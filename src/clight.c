@@ -66,7 +66,6 @@ static void parse_cmd(int argc, char * const argv[]) {
     // default value
     num_captures = 5;
     
-    
     int idx = 0, opt;
     
     static struct option opts[] = {
@@ -96,8 +95,7 @@ static void parse_cmd(int argc, char * const argv[]) {
  * set the correct brightness level, then leave.
  */
 static void do_single_capture(void) {
-    int ret = start_stream();
-    if (ret == -1) {
+    if (start_stream() == -1) {
         quit = 1;
     } else {
         for (int i = 0; i < num_captures; i++) {
@@ -167,7 +165,7 @@ static void set_pollfd(void) {
 }
 
 /**
- * Frees every resource used
+ * Free every resource used
  */
 static void free_everything(void) {
     if (main_p) {
@@ -215,7 +213,6 @@ static void set_timeout(int start, int fd) {
     
     _log(stdout, "Timer expiring in: %d seconds.\n", start);
 }
-
 
 /*
  * if received an external SIGINT or SIGTERM,
