@@ -1,15 +1,15 @@
- # Clight
- 
- Clight is a C daemon utility to automagically change screen backlight level to match ambient brightness.  
- Ambient brightness is computed by capturing frames from webcam.
- 
- It is heavily insipred by [calise](http://calise.sourceforge.net/wordpress/), at least in its intents.
- 
- It currently needs:  
- * v4l2 (linux/videodev2.h)
- * libxcb (xcb.h, xcb/dpms.h)
- * imagemagick (wand/MagickWand.h)
- * polkit (runtime dep)
+# Clight
+
+Clight is a C daemon utility to automagically change screen backlight level to match ambient brightness.  
+Ambient brightness is computed by capturing frames from webcam.
+
+It is heavily insipred by [calise](http://calise.sourceforge.net/wordpress/), at least in its intents.
+
+It currently needs:  
+* v4l2 (linux/videodev2.h)
+* libxcb (xcb.h, xcb/dpms.h)
+* imagemagick (wand/MagickWand.h)
+* polkit (runtime dep)
 
 Optionally:  
 * libsystemd (systemd/sd-journal.h) to log to systemd journal
