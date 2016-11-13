@@ -1,0 +1,6 @@
+*.o
+/clight
+clight.kdev4
+*/
+!inc/
+!src/
