@@ -5,18 +5,17 @@ static int xioctl(int request, void *arg);
 static int print_caps(void);
 
 static int device_fd, captured_frames;
-static const char dev_name[] = "/dev/video0";
-static float *brightness_value;
+static double *brightness_value;
 static struct v4l2_buffer buf;
 
 void open_device(void) {
-    device_fd = open(dev_name, O_RDWR);
+    device_fd = open(conf.dev_name, O_RDWR);
     if (device_fd == -1) {
         _log(stderr, "Cannot open '%s': %d, %s\n",
-             dev_name, errno, strerror(errno));
+             conf.dev_name, errno, strerror(errno));
         quit = 1;
     } else {
-        brightness_value = malloc(num_captures * sizeof(float));
+        brightness_value = malloc(conf.num_captures * sizeof(double));
         print_caps();
         init_mmap();
     }
@@ -183,26 +182,32 @@ int capture_frame(void) {
     }
     
     return captured_frames;
-
 }
 
-float compute_backlight(void) {
+double compute_backlight(void) {
     int lowest = 0, highest = 0;
-    float total = 0;
+    double total = 0;
     
-    for (int i = 1; i < num_captures; i++) {
+    for (int i = 0; i < conf.num_captures; i++) {
         if (brightness_value[i] < brightness_value[lowest]) {
             lowest = i;
         } else if (brightness_value[i] > brightness_value[highest]) {
             highest = i;
         }
-        total += brightness_value[i];
+        
+        // compute_brightness returns -1 if it fails
+        if (brightness_value[i] != -1) {
+            total += brightness_value[i];
+        }
     }
-    
-    // remove highest and lowest values to normalize
-    total -= (brightness_value[highest] + brightness_value[lowest]); 
-    
-    return total / (num_captures - 2);
+        
+    // total == 0 means every captured frame decompression failed
+    if (total != 0 && conf.num_captures > 2) {
+        // remove highest and lowest values to normalize
+        total -= (brightness_value[highest] + brightness_value[lowest]); 
+    }
+        
+    return (conf.num_captures > 2) ? (total / (conf.num_captures - 2)) : (total / conf.num_captures);
 }
 
 void free_device(void) {

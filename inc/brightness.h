@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <wand/MagickWand.h>
+#include <turbojpeg.h>
+
 #include "log.h"
 
 void init_brightness(void);
-float compute_brightness(unsigned int length);
-float set_brightness(float perc);
-void free_wand(void);
+double compute_brightness(unsigned int length);
+double set_brightness(double perc);
+void free_brightness(void);

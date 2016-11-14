@@ -6,15 +6,18 @@ struct brightness {
     int old;
 };
 
+static tjhandle _jpegDecompressor;
 static struct brightness br;
-static MagickWand *wand;
+char brightness_path[PATH_MAX + 1];
 
 void init_brightness(void) {
-    MagickWandGenesis();
+    _jpegDecompressor = tjInitDecompress();
     
-    wand = NewMagickWand();
+    char max_brightness_path[PATH_MAX + 1];
     
-    FILE *f = fopen("/sys/class/backlight/intel_backlight/max_brightness", "r");
+    sprintf(max_brightness_path, "%s/max_brightness", conf.screen_path);
+    
+    FILE *f = fopen(max_brightness_path, "r");
     if (!f) {
         goto error;
     }
@@ -23,7 +26,9 @@ void init_brightness(void) {
     
     _log(stdout, "Max supported brightness: %d\n", br.max);
     
-    f = fopen("/sys/class/backlight/intel_backlight/brightness", "r");
+    sprintf(brightness_path, "%s/brightness", conf.screen_path);
+    
+    f = fopen(brightness_path, "r");
     if (!f) {
         goto error;
     }
@@ -38,37 +43,32 @@ error:
     quit = 1;
 }
 
-float compute_brightness(unsigned int length) {
-    MagickReadImageBlob(wand, buffer, length);
+double compute_brightness(unsigned int length) {
+    double brightness = 0;
     size_t total_gray_pixels = camera_width * camera_height;
-    
-    // Allocate memory to hold values (total pixels * size of data type)
     unsigned char *blob = malloc(total_gray_pixels);
     
-    MagickExportImagePixels(wand,      // Image instance
-                            0,         // Start X
-                            0,         // Start Y
-                            camera_width,     // End X
-                            camera_height,    // End Y
-                            "I",       // Value where "I" = intensity = gray value
-                            CharPixel, // Storage type where "unsigned char == (0 ~ 255)
-                            blob);     // Destination pointer
+    if (tjDecompress2(_jpegDecompressor, buffer, length, blob, camera_width, 0, camera_height, TJPF_GRAY, TJFLAG_FASTDCT) == -1) {
+        _log(stderr, "%s", tjGetErrorStr());
+        // returns -1 (-255 / 255) as error code
+        brightness = -255;
+        goto end;
+    }
     
-    // Dump to stdout
-    unsigned long brightness = 0;
     for (int i = 0; i < total_gray_pixels; i++ ) {
         brightness += (int)blob[i];
     }
     brightness /= total_gray_pixels;
-    
+
+end:
     free(blob);
-    return (float)(brightness) / 255;
+    return brightness / 255;
 }
 
-float set_brightness(float perc) {
+double set_brightness(double perc) {
     br.old = br.current;
     
-    FILE *f = fopen("/sys/class/backlight/intel_backlight/brightness", "w");
+    FILE *f = fopen(brightness_path, "w");
     if (f) {
         fprintf(f, "%d", (int) (br.max * perc));
         fclose(f);
@@ -80,12 +80,9 @@ float set_brightness(float perc) {
     
     _log(stdout, "New brightness value: %d\nOld brightness value: %d\n", br.current, br.old);
     
-    return (float)(br.current - br.old) / br.max;
+    return (double)(br.current - br.old) / br.max;
 }
 
-void free_wand(void) {
-    if (wand) {
-        wand = DestroyMagickWand(wand);
-        MagickWandTerminus();
-    }
+void free_brightness(void) {
+    tjDestroy(_jpegDecompressor);
 }

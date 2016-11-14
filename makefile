@@ -1,15 +1,16 @@
 BINDIR = /usr/bin
 BINNAME = clight
-POLKITDIR = /usr/share/polkit-1/actions/
-POLKITNAME = org.clight.screenbrightness.pkexec.policy
+SYSTEMDDIR = /usr/lib/systemd/user/
+SYSTEMDUNIT = clight.service
+EXTRADIR = Extra
 RM = rm -f
 INSTALL = install -p
 INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS =-lv4l2 -lm $(shell pkg-config --libs MagickWand xcb xcb-dpms)
-CFLAGS = $(shell pkg-config --cflags MagickWand xcb xcb-dpms)
+LIBS =-lv4l2 -lm $(shell pkg-config --libs libturbojpeg xcb xcb-dpms libconfig)
+CFLAGS = $(shell pkg-config --cflags libturbojpeg xcb xcb-dpms libconfig)
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
@@ -46,13 +47,13 @@ install:
 	@$(INSTALL_DIR) "$(DESTDIR)$(BINDIR)"
 	@$(INSTALL_PROGRAM) $(BINNAME) "$(DESTDIR)$(BINDIR)"
 	
-	$(info installing polkit policy.)
-	@$(INSTALL_DIR) "$(DESTDIR)$(POLKITDIR)"
-	@$(INSTALL_DATA) $(POLKITNAME) "$(DESTDIR)$(POLKITDIR)"
+	$(info installing systemd unit.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
 
 uninstall:
 	$(info uninstalling bin.)
 	@$(RM) "$(DESTDIR)$(BINDIR)/$(BINNAME)"
 	
-	$(info uninstalling polkit policy.)
-	@$(RM) "$(DESTDIR)$(POLKITDIR)/$(POLKITNAME)"
+	$(info uninstalling systemd unit.)
+	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"
