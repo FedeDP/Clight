@@ -3,7 +3,7 @@
 Clight is a C daemon utility to automagically change screen backlight level to match ambient brightness.  
 Ambient brightness is computed by capturing frames from webcam.
 
-It is heavily insipred by [calise](http://calise.sourceforge.net/wordpress/), at least in its intents.
+It is heavily inspired by [calise](http://calise.sourceforge.net/wordpress/), at least in its intents.
 
 It currently needs:  
 * linux-api-headers (linux/videodev2.h)
@@ -21,7 +21,6 @@ Current features:
 * fully valgrind clean
 * external signals catching (sigint/sigterm) even during a frame capture
 * dpms support: it will check current screen powersave level and won't do anything if screen is currently off.
-* number of frames customizable from cmdline
 * a single capture mode from cmdline
 
 Cmdline options:

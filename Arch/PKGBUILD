@@ -1,8 +1,8 @@
 # Maintainer: Federico Di Pierro <nierro92@gmail.com>
 
 pkgname=clight-git
-_gitname=clight
-pkgver=v0.1
+_gitname=Clight
+pkgver=r6.9e69ebf
 pkgrel=1
 pkgdesc="A C daemon that turns your webcam into a light sensor. It will adjust screen backlight based on ambient brightness."
 arch=('i686' 'x86_64')
@@ -17,7 +17,7 @@ sha256sums=("SKIP")
 
 pkgver() {
   cd "$_gitname"
-  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {

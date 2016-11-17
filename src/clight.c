@@ -2,7 +2,6 @@
 #include <signal.h>
 #include <sys/signalfd.h>
 #include <sys/timerfd.h>
-#include <string.h>
 #include <math.h>
 #include <xcb/dpms.h>
 #include <getopt.h>

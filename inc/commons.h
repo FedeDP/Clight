@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <linux/limits.h>
+#include <string.h>
 
 struct config {
     int num_captures;
