@@ -95,7 +95,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {0, 0, 0, 0}
     };
     
-    while ((opt = getopt_long(argc, argv, "cf:t:sd:b:hu:", opts, &idx)) != -1) {
+    while ((opt = getopt_long(argc, argv, "cf:t:sd:b:h", opts, &idx)) != -1) {
         switch (opt) {
         case 'c':
             single_capture_mode = 1;
