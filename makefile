@@ -9,7 +9,7 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS =-lv4l2 -lm $(shell pkg-config --libs libturbojpeg xcb xcb-dpms libconfig)
+LIBS = -lm $(shell pkg-config --libs libturbojpeg xcb xcb-dpms libconfig)
 CFLAGS = $(shell pkg-config --cflags libturbojpeg xcb xcb-dpms libconfig)
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
@@ -23,9 +23,9 @@ endif
 
 endif
 
-all: objects clight clean
+all: clight clean
 
-debug: objects-debug clight-debug clean
+debug: clight-debug clean
 
 objects:
 	@cd $(SRCDIR); $(CC) -c *.c $(CFLAGS)
