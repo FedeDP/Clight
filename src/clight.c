@@ -295,7 +295,7 @@ static void timer_func(void) {
     // if screen is currently blanked thanks to dpms,
     // do not do anything. Set a long timeout and return.
     // Timeout will increase as screen power management goes deeper.
-    if (dpms_enabled && get_screen_dpms()) {
+    if (dpms_enabled && get_screen_dpms() > 0) {
         set_timeout(2 * conf.timeout * get_screen_dpms(), main_p[TIMER_IX].fd);
         return;
     }
@@ -361,11 +361,16 @@ static void camera_func(void) {
 static int get_screen_dpms(void) {
     xcb_dpms_info_cookie_t cookie;
     xcb_dpms_info_reply_t *info;
+    int ret = -1;
     
     cookie = xcb_dpms_info(connection);
     info = xcb_dpms_info_reply(connection, cookie, NULL);
     
-    return info->power_level;
+    if (info) {
+        ret = info->power_level;
+        free(info);
+    }
+    return ret;
 }
 
 static void main_poll(void) {

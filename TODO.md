@@ -6,6 +6,8 @@ TODO:
 - [x] strict error checking  
 - [x] add initial setup support ("-s/--setup") to create initial conf file through libconfig
 - [ ] fix algorithms  
+- [ ] do not hold exclusive lock on device fd...
+- [x] don't leave for every error
 - [x] switch to something lighter than imagemagick...
 - [x] add pkgbuild for arch
 - [x] add systemd user unit
