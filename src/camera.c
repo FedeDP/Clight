@@ -45,14 +45,9 @@ static void init(void) {
     }
     
     // check device priority level. Do not need to quit if this is not supported.
-    enum v4l2_priority priority;
-    if (-1 == xioctl(VIDIOC_G_PRIORITY, &priority)) {
-        _perror("Querying priority Capabilities");
-    } else {
-        priority = V4L2_PRIORITY_BACKGROUND;
-        if (-1 == xioctl(VIDIOC_S_PRIORITY, &priority)) {
-            _perror("Setting priority");
-        }
+    enum v4l2_priority priority = V4L2_PRIORITY_BACKGROUND;
+    if (-1 == xioctl(VIDIOC_S_PRIORITY, &priority)) {
+        _perror("Setting priority");
     }
     
     // query format
@@ -73,12 +68,10 @@ static void init(void) {
     _log(stdout, "Selected Camera Mode:\n"
     "  Width: %d\n"
     "  Height: %d\n"
-    "  PixFmt: %s\n"
-    "  Field: %d\n",
+    "  PixFmt: %s\n",
     fmt.fmt.pix.width,
     fmt.fmt.pix.height,
-    fourcc,
-    fmt.fmt.pix.field);
+    fourcc);
     
     camera_width = fmt.fmt.pix.width;
     camera_height = fmt.fmt.pix.height;
