@@ -8,6 +8,7 @@ TODO:
 - [x] *clightd* switch to libudev even for webcam?
 - [x] *clight* fix default values for devname and backlight interface
 - [ ] *clightd* + *clight* check for ebusy errors
+- [ ] *clightd* + *clight* fix PKGBUILD
 - [x] *clightd* + *clight* update readmes
 - [x] check dbus call ret value in clight
 - [x] switch to new dbus interface
