@@ -1,28 +1,19 @@
 TODO:  
 
-- [x] stop if screen is idle?  
-- [x] add a "-c/--capture" switch to do a fast capture  
-- [x] timerfd without timeout (only start time)  
-- [x] strict error checking  
-- [x] add initial setup support ("-s/--setup") to create initial conf file through libconfig
-- [ ] fix algorithms  
-- [ ] do not hold exclusive lock on device fd...
-- [x] don't leave for every error
-- [x] switch to something lighter than imagemagick...
-- [x] add pkgbuild for arch
-- [x] add systemd user unit
-
-GETOPT:  
-
-- [x] make webcam device customizable  
-- [x] make number of captures taken customizable  
-- [x] make timeout customizable  
-- [x] make screen syspath customizable  
-- [x] add --help switch
-
-LIBCONFIG:  
-
-- [x] make webcam device customizable  
-- [x] make number of captures taken customizable  
-- [x] make timeout customizable  
-- [x] make screen syspath customizable  
+- [ ] *clight* fix algorithm to set screen brightness based on ambient brightness  
+- [ ] *clightd* add support for polkit (is it useful?)
+- [x] add actual_brightness method
+- [x] setbrightness should check max interface brightness value too
+- [x] *clightd* switch to libudev instead of sys/class string?
+- [x] *clightd* switch to libudev even for webcam?
+- [x] *clight* fix default values for devname and backlight interface
+- [ ] *clightd* + *clight* check for ebusy errors
+- [x] *clightd* + *clight* update readmes
+- [x] check dbus call ret value in clight
+- [x] switch to new dbus interface
+- [x] drop journald support
+- [x] drop in pkgbuild udev rule, as it is not needed anymore
+- [x] make dbus service build even without frameCapture support
+- [x] install service file in /usr/share/dbus-1/system-services/
+- [x] install bus conf file in /etc/dbus-1/system.d/
+- [x] install clightd in /usr/lib/clight/clightd

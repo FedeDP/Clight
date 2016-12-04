@@ -27,37 +27,5 @@ build() {
 
 package() {
     cd $srcdir/$_gitname
-    
-    ###################################################
-    # Next part is stolen by calise-git aur package :)#
-    ###################################################
-    # preliminary check
-    if [ ! -d /sys/class/backlight/ ]; then
-        return 1
-    fi
-
-    # udev rules creation (for all available interfaces)
-    interfaces=""
-    for path in /sys/class/backlight/*; do
-        interfaces="`udevadm info -a -p ${path} |
-            grep "KERNEL=" |
-            sed s'/KERNEL==//' |
-            awk -F ['"'] '{print $2}'` ${interfaces}"
-    done
-    if [ -z "$interfaces" ]; then
-        echo "Your configuration is currently not supported."
-        return 2
-    fi
-    for interface in ${interfaces}; do
-        if [ ! -f /sys/class/backlight/$interface/brightness ]; then
-            echo "Your configuration is currently not supported."
-            return 3
-        fi
-        udevrule="${interface}.rules"
-        echo "KERNEL==\"${interface}\", RUN+=\"/bin/chmod 664 /sys/class/backlight/${interface}/brightness\"" > $udevrule
-        echo "KERNEL==\"${interface}\", RUN+=\"/bin/chgrp wheel /sys/class/backlight/${interface}/brightness\"" >> $udevrule
-        install -Dm644 ${udevrule} "${pkgdir}/usr/lib/udev/rules.d/99-backlight-${udevrule}"
-    done
-    
     make DESTDIR="$pkgdir" install
 }
