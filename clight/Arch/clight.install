@@ -1,0 +1,6 @@
+post_install() {
+	echo '--> On first run, use 'clight -s' to create your user config file.'
+	echo '--> Then, remember to enable the unit file shipped (without sudo): systemctl --user enable clight.service'
+	echo '--> Finally, reboot the system.
+}
+
