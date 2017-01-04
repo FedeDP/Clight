@@ -8,6 +8,8 @@ static int method_getbrightness(sd_bus_message *m, void *userdata, sd_bus_error 
 static int method_getmaxbrightness(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_getactualbrightness(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void get_first_matching_device(struct udev_device **dev, const char *subsystem);
+static void get_udev_device(const char *backlight_interface, const char *subsystem, 
+                            sd_bus_error **ret_error, struct udev_device **dev);
 #ifndef DISABLE_FRAME_CAPTURES
 static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 #endif
@@ -55,14 +57,8 @@ static int method_setbrightness(sd_bus_message *m, void *userdata, sd_bus_error 
         return -EINVAL;
     }
     
-    // if no backlight_interface is specified, try to get first matching device
-    if (!strlen(backlight_interface)) {
-        get_first_matching_device(&dev, "backlight");
-    } else {
-        dev = udev_device_new_from_subsystem_sysname(udev, "backlight", backlight_interface);
-    }
-    if (!dev) {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+    get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
+    if (sd_bus_error_is_set(ret_error)) {
         return -1;
     }
     
@@ -106,14 +102,8 @@ static int method_getbrightness(sd_bus_message *m, void *userdata, sd_bus_error 
         return r;
     }
     
-    // if no backlight_interface is specified, try to get first matching device
-    if (!strlen(backlight_interface)) {
-        get_first_matching_device(&dev, "backlight");
-    } else {
-        dev = udev_device_new_from_subsystem_sysname(udev, "backlight", backlight_interface);
-    }
-    if (!dev) {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+    get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
+    if (sd_bus_error_is_set(ret_error)) {
         return -1;
     }
     
@@ -141,14 +131,8 @@ static int method_getmaxbrightness(sd_bus_message *m, void *userdata, sd_bus_err
         return r;
     }
     
-    // if no backlight_interface is specified, try to get first matching device
-    if (!strlen(backlight_interface)) {
-        get_first_matching_device(&dev, "backlight");
-    } else {
-        dev = udev_device_new_from_subsystem_sysname(udev, "backlight", backlight_interface);
-    }
-    if (!dev) {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+    get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
+    if (sd_bus_error_is_set(ret_error)) {
         return -1;
     }
     
@@ -176,14 +160,8 @@ static int method_getactualbrightness(sd_bus_message *m, void *userdata, sd_bus_
         return r;
     }
     
-    // if no backlight_interface is specified, try to get first matching device
-    if (!strlen(backlight_interface)) {
-        get_first_matching_device(&dev, "backlight");
-    } else {
-        dev = udev_device_new_from_subsystem_sysname(udev, "backlight", backlight_interface);
-    }
-    if (!dev) {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+    get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
+    if (sd_bus_error_is_set(ret_error)) {
         return -1;
     }
     
@@ -217,6 +195,19 @@ static void get_first_matching_device(struct udev_device **dev, const char *subs
     udev_enumerate_unref(enumerate);
 }
 
+static void get_udev_device(const char *backlight_interface, const char *subsystem, 
+                            sd_bus_error **ret_error, struct udev_device **dev) {
+    // if no backlight_interface is specified, try to get first matching device
+    if (!strlen(backlight_interface)) {
+        get_first_matching_device(dev, subsystem);
+    } else {
+        *dev = udev_device_new_from_subsystem_sysname(udev, subsystem, backlight_interface);
+    }
+    if (!(*dev)) {
+        sd_bus_error_set_const(*ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+    }
+}
+
 #ifndef DISABLE_FRAME_CAPTURES
 /**
  * Frames capturing method
@@ -235,13 +226,8 @@ static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error 
     }
     
     // if no video device is specified, try to get first matching device
-    if (!strlen(video_interface)) {
-        get_first_matching_device(&dev, "video4linux");
-    } else {
-        dev = udev_device_new_from_subsystem_sysname(udev, "video4linux", video_interface);
-    }
-    if (!dev) {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+    get_udev_device(video_interface, "video4linux", &ret_error, &dev);
+    if (sd_bus_error_is_set(ret_error)) {
         return -1;
     }
     
