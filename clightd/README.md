@@ -5,6 +5,8 @@ It currently needs:
 * libjpeg-turbo (turbojpeg.h)
 * linux-api-headers (linux/videodev2.h)
 * libudev (libudev.h)
+* libxrandr (X11/extensions/Xrandr.h)
+* libx11 (X11/Xlib.h)
 
 You may ask why did i developed this solution. The answer is quite simple.  
 In linux there is no simple and unified way of changing screen brightness.  
@@ -36,6 +38,8 @@ Returns current brightness value (int).
 * setbrightness -> takes a backlight kernel interface and a new value. Set the brightness value on that interface and returns new brightness value (int).  
 Note that new brightness value is checked to be between 0 and max_brightness.
 * getactualbrightness -> takes a backlight kernel interface. Returns actual brightness for that interface (int).
+* getgamma -> returns current display temperature (int).
+* setgamma -> takes a temperature value (int, between 1000 and 10000) and set display temperature. Returns newly setted display temperature (int).
 
 If build with frame captures support:  
 

@@ -2,17 +2,24 @@
 #include <libudev.h>
 
 #include "../inc/camera.h"
+#include "../inc/gamma.h"
+#include "../inc/commons.h"
 
 static int method_setbrightness(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_getbrightness(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_getmaxbrightness(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_getactualbrightness(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void get_first_matching_device(struct udev_device **dev, const char *subsystem);
-static void get_udev_device(const char *backlight_interface, const char *subsystem, 
-                            sd_bus_error **ret_error, struct udev_device **dev);
+#ifndef DISABLE_GAMMA
+static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_getgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+#endif
 #ifndef DISABLE_FRAME_CAPTURES
 static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 #endif
+static void get_first_matching_device(struct udev_device **dev, const char *subsystem);
+static void get_udev_device(const char *backlight_interface, const char *subsystem, 
+                            sd_bus_error **ret_error, struct udev_device **dev);
+
 
 static const char object_path[] = "/org/clight/backlight";
 static const char bus_interface[] = "org.clight.backlight";
@@ -28,7 +35,14 @@ static const sd_bus_vtable calculator_vtable[] = {
     SD_BUS_METHOD("getbrightness", "s", "i", method_getbrightness, SD_BUS_VTABLE_UNPRIVILEGED),
     // takes: backlight kernel interface, eg: "intel_backlight". Returns max brightness val
     SD_BUS_METHOD("getmaxbrightness", "s", "i", method_getmaxbrightness, SD_BUS_VTABLE_UNPRIVILEGED),
+    // takes: backlight kernel interface, eg: "intel_backlight". Returns actual brightness val
     SD_BUS_METHOD("getactualbrightness", "s", "i", method_getactualbrightness, SD_BUS_VTABLE_UNPRIVILEGED),
+#ifndef DISABLE_GAMMA
+    // takes: new screen gamma temperature val. Returns new temperature val
+    SD_BUS_METHOD("setgamma", "i", "i", method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
+    // takes: nothing. Returns current temperature val
+    SD_BUS_METHOD("getgamma", "", "i", method_getgamma, SD_BUS_VTABLE_UNPRIVILEGED),
+#endif
 #ifndef DISABLE_FRAME_CAPTURES
     // takes: video interface, eg: "/dev/video0" and number of frames to be taken. Returns frames average brightness.
     SD_BUS_METHOD("captureframes", "si", "d", method_captureframes, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -174,39 +188,49 @@ static int method_getactualbrightness(sd_bus_message *m, void *userdata, sd_bus_
     return sd_bus_reply_method_return(m, "i", x);
 }
 
-/**
- * Set dev to first device in subsystem
- */
-static void get_first_matching_device(struct udev_device **dev, const char *subsystem) {
-    struct udev_enumerate *enumerate;
-    struct udev_list_entry *devices, *dev_list_entry;
+#ifndef DISABLE_GAMMA
+static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int temp, r;
     
-    enumerate = udev_enumerate_new(udev);
-    udev_enumerate_add_match_subsystem(enumerate, subsystem);
-    udev_enumerate_scan_devices(enumerate);
-    devices = udev_enumerate_get_list_entry(enumerate);
-    udev_list_entry_foreach(dev_list_entry, devices) {
-        const char *path;
-        path = udev_list_entry_get_name(dev_list_entry);
-        *dev = udev_device_new_from_syspath(udev, path);
-        break;
+    /* Read the parameters */
+    r = sd_bus_message_read(m, "i", &temp);
+    if (r < 0) {
+        fprintf(stderr, "Failed to parse parameters: %s\n", strerror(-r));
+        return r;
     }
-    /* Free the enumerator object */
-    udev_enumerate_unref(enumerate);
+    
+    int ret = set_gamma(temp);
+    if (ret) {
+        if (ret == -EINVAL) {
+            sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Temperature value should be between 1000 and 10000.");
+        } else if (ret == -ENXIO) {
+            sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Could not open X screen.");
+        }
+        return -1;
+    }
+    
+    printf("Gamma value set: %d\n", temp);
+    
+    /* Reply with the response */
+    return sd_bus_reply_method_return(m, "i", temp);
 }
 
-static void get_udev_device(const char *backlight_interface, const char *subsystem, 
-                            sd_bus_error **ret_error, struct udev_device **dev) {
-    // if no backlight_interface is specified, try to get first matching device
-    if (!strlen(backlight_interface)) {
-        get_first_matching_device(dev, subsystem);
-    } else {
-        *dev = udev_device_new_from_subsystem_sysname(udev, subsystem, backlight_interface);
+static int method_getgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int temp = get_gamma();
+    if (temp < 0) {
+        if (temp == -ENXIO) {
+            sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Could not open X screen.");
+        } else {
+            sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Failed to get screen temperature.");
+        }
+        return -1;
     }
-    if (!(*dev)) {
-        sd_bus_error_set_const(*ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
-    }
+    
+    printf("Current gamma value: %d\n", temp);
+    
+    return sd_bus_reply_method_return(m, "i", temp);
 }
+#endif
 
 #ifndef DISABLE_FRAME_CAPTURES
 /**
@@ -242,7 +266,41 @@ static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error 
 }
 #endif
 
-int main(int argc, char *argv[]) {
+/**
+ * Set dev to first device in subsystem
+ */
+static void get_first_matching_device(struct udev_device **dev, const char *subsystem) {
+    struct udev_enumerate *enumerate;
+    struct udev_list_entry *devices, *dev_list_entry;
+    
+    enumerate = udev_enumerate_new(udev);
+    udev_enumerate_add_match_subsystem(enumerate, subsystem);
+    udev_enumerate_scan_devices(enumerate);
+    devices = udev_enumerate_get_list_entry(enumerate);
+    udev_list_entry_foreach(dev_list_entry, devices) {
+        const char *path;
+        path = udev_list_entry_get_name(dev_list_entry);
+        *dev = udev_device_new_from_syspath(udev, path);
+        break;
+    }
+    /* Free the enumerator object */
+    udev_enumerate_unref(enumerate);
+}
+
+static void get_udev_device(const char *backlight_interface, const char *subsystem, 
+                            sd_bus_error **ret_error, struct udev_device **dev) {
+    // if no backlight_interface is specified, try to get first matching device
+    if (!strlen(backlight_interface)) {
+        get_first_matching_device(dev, subsystem);
+    } else {
+        *dev = udev_device_new_from_subsystem_sysname(udev, subsystem, backlight_interface);
+    }
+    if (!(*dev)) {
+        sd_bus_error_set_const(*ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+    }
+}
+
+int main(void) {
     sd_bus_slot *slot = NULL;
     sd_bus *bus = NULL;
     int r;

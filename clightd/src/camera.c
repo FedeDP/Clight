@@ -175,7 +175,7 @@ static void start_stream(int fd, int *quit) {
         return;
     }
     
-    // query a buffer from camera on device_fd so main poll will read from CAMERA_IX
+    // query a buffer from camera
     if(-1 == xioctl(fd, VIDIOC_QBUF, &buf)) {
         perror("Query Buffer");
         *quit = 1;

@@ -30,6 +30,15 @@ CFLAGS+=-DDISABLE_FRAME_CAPTURES
 $(info Frames capturing support disabled.)
 endif
 
+ifneq ("$(DISABLE_GAMMA)","1")
+CFLAGS+=$(shell pkg-config --cflags x11 xrandr)
+LIBS+=$(shell pkg-config --libs x11 xrandr)
+$(info Gamma support enabled.)
+else
+CFLAGS+=-DDISABLE_GAMMA
+$(info Gamma support disabled.)
+endif
+
 endif
 
 all: clightd clean
