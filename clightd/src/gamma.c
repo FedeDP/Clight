@@ -1,7 +1,6 @@
 #ifndef DISABLE_GAMMA
 
 #include "../inc/gamma.h"
-#include <stdio.h>
 
 /* cribbed from redshift, but truncated with 500K steps */
 static const struct { float r; float g; float b; } whitepoints[] = {
@@ -34,6 +33,7 @@ void set_gamma(int temp, int *err) {
         *err = ENXIO;
         return;
     }
+    
     int screen = DefaultScreen(dpy);
     Window root = RootWindow(dpy, screen);
     
@@ -67,7 +67,6 @@ void set_gamma(int temp, int *err) {
             crtc_gamma->blue[j] = g * gammab;
         }
         XRRSetCrtcGamma(dpy, crtcxid, crtc_gamma);
-        
         XFree(crtc_gamma);
     }
     

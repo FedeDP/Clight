@@ -27,8 +27,7 @@ double capture_frames(const char *interface, int num_frames, int *err) {
     
     /* properly initialize struct with all fields to zero-or-null */
     struct state tmp = {0};
-    state = malloc(sizeof(struct state));
-    *state = tmp;
+    state = &tmp;
     
     open_device(interface);
     if (!state->quit) {
@@ -282,8 +281,6 @@ static void free_all(void) {
     if (state->_jpegDecompressor) {
         tjDestroy(state->_jpegDecompressor);
     }
-    
-    free(state);
 }
 
 #endif
