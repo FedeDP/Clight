@@ -281,6 +281,8 @@ static void free_all(void) {
     if (state->_jpegDecompressor) {
         tjDestroy(state->_jpegDecompressor);
     }
+    
+    state = NULL;
 }
 
 #endif
