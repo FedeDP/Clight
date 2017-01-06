@@ -58,13 +58,13 @@ static void init_config(int argc, char *argv[]) {
 }
 
 static void setup_everything(void) {
-    if (!quit) {
+    if (!state.quit) {
         init_brightness();
-        if (!quit) {
+        if (!state.quit) {
             printf("Using %d frames captures with timeout %d.\n", conf.num_captures, conf.timeout);
             if (single_capture_mode) {
                 do_capture();
-                quit = 1;
+                state.quit = 1;
             } else {
                 init_dpms();
                 set_pollfd();
@@ -104,7 +104,7 @@ static void parse_cmd(int argc, char *const argv[]) {
             break;
         case 's':
             setup_config();
-            quit = 1;
+            state.quit = 1;
             break;
         case 'd':
             strncpy(conf.dev_name, optarg, PATH_MAX);
@@ -114,10 +114,10 @@ static void parse_cmd(int argc, char *const argv[]) {
             break;
         case 'h':
             print_help();
-            quit = 1;
+            state.quit = 1;
             return;
         case '?':
-            quit = 1;
+            state.quit = 1;
             return;
         default:
             break;
@@ -182,7 +182,7 @@ static void set_pollfd(void) {
     main_p = calloc(nfds, sizeof(struct pollfd));
     int timerfd = start_timer();
     if (timerfd == -1 || !main_p) {
-        quit = 1;
+        state.quit = 1;
         return;
     }
     main_p[TIMER_IX] = (struct pollfd) {
@@ -214,7 +214,7 @@ static void free_everything(void) {
 }
 
 /**
- * Create 30s timer and returns its fd to
+ * Create timer and returns its fd to
  * the main struct pollfd
  */
 static int start_timer(void) {
@@ -258,7 +258,7 @@ static void sig_handler(int fd) {
     } else {
         printf("received signal %d. Leaving.\n", fdsi.ssi_signo);
     }
-    quit = 1;
+    state.quit = 1;
 }
 
 /**
@@ -278,11 +278,16 @@ static void do_capture(void) {
     
     double drop = 0.0;
     double val = capture_frames();
-    if (!quit) {
+    /* 
+     * if there is an error but quit is 0, 
+     * it means it was an EBUSY error.
+     * Do not leave, but obviously do not set_brightness.
+     */
+    if (!state.quit && !state.error) {
         drop = set_brightness(val);
     }
     
-    if (!single_capture_mode && !quit) {
+    if (!single_capture_mode && !state.quit) {
         // if there is too high difference, do a fast recapture to be sure
         // this is the correct level
         if (fabs(drop) > drop_limit) {
@@ -293,6 +298,8 @@ static void do_capture(void) {
             // reset normal timer
             set_timeout(conf.timeout, main_p[TIMER_IX].fd);
         }
+        // reset error field
+        state.error = 0;
     }
 }
 
@@ -322,10 +329,13 @@ static int get_screen_dpms(void) {
 static void main_poll(void) {
     uint64_t t;
     
-    while (!quit) {
+    while (!state.quit) {
         int r = poll(main_p, nfds, -1);
         if (r == -1) {
-            quit = 1;
+            if (errno == EINTR) {
+                continue;
+            }
+            state.quit = 1;
             return;
         }
             

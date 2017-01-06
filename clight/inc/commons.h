@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <errno.h>
 
 struct config {
     int num_captures;
@@ -15,8 +16,14 @@ struct config {
     char screen_path[PATH_MAX + 1];
 };
 
+struct state {
+    int quit;
+    int error; 
+};
+
+struct state state;
 struct config conf;
-int quit, camera_width, camera_height;
+int camera_width, camera_height;
 uint8_t *buffer;
 
 

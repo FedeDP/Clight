@@ -27,11 +27,12 @@ static const struct { float r; float g; float b; } whitepoints[] = {
 	{ 0.77442176,  0.85453121,  1.00000000, },
 };
 
-int set_gamma(int temp) {
+void set_gamma(int temp, int *err) {
     Display *dpy = XOpenDisplay(NULL);
     
     if (dpy == NULL) {
-        return -ENXIO;
+        *err = ENXIO;
+        return;
     }
     int screen = DefaultScreen(dpy);
     Window root = RootWindow(dpy, screen);
@@ -39,7 +40,8 @@ int set_gamma(int temp) {
     XRRScreenResources *res = XRRGetScreenResourcesCurrent(dpy, root);
     
     if (temp < 1000 || temp > 10000) {
-        return -EINVAL;
+        *err = EINVAL;
+        return;
     }
     
     temp -= 1000;
@@ -70,14 +72,14 @@ int set_gamma(int temp) {
     }
     
     XCloseDisplay(dpy);
-    return 0;
 }
 
-int get_gamma(void) {
+int get_gamma(int *err) {
     int temp = -1;
     Display *dpy = XOpenDisplay(NULL);
     if (dpy == NULL) {
-        return -ENXIO;
+        *err = ENXIO;
+        goto end;
     }
     int screen = DefaultScreen(dpy);
     Window root = RootWindow(dpy, screen);
@@ -96,6 +98,7 @@ int get_gamma(void) {
                 // at least second decimal digit is different, given our table
                 if ((fabs(whitepoints[i].g - gammag) < distance) && (fabs(whitepoints[i].b - gammab) < distance)) {
                     temp = (i * 500) + 1000;
+                    break;
                 }
             }
         }
@@ -103,7 +106,13 @@ int get_gamma(void) {
         XFree(crtc_gamma);
     }
     
+    if (temp == 0) {
+        *err = 1;
+    }
+    
     XCloseDisplay(dpy);
+    
+end:
     return temp;
 }
 

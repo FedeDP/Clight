@@ -73,7 +73,7 @@ static int method_setbrightness(sd_bus_message *m, void *userdata, sd_bus_error 
     
     get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
     if (sd_bus_error_is_set(ret_error)) {
-        return -1;
+        return -sd_bus_error_get_errno(ret_error);
     }
     
     /**
@@ -118,7 +118,7 @@ static int method_getbrightness(sd_bus_message *m, void *userdata, sd_bus_error 
     
     get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
     if (sd_bus_error_is_set(ret_error)) {
-        return -1;
+        return -sd_bus_error_get_errno(ret_error);
     }
     
     x = atoi(udev_device_get_sysattr_value(dev, "brightness"));
@@ -147,7 +147,7 @@ static int method_getmaxbrightness(sd_bus_message *m, void *userdata, sd_bus_err
     
     get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
     if (sd_bus_error_is_set(ret_error)) {
-        return -1;
+        return -sd_bus_error_get_errno(ret_error);
     }
     
     x = atoi(udev_device_get_sysattr_value(dev, "max_brightness"));
@@ -176,7 +176,7 @@ static int method_getactualbrightness(sd_bus_message *m, void *userdata, sd_bus_
     
     get_udev_device(backlight_interface, "backlight", &ret_error, &dev);
     if (sd_bus_error_is_set(ret_error)) {
-        return -1;
+        return -sd_bus_error_get_errno(ret_error);
     }
     
     x = atoi(udev_device_get_sysattr_value(dev, "actual_brightness"));
@@ -190,7 +190,7 @@ static int method_getactualbrightness(sd_bus_message *m, void *userdata, sd_bus_
 
 #ifndef DISABLE_GAMMA
 static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int temp, r;
+    int temp, r, error = 0;
     
     /* Read the parameters */
     r = sd_bus_message_read(m, "i", &temp);
@@ -199,14 +199,14 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
         return r;
     }
     
-    int ret = set_gamma(temp);
-    if (ret) {
-        if (ret == -EINVAL) {
+    set_gamma(temp, &error);
+    if (error) {
+        if (error == EINVAL) {
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Temperature value should be between 1000 and 10000.");
-        } else if (ret == -ENXIO) {
+        } else if (error == ENXIO) {
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Could not open X screen.");
         }
-        return -1;
+        return -error;
     }
     
     printf("Gamma value set: %d\n", temp);
@@ -216,14 +216,15 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
 }
 
 static int method_getgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int temp = get_gamma();
-    if (temp < 0) {
-        if (temp == -ENXIO) {
+    int error = 0;
+    int temp = get_gamma(&error);
+    if (error) {
+        if (error == ENXIO) {
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Could not open X screen.");
         } else {
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Failed to get screen temperature.");
         }
-        return -1;
+        return -error;
     }
     
     printf("Current gamma value: %d\n", temp);
@@ -237,10 +238,9 @@ static int method_getgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
  * Frames capturing method
  */
 static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int num_frames, r;
+    int num_frames, r, error = 0;
     struct udev_device *dev;
     const char *video_interface;
-    double val;
     
     /* Read the parameters */
     r = sd_bus_message_read(m, "si", &video_interface, &num_frames);
@@ -252,13 +252,17 @@ static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error 
     // if no video device is specified, try to get first matching device
     get_udev_device(video_interface, "video4linux", &ret_error, &dev);
     if (sd_bus_error_is_set(ret_error)) {
-        return -1;
+        return -sd_bus_error_get_errno(ret_error);
     }
     
-    val = capture_frames(udev_device_get_devnode(dev), num_frames);
+    double val = capture_frames(udev_device_get_devnode(dev), num_frames, &error);
+    if (error) {
+        sd_bus_error_set_errno(ret_error, error);
+        udev_device_unref(dev);
+        return -error;
+    }
     
-    printf("Frames captured by %s average brightness value: %lf\n", udev_device_get_sysname(dev), val);
-    
+    printf("%d frames captured by %s. Average brightness value: %lf\n", num_frames, udev_device_get_sysname(dev), val);
     udev_device_unref(dev);
     
     /* Reply with the response */
@@ -296,7 +300,7 @@ static void get_udev_device(const char *backlight_interface, const char *subsyst
         *dev = udev_device_new_from_subsystem_sysname(udev, subsystem, backlight_interface);
     }
     if (!(*dev)) {
-        sd_bus_error_set_const(*ret_error, SD_BUS_ERROR_FILE_NOT_FOUND, "Device does not exist.");
+        sd_bus_error_set_errno(*ret_error, ENODEV);
     }
 }
 

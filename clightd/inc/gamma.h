@@ -11,7 +11,7 @@
 
 #include "commons.h"
 
-int set_gamma(int temp);
-int get_gamma(void);
+void set_gamma(int temp, int *err);
+int get_gamma(int *err);
 
 #endif

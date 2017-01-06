@@ -14,6 +14,6 @@
 
 #include "commons.h"
 
-double capture_frames(const char *interface, int num_frames);
+double capture_frames(const char *interface, int num_frames, int *err);
 
 #endif
