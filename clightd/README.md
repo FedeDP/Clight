@@ -45,7 +45,7 @@ If built with gamma support:
 * *setgamma* -> takes a temperature value (int, between 1000 and 10000) and set display temperature. Returns newly setted display temperature (int).
 
 If built with frame captures support:  
-* *captureframe* -> takes a video sysname (eg: video0). Returns average frame brightness (double).
+* *captureframe* -> takes a video sysname (eg: video0). Returns average frame brightness, between 0.0 and 1.0 (double).
 
 
 **It does only support jpeg screen captures. So, if your webcam does not support jpeg frame captures, you are out of luck, sorry.**
