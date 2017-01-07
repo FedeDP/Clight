@@ -55,6 +55,15 @@ static void init_config(int argc, char *argv[]) {
     init_config_file();
     read_config();
     parse_cmd(argc, argv);
+    
+    /* Reset default values in case of wrong values */
+    if (conf.timeout <= 0) {
+        conf.timeout = 300;
+    }
+    
+    if (conf.num_captures <= 0) {
+        conf.num_captures = 5;
+    }
 }
 
 static void setup_everything(void) {
@@ -277,14 +286,16 @@ static void do_capture(void) {
     }
     
     double drop = 0.0;
-    double val = capture_frames();
-    /* 
-     * if there is an error but quit is 0, 
-     * it means it was an EBUSY error.
-     * Do not leave, but obviously do not set_brightness.
-     */
-    if (!state.quit && !state.error) {
-        drop = set_brightness(val);
+        
+    for (int i = 0; i < conf.num_captures && !state.quit; i++) {
+        state.values[i] = capture_frame();
+    }
+    
+    if (!state.quit) {
+        double new_val = compute_backlight();
+        if (new_val != 0.0) {
+            drop = set_brightness(new_val);
+        }
     }
     
     if (!single_capture_mode && !state.quit) {
@@ -298,8 +309,6 @@ static void do_capture(void) {
             // reset normal timer
             set_timeout(conf.timeout, main_p[TIMER_IX].fd);
         }
-        // reset error field
-        state.error = 0;
     }
 }
 

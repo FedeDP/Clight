@@ -18,7 +18,7 @@ struct config {
 
 struct state {
     int quit;
-    int error; 
+    double *values;
 };
 
 struct state state;

@@ -4,5 +4,6 @@
 
 void init_brightness(void);
 double set_brightness(double perc);
-double capture_frames(void);
+double capture_frame(void);
+double compute_backlight(void);
 void free_brightness(void);

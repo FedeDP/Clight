@@ -14,7 +14,7 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
 static int method_getgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 #endif
 #ifndef DISABLE_FRAME_CAPTURES
-static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_captureframe(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 #endif
 static void get_first_matching_device(struct udev_device **dev, const char *subsystem);
 static void get_udev_device(const char *backlight_interface, const char *subsystem, 
@@ -44,8 +44,8 @@ static const sd_bus_vtable calculator_vtable[] = {
     SD_BUS_METHOD("getgamma", "", "i", method_getgamma, SD_BUS_VTABLE_UNPRIVILEGED),
 #endif
 #ifndef DISABLE_FRAME_CAPTURES
-    // takes: video interface, eg: "/dev/video0" and number of frames to be taken. Returns frames average brightness.
-    SD_BUS_METHOD("captureframes", "si", "d", method_captureframes, SD_BUS_VTABLE_UNPRIVILEGED),
+    // takes: video interface, eg: "/dev/video0". Returns frame average brightness.
+    SD_BUS_METHOD("captureframe", "s", "d", method_captureframe, SD_BUS_VTABLE_UNPRIVILEGED),
 #endif
     SD_BUS_VTABLE_END
 };
@@ -235,15 +235,15 @@ static int method_getgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
 
 #ifndef DISABLE_FRAME_CAPTURES
 /**
- * Frames capturing method
+ * Frame capturing method
  */
-static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int num_frames, r, error = 0;
+static int method_captureframe(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int r, error = 0;
     struct udev_device *dev;
     const char *video_interface;
     
     /* Read the parameters */
-    r = sd_bus_message_read(m, "si", &video_interface, &num_frames);
+    r = sd_bus_message_read(m, "s", &video_interface);
     if (r < 0) {
         fprintf(stderr, "Failed to parse parameters: %s\n", strerror(-r));
         return r;
@@ -255,14 +255,14 @@ static int method_captureframes(sd_bus_message *m, void *userdata, sd_bus_error 
         return -sd_bus_error_get_errno(ret_error);
     }
     
-    double val = capture_frames(udev_device_get_devnode(dev), num_frames, &error);
+    double val = capture_frames(udev_device_get_devnode(dev), &error);
     if (error) {
         sd_bus_error_set_errno(ret_error, error);
         udev_device_unref(dev);
         return -error;
     }
     
-    printf("%d frames captured by %s. Average brightness value: %lf\n", num_frames, udev_device_get_sysname(dev), val);
+    printf("Frame captured by %s. Average brightness value: %lf\n", udev_device_get_sysname(dev), val);
     udev_device_unref(dev);
     
     /* Reply with the response */

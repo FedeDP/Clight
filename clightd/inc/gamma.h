@@ -6,7 +6,6 @@
 #ifndef DISABLE_GAMMA
 
 #include <X11/extensions/Xrandr.h>
-
 #include <math.h>
 
 #include "commons.h"

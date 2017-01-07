@@ -8,23 +8,21 @@ static void init_mmap(void);
 static int xioctl(int request, void *arg);
 static void start_stream(void);
 static void stop_stream(void);
-static void capture_frame(int idx);
+static void capture_frame(void);
 static double compute_brightness(unsigned int length);
-static double compute_backlight(void);
 static void free_all();
 
 struct state {
-    int quit, width, height, device_fd, num_frames, buf_size;
-    double *brightness_value;
+    int quit, width, height, device_fd, buf_size;
+    double brightness_value;
     uint8_t *buffer;
     tjhandle _jpegDecompressor;
 };
 
 static struct state *state;
 
-double capture_frames(const char *interface, int num_frames, int *err) {
-    double val = 0.0;
-    
+double capture_frames(const char *interface, int *err) {
+    double val;
     /* properly initialize struct with all fields to zero-or-null */
     struct state tmp = {0};
     state = &tmp;
@@ -41,33 +39,23 @@ double capture_frames(const char *interface, int num_frames, int *err) {
             goto end;
         }
         
-        state->num_frames = num_frames;
-        state->brightness_value = calloc(state->num_frames, sizeof(double));
         state->_jpegDecompressor = tjInitDecompress();
         
         start_stream();
         if (state->quit) {
             goto end;
         }
-        
-        for (int i = 0; i < state->num_frames; i++) {
-            capture_frame(i);
-            if (state->quit) {
-                break;
-            }
-        }
-        
+        capture_frame();
         stop_stream();
-        
-        if (!state->quit) {
-            val = compute_backlight();
-        }
     }
     
 end:
+    val = state->brightness_value;
+    
     if (state->quit) {
         *err = state->quit;
     }
+
     free_all();
     return val;
 }
@@ -197,7 +185,7 @@ static void stop_stream(void) {
     }
 }
 
-static void capture_frame(int idx) {
+static void capture_frame(void) {
     struct v4l2_buffer buf = {0};
     
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -209,14 +197,7 @@ static void capture_frame(int idx) {
         return;
     }
 
-    state->brightness_value[idx] = compute_brightness(buf.bytesused);
-    
-    // query another buffer only if we did not still reach num_frames
-    if (idx < state->num_frames) {
-        if (-1 == xioctl(VIDIOC_QBUF, &buf)) {
-            perror("Query Buffer");
-        }
-    }
+    state->brightness_value = compute_brightness(buf.bytesused);
 }
 
 static double compute_brightness(unsigned int length) {
@@ -241,37 +222,9 @@ end:
     return brightness / 255;
 }
 
-static double compute_backlight(void) {
-    int lowest = 0, highest = 0;
-    double total = 0.0;
-    
-    for (int i = 0; i < state->num_frames; i++) {
-        if (state->brightness_value[i] < state->brightness_value[lowest]) {
-            lowest = i;
-        } else if (state->brightness_value[i] > state->brightness_value[highest]) {
-            highest = i;
-        }
-        
-        total += state->brightness_value[i];
-    }
-        
-    // total == 0.0 means every captured frame decompression failed
-    if (total != 0.0 && state->num_frames > 2) {
-        // remove highest and lowest values to normalize
-        total -= (state->brightness_value[highest] + state->brightness_value[lowest]);
-        return total / (state->num_frames - 2);
-    }
-        
-    return total / state->num_frames;
-}
-
 static void free_all(void) {
     if (state->device_fd != -1) {
         close(state->device_fd);
-    }
-    
-    if (state->brightness_value) {
-        free(state->brightness_value);
     }
     
     if (state->buffer) {
