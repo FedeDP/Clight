@@ -294,6 +294,7 @@ static void do_capture(void) {
     if (!state.quit) {
         double new_val = compute_backlight();
         if (new_val != 0.0) {
+            printf("Average frames brightness: %lf.\n", new_val);
             drop = set_brightness(new_val);
         }
     }

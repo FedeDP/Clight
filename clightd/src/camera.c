@@ -22,7 +22,6 @@ struct state {
 static struct state *state;
 
 double capture_frames(const char *interface, int *err) {
-    double val;
     /* properly initialize struct with all fields to zero-or-null */
     struct state tmp = {0};
     state = &tmp;
@@ -49,15 +48,13 @@ double capture_frames(const char *interface, int *err) {
         stop_stream();
     }
     
-end:
-    val = state->brightness_value;
-    
+end:    
     if (state->quit) {
         *err = state->quit;
     }
 
     free_all();
-    return val;
+    return tmp.brightness_value;
 }
 
 static void open_device(const char *interface) {
