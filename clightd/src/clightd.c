@@ -275,17 +275,16 @@ static int method_captureframe(sd_bus_message *m, void *userdata, sd_bus_error *
  */
 static void get_first_matching_device(struct udev_device **dev, const char *subsystem) {
     struct udev_enumerate *enumerate;
-    struct udev_list_entry *devices, *dev_list_entry;
+    struct udev_list_entry *devices;
     
     enumerate = udev_enumerate_new(udev);
     udev_enumerate_add_match_subsystem(enumerate, subsystem);
     udev_enumerate_scan_devices(enumerate);
     devices = udev_enumerate_get_list_entry(enumerate);
-    udev_list_entry_foreach(dev_list_entry, devices) {
+    if (devices) {
         const char *path;
-        path = udev_list_entry_get_name(dev_list_entry);
+        path = udev_list_entry_get_name(devices);
         *dev = udev_device_new_from_syspath(udev, path);
-        break;
     }
     /* Free the enumerator object */
     udev_enumerate_unref(enumerate);
