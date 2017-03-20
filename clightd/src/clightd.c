@@ -303,6 +303,26 @@ static void get_udev_device(const char *backlight_interface, const char *subsyst
     }
 }
 
+// https://www.freedesktop.org/software/polkit/docs/0.105/polkit-apps.html
+// static int check_authorization(void) {
+//     sd_bus_error error = SD_BUS_ERROR_NULL;
+//     sd_bus_message *m = NULL;
+//     int r;
+//     
+//     r = sd_bus_call_method(bus,
+//                            "org.freedesktop.PolicyKit1",
+//                            "/org/freedesktop/PolicyKit1/Authority",
+//                            "org.freedesktop.PolicyKit1.Authority",
+//                            "CheckAuthorization",
+//                            &error,
+//                            &m,
+//                            "(sa{sv})sa{ss}us",
+//                            );
+//     
+//     /* Parse the response message */
+//     r = sd_bus_message_read(m, "i", &br.max);
+// }
+
 int main(void) {
     sd_bus_slot *slot = NULL;
     sd_bus *bus = NULL;
