@@ -38,6 +38,7 @@ static void set_timeout(int start, int fd, int flag);
 static void sig_handler(int fd);
 static void do_capture(void);
 static int get_screen_dpms(void);
+static void check_gamma(void);
 static void main_poll(void);
 
 int main(int argc, char *argv[]) {
