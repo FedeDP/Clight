@@ -1,6 +1,15 @@
-TODO:  
+TODO:
 
 - [ ] *clight* fix algorithm to set screen brightness based on ambient brightness   (MID)
-- [ ] *clight* add gamma correction support
-- [ ] *clight* split "print_help" and cmdline getopt from main to their own modules
+- [x] *clight* add gamma correction support
+- [x] *clight* smooth gamma transition (mid)
+- [x] *clight* switch to popt lib to parse cmdline options
+- [ ] *clight* improve gamma transitioning (see FIXME) (HIGH)
+- [ ] *clight* add geoclue dbus api support (HIGH PRIORITY)
+- [x] *clight* add conf file support to specify nightly and daily temperatures (mid)
+- [x] *clight* add getopt support to specify nightly and daily temperatures (mid)
+- [x] *clight* add getopt and conf settings for smooth gamma transitions
+- [ ] *clight* add opt and conf for latitude and longitude
+- [ ] *clight* add a LOG(..) function that logs every printf (mid)
+- [ ] *clight* follow https://github.com/systemd/systemd/issues/5654 (next systemd release?)
 - [ ] *clightd* add polkit checkAuthorization support. (MID) -> this way only active session can affect screen brightness/gamma
