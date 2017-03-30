@@ -14,6 +14,11 @@ struct config {
     int timeout;
     char dev_name[PATH_MAX + 1];
     char screen_path[PATH_MAX + 1];
+    int day_temp;
+    int night_temp;
+    int smooth_transition;
+    double lat;
+    double lon;
 };
 
 struct state {

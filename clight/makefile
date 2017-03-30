@@ -9,8 +9,8 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs libturbojpeg xcb xcb-dpms libconfig libsystemd)
-CFLAGS = $(shell pkg-config --cflags libturbojpeg xcb xcb-dpms libconfig libsystemd)
+LIBS = -lm $(shell pkg-config --libs libturbojpeg xcb xcb-dpms libconfig libsystemd popt)
+CFLAGS = $(shell pkg-config --cflags libturbojpeg xcb xcb-dpms libconfig libsystemd popt)
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
