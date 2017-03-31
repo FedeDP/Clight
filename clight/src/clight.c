@@ -11,7 +11,6 @@
 
 #include "../inc/bus.h"
 #include "../inc/brightness.h"
-#include "../inc/config.h"
 #include "../inc/gamma.h"
 
 #define TIMER_IX 0
@@ -57,8 +56,6 @@ static void init_config(int argc, char *argv[]) {
     conf.night_temp = 4000;
     conf.smooth_transition = 1;
 
-    init_config_file();
-    read_config();
     parse_cmd(argc, argv);
 
     /* Reset default values in case of wrong values */
@@ -111,7 +108,6 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"capture", 'c', POPT_ARG_NONE, &single_capture_mode, 0, "Take a fast capture/screen brightness calibration and quit.", NULL},
         {"frames", 'f', POPT_ARG_INT, &conf.num_captures, 0, "Frames taken for each capture. Defaults to 5.", "Number of frames to be taken."},
         {"timeout", 't', POPT_ARG_INT, &conf.timeout, 0, "Timeout between captures. Defaults to 300.", "Number of seconds between each capture."},
-        {"setup", 's', POPT_ARG_NONE, NULL, 0, "Interactively create a config file.", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used.", "Webcam device to be used."},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used.", "Backlight to be used."},
         {"smooth_transition", 0, POPT_ARG_INT, &conf.smooth_transition, 0, "Whether to enable smooth gamma transition.", "1 enable/0 disable."},

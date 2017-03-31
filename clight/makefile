@@ -9,8 +9,8 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs libturbojpeg xcb xcb-dpms libconfig libsystemd popt)
-CFLAGS = $(shell pkg-config --cflags libturbojpeg xcb xcb-dpms libconfig libsystemd popt)
+LIBS = -lm $(shell pkg-config --libs libturbojpeg xcb xcb-dpms libsystemd popt)
+CFLAGS = $(shell pkg-config --cflags libturbojpeg xcb xcb-dpms libsystemd popt)
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
@@ -44,7 +44,7 @@ install:
 	$(info installing bin.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(BINDIR)"
 	@$(INSTALL_PROGRAM) $(BINNAME) "$(DESTDIR)$(BINDIR)"
-	
+
 	$(info installing systemd unit.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
@@ -52,6 +52,6 @@ install:
 uninstall:
 	$(info uninstalling bin.)
 	@$(RM) "$(DESTDIR)$(BINDIR)/$(BINNAME)"
-	
+
 	$(info uninstalling systemd unit.)
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"
