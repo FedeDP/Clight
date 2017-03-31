@@ -12,13 +12,15 @@
 #include "../inc/bus.h"
 #include "../inc/brightness.h"
 #include "../inc/gamma.h"
+#include "../inc/position.h"
 
 #define TIMER_IX 0
 #define SIGNAL_IX 1
 #define GAMMA_IX 2
+#define POSITION_IX 3
 
 static const int fast_timeout = 15;
-static const int nfds = 3;
+static const int nfds = 4;
 static const double drop_limit = 0.6;
 
 static int dpms_enabled, single_capture_mode;
@@ -113,6 +115,8 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"smooth_transition", 0, POPT_ARG_INT, &conf.smooth_transition, 0, "Whether to enable smooth gamma transition.", "1 enable/0 disable."},
         {"day_temp", 0, POPT_ARG_INT, &conf.day_temp, 0, "Daily gamma temperature.", "Between 1000 and 10000."},
         {"night_temp", 0, POPT_ARG_INT, &conf.night_temp, 0, "Nightly gamma temperature.", "Between 1000 and 10000."},
+        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 0, "Your current latitude.", NULL},
+        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your current longitude.", NULL},
         POPT_AUTOHELP
         {NULL}
     };
@@ -183,15 +187,19 @@ static void set_pollfd(void) {
         state.quit = 1;
         return;
     }
-    // init timerfd for captures, with initial timeout of 3s
-    int capture_timerfd = start_timer(CLOCK_MONOTONIC, 3, 0);
-    // init timerfd for gamma correction, with initial timeout of 1s
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, TFD_TIMER_ABSTIME);
-    if (capture_timerfd == -1 || gamma_timerfd == -1) {
+    // init timerfd for captures, with initial timeout of 1s
+    int capture_timerfd = start_timer(CLOCK_MONOTONIC, 1, 0);
+    int fd = init_position();
+    if (capture_timerfd == -1 || fd == -1) {
+        fprintf(stderr, "%s\n", strerror(errno));
         state.quit = 1;
         return;
     }
 
+    main_p[POSITION_IX] = (struct pollfd) {
+        .fd = fd,
+        .events = POLLIN,
+    };
     main_p[TIMER_IX] = (struct pollfd) {
         .fd = capture_timerfd,
         .events = POLLIN,
@@ -201,7 +209,7 @@ static void set_pollfd(void) {
         .events = POLLIN,
     };
     main_p[GAMMA_IX] = (struct pollfd) {
-        .fd = gamma_timerfd,
+        .fd = -1,
         .events = POLLIN,
     };
 }
@@ -339,10 +347,26 @@ static int get_screen_dpms(void) {
 static void check_gamma(void) {
     struct time t;
 
-    check_gamma_time(45.9, 9.16, &t);
+    check_gamma_time(conf.lat, conf.lon, &t);
     set_screen_temp(t.state);
     printf("Next gamma alarm due to: %s", ctime(&(t.next_alarm)));
     set_timeout(t.next_alarm, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+}
+
+static void on_new_position(void) {
+    // if there was already a gamma timer set, destroy it
+    if (main_p[GAMMA_IX].fd != -1) {
+        close(main_p[GAMMA_IX].fd);
+    }
+    // init timerfd for gamma correction, so we will check new sunset/sunrise timing
+    // based on new location
+    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, TFD_TIMER_ABSTIME);
+    if (gamma_timerfd == -1) {
+        state.quit = 1;
+        return;
+    }
+    main_p[GAMMA_IX].fd = gamma_timerfd;
+    printf("New position received: %.2lf, %.2lf\n", conf.lat, conf.lon);
 }
 
 static void main_poll(void) {
@@ -363,7 +387,7 @@ static void main_poll(void) {
                 switch (i) {
                 case TIMER_IX:
                     /* we received a timer expiration signal on timerfd */
-                    read(main_p[i].fd, &t, 8);
+                    read(main_p[i].fd, &t, sizeof(uint64_t));
                     do_capture();
                     break;
                 case SIGNAL_IX:
@@ -372,8 +396,13 @@ static void main_poll(void) {
                     break;
                 case GAMMA_IX:
                     /* we received a timer expiration for gamma */
-                    read(main_p[i].fd, &t, 8);
+                    read(main_p[i].fd, &t, sizeof(uint64_t));
                     check_gamma();
+                    break;
+                case POSITION_IX:
+                    /* we received a new user position */
+                    read(main_p[i].fd, &t, sizeof(uint64_t));
+                    on_new_position();
                     break;
                 }
                 r--;

@@ -7,15 +7,10 @@ TODO:
 ## Gamma support
 - [x] add gamma correction support
 - [x] smooth gamma transition (mid)
-- [ ] add opt for latitude and longitude
+- [x] add opt for latitude and longitude
 - [ ] improve gamma transitioning (see FIXME) (HIGH)
 - [ ] add geoclue dbus api support (HIGH PRIORITY)
 
 ## Generic
-- [x] switch to popt lib to parse cmdline options
-- [x] drop libconfig
-- [x] add conf file support to specify nightly and daily temperatures (mid)
-- [x] add getopt support to specify nightly and daily temperatures (mid)
-- [x] add getopt and conf settings for smooth gamma transitions
 - [ ] add a LOG(..) function that logs every printf (mid)
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?)

@@ -142,16 +142,20 @@ static int set_temp(int temp) {
     // FIXME: better interface: set a recurring timer on gamma_timerfd every ms that everytime sets old_gamma + 50
     // this way we will not lock clight while sleeping. I think redshift uses something like 100/200ms (ie: transition lasts 5/10s, way too long to lock main thread)
     bus_call(&old_temp, "i", "getgamma", "");
-    do {
-        if (old_temp > temp) {
-            old_temp = old_temp - step < temp ? temp : old_temp - step;
-        } else {
-            old_temp = old_temp + step > temp ? temp : old_temp + step;
-        }
-        bus_call(&new_temp, "i", "setgamma", "i", old_temp);
-        usleep(100000); // 100ms sleep
-    } while (new_temp != temp);
-    printf("%d gamma temp setted.\n", new_temp);
+    if (old_temp != temp) {
+        do {
+            if (old_temp > temp) {
+                old_temp = old_temp - step < temp ? temp : old_temp - step;
+            } else {
+                old_temp = old_temp + step > temp ? temp : old_temp + step;
+            }
+            bus_call(&new_temp, "i", "setgamma", "i", old_temp);
+            usleep(100000); // 100ms sleep
+        } while (new_temp != temp);
+        printf("%d gamma temp setted.\n", new_temp);
+    } else {
+        printf("Gamma temp was already %d\n", temp);
+    }
     return 0;
 }
 
