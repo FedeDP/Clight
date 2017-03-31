@@ -4,6 +4,8 @@ TODO:
 - [x] *clight* add gamma correction support
 - [x] *clight* smooth gamma transition (mid)
 - [x] *clight* switch to popt lib to parse cmdline options
+- [x] *clight* drop libconfig
+- [ ] *clight* less frequent capture during night time (ie 45mins). Very frequent capture at "event" changing (ie: during sunset or sunrise)
 - [ ] *clight* improve gamma transitioning (see FIXME) (HIGH)
 - [ ] *clight* add geoclue dbus api support (HIGH PRIORITY)
 - [x] *clight* add conf file support to specify nightly and daily temperatures (mid)
@@ -12,4 +14,3 @@ TODO:
 - [ ] *clight* add opt and conf for latitude and longitude
 - [ ] *clight* add a LOG(..) function that logs every printf (mid)
 - [ ] *clight* follow https://github.com/systemd/systemd/issues/5654 (next systemd release?)
-- [ ] *clightd* add polkit checkAuthorization support. (MID) -> this way only active session can affect screen brightness/gamma
