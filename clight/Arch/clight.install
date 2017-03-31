@@ -1,8 +1,8 @@
 post_install() {
-	echo '--> On first run, use 'clight -s' to create your user config file.'
-	echo '--> Running setup is not mandatory. By default, first matching webcam and backlight interface are used.'
-	echo '--> Therefore, it should work out of the box even without setup on most cases.'
-	echo '--> Then, remember to enable the unit file shipped (without sudo): systemctl --user enable clight.service'
-	echo '--> Finally, reboot the system.
+    echo '--> By default, first matching webcam and backlight interface are used.'
+	echo '--> Therefore, it should work out of the box even without any setup on most cases.'
+	echo '--> Remember to enable the unit file shipped (without sudo): systemctl --user enable clight.service'
+	echo '--> You can customize cmdline arguments using systemctl --user edit clight.service'
+	echo '--> A reboot is needed to let bus interface be loaded.'
 }
 
