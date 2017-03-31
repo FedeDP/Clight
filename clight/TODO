@@ -1,16 +1,21 @@
 TODO:
 
-- [ ] *clight* fix algorithm to set screen brightness based on ambient brightness   (MID)
-- [x] *clight* add gamma correction support
-- [x] *clight* smooth gamma transition (mid)
-- [x] *clight* switch to popt lib to parse cmdline options
-- [x] *clight* drop libconfig
-- [ ] *clight* less frequent capture during night time (ie 45mins). Very frequent capture at "event" changing (ie: during sunset or sunrise)
-- [ ] *clight* improve gamma transitioning (see FIXME) (HIGH)
-- [ ] *clight* add geoclue dbus api support (HIGH PRIORITY)
-- [x] *clight* add conf file support to specify nightly and daily temperatures (mid)
-- [x] *clight* add getopt support to specify nightly and daily temperatures (mid)
-- [x] *clight* add getopt and conf settings for smooth gamma transitions
-- [ ] *clight* add opt and conf for latitude and longitude
-- [ ] *clight* add a LOG(..) function that logs every printf (mid)
-- [ ] *clight* follow https://github.com/systemd/systemd/issues/5654 (next systemd release?)
+## Screen brightness algorithm
+- [ ] fix algorithm to set screen brightness based on ambient brightness   (MID)
+- [ ] less frequent capture during night time (ie 45mins). Very frequent capture at "event" changing (ie: during sunset or sunrise)
+
+## Gamma support
+- [x] add gamma correction support
+- [x] smooth gamma transition (mid)
+- [ ] add opt for latitude and longitude
+- [ ] improve gamma transitioning (see FIXME) (HIGH)
+- [ ] add geoclue dbus api support (HIGH PRIORITY)
+
+## Generic
+- [x] switch to popt lib to parse cmdline options
+- [x] drop libconfig
+- [x] add conf file support to specify nightly and daily temperatures (mid)
+- [x] add getopt support to specify nightly and daily temperatures (mid)
+- [x] add getopt and conf settings for smooth gamma transitions
+- [ ] add a LOG(..) function that logs every printf (mid)
+- [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?)
