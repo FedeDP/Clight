@@ -220,7 +220,9 @@ static void set_pollfd(void) {
 static void free_everything(void) {
     if (main_p) {
         for (int i = 0; i < nfds; i++) {
-            close(main_p[i].fd);
+            if (main_p[i].fd != -1) {
+                close(main_p[i].fd);
+            }
         }
         free(main_p);
     }
