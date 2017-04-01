@@ -12,12 +12,14 @@
 #include "../inc/bus.h"
 #include "../inc/brightness.h"
 #include "../inc/gamma.h"
-#include "../inc/position.h"
+#include "../inc/location.h"
 
 #define TIMER_IX 0
 #define SIGNAL_IX 1
 #define GAMMA_IX 2
 #define POSITION_IX 3
+
+#define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 
 static const int fast_timeout = 15;
 static const int nfds = 4;
@@ -34,12 +36,13 @@ static void init_dpms(void);
 static int set_signals(void);
 static void set_pollfd(void);
 static void free_everything(void);
-static int start_timer(int clockid, int initial_timeout, int flag);
-static void set_timeout(int start, int fd, int flag);
+static int start_timer(int clockid, int initial_timeout);
+static void set_timeout(int sec, int nsec, int fd, int flag);
 static void sig_handler(int fd);
 static void do_capture(void);
 static int get_screen_dpms(void);
 static void check_gamma(void);
+static void on_new_location(void);
 static void main_poll(void);
 
 int main(int argc, char *argv[]) {
@@ -188,16 +191,23 @@ static void set_pollfd(void) {
         return;
     }
     // init timerfd for captures, with initial timeout of 1s
-    int capture_timerfd = start_timer(CLOCK_MONOTONIC, 1, 0);
-    int fd = init_position();
-    if (capture_timerfd == -1 || fd == -1) {
+    int capture_timerfd = start_timer(CLOCK_MONOTONIC, 1);
+    // init location receiver fd
+    int location_fd = init_location();
+    // init gamma timer disarmed: seconds = 0
+    int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
+    if (capture_timerfd == -1 || location_fd == -1 || gamma_timerfd == -1) {
         fprintf(stderr, "%s\n", strerror(errno));
         state.quit = 1;
         return;
     }
 
+    main_p[GAMMA_IX] = (struct pollfd) {
+        .fd = gamma_timerfd,
+        .events = POLLIN,
+    };
     main_p[POSITION_IX] = (struct pollfd) {
-        .fd = fd,
+        .fd = location_fd,
         .events = POLLIN,
     };
     main_p[TIMER_IX] = (struct pollfd) {
@@ -206,10 +216,6 @@ static void set_pollfd(void) {
     };
     main_p[SIGNAL_IX] = (struct pollfd) {
         .fd = set_signals(),
-        .events = POLLIN,
-    };
-    main_p[GAMMA_IX] = (struct pollfd) {
-        .fd = -1,
         .events = POLLIN,
     };
 }
@@ -239,25 +245,24 @@ static void free_everything(void) {
  * Create timer and returns its fd to
  * the main struct pollfd
  */
-static int start_timer(int clockid, int initial_timeout, int flag) {
+static int start_timer(int clockid, int initial_timeout) {
     int timerfd = timerfd_create(clockid, 0);
     if (timerfd == -1) {
         fprintf(stderr, "could not start timer.\n");
         return -1;
     }
-    // first capture immediately, then every 5min
-    set_timeout(initial_timeout, timerfd, flag);
+    set_timeout(initial_timeout, 0, timerfd, 0);
     return timerfd;
 }
 
 /**
  * Helper to set a new trigger on timerfd in $start seconds
  */
-static void set_timeout(int time, int fd, int flag) {
+static void set_timeout(int sec, int nsec, int fd, int flag) {
     struct itimerspec timerValue = {{0}};
 
-    timerValue.it_value.tv_sec = time;
-    timerValue.it_value.tv_nsec = 0;
+    timerValue.it_value.tv_sec = sec;
+    timerValue.it_value.tv_nsec = nsec;
     timerValue.it_interval.tv_sec = 0;
     timerValue.it_interval.tv_nsec = 0;
     timerfd_settime(fd, flag, &timerValue, NULL);
@@ -291,7 +296,7 @@ static void do_capture(void) {
     // Timeout will increase as screen power management goes deeper.
     if (dpms_enabled && get_screen_dpms() > 0) {
         printf("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        set_timeout(2 * conf.timeout * get_screen_dpms(), main_p[TIMER_IX].fd, 0);
+        set_timeout(2 * conf.timeout * get_screen_dpms(), 0, main_p[TIMER_IX].fd, 0);
         return;
     }
 
@@ -315,10 +320,10 @@ static void do_capture(void) {
         if (fabs(drop) > drop_limit) {
             printf("Weird brightness drop. Recapturing in 15 seconds.\n");
             // single call after 15s
-            set_timeout(fast_timeout, main_p[TIMER_IX].fd, 0);
+            set_timeout(fast_timeout, 0, main_p[TIMER_IX].fd, 0);
         } else {
             // reset normal timer
-            set_timeout(conf.timeout, main_p[TIMER_IX].fd, 0);
+            set_timeout(conf.timeout, 0, main_p[TIMER_IX].fd, 0);
         }
     }
 }
@@ -346,29 +351,33 @@ static int get_screen_dpms(void) {
     return ret;
 }
 
+/*
+ * check current period of time (day or night) and next event (sunrise/sunset).
+ * Then call set_screen_temp on current state.
+ * It returns 0 if: 1) smooth_transition is off, or 2) desired temp has finally been setted (after transitioning).
+ * If it returns 0, reset struct time and set next event timeout.
+ * Else, set a timeout of 200ms for smooth transition.
+ */
 static void check_gamma(void) {
-    struct time t;
+    static struct time t = {0};
 
-    check_gamma_time(conf.lat, conf.lon, &t);
-    set_temp(t.state);
-    printf("Next gamma alarm due to: %s", ctime(&(t.next_alarm)));
-    set_timeout(t.next_alarm, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+    if (t.next_alarm == 0) {
+        check_gamma_time(conf.lat, conf.lon, &t);
+    }
+
+    if (set_screen_temp(t.state) == 0) {
+        printf("Next gamma alarm due to: %s", ctime(&(t.next_alarm)));
+        set_timeout(t.next_alarm, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        memset(&t, 0, sizeof(struct time));
+    } else {
+        // here, set a timeout of 300ms from now
+        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
+    }
 }
 
-static void on_new_position(void) {
-    // if there was already a gamma timer set, destroy it
-    if (main_p[GAMMA_IX].fd != -1) {
-        close(main_p[GAMMA_IX].fd);
-    }
-    // init timerfd for gamma correction, so we will check new sunset/sunrise timing
-    // based on new location
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, TFD_TIMER_ABSTIME);
-    if (gamma_timerfd == -1) {
-        state.quit = 1;
-        return;
-    }
-    main_p[GAMMA_IX].fd = gamma_timerfd;
-    printf("New position received: %.2lf, %.2lf\n", conf.lat, conf.lon);
+static void on_new_location(void) {
+    set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+    printf("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
 }
 
 static void main_poll(void) {
@@ -404,7 +413,7 @@ static void main_poll(void) {
                 case POSITION_IX:
                     /* we received a new user position */
                     read(main_p[i].fd, &t, sizeof(uint64_t));
-                    on_new_position();
+                    on_new_location();
                     break;
                 }
                 r--;

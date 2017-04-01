@@ -8,7 +8,7 @@ TODO:
 - [x] add gamma correction support
 - [x] smooth gamma transition (mid)
 - [x] add opt for latitude and longitude
-- [ ] improve gamma transitioning (see FIXME) (HIGH)
+- [x] improve gamma transitioning (see FIXME) (HIGH)
 - [ ] add geoclue dbus api support (HIGH PRIORITY)
 
 ## Generic

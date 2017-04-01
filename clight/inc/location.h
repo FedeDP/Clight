@@ -2,4 +2,4 @@
 #include <sys/eventfd.h>
 #include <fcntl.h>
 
-int init_position(void);
+int init_location(void);

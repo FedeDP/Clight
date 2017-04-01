@@ -6,6 +6,7 @@ static double  degToRad(const double angleDeg);
 static double radToDeg(const double angleRad);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, const int type, int tomorrow);
+static int set_temp(int temp);
 
 enum types { SUNRISE, SUNSET };
 enum states { DAY, NIGHT };
@@ -135,30 +136,46 @@ void check_gamma_time(const float lat, const float lon, struct time *t) {
     }
 }
 
-int set_temp(int temp) {
+static int set_temp(int temp) {
     const int step = 50;
-    int new_temp, old_temp;
+    int new_temp;
+    static int old_temp = 0;
 
-    // FIXME: better interface: set a recurring timer on gamma_timerfd every ms that everytime sets old_gamma + 50
-    // this way we will not lock clight while sleeping. I think redshift uses something like 100/200ms (ie: transition lasts 5/10s, way too long to lock main thread)
-    bus_call(&old_temp, "i", "getgamma", "");
+    if (old_temp == 0) {
+        bus_call(&old_temp, "i", "getgamma", "");
+    }
+
     if (old_temp != temp) {
         if (conf.smooth_transition) {
-            do {
-                if (old_temp > temp) {
+            if (old_temp > temp) {
                     old_temp = old_temp - step < temp ? temp : old_temp - step;
                 } else {
                     old_temp = old_temp + step > temp ? temp : old_temp + step;
                 }
                 bus_call(&new_temp, "i", "setgamma", "i", old_temp);
-                usleep(100000); // 100ms sleep
-            } while (new_temp != temp);
         } else {
+            // reset old_temp
+            old_temp = 0;
             bus_call(&new_temp, "i", "setgamma", "i", temp);
         }
         printf("%d gamma temp setted.\n", new_temp);
     } else {
+        // reset old_temp
+        old_temp = 0;
+        new_temp = temp;
         printf("Gamma temp was already %d\n", temp);
     }
-    return 0;
+    return new_temp != temp;
+}
+
+
+int set_screen_temp(int status) {
+    switch (status) {
+        case DAY:
+            return set_temp(conf.day_temp);
+        case NIGHT:
+            return set_temp(conf.night_temp);
+        default:
+            return -1;
+    }
 }

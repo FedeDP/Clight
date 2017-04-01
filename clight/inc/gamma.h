@@ -10,4 +10,4 @@ struct time {
 };
 
 void check_gamma_time(const float lat, const float lon, struct time *t);
-int set_temp(int temp);
+int set_screen_temp(int status);

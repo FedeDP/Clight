@@ -1,7 +1,7 @@
-#include "../inc/position.h"
+#include "../inc/location.h"
 
 /* Skeleton for our future interface that will use geoclue */
-int init_position(void) {
+int init_location(void) {
     // fd used to notify main poll that a new position has been received
     int position_fd = -1;
 
