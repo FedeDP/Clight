@@ -350,7 +350,7 @@ static void check_gamma(void) {
     struct time t;
 
     check_gamma_time(conf.lat, conf.lon, &t);
-    set_screen_temp(t.state);
+    set_temp(t.state);
     printf("Next gamma alarm due to: %s", ctime(&(t.next_alarm)));
     set_timeout(t.next_alarm, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
 }

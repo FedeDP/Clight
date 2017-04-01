@@ -135,7 +135,7 @@ void check_gamma_time(const float lat, const float lon, struct time *t) {
     }
 }
 
-static int set_temp(int temp) {
+int set_temp(int temp) {
     const int step = 50;
     int new_temp, old_temp;
 
@@ -161,15 +161,4 @@ static int set_temp(int temp) {
         printf("Gamma temp was already %d\n", temp);
     }
     return 0;
-}
-
-int set_screen_temp(int status) {
-    switch (status) {
-        case DAY:
-            return set_temp(conf.day_temp);
-        case NIGHT:
-            return set_temp(conf.night_temp);
-        default:
-            return -1;
-    }
 }
