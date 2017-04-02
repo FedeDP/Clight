@@ -2,6 +2,9 @@
 
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 
+/*
+ * Open our bus
+ */
 void init_bus(void) {
     int r = sd_bus_open_system(&bus);
     if (r < 0) {
@@ -10,6 +13,11 @@ void init_bus(void) {
     }
 }
 
+/*
+ * Calls a method on bus and store its result of type userptr_type in userptr.
+ * Note that this is a variadic function and will correctly handle 's' and 'i' signature types.
+ * Follow: https://github.com/systemd/systemd/issues/5654 (i need to propose a patch there)
+ */
 void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
@@ -72,6 +80,9 @@ finish:
     free_bus_structs(&error, m, reply);
 }
 
+/*
+ * Add a match on bus on certain signal for cb callback
+ */
 void add_match(const struct bus_args *a, int (*cb) (sd_bus_message *, void *, sd_bus_error *)) {
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal',interface='%s', member='%s', path='%s'", a->interface, a->member, a->path);
@@ -79,6 +90,9 @@ void add_match(const struct bus_args *a, int (*cb) (sd_bus_message *, void *, sd
     check_err(r, NULL);
 }
 
+/*
+ * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
+ */
 void set_property(const struct bus_args *a, const char type, const char *value) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
@@ -98,6 +112,9 @@ void set_property(const struct bus_args *a, const char type, const char *value) 
     free_bus_structs(&error, NULL, NULL);
 }
 
+/*
+ * Get a property of type "type" into userptr.
+ */
 void get_property(const struct bus_args *a, const char *type, void *userptr) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
@@ -122,6 +139,9 @@ finish:
     free_bus_structs(&error, m, NULL);
 }
 
+/*
+ * Free used resources.
+ */
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply) {
     if (err) {
         sd_bus_error_free(err);
@@ -136,10 +156,15 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
     }
 }
 
+/*
+ * Check any error. Do not leave for EBUSY errors.
+ */
 int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
         if (err->message) {
             fprintf(stderr, "%s\n", err->message);
+        } else {
+            fprintf(stderr, "%s\n", strerror(-r));
         }
         /* Don't leave for ebusy errors */
         if (r != -EBUSY) {
@@ -149,6 +174,9 @@ int check_err(int r, sd_bus_error *err) {
     return r < 0;
 }
 
+/*
+ * Close bus.
+ */
 void destroy_bus(void) {
     if (bus) {
         sd_bus_flush_close_unref(bus);

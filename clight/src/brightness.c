@@ -3,6 +3,9 @@
 static void get_max_brightness(void);
 static void get_current_brightness(void);
 
+/*
+ * Storage struct for our needed variables.
+ */
 struct brightness {
     int current;
     int max;
@@ -11,6 +14,9 @@ struct brightness {
 
 static struct brightness br;
 
+/*
+ * Init brightness values (max and current)
+ */
 void init_brightness(void) {
     get_max_brightness();
     if (!state.quit) {
@@ -53,7 +59,11 @@ double capture_frame(void) {
     return brightness;
 }
 
-double compute_backlight(void) {
+/*
+ * Compute average captured frames brightness.
+ * It will normalize data removing highest and lowest values.
+ */
+double compute_avg_brightness(void) {
     int lowest = 0, highest = 0;
     double total = 0.0;
 

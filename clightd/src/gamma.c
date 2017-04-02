@@ -28,38 +28,38 @@ static const struct { float r; float g; float b; } whitepoints[] = {
 
 void set_gamma(int temp, int *err) {
     Display *dpy = XOpenDisplay(NULL);
-    
+
     if (dpy == NULL) {
         *err = ENXIO;
         return;
     }
-    
+
     int screen = DefaultScreen(dpy);
     Window root = RootWindow(dpy, screen);
-    
+
     XRRScreenResources *res = XRRGetScreenResourcesCurrent(dpy, root);
-    
+
     if (temp < 1000 || temp > 10000) {
         *err = EINVAL;
         return;
     }
-    
+
     temp -= 1000;
     double ratio = temp % 500 / 500.0;
-    
+
 #define AVG(c) whitepoints[temp / 500].c * (1 - ratio) + whitepoints[temp / 500 + 1].c * ratio
 
     double gammar = AVG(r);
     double gammag = AVG(g);
     double gammab = AVG(b);
-    
+
     for (int i = 0; i < res->ncrtc; i++) {
         int crtcxid = res->crtcs[i];
-        
+
         int size = XRRGetCrtcGammaSize(dpy, crtcxid);
-        
+
         XRRCrtcGamma *crtc_gamma = XRRAllocGamma(size);
-        
+
         for (int j = 0; j < size; j++) {
             double g = 65535.0 * j / size;
             crtc_gamma->red[j] = g * gammar;
@@ -69,7 +69,7 @@ void set_gamma(int temp, int *err) {
         XRRSetCrtcGamma(dpy, crtcxid, crtc_gamma);
         XFree(crtc_gamma);
     }
-    
+
     XCloseDisplay(dpy);
 }
 
@@ -82,9 +82,9 @@ int get_gamma(int *err) {
     }
     int screen = DefaultScreen(dpy);
     Window root = RootWindow(dpy, screen);
-    
+
     XRRScreenResources *res = XRRGetScreenResourcesCurrent(dpy, root);
-    
+
     if (res->ncrtc > 0) {
         XRRCrtcGamma *crtc_gamma = XRRGetCrtcGamma(dpy, res->crtcs[0]);
         int size = crtc_gamma->size;
@@ -97,20 +97,19 @@ int get_gamma(int *err) {
                 // at least second decimal digit is different, given our table
                 if ((fabs(whitepoints[i].g - gammag) < distance) && (fabs(whitepoints[i].b - gammab) < distance)) {
                     temp = (i * 500) + 1000;
-                    break;
                 }
             }
         }
-        
+
         XFree(crtc_gamma);
     }
-    
-    if (temp == 0) {
+
+    if (temp == 0 || temp == -1) {
         *err = 1;
     }
-    
+
     XCloseDisplay(dpy);
-    
+
 end:
     return temp;
 }

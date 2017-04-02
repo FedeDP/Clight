@@ -6,10 +6,8 @@ static double  degToRad(const double angleDeg);
 static double radToDeg(const double angleRad);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, const int type, int tomorrow);
-static int set_temp(int temp);
 
 enum types { SUNRISE, SUNSET };
-enum states { DAY, NIGHT };
 
 /* Convert degrees to radians */
 static double  degToRad(double angleDeg) {
@@ -25,6 +23,10 @@ static float to_hours(const float rad) {
     return rad / 15.0;// 360 degree / 24 hours = 15 degrees/h
 }
 
+/*
+ * Just a small function to compute sunset/sunrise for today (or tomorrow).
+ * See: http://stackoverflow.com/questions/7064531/sunrise-sunset-times-in-c
+ */
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, const int type, int tomorrow) {
     // 1. compute the day of the year (timeinfo->tm_yday below)
     time(tt);
@@ -112,7 +114,14 @@ static int calculate_sunset(const float lat, const float lng, time_t *tt, int to
     return calculate_sunrise_sunset(lat, lng, tt, SUNSET, tomorrow);
 }
 
-void check_gamma_time(const float lat, const float lon, struct time *t) {
+/*
+ * Tries to understand next event:
+ * first computes today's sunrise and sunset.
+ * If now is < sunrise, next event is today's sunrise and we're during the night.
+ * Otherwise, if now is < sunset, we're during the day and next event is sunset.
+ * Else, next event will be tomorrow's sunrise and we're in night time.
+ */
+time_t get_next_gamma_alarm(const float lat, const float lon) {
     time_t sunrise, sunset, now;
     int ret_sunrise, ret_sunset;
 
@@ -123,20 +132,27 @@ void check_gamma_time(const float lat, const float lon, struct time *t) {
 
     // if sunrise time is after now, set next alarm
     if (ret_sunrise == 0 && sunrise > now) {
-        t->state = NIGHT;
-        t->next_alarm = sunrise;
-    } else if (ret_sunset == 0 && sunset > now) {
-        t->state = DAY;
-        t->next_alarm = sunset;
-    } else {
-        // we are after sunset time for today. Let's check tomorrow's sunrise
-        calculate_sunrise(lat, lon, &sunrise, 1);
-        t->state = NIGHT;
-        t->next_alarm = sunrise;
+        state.time = NIGHT;
+        return sunrise;
     }
+    if (ret_sunset == 0 && sunset > now) {
+        state.time = DAY;
+        return sunset;
+    }
+    // we are after sunset time for today. Let's check tomorrow's sunrise
+    calculate_sunrise(lat, lon, &sunrise, 1);
+    state.time = NIGHT;
+    return sunrise;
 }
 
-static int set_temp(int temp) {
+/*
+ * First, it gets current gamma value.
+ * Then, if current value is != from temp, it will adjust screen temperature accordingly.
+ * If smooth_transition is enabled, the function will return 1 until they are the same.
+ * old_temp is static so we don't have to call getgamma everytime the function is called (if smooth_transition is enabled.)
+ * and gets resetted when old_temp reaches correct temp.
+ */
+int set_temp(int temp) {
     const int step = 50;
     int new_temp;
     static int old_temp = 0;
@@ -145,6 +161,9 @@ static int set_temp(int temp) {
         struct bus_args args_get = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "getgamma"};
 
         bus_call(&old_temp, "i", &args_get, "");
+        if (state.quit) {
+            return -1;
+        }
     }
 
     if (old_temp != temp) {
@@ -156,12 +175,12 @@ static int set_temp(int temp) {
                 } else {
                     old_temp = old_temp + step > temp ? temp : old_temp + step;
                 }
-                temp = old_temp;
+                bus_call(&new_temp, "i", &args_set, "i", old_temp);
         } else {
             // reset old_temp for next call
             old_temp = 0;
+            bus_call(&new_temp, "i", &args_set, "i", temp);
         }
-        bus_call(&new_temp, "i", &args_set, "i", temp);
         printf("%d gamma temp setted.\n", new_temp);
     } else {
         // reset old_temp
@@ -170,16 +189,4 @@ static int set_temp(int temp) {
         printf("Gamma temp was already %d\n", temp);
     }
     return new_temp != temp;
-}
-
-
-int set_screen_temp(int status) {
-    switch (status) {
-        case DAY:
-            return set_temp(conf.day_temp);
-        case NIGHT:
-            return set_temp(conf.night_temp);
-        default:
-            return -1;
-    }
 }

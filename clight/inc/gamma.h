@@ -4,10 +4,5 @@
 
 #include "bus.h"
 
-struct time {
-    time_t next_alarm;
-    int state;
-};
-
-void check_gamma_time(const float lat, const float lon, struct time *t);
-int set_screen_temp(int status);
+time_t get_next_gamma_alarm(const float lat, const float lon);
+int set_temp(int temp);

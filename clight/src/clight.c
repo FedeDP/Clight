@@ -14,20 +14,12 @@
 #include "../inc/gamma.h"
 #include "../inc/location.h"
 
-#define TIMER_IX 0
+#define CAPTURE_IX 0
 #define SIGNAL_IX 1
 #define GAMMA_IX 2
 #define LOCATION_IX 3
 
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
-
-static const int fast_timeout = 15;
-static const int nfds = 4;
-static const double drop_limit = 0.6;
-
-static int dpms_enabled, single_capture_mode;
-static struct pollfd *main_p;
-static xcb_connection_t *connection;
 
 static void init_config(int argc, char *argv[]);
 static void setup_everything(void);
@@ -45,6 +37,14 @@ static void check_gamma(void);
 static void on_new_location(void);
 static void main_poll(void);
 
+static const int fast_timeout = 15;
+static const int nfds = 4;
+static const double drop_limit = 0.6;
+
+static int dpms_enabled, single_capture_mode;
+static struct pollfd *main_p;
+static xcb_connection_t *connection;
+
 int main(int argc, char *argv[]) {
     init_config(argc, argv);
     setup_everything();
@@ -53,20 +53,29 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+/*
+ * Init default config values and parse cmdline args through popt lib.
+ */
 static void init_config(int argc, char *argv[]) {
     // default values
     conf.num_captures = 5;
-    conf.timeout = 300;
-    conf.day_temp = 6500;
-    conf.night_temp = 4000;
+    conf.timeout[DAY] = 10 * 60; // 10 mins
+    conf.timeout[NIGHT] = 45 * 60; // 45 mins
+    conf.temp[DAY] = 6500;
+    conf.temp[NIGHT] = 4000;
     conf.smooth_transition = 1;
 
     parse_cmd(argc, argv);
 
     /* Reset default values in case of wrong values */
-    if (conf.timeout <= 0) {
-        fprintf(stderr, "Wrong timeout value. Resetting default value.\n");
-        conf.timeout = 300;
+    if (conf.timeout[DAY] <= 0) {
+        fprintf(stderr, "Wrong day timeout value. Resetting default value.\n");
+        conf.timeout[DAY] = 10 * 60;
+    }
+
+    if (conf.timeout[NIGHT] <= 0) {
+        fprintf(stderr, "Wrong night timeout value. Resetting default value.\n");
+        conf.timeout[NIGHT] = 45 * 60;
     }
 
     if (conf.num_captures <= 0) {
@@ -74,24 +83,26 @@ static void init_config(int argc, char *argv[]) {
         conf.num_captures = 5;
     }
 
-    if (conf.day_temp < 1000 || conf.day_temp > 10000) {
+    if (conf.temp[DAY] < 1000 || conf.temp[DAY] > 10000) {
         fprintf(stderr, "Wrong daily temp value. Resetting default value.\n");
-        conf.day_temp = 6500;
+        conf.temp[DAY] = 6500;
     }
 
-    if (conf.night_temp < 1000 || conf.night_temp > 10000) {
+    if (conf.temp[NIGHT] < 1000 || conf.temp[NIGHT] > 10000) {
         fprintf(stderr, "Wrong nightly temp value. Resetting default value.\n");
-        conf.night_temp = 4000;
+        conf.temp[NIGHT] = 4000;
     }
 }
 
+/*
+ * Create every needed struct/variable.
+ */
 static void setup_everything(void) {
     if (!state.quit) {
         init_bus();
         if (!state.quit) {
             init_brightness();
             if (!state.quit) {
-                printf("Using %d frames captures with timeout %d.\n", conf.num_captures, conf.timeout);
                 if (single_capture_mode) {
                     do_capture();
                     state.quit = 1;
@@ -112,12 +123,13 @@ static void parse_cmd(int argc, char *const argv[]) {
     struct poptOption po[] = {
         {"capture", 'c', POPT_ARG_NONE, &single_capture_mode, 0, "Take a fast capture/screen brightness calibration and quit.", NULL},
         {"frames", 'f', POPT_ARG_INT, &conf.num_captures, 0, "Frames taken for each capture. Defaults to 5.", "Number of frames to be taken."},
-        {"timeout", 't', POPT_ARG_INT, &conf.timeout, 0, "Timeout between captures. Defaults to 300.", "Number of seconds between each capture."},
+        {"day_timeout", 0, POPT_ARG_INT, &conf.timeout[DAY], 0, "Timeout between captures during the day. Defaults to 10mins.", "Number of seconds between each capture."},
+        {"night_timeout", 0, POPT_ARG_INT, &conf.timeout[NIGHT], 0, "Timeout between captures during the night. Defaults to 45mins.", "Number of seconds between each capture."},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used.", "Webcam device to be used."},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used.", "Backlight to be used."},
         {"smooth_transition", 0, POPT_ARG_INT, &conf.smooth_transition, 0, "Whether to enable smooth gamma transition.", "1 enable/0 disable."},
-        {"day_temp", 0, POPT_ARG_INT, &conf.day_temp, 0, "Daily gamma temperature.", "Between 1000 and 10000."},
-        {"night_temp", 0, POPT_ARG_INT, &conf.night_temp, 0, "Nightly gamma temperature.", "Between 1000 and 10000."},
+        {"day_temp", 0, POPT_ARG_INT, &conf.temp[DAY], 0, "Daily gamma temperature.", "Between 1000 and 10000."},
+        {"night_temp", 0, POPT_ARG_INT, &conf.temp[NIGHT], 0, "Nightly gamma temperature.", "Between 1000 and 10000."},
         {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 0, "Your current latitude.", NULL},
         {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your current longitude.", NULL},
         POPT_AUTOHELP
@@ -210,7 +222,7 @@ static void set_pollfd(void) {
         .fd = location_fd,
         .events = POLLIN,
     };
-    main_p[TIMER_IX] = (struct pollfd) {
+    main_p[CAPTURE_IX] = (struct pollfd) {
         .fd = capture_timerfd,
         .events = POLLIN,
     };
@@ -221,7 +233,7 @@ static void set_pollfd(void) {
 }
 
 /**
- * Free every resource used
+ * Free every used resource
  */
 static void free_everything(void) {
     if (main_p) {
@@ -298,7 +310,7 @@ static void do_capture(void) {
     // Timeout will increase as screen power management goes deeper.
     if (dpms_enabled && get_screen_dpms() > 0) {
         printf("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        set_timeout(2 * conf.timeout * get_screen_dpms(), 0, main_p[TIMER_IX].fd, 0);
+        set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[CAPTURE_IX].fd, 0);
         return;
     }
 
@@ -309,7 +321,7 @@ static void do_capture(void) {
     }
 
     if (!state.quit) {
-        double new_val = compute_backlight();
+        double new_val = compute_avg_brightness();
         if (new_val != 0.0) {
             printf("Average frames brightness: %lf.\n", new_val);
             drop = set_brightness(new_val);
@@ -322,10 +334,10 @@ static void do_capture(void) {
         if (fabs(drop) > drop_limit) {
             printf("Weird brightness drop. Recapturing in 15 seconds.\n");
             // single call after 15s
-            set_timeout(fast_timeout, 0, main_p[TIMER_IX].fd, 0);
+            set_timeout(fast_timeout, 0, main_p[CAPTURE_IX].fd, 0);
         } else {
             // reset normal timer
-            set_timeout(conf.timeout, 0, main_p[TIMER_IX].fd, 0);
+            set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
         }
     }
 }
@@ -355,28 +367,37 @@ static int get_screen_dpms(void) {
 
 /*
  * check current period of time (day or night) and next event (sunrise/sunset).
- * Then call set_screen_temp on current state.
- * It returns 0 if: 1) smooth_transition is off, or 2) desired temp has finally been setted (after transitioning).
- * If it returns 0, reset struct time and set next event timeout.
- * Else, set a timeout of 200ms for smooth transition.
+ * Then call set_temp with correct temp, given current state(night or day).
+ * It returns 0 if: smooth_transition is off or desired temp has finally been setted (after transitioning).
+ * If it returns 0, reset time_t value and set next event timeout.
+ * Else, set a timeout for smooth transition.
  */
 static void check_gamma(void) {
-    static struct time t = {0};
+    static time_t t = {0};
 
-    if (t.next_alarm == 0) {
-        check_gamma_time(conf.lat, conf.lon, &t);
+    if (t == 0) {
+        t = get_next_gamma_alarm(conf.lat, conf.lon);
     }
 
-    if (set_screen_temp(t.state) == 0) {
-        printf("Next gamma alarm due to: %s", ctime(&(t.next_alarm)));
-        set_timeout(t.next_alarm, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
-        memset(&t, 0, sizeof(struct time));
+    int ret = set_temp(conf.temp[state.time]);
+    if (state.quit) {
+        return;
+    }
+
+    if (ret == 0) {
+        printf("Next gamma alarm due to: %s", ctime(&(t)));
+        set_timeout(t, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        memset(&t, 0, sizeof(time_t));
     } else {
         // here, set a timeout of 300ms from now
         set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
     }
 }
 
+/*
+ * When a new location is received, reset GAMMA timer to now + 1sec;
+ * this way, check_gamma will be called and it will correctly set new timer.
+ */
 static void on_new_location(void) {
     set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
     printf("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
@@ -398,7 +419,7 @@ static void main_poll(void) {
         for (int i = 0; i < nfds && r > 0; i++) {
             if (main_p[i].revents & POLLIN) {
                 switch (i) {
-                case TIMER_IX:
+                case CAPTURE_IX:
                     /* we received a timer expiration signal on timerfd */
                     read(main_p[i].fd, &t, sizeof(uint64_t));
                     do_capture();
