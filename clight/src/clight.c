@@ -193,7 +193,7 @@ static void set_pollfd(void) {
     // init timerfd for captures, with initial timeout of 1s
     int capture_timerfd = start_timer(CLOCK_MONOTONIC, 1);
     // init location receiver fd
-    int location_fd = init_location(on_new_location);
+    int location_fd = init_location();
     // init gamma timer disarmed: seconds = 0
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
     if (capture_timerfd == -1 || location_fd == -1 || gamma_timerfd == -1) {
@@ -417,8 +417,10 @@ static void main_poll(void) {
                     if (!is_geoclue()) {
                         // it is not from a bus signal!
                         read(main_p[i].fd, &t, sizeof(uint64_t));
+                    } else {
+                        sd_bus_process(bus, NULL);
                     }
-                    update_location();
+                    on_new_location();
                     break;
                 }
                 r--;

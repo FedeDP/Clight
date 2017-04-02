@@ -158,7 +158,7 @@ static int set_temp(int temp) {
                 }
                 temp = old_temp;
         } else {
-            // reset old_temp
+            // reset old_temp for next call
             old_temp = 0;
         }
         bus_call(&new_temp, "i", &args_set, "i", temp);

@@ -13,7 +13,6 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
-void (*new_location_cb) (void);
 
 /*
  * init location:
@@ -27,9 +26,7 @@ void (*new_location_cb) (void);
  *
  * Moreover, it stores a callback to be called on updated location event.
  */
-int init_location(void (*cb) (void)) {
-    new_location_cb = cb;
-
+int init_location(void) {
     if (conf.lat != 0 && conf.lon != 0) {
         return location_conf_init();
     }
@@ -109,16 +106,6 @@ static void geoclue_check_initial_location(void) {
                             "LocationUpdated", "oo", loc_obj, loc_obj);
         check_err(r, NULL);
     }
-}
-
-/*
- * Called from main loop when an event on LOCATION_IX happens.
- */
-void update_location(void) {
-    if (is_geoclue()) {
-        sd_bus_process(bus, NULL);
-    }
-    new_location_cb();
 }
 
 /*

@@ -11,7 +11,7 @@ TODO:
 - [x] improve gamma transitioning (see FIXME) (HIGH)
 - [x] add geoclue dbus api support (HIGH PRIORITY)
 - [x] fix initial wrong bus_process calls
-- [ ] geoclue2 runtime check
+- [ ] geoclue2 runtime check (if it is missing, print an error and disable gamma support)
 - [x] add a struct in bus.h to create a {service, interface, method} triplet
 
 ## Generic
