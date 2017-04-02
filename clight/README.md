@@ -13,7 +13,8 @@ Current features:
 * external signals catching (sigint/sigterm)
 * dpms support: it will check current screen powersave level and won't do anything if screen is currently off.
 * a single capture mode from cmdline
-* gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does). STILL WIP.
+* gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does).
+* geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates.
 
 For cmdline options, check clight [-?|--help] [--usage].
 

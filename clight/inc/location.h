@@ -1,5 +1,6 @@
 #include "../inc/bus.h"
-#include <sys/eventfd.h>
-#include <fcntl.h>
 
-int init_location(void);
+int init_location(void (*cb) (void));
+void update_location(void);
+void destroy_geoclue(void);
+int is_geoclue(void);

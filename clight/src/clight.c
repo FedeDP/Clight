@@ -17,7 +17,7 @@
 #define TIMER_IX 0
 #define SIGNAL_IX 1
 #define GAMMA_IX 2
-#define POSITION_IX 3
+#define LOCATION_IX 3
 
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 
@@ -193,7 +193,7 @@ static void set_pollfd(void) {
     // init timerfd for captures, with initial timeout of 1s
     int capture_timerfd = start_timer(CLOCK_MONOTONIC, 1);
     // init location receiver fd
-    int location_fd = init_location();
+    int location_fd = init_location(on_new_location);
     // init gamma timer disarmed: seconds = 0
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
     if (capture_timerfd == -1 || location_fd == -1 || gamma_timerfd == -1) {
@@ -206,7 +206,7 @@ static void set_pollfd(void) {
         .fd = gamma_timerfd,
         .events = POLLIN,
     };
-    main_p[POSITION_IX] = (struct pollfd) {
+    main_p[LOCATION_IX] = (struct pollfd) {
         .fd = location_fd,
         .events = POLLIN,
     };
@@ -225,7 +225,8 @@ static void set_pollfd(void) {
  */
 static void free_everything(void) {
     if (main_p) {
-        for (int i = 0; i < nfds; i++) {
+        // nfds - geoclue -> because we should not close last fd if it points to a sd_bus_fd
+        for (int i = 0; i < nfds - is_geoclue(); i++) {
             if (main_p[i].fd != -1) {
                 close(main_p[i].fd);
             }
@@ -233,6 +234,7 @@ static void free_everything(void) {
         free(main_p);
     }
 
+    destroy_geoclue();
     destroy_bus();
     free_brightness();
 
@@ -410,10 +412,13 @@ static void main_poll(void) {
                     read(main_p[i].fd, &t, sizeof(uint64_t));
                     check_gamma();
                     break;
-                case POSITION_IX:
+                case LOCATION_IX:
                     /* we received a new user position */
-                    read(main_p[i].fd, &t, sizeof(uint64_t));
-                    on_new_location();
+                    if (!is_geoclue()) {
+                        // it is not from a bus signal!
+                        read(main_p[i].fd, &t, sizeof(uint64_t));
+                    }
+                    update_location();
                     break;
                 }
                 r--;

@@ -142,22 +142,26 @@ static int set_temp(int temp) {
     static int old_temp = 0;
 
     if (old_temp == 0) {
-        bus_call(&old_temp, "i", "getgamma", "");
+        struct bus_args args_get = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "getgamma"};
+
+        bus_call(&old_temp, "i", &args_get, "");
     }
 
     if (old_temp != temp) {
+        struct bus_args args_set = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "setgamma"};
+
         if (conf.smooth_transition) {
             if (old_temp > temp) {
                     old_temp = old_temp - step < temp ? temp : old_temp - step;
                 } else {
                     old_temp = old_temp + step > temp ? temp : old_temp + step;
                 }
-                bus_call(&new_temp, "i", "setgamma", "i", old_temp);
+                temp = old_temp;
         } else {
             // reset old_temp
             old_temp = 0;
-            bus_call(&new_temp, "i", "setgamma", "i", temp);
         }
+        bus_call(&new_temp, "i", &args_set, "i", temp);
         printf("%d gamma temp setted.\n", new_temp);
     } else {
         // reset old_temp
