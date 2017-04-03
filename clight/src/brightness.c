@@ -46,7 +46,7 @@ double set_brightness(double perc) {
 
     bus_call(&br.current, "i", &args, "si", conf.screen_path, (int) (br.max * perc));
     if (br.current != -1) {
-        printf("New brightness value: %d\n", br.current);
+        INFO("New brightness value: %d\n", br.current);
     }
     return (double)(br.current - br.old) / br.max;
 }

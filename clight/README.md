@@ -15,6 +15,7 @@ Current features:
 * a single capture mode from cmdline
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does).
 * geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates.
+* different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable.)
 
 For cmdline options, check clight [-?|--help] [--usage].
 

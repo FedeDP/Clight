@@ -5,7 +5,6 @@
 #include <sys/signalfd.h>
 #include <signal.h>
 #include <sys/timerfd.h>
-#include <math.h>
 #include <xcb/dpms.h>
 #include <popt.h>
 
@@ -37,19 +36,19 @@ static void check_gamma(void);
 static void on_new_location(void);
 static void main_poll(void);
 
-static const int fast_timeout = 15;
 static const int nfds = 4;
-static const double drop_limit = 0.6;
 
 static int dpms_enabled, single_capture_mode;
 static struct pollfd *main_p;
 static xcb_connection_t *connection;
 
 int main(int argc, char *argv[]) {
+    open_log();
     init_config(argc, argv);
     setup_everything();
     main_poll();
     free_everything();
+    close_log();
     return 0;
 }
 
@@ -67,31 +66,37 @@ static void init_config(int argc, char *argv[]) {
 
     parse_cmd(argc, argv);
 
-    /* Reset default values in case of wrong values */
+    /*
+     * Reset default values in case of wrong values
+     * Keep in mind that here log file is not yet initialized, so
+     * ERROR will only print to stderr.
+     */
     if (conf.timeout[DAY] <= 0) {
-        fprintf(stderr, "Wrong day timeout value. Resetting default value.\n");
+        ERROR("Wrong day timeout value. Resetting default value.\n");
         conf.timeout[DAY] = 10 * 60;
     }
 
     if (conf.timeout[NIGHT] <= 0) {
-        fprintf(stderr, "Wrong night timeout value. Resetting default value.\n");
+        ERROR("Wrong night timeout value. Resetting default value.\n");
         conf.timeout[NIGHT] = 45 * 60;
     }
 
     if (conf.num_captures <= 0) {
-        fprintf(stderr, "Wrong frames value. Resetting default value.\n");
+        ERROR("Wrong frames value. Resetting default value.\n");
         conf.num_captures = 5;
     }
 
     if (conf.temp[DAY] < 1000 || conf.temp[DAY] > 10000) {
-        fprintf(stderr, "Wrong daily temp value. Resetting default value.\n");
+        ERROR("Wrong daily temp value. Resetting default value.\n");
         conf.temp[DAY] = 6500;
     }
 
     if (conf.temp[NIGHT] < 1000 || conf.temp[NIGHT] > 10000) {
-        fprintf(stderr, "Wrong nightly temp value. Resetting default value.\n");
+        ERROR("Wrong nightly temp value. Resetting default value.\n");
         conf.temp[NIGHT] = 4000;
     }
+
+    log_conf();
 }
 
 /*
@@ -152,7 +157,7 @@ static void parse_cmd(int argc, char *const argv[]) {
     // poptGetNextOpt returns -1 when the final argument has been parsed
     // otherwise an error occured
     if (rc != -1) {
-        fprintf(stderr, "%s\n", poptStrerror(rc));
+        ERROR("%s\n", poptStrerror(rc));
         poptFreeContext(pc);
         exit(1);
     }
@@ -208,9 +213,8 @@ static void set_pollfd(void) {
     int location_fd = init_location();
     // init gamma timer disarmed: seconds = 0
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
-    if (capture_timerfd == -1 || location_fd == -1 || gamma_timerfd == -1) {
-        fprintf(stderr, "%s\n", strerror(errno));
-        state.quit = 1;
+    if (state.quit) {
+        ERROR("%s\n", strerror(errno));
         return;
     }
 
@@ -262,10 +266,11 @@ static void free_everything(void) {
 static int start_timer(int clockid, int initial_timeout) {
     int timerfd = timerfd_create(clockid, 0);
     if (timerfd == -1) {
-        fprintf(stderr, "could not start timer.\n");
-        return -1;
+        ERROR("could not start timer: %s\n", strerror(errno));
+        state.quit = 1;
+    } else {
+        set_timeout(initial_timeout, 0, timerfd, 0);
     }
-    set_timeout(initial_timeout, 0, timerfd, 0);
     return timerfd;
 }
 
@@ -279,7 +284,11 @@ static void set_timeout(int sec, int nsec, int fd, int flag) {
     timerValue.it_value.tv_nsec = nsec;
     timerValue.it_interval.tv_sec = 0;
     timerValue.it_interval.tv_nsec = 0;
-    timerfd_settime(fd, flag, &timerValue, NULL);
+    int r = timerfd_settime(fd, flag, &timerValue, NULL);
+    if (r == -1) {
+        ERROR("%s\n", strerror(errno));
+        state.quit = 1;
+    }
 }
 
 /*
@@ -292,9 +301,9 @@ static void sig_handler(int fd) {
 
     s = read(fd, &fdsi, sizeof(struct signalfd_siginfo));
     if (s != sizeof(struct signalfd_siginfo)) {
-        fprintf(stderr, "an error occurred while getting signalfd data.\n");
+        ERROR("an error occurred while getting signalfd data.\n");
     } else {
-        printf("received signal %d. Leaving.\n", fdsi.ssi_signo);
+        INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
     }
     state.quit = 1;
 }
@@ -305,11 +314,14 @@ static void sig_handler(int fd) {
  * webcam device fd. This way our main poll will get events (frames) from webcam device too.
  */
 static void do_capture(void) {
+    static const int fast_timeout = 15;
+    static const double drop_limit = 0.6;
+
     // if screen is currently blanked thanks to dpms,
     // do not do anything. Set a long timeout and return.
     // Timeout will increase as screen power management goes deeper.
     if (dpms_enabled && get_screen_dpms() > 0) {
-        printf("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
+        INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
         set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[CAPTURE_IX].fd, 0);
         return;
     }
@@ -323,7 +335,7 @@ static void do_capture(void) {
     if (!state.quit) {
         double new_val = compute_avg_brightness();
         if (new_val != 0.0) {
-            printf("Average frames brightness: %lf.\n", new_val);
+            INFO("Average frames brightness: %lf.\n", new_val);
             drop = set_brightness(new_val);
         }
     }
@@ -332,7 +344,7 @@ static void do_capture(void) {
         // if there is too high difference, do a fast recapture to be sure
         // this is the correct level
         if (fabs(drop) > drop_limit) {
-            printf("Weird brightness drop. Recapturing in 15 seconds.\n");
+            INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
             // single call after 15s
             set_timeout(fast_timeout, 0, main_p[CAPTURE_IX].fd, 0);
         } else {
@@ -385,7 +397,7 @@ static void check_gamma(void) {
     }
 
     if (ret == 0) {
-        printf("Next gamma alarm due to: %s", ctime(&(t)));
+        INFO("Next gamma alarm due to: %s", ctime(&(t)));
         set_timeout(t, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
         memset(&t, 0, sizeof(time_t));
     } else {
@@ -399,8 +411,8 @@ static void check_gamma(void) {
  * this way, check_gamma will be called and it will correctly set new timer.
  */
 static void on_new_location(void) {
+    INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
     set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
-    printf("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
 }
 
 static void main_poll(void) {

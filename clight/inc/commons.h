@@ -1,5 +1,3 @@
-#pragma once
-
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -8,6 +6,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <time.h>
+#include <stdarg.h>
 
 #define SIZE(a) (sizeof(a) / sizeof(*a))
 

@@ -1,9 +1,8 @@
 #pragma once
 
 #include <systemd/sd-bus.h>
-#include <stdarg.h>
 
-#include "commons.h"
+#include "log.h"
 
 /*
  * Object wrapper for bus calls

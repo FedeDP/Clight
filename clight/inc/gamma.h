@@ -1,6 +1,5 @@
 #include <bits/time.h>
 #include <math.h>
-#include <time.h>
 
 #include "bus.h"
 
