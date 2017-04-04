@@ -1,5 +1,3 @@
-#pragma once
-
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -8,17 +6,19 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <time.h>
+#include <stdarg.h>
 
 #define SIZE(a) (sizeof(a) / sizeof(*a))
 
-enum states { DAY, NIGHT };
+enum states { DAY, NIGHT, EVENT, UNKNOWN, SIZE };
 
 struct config {
     int num_captures;
-    int timeout[2];
+    int timeout[SIZE]; // sizeof enum states
     char dev_name[PATH_MAX + 1];
     char screen_path[PATH_MAX + 1];
-    int temp[2];
+    int temp[SIZE]; // sizeof enum states DAY, NIGHT only
     int smooth_transition;
     double lat;
     double lon;
@@ -28,6 +28,7 @@ struct state {
     int quit;
     double *values;
     enum states time; // whether it is day or night time
+    time_t next_event;
 };
 
 struct state state;

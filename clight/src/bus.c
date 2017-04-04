@@ -8,7 +8,7 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
 void init_bus(void) {
     int r = sd_bus_open_system(&bus);
     if (r < 0) {
-        fprintf(stderr, "Failed to connect to system bus: %s\n", strerror(-r));
+        ERROR("Failed to connect to system bus: %s\n", strerror(-r));
         state.quit = 1;
     }
 }
@@ -50,7 +50,7 @@ void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a,
                 }
                 break;
             default:
-                fprintf(stderr, "Wrong signature in bus call: %c.\n", signature[i]);
+                ERROR("Wrong signature in bus call: %c.\n", signature[i]);
                 break;
         }
         i++;
@@ -105,7 +105,7 @@ void set_property(const struct bus_args *a, const char type, const char *value) 
             r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "s", value);
             break;
         default:
-            fprintf(stderr, "Wrong signature in bus call: %c.\n", type);
+            ERROR("Wrong signature in bus call: %c.\n", type);
             break;
     }
     check_err(r, &error);
@@ -162,9 +162,9 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
 int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
         if (err->message) {
-            fprintf(stderr, "%s\n", err->message);
+            ERROR("%s\n", err->message);
         } else {
-            fprintf(stderr, "%s\n", strerror(-r));
+            ERROR("%s\n", strerror(-r));
         }
         /* Don't leave for ebusy errors */
         if (r != -EBUSY) {

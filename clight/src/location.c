@@ -42,13 +42,13 @@ static int location_conf_init(void) {
     // as it is setted through a cmdline option
     int location_fd = eventfd(0, 0);
     if (location_fd == -1) {
-        fprintf(stderr, "%s\n", strerror(errno));
+        ERROR("%s\n", strerror(errno));
         state.quit = 1;
     } else {
         uint64_t value = 1;
         int r = write(location_fd, &value, sizeof(uint64_t));
         if (r == -1) {
-            fprintf(stderr, "%s\n", strerror(errno));
+            ERROR("%s\n", strerror(errno));
             state.quit = 1;
         }
     }
@@ -88,6 +88,11 @@ static int geoclue_init(void) {
     geoclue_check_initial_location();
 
 end:
+    /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
+    if (state.quit) {
+        ERROR("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
+        state.quit = 0;
+    }
     return location_fd;
 }
 
