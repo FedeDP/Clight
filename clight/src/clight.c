@@ -56,20 +56,22 @@ int main(int argc, char *argv[]) {
  * Init default config values and parse cmdline args through popt lib.
  */
 static void init_config(int argc, char *argv[]) {
-    // default values
+    /* default values */
     conf.num_captures = 5;
-    conf.timeout[DAY] = 10 * 60; // 10 mins
-    conf.timeout[NIGHT] = 45 * 60; // 45 mins
+    conf.timeout[DAY] = 10 * 60; // 10 mins during the day
+    conf.timeout[NIGHT] = 45 * 60; // 45 mins during the night
+    conf.timeout[EVENT] = 3 * 60; // 3 mins during an event
+    conf.timeout[UNKNOWN] = conf.timeout[DAY]; // if unknown, fallback to 10mins
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
+    conf.temp[EVENT] = -1;
+    conf.temp[UNKNOWN] = -1;
     conf.smooth_transition = 1;
 
     parse_cmd(argc, argv);
 
     /*
      * Reset default values in case of wrong values
-     * Keep in mind that here log file is not yet initialized, so
-     * ERROR will only print to stderr.
      */
     if (conf.timeout[DAY] <= 0) {
         ERROR("Wrong day timeout value. Resetting default value.\n");
@@ -317,13 +319,14 @@ static void do_capture(void) {
     static const int fast_timeout = 15;
     static const double drop_limit = 0.6;
 
-    // if screen is currently blanked thanks to dpms,
-    // do not do anything. Set a long timeout and return.
-    // Timeout will increase as screen power management goes deeper.
+    /*
+     * if screen is currently blanked thanks to dpms,
+     * do not do anything. Set a long timeout and return.
+     * Timeout will increase as screen power management goes deeper.
+     */
     if (dpms_enabled && get_screen_dpms() > 0) {
         INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[CAPTURE_IX].fd, 0);
-        return;
+        return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[CAPTURE_IX].fd, 0);
     }
 
     double drop = 0.0;
@@ -381,14 +384,14 @@ static int get_screen_dpms(void) {
  * check current period of time (day or night) and next event (sunrise/sunset).
  * Then call set_temp with correct temp, given current state(night or day).
  * It returns 0 if: smooth_transition is off or desired temp has finally been setted (after transitioning).
- * If it returns 0, reset time_t value and set next event timeout.
- * Else, set a timeout for smooth transition.
+ * If it returns 0, reset transitioning flag and set next event timeout.
+ * Else, set a timeout for smooth transition and set transitioning flag to 1.
  */
 static void check_gamma(void) {
-    static time_t t = {0};
+    static int transitioning = 0;
 
-    if (t == 0) {
-        t = get_next_gamma_alarm(conf.lat, conf.lon);
+    if (!transitioning) {
+        get_next_gamma_event(conf.lat, conf.lon);
     }
 
     int ret = set_temp(conf.temp[state.time]);
@@ -397,12 +400,13 @@ static void check_gamma(void) {
     }
 
     if (ret == 0) {
-        INFO("Next gamma alarm due to: %s", ctime(&(t)));
-        set_timeout(t, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
-        memset(&t, 0, sizeof(time_t));
+        INFO("Next gamma alarm due to: %s", ctime(&(state.next_event)));
+        set_timeout(state.next_event, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        transitioning = 0;
     } else {
-        // here, set a timeout of 300ms from now
+        // here, set a timeout of 300ms from now for smooth gamma transition
         set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
+        transitioning = 1;
     }
 }
 
@@ -448,7 +452,7 @@ static void main_poll(void) {
                 case LOCATION_IX:
                     /* we received a new user position */
                     if (!is_geoclue()) {
-                        // it is not from a bus signal!
+                        /* it is not from a bus signal as geoclue2 is not being used */
                         read(main_p[i].fd, &t, sizeof(uint64_t));
                     } else {
                         sd_bus_process(bus, NULL);

@@ -16,8 +16,18 @@ Current features:
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does).
 * geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates.
 * different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable.)
+* nice log file, placed in $HOME/.clight.log
 
 For cmdline options, check clight [-?|--help] [--usage].
 
 There is no more option file support through libconfig as cmd line options already expose every setting.
 Moreover, with [systemd unit conf files](https://wiki.archlinux.org/index.php/systemd#Drop-in_files), is really easy to reach same behaviour (ie: systemd unit launched with certain cmdline args).
+
+Build instructions:
+
+    $ make
+    # make install
+
+To uninstall:
+
+    # make uninstall

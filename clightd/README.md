@@ -16,6 +16,15 @@ Build time switches:
 * DISABLE_FRAME_CAPTURES=1 (to disable frame captures support)
 * DISABLE_GAMMA=1 (to disable gamma support)
 
+Build instructions:
+
+    $ make
+    # make install
+
+To uninstall:
+
+    # make uninstall
+
 You may ask why did i developed this solution. The answer is quite simple.
 In linux there is no simple and unified way of changing screen brightness.
 So, i thought it could be a good idea to develop a bus service that can be used by every other program.
