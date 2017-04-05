@@ -45,11 +45,9 @@ static void init(int argc, char *argv[]) {
         for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
             init_module[i]();
         }
-        if (!state.quit) {
-            if (conf.single_capture_mode) {
-                run_callback(CAPTURE_IX);
-                state.quit = 1;
-            }
+        if (!state.quit && conf.single_capture_mode) {
+            main_p.cb[CAPTURE_IX]();
+            state.quit = 1;
         }
     }
 }
@@ -67,7 +65,7 @@ static void destroy(void) {
 
 static void main_poll(void) {
     while (!state.quit) {
-        int r = poll(main_p, MODULES_NUM - 1, -1);
+        int r = poll(main_p.p, MODULES_NUM - 1, -1);
         if (r == -1) {
             if (errno == EINTR) {
                 continue;
@@ -77,8 +75,8 @@ static void main_poll(void) {
         }
 
         for (int i = 0; i < MODULES_NUM - 1 && r > 0; i++) {
-            if (main_p[i].revents & POLLIN) {
-                run_callback(i);
+            if (main_p.p[i].revents & POLLIN) {
+                main_p.cb[i]();
                 r--;
             }
         }

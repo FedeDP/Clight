@@ -34,8 +34,16 @@ struct state {
     time_t next_event;
 };
 
+struct poll_s {
+    struct pollfd p[MODULES_NUM - 1];
+    /*
+     * pointer to poll callback function for a module
+     */
+    void (*cb[MODULES_NUM - 1])(void);
+};
+
 struct state state;
 struct config conf;
 int camera_width, camera_height;
 uint8_t *buffer;
-struct pollfd main_p[MODULES_NUM - 1];
+struct poll_s main_p; //cannot be array as poll() wants a &struct pollfd...

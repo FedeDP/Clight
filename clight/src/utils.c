@@ -1,11 +1,5 @@
 #include "../inc/utils.h"
 
-/*
- * pointers to poll callback functions;
- * MODULES_NUM - 1 as dpms does not generate poll i/o
- */
-static void (*poll_cb[MODULES_NUM - 1])(void);
-
 /**
  * Create timer and returns its fd to
  * the main struct pollfd
@@ -44,12 +38,9 @@ void set_pollfd(int fd, enum modules module, void (*cb)(void)) {
         return;
     }
 
-    main_p[module].fd = fd;
-    poll_cb[module] = cb;
-}
-
-void run_callback(enum modules module) {
-    if (poll_cb[module]) {
-        poll_cb[module]();
-    }
+    main_p.p[module] = (struct pollfd) {
+        .fd = fd,
+        .events = POLLIN,
+    };
+    main_p.cb[module] = cb;
 }

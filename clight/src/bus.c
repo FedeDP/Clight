@@ -10,6 +10,8 @@ void init_bus(void) {
     if (r < 0) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
         state.quit = 1;
+    } else {
+        INFO("Bus support started.\n");
     }
 }
 
@@ -181,4 +183,5 @@ void destroy_bus(void) {
     if (bus) {
         sd_bus_flush_close_unref(bus);
     }
+    INFO("Bus destroyed.\n");
 }

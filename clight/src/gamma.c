@@ -16,18 +16,20 @@ static int calculate_sunrise_sunset(const float lat, const float lng,
 void init_gamma(void) {
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
     set_pollfd(gamma_timerfd, GAMMA_IX, gamma_cb);
+    INFO("Gamma module started.\n");
 }
 
 void destroy_gamma(void) {
-    if (main_p[GAMMA_IX].fd != -1) {
-        close(main_p[GAMMA_IX].fd);
+    if (main_p.p[GAMMA_IX].fd != -1) {
+        close(main_p.p[GAMMA_IX].fd);
     }
+    INFO("Gamma module destroyed.\n");
 }
 
 static void gamma_cb(void) {
     uint64_t t;
 
-    read(main_p[GAMMA_IX].fd, &t, sizeof(uint64_t));
+    read(main_p.p[GAMMA_IX].fd, &t, sizeof(uint64_t));
     check_gamma();
 }
 
@@ -52,11 +54,11 @@ static void check_gamma(void) {
 
     if (ret == 0) {
         INFO("Next gamma alarm due to: %s", ctime(&(state.next_event)));
-        set_timeout(state.next_event, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        set_timeout(state.next_event, 0, main_p.p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
     } else {
         // here, set a timeout of 300ms from now for smooth gamma transition
-        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
+        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p.p[GAMMA_IX].fd, 0);
         transitioning = 1;
     }
 }

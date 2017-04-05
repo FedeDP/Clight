@@ -17,6 +17,7 @@ void init_signal(void) {
 
     int fd = signalfd(-1, &mask, 0);
     set_pollfd(fd, SIGNAL_IX, signal_cb);
+    INFO("Signal module started.\n");
 }
 
 /*
@@ -27,7 +28,7 @@ static void signal_cb(void) {
     struct signalfd_siginfo fdsi;
     ssize_t s;
 
-    s = read(main_p[SIGNAL_IX].fd, &fdsi, sizeof(struct signalfd_siginfo));
+    s = read(main_p.p[SIGNAL_IX].fd, &fdsi, sizeof(struct signalfd_siginfo));
     if (s != sizeof(struct signalfd_siginfo)) {
         ERROR("an error occurred while getting signalfd data.\n");
     } else {
@@ -37,7 +38,8 @@ static void signal_cb(void) {
 }
 
 void destroy_signal(void) {
-    if (main_p[SIGNAL_IX].fd != -1) {
-        close(main_p[SIGNAL_IX].fd);
+    if (main_p.p[SIGNAL_IX].fd != -1) {
+        close(main_p.p[SIGNAL_IX].fd);
     }
+    INFO("Signal module destroyed.\n");
 }

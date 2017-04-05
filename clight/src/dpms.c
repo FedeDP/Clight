@@ -24,6 +24,7 @@ void init_dpms(void) {
 
         free(info);
     }
+    INFO("Dpms support started.\n");
 }
 
 
@@ -59,4 +60,5 @@ void destroy_dpms(void) {
     if (connection) {
         xcb_disconnect(connection);
     }
+    INFO("Dpms destroyed.\n");
 }

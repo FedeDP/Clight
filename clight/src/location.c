@@ -36,6 +36,7 @@ void init_location(void) {
         fd = geoclue_init();
     }
     set_pollfd(fd, LOCATION_IX, location_cb);
+    INFO("Location module started.\n");
 }
 
 /*
@@ -90,6 +91,7 @@ static int geoclue_init(void) {
     } while (r > 0);
 
     // emit a bus signal if there already is a location
+    // this way it will be available to our main poll
     geoclue_check_initial_location();
 
 end:
@@ -111,12 +113,12 @@ static void location_cb(void) {
     if (!is_geoclue()) {
         uint64_t t;
         /* it is not from a bus signal as geoclue2 is not being used */
-        read(main_p[LOCATION_IX].fd, &t, sizeof(uint64_t));
+        read(main_p.p[LOCATION_IX].fd, &t, sizeof(uint64_t));
     } else {
         sd_bus_process(bus, NULL);
     }
     INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-    set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+    set_timeout(1, 0, main_p.p[GAMMA_IX].fd, 0);
 }
 
 /*
@@ -142,9 +144,10 @@ static void geoclue_check_initial_location(void) {
 void destroy_location(void) {
     if (is_geoclue()) {
         geoclue_client_stop();
-    } else if (main_p[LOCATION_IX].fd != -1) {
-        close(main_p[LOCATION_IX].fd);
+    } else if (main_p.p[LOCATION_IX].fd != -1) {
+        close(main_p.p[LOCATION_IX].fd);
     }
+    INFO("Location module destroyed.\n");
 }
 
 /*
@@ -171,7 +174,6 @@ static void geoclue_hook_update(void) {
         .interface = "org.freedesktop.GeoClue2.Client",
         .member = "LocationUpdated"
     };
-
     add_match(&args, geoclue_new_location);
 }
 
@@ -210,6 +212,5 @@ static void geoclue_client_start(void) {
  */
 static void geoclue_client_stop(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop"};
-
     bus_call(NULL, "", &args, "");
 }
