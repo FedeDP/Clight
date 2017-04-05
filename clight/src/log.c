@@ -10,6 +10,9 @@ void open_log(void) {
 
     snprintf(log_path, PATH_MAX, "%s/.%s", getpwuid(getuid())->pw_dir, log_name);
     log_file = fopen(log_path, "w");
+    if (!log_file) {
+        ERROR("%s\n", strerror(errno));
+    }
 }
 
 void log_conf(void) {

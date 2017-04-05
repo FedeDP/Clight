@@ -35,20 +35,18 @@ int main(int argc, char *argv[]) {
 }
 
 /*
- * Create every needed struct/variable.
+ * Creates every needed struct/variable.
  */
 static void init(int argc, char *argv[]) {
     open_log();
     init_opts(argc, argv);
-    if (!state.quit) {
-        init_bus();
-        for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
-            init_module[i]();
-        }
-        if (!state.quit && conf.single_capture_mode) {
-            main_p.cb[CAPTURE_IX]();
-            state.quit = 1;
-        }
+    init_bus();
+    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+        init_module[i]();
+    }
+    if (!state.quit && conf.single_capture_mode) {
+        main_p.cb[CAPTURE_IX]();
+        state.quit = 1;
     }
 }
 
@@ -63,6 +61,9 @@ static void destroy(void) {
     close_log();
 }
 
+/*
+ * Listens on all fds and calls correct callback
+ */
 static void main_poll(void) {
     while (!state.quit) {
         int r = poll(main_p.p, MODULES_NUM - 1, -1);
