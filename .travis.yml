@@ -23,6 +23,7 @@ arch:
         - libxrandr
     script:
         - "echo $CC"
+        - "ls"
         - cd clight/
         - make debug
         - cd ../clighd
