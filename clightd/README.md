@@ -25,11 +25,10 @@ To uninstall:
 
     # make uninstall
 
-You may ask why did i developed this solution. The answer is quite simple.
-In linux there is no simple and unified way of changing screen brightness.
+You may ask why did i developed this solution. The answer is quite simple: on linux there is no simple and unified way of changing screen brightness.  
 So, i thought it could be a good idea to develop a bus service that can be used by every other program.
 
-My idea is that anyone can now implement something similar to clight without messing with videodev or libjpeg.
+My idea is that anyone can now implement something similar to clight without messing with videodev or libjpeg.  
 A clight bash replacement, using clightd, can be something like (pseudo-code):
 
     $ max_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight getmaxbrightness s ""
@@ -37,8 +36,7 @@ A clight bash replacement, using clightd, can be something like (pseudo-code):
     $ new_br = ambient_br * max_br
     $ busctl call org.clight.backlight /org/clight/backlight org.clight.backlight setbrightness si "" new_br
 
-Note that passing an empty string as first parameter will make clightd use first subsystem matching device it finds (through libudev).
-It should be good to go in most cases.
+Note that passing an empty string as first parameter will make clightd use first subsystem matching device it finds (through libudev). It should be good to go in most cases.
 
 Bus interface methods:
 * *getbrightness* -> takes a backlight kernel interface (eg: intel_backlight) or nothing to just use first backlight kernel interface that libudev finds.

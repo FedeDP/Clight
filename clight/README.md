@@ -20,7 +20,7 @@ Current features:
 
 For cmdline options, check clight [-?|--help] [--usage].
 
-There is no more option file support through libconfig as cmd line options already expose every setting.
+There is no more option file support through libconfig as cmd line options already expose every setting.  
 Moreover, with [systemd unit conf files](https://wiki.archlinux.org/index.php/systemd#Drop-in_files), is really easy to reach same behaviour (ie: systemd unit launched with certain cmdline args).
 
 Build instructions:
