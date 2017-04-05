@@ -1,0 +1,36 @@
+sudo: required
+
+notifications:
+  email:
+    recipients: nierro92@gmail.com
+    on_success: never
+    on_failure: always
+
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+arch:
+    packages:
+        - systemd
+        - libxcb
+        - popt
+        - linux-api-headers
+        - libx11
+        - libjpeg-turbo
+        - libxrandr
+    script:
+        - "echo $CC"
+        - cd clight/
+        - make debug
+        - cd ../clighd
+        - make debug
+        - make DISABLE_FRAME_CAPTURES=1 debug
+        - make DISABLE_GAMMA=1 debug
+        - make DISABLE_FRAME_CAPTURES=1 DISABLE_GAMMA=1 debug
+
+script:
+    - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"
+
