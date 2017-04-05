@@ -14,3 +14,5 @@ TODO before release:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (low priority | code cosmetic)
 - [x] drop some global vars
 - [x] more robust error checking
+- [x] refactor code
+- [ ] use sd_bus_call_async for captures? To make them async

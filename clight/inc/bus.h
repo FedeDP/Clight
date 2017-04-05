@@ -2,7 +2,7 @@
 
 #include <systemd/sd-bus.h>
 
-#include "log.h"
+#include "utils.h"
 
 /*
  * Object wrapper for bus calls

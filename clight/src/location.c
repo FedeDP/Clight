@@ -5,7 +5,8 @@
 
 static int location_conf_init(void);
 static int geoclue_init(void);
-static void geoclue_check_initial_location(void) ;
+static void location_cb(void);
+static void geoclue_check_initial_location(void);
 static void geoclue_get_client(void);
 static void geoclue_hook_update(void);
 static int geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -26,11 +27,15 @@ static char client[PATH_MAX + 1];
  *
  * Moreover, it stores a callback to be called on updated location event.
  */
-int init_location(void) {
+void init_location(void) {
+    int fd;
+
     if (conf.lat != 0 && conf.lon != 0) {
-        return location_conf_init();
+        fd = location_conf_init();
+    } else {
+        fd = geoclue_init();
     }
-    return geoclue_init();
+    set_pollfd(fd, LOCATION_IX, location_cb);
 }
 
 /*
@@ -92,8 +97,26 @@ end:
     if (state.quit) {
         ERROR("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
         state.quit = 0;
+        location_fd = -1;
     }
     return location_fd;
+}
+
+/*
+ * When a new location is received, reset GAMMA timer to now + 1sec;
+ * this way, check_gamma will be called and it will correctly set new timer.
+ */
+static void location_cb(void) {
+    /* we received a new user position */
+    if (!is_geoclue()) {
+        uint64_t t;
+        /* it is not from a bus signal as geoclue2 is not being used */
+        read(main_p[LOCATION_IX].fd, &t, sizeof(uint64_t));
+    } else {
+        sd_bus_process(bus, NULL);
+    }
+    INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
+    set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
 }
 
 /*
@@ -116,9 +139,11 @@ static void geoclue_check_initial_location(void) {
 /*
  * If we are using geoclue, stop client.
  */
-void destroy_geoclue(void) {
+void destroy_location(void) {
     if (is_geoclue()) {
         geoclue_client_stop();
+    } else if (main_p[LOCATION_IX].fd != -1) {
+        close(main_p[LOCATION_IX].fd);
     }
 }
 

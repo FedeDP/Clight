@@ -1,3 +1,5 @@
+#pragma once
+
 #include "commons.h"
 
 #define INFO(msg, ...) log_message('I', msg, ##__VA_ARGS__)

@@ -1,14 +1,65 @@
 #include "../inc/gamma.h"
 
 #define ZENITH -0.83
+#define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 
 enum events { SUNRISE, SUNSET };
 
+static void gamma_cb(void);
+static void check_gamma(void);
 static double  degToRad(const double angleDeg);
 static double radToDeg(const double angleRad);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng,
                                     time_t *tt, enum events event, int tomorrow);
+
+void init_gamma(void) {
+    int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
+    set_pollfd(gamma_timerfd, GAMMA_IX, gamma_cb);
+}
+
+void destroy_gamma(void) {
+    if (main_p[GAMMA_IX].fd != -1) {
+        close(main_p[GAMMA_IX].fd);
+    }
+}
+
+static void gamma_cb(void) {
+    uint64_t t;
+
+    read(main_p[GAMMA_IX].fd, &t, sizeof(uint64_t));
+    check_gamma();
+}
+
+/*
+ * check current period of time (day or night) and next event (sunrise/sunset).
+ * Then call set_temp with correct temp, given current state(night or day).
+ * It returns 0 if: smooth_transition is off or desired temp has finally been setted (after transitioning).
+ * If it returns 0, reset transitioning flag and set next event timeout.
+ * Else, set a timeout for smooth transition and set transitioning flag to 1.
+ */
+static void check_gamma(void) {
+    static int transitioning = 0;
+
+    if (!transitioning) {
+        get_next_gamma_event(conf.lat, conf.lon);
+    }
+
+    int ret = set_temp(conf.temp[state.time]);
+    if (state.quit) {
+        return;
+    }
+
+    if (ret == 0) {
+        INFO("Next gamma alarm due to: %s", ctime(&(state.next_event)));
+        set_timeout(state.next_event, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        transitioning = 0;
+    } else {
+        // here, set a timeout of 300ms from now for smooth gamma transition
+        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
+        transitioning = 1;
+    }
+}
 
 /* Convert degrees to radians */
 static double  degToRad(double angleDeg) {

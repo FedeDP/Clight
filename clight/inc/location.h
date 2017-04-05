@@ -1,6 +1,5 @@
-#include "../inc/bus.h"
+#include "bus.h"
 
-int init_location(void);
-void update_location(void);
-void destroy_geoclue(void);
+void init_location(void);
+void destroy_location(void);
 int is_geoclue(void);

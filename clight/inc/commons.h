@@ -8,13 +8,16 @@
 #include <errno.h>
 #include <time.h>
 #include <stdarg.h>
+#include <poll.h>
+#include <math.h>
 
-#define SIZE(a) (sizeof(a) / sizeof(*a))
+enum modules { CAPTURE_IX, GAMMA_IX, LOCATION_IX, SIGNAL_IX, DPMS_IX, MODULES_NUM };
 
 enum states { DAY, NIGHT, EVENT, UNKNOWN, SIZE };
 
 struct config {
     int num_captures;
+    int single_capture_mode;
     int timeout[SIZE]; // sizeof enum states
     char dev_name[PATH_MAX + 1];
     char screen_path[PATH_MAX + 1];
@@ -35,5 +38,4 @@ struct state state;
 struct config conf;
 int camera_width, camera_height;
 uint8_t *buffer;
-
-
+struct pollfd main_p[MODULES_NUM - 1];

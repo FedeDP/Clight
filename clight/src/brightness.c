@@ -1,5 +1,8 @@
 #include "../inc/brightness.h"
+#include "../inc/dpms.h"
 
+static void brightness_cb(void);
+static void do_capture(void);
 static void get_max_brightness(void);
 static void get_current_brightness(void);
 
@@ -25,6 +28,64 @@ void init_brightness(void) {
         /* Initialize our brightness values array */
         if (!state.quit && !(state.values = calloc(conf.num_captures, sizeof(double)))) {
             state.quit = 1;
+        }
+    }
+    int fd = start_timer(CLOCK_MONOTONIC, 1);
+    set_pollfd(fd, CAPTURE_IX, brightness_cb);
+}
+
+static void brightness_cb(void) {
+    if (!conf.single_capture_mode) {
+        uint64_t t;
+
+        read(main_p[CAPTURE_IX].fd, &t, sizeof(uint64_t));
+    }
+    do_capture();
+}
+
+/**
+ * When timerfd timeout expires, check if we are in screen power_save mode,
+ * otherwise start streaming on webcam and set CAMERA_IX fd of pollfd struct to
+ * webcam device fd. This way our main poll will get events (frames) from webcam device too.
+ */
+static void do_capture(void) {
+    static const int fast_timeout = 15;
+    static const double drop_limit = 0.6;
+
+    /*
+     * if screen is currently blanked thanks to dpms,
+     * do not do anything. Set a long timeout and return.
+     * Timeout will increase as screen power management goes deeper.
+     */
+    if (get_screen_dpms() > 0) {
+        INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
+        return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[CAPTURE_IX].fd, 0);
+    }
+
+    double drop = 0.0;
+
+    for (int i = 0; i < conf.num_captures && !state.quit; i++) {
+        state.values[i] = capture_frame();
+    }
+
+    if (!state.quit) {
+        double new_val = compute_avg_brightness();
+        if (new_val != 0.0) {
+            INFO("Average frames brightness: %lf.\n", new_val);
+            drop = set_brightness(new_val);
+        }
+    }
+
+    if (!conf.single_capture_mode && !state.quit) {
+        // if there is too high difference, do a fast recapture to be sure
+        // this is the correct level
+        if (fabs(drop) > drop_limit) {
+            INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
+            // single call after 15s
+            set_timeout(fast_timeout, 0, main_p[CAPTURE_IX].fd, 0);
+        } else {
+            // reset normal timer
+            set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
         }
     }
 }
@@ -87,8 +148,12 @@ double compute_avg_brightness(void) {
     return total / conf.num_captures;
 }
 
-void free_brightness(void) {
+void destroy_brightness(void) {
     if (state.values) {
         free(state.values);
+    }
+
+    if (main_p[CAPTURE_IX].fd != -1) {
+        close(main_p[CAPTURE_IX].fd);
     }
 }
