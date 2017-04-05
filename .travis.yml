@@ -23,14 +23,11 @@ arch:
         - libxrandr
     script:
         - "echo $CC"
-        - "ls"
-        - cd clight/
-        - make debug
-        - cd ../clighd
-        - make debug
-        - make DISABLE_FRAME_CAPTURES=1 debug
-        - make DISABLE_GAMMA=1 debug
-        - make DISABLE_FRAME_CAPTURES=1 DISABLE_GAMMA=1 debug
+        - make -C clight/ debug
+        - make -C clightd/ debug
+        - make -C clightd/ DISABLE_FRAME_CAPTURES=1 debug
+        - make -C clightd/ DISABLE_GAMMA=1 debug
+        - make -C clightd/ DISABLE_FRAME_CAPTURES=1 DISABLE_GAMMA=1 debug
 
 script:
     - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"
