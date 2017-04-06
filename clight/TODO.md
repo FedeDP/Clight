@@ -4,7 +4,6 @@ TODO before release:
 - [ ] Very frequent capture at "event" changing (ie: during sunset or sunrise)
 
 ## Mid Priority:
-- [ ] use sd_bus_call_async for captures? To make them async
 - [ ] add settable timers for gamma temp events (eg --sunset 7:00 --sunshine 19:30)
 
 ## Low Priority:

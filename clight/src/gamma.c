@@ -187,14 +187,14 @@ static void get_next_gamma_event(const float lat, const float lon) {
         state.time = NIGHT;
     } else if (calculate_sunset(lat, lon, &t, 0) == 0 && t > now) {
         state.time = DAY;
-    } else if (calculate_sunrise(lat, lon, &t, 1)) {
+    } else if (calculate_sunrise(lat, lon, &t, 1) == 0) {
         // we are after sunset time for today. Let's check tomorrow's sunrise
         state.time = NIGHT;
     } else {
         // no sunrise/sunset could be found.
         state.time = UNKNOWN;
-        // set an alarm to recheck gamma event after 24h...
-        t = now + 24 * 60 * 60;
+        // set an alarm to recheck gamma event after 12h...
+        t = now + 12 * 60 * 60;
         ERROR("Failed to retrieve sunrise/sunset informations.\n");
     }
     state.next_event = t;

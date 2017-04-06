@@ -16,6 +16,12 @@ struct brightness {
     int current;
     int max;
     int old;
+    /*
+     * for each conf.num_captures frame, we store its brightness 
+     * (returned from captureframe method on clighd bus interface)
+     * to later compute average brightness (it is not strictly needed to store them,
+     * but it obviously way more flexible doing so.)
+     */
     double *values;
 };
 
