@@ -12,6 +12,8 @@ static double radToDeg(const double angleRad);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng,
                                     time_t *tt, enum events event, int tomorrow);
+static void get_next_gamma_event(const float lat, const float lon);
+static int set_temp(int temp);
 
 void init_gamma(void) {
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
@@ -175,7 +177,7 @@ static int calculate_sunset(const float lat, const float lng, time_t *tt, int to
  * Otherwise, if now is < sunset, we're during the day and next event is sunset.
  * Else, next event will be tomorrow's sunrise and we're in night time.
  */
-void get_next_gamma_event(const float lat, const float lon) {
+static void get_next_gamma_event(const float lat, const float lon) {
     time_t t, now;
 
     time(&now);
@@ -205,7 +207,7 @@ void get_next_gamma_event(const float lat, const float lon) {
  * old_temp is static so we don't have to call getgamma everytime the function is called (if smooth_transition is enabled.)
  * and gets resetted when old_temp reaches correct temp.
  */
-int set_temp(int temp) {
+static int set_temp(int temp) {
     const int step = 50;
     int new_temp;
     static int old_temp = 0;

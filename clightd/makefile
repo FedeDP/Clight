@@ -49,7 +49,7 @@ objects:
 	@cd $(SRCDIR); $(CC) -c *.c $(CFLAGS)
 
 objects-debug:
-	@cd $(SRCDIR); $(CC) -c *.c -Wall $(CFLAGS) -Wshadow -Wstrict-overflow -fno-strict-aliasing -Wformat -Wformat-security -g
+	@cd $(SRCDIR); $(CC) -c *.c -Wall $(CFLAGS) -Wshadow -Wtype-limits -Wstrict-overflow -fno-strict-aliasing -Wformat -Wformat-security -g
 
 clightd: objects
 	@cd $(SRCDIR); $(CC) -o ../$(BINNAME) *.o $(LIBS)

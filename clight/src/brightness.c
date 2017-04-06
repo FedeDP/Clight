@@ -5,6 +5,9 @@ static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
 static void get_current_brightness(void);
+static double set_brightness(double perc);
+static double capture_frame_brightness(void);
+static double compute_avg_brightness(void);
 
 /*
  * Storage struct for our needed variables.
@@ -13,6 +16,7 @@ struct brightness {
     int current;
     int max;
     int old;
+    double *values;
 };
 
 static struct brightness br;
@@ -26,7 +30,7 @@ void init_brightness(void) {
         get_current_brightness();
 
         /* Initialize our brightness values array */
-        if (!state.quit && !(state.values = calloc(conf.num_captures, sizeof(double)))) {
+        if (!state.quit && !(br.values = calloc(conf.num_captures, sizeof(double)))) {
             state.quit = 1;
         } else {
             int fd = start_timer(CLOCK_MONOTONIC, 1);
@@ -67,7 +71,7 @@ static void do_capture(void) {
     double drop = 0.0;
 
     for (int i = 0; i < conf.num_captures && !state.quit; i++) {
-        state.values[i] = capture_frame();
+        br.values[i] = capture_frame_brightness();
     }
 
     if (!state.quit) {
@@ -104,7 +108,7 @@ static void get_current_brightness(void) {
     bus_call(&br.current, "i", &args, "s", conf.screen_path);
 }
 
-double set_brightness(double perc) {
+static double set_brightness(double perc) {
     struct bus_args args = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "setbrightness"};
 
     bus_call(&br.current, "i", &args, "si", conf.screen_path, (int) (br.max * perc));
@@ -114,7 +118,7 @@ double set_brightness(double perc) {
     return (double)(br.current - br.old) / br.max;
 }
 
-double capture_frame(void) {
+static double capture_frame_brightness(void) {
     double brightness = 0.0;
     struct bus_args args = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "captureframe"};
 
@@ -126,24 +130,24 @@ double capture_frame(void) {
  * Compute average captured frames brightness.
  * It will normalize data removing highest and lowest values.
  */
-double compute_avg_brightness(void) {
+static double compute_avg_brightness(void) {
     int lowest = 0, highest = 0;
     double total = 0.0;
 
     for (int i = 0; i < conf.num_captures; i++) {
-        if (state.values[i] < state.values[lowest]) {
+        if (br.values[i] < br.values[lowest]) {
             lowest = i;
-        } else if (state.values[i] > state.values[highest]) {
+        } else if (br.values[i] > br.values[highest]) {
             highest = i;
         }
 
-        total += state.values[i];
+        total += br.values[i];
     }
 
     // total == 0.0 means every captured frame decompression failed
     if (total != 0.0 && conf.num_captures > 2) {
         // remove highest and lowest values to normalize
-        total -= (state.values[highest] + state.values[lowest]);
+        total -= (br.values[highest] + br.values[lowest]);
         return total / (conf.num_captures - 2);
     }
 
@@ -151,8 +155,8 @@ double compute_avg_brightness(void) {
 }
 
 void destroy_brightness(void) {
-    if (state.values) {
-        free(state.values);
+    if (br.values) {
+        free(br.values);
     }
 
     if (main_p.p[CAPTURE_IX].fd != -1) {

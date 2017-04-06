@@ -7,6 +7,7 @@ static int location_conf_init(void);
 static int geoclue_init(void);
 static void location_cb(void);
 static void geoclue_check_initial_location(void);
+static int is_geoclue(void);
 static void geoclue_get_client(void);
 static void geoclue_hook_update(void);
 static int geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -153,7 +154,7 @@ void destroy_location(void) {
 /*
  * Whether we are using geoclue (thus client object length is > 0)
  */
-int is_geoclue(void) {
+static int is_geoclue(void) {
     return strlen(client) != 0;
 }
 

@@ -29,7 +29,6 @@ struct config {
 
 struct state {
     int quit;
-    double *values;
     enum states time; // whether it is day or night time
     time_t next_event;
 };
