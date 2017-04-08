@@ -5,6 +5,7 @@ TODO before release:
 
 ## Mid Priority:
 - [ ] add settable timers for gamma temp events (eg --sunset 7:00 --sunshine 19:30)
+- [x] add gpl license file
 
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream)

@@ -32,7 +32,7 @@ static void signal_cb(void) {
     if (s != sizeof(struct signalfd_siginfo)) {
         ERROR("an error occurred while getting signalfd data.\n");
     } else {
-        INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
+        INFO("\nreceived signal %d. Leaving.\n", fdsi.ssi_signo);
     }
     state.quit = 1;
 }

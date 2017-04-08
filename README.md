@@ -13,3 +13,5 @@ It is splitted in 2 modules: clight and clightd.
 [Clightd](https://github.com/FedeDP/Clight/tree/master/clightd) is the bus interface that is needed to change screen brightness and to capture webcame frames.  
 
 For more details, check each module README.
+
+This software is distributed with a GPL license, see [COPYING](https://github.com/FedeDP/Clight/blob/master/COPYING) file for more informations.

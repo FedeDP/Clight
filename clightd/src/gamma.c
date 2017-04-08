@@ -1,30 +1,89 @@
+/**
+ * Thanks to http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/ 
+ * and to improvements made here: http://www.zombieprototypes.com/?p=210.
+ **/
+
 #ifndef DISABLE_GAMMA
 
 #include "../inc/gamma.h"
 
-/* cribbed from redshift, but truncated with 500K steps */
-static const struct { float r; float g; float b; } whitepoints[] = {
-	{ 1.00000000,  0.18172716,  0.00000000, }, /* 1000K */
-	{ 1.00000000,  0.42322816,  0.00000000, },
-	{ 1.00000000,  0.54360078,  0.08679949, },
-	{ 1.00000000,  0.64373109,  0.28819679, },
-	{ 1.00000000,  0.71976951,  0.42860152, },
-	{ 1.00000000,  0.77987699,  0.54642268, },
-	{ 1.00000000,  0.82854786,  0.64816570, },
-	{ 1.00000000,  0.86860704,  0.73688797, },
-	{ 1.00000000,  0.90198230,  0.81465502, },
-	{ 1.00000000,  0.93853986,  0.88130458, },
-	{ 1.00000000,  0.97107439,  0.94305985, },
-	{ 1.00000000,  1.00000000,  1.00000000, }, /* 6500K */
-	{ 0.95160805,  0.96983355,  1.00000000, },
-	{ 0.91194747,  0.94470005,  1.00000000, },
-	{ 0.87906581,  0.92357340,  1.00000000, },
-	{ 0.85139976,  0.90559011,  1.00000000, },
-	{ 0.82782969,  0.89011714,  1.00000000, },
-	{ 0.80753191,  0.87667891,  1.00000000, },
-	{ 0.78988728,  0.86491137,  1.00000000, }, /* 10000K */
-	{ 0.77442176,  0.85453121,  1.00000000, },
-};
+static double clamp(double x, double max);
+static double get_red(int temp);
+static double get_green(int temp);
+static double get_blue(int temp);
+static double get_temp(const double R, const double B);
+
+static double clamp(double x, double max) {
+    if (x > max) { 
+        return max; 
+    }
+    return x;
+}
+
+static double get_red(int temp) {
+    if (temp < 6600) {
+        return 255;
+    }
+    const double a = 351.97690566805693;
+    const double b = 0.114206453784165;
+    const double c = -40.25366309332127;
+    const double new_temp = ((double)temp / 100) - 55;
+    
+    return clamp(a + b * new_temp + c * log(new_temp), 255);
+}
+
+static double get_green(int temp) {
+    double a, b, c;
+    double new_temp;
+    if (temp < 6600) {
+        a = -155.25485562709179;
+        b = -0.44596950469579133;
+        c = 104.49216199393888;
+        new_temp = ((double)temp / 100) - 2;
+    } else {
+        a = 325.4494125711974;
+        b = 0.07943456536662342;
+        c = -28.0852963507957;
+        new_temp = ((double)temp / 100) - 50;        
+    }
+    return clamp(a + b * new_temp + c * log(new_temp), 255);
+}
+
+static double get_blue(int temp) {
+    if (temp < 1900) {
+        return 0;
+    }
+    
+    if (temp < 6600) {
+        const double new_temp = ((double)temp / 100) - 10;
+        const double a = -254.76935184120902;
+        const double b = 0.8274096064007395;
+        const double c = 115.67994401066147;
+        
+        return clamp(a + b * new_temp + c * log(new_temp), 255);
+    }
+    return 255;
+}
+
+/* Thanks to: https://github.com/neilbartlett/color-temperature/blob/master/index.js */
+static double get_temp(const double R, const double B) {
+    double temperature;
+    double testR,  testB;
+    double epsilon=0.4;
+    double minTemperature = 1000;
+    double maxTemperature = 40000;
+    while (maxTemperature - minTemperature > epsilon) {
+        temperature = (maxTemperature + minTemperature) / 2;
+        testR = get_red(temperature);
+        testB = get_blue(temperature);
+        if ((testB / testR) >= (B / R)) {
+            maxTemperature = temperature;
+        } else {
+            minTemperature = temperature;
+        }
+    }
+    return round(temperature);
+}
 
 void set_gamma(int temp, int *err) {
     Display *dpy = XOpenDisplay(NULL);
@@ -43,16 +102,11 @@ void set_gamma(int temp, int *err) {
         *err = EINVAL;
         return;
     }
-
-    temp -= 1000;
-    double ratio = temp % 500 / 500.0;
-
-#define AVG(c) whitepoints[temp / 500].c * (1 - ratio) + whitepoints[temp / 500 + 1].c * ratio
-
-    double gammar = AVG(r);
-    double gammag = AVG(g);
-    double gammab = AVG(b);
-
+    
+    double red = get_red(temp) / 255;
+    double green = get_green(temp) / 255;
+    double blue = get_blue(temp) / 255;
+        
     for (int i = 0; i < res->ncrtc; i++) {
         int crtcxid = res->crtcs[i];
 
@@ -62,9 +116,9 @@ void set_gamma(int temp, int *err) {
 
         for (int j = 0; j < size; j++) {
             double g = 65535.0 * j / size;
-            crtc_gamma->red[j] = g * gammar;
-            crtc_gamma->green[j] = g * gammag;
-            crtc_gamma->blue[j] = g * gammab;
+            crtc_gamma->red[j] = g * red;
+            crtc_gamma->green[j] = g * green;
+            crtc_gamma->blue[j] = g * blue;
         }
         XRRSetCrtcGamma(dpy, crtcxid, crtc_gamma);
         XFree(crtc_gamma);
@@ -87,24 +141,11 @@ int get_gamma(int *err) {
 
     if (res->ncrtc > 0) {
         XRRCrtcGamma *crtc_gamma = XRRGetCrtcGamma(dpy, res->crtcs[0]);
-        int size = crtc_gamma->size;
-        if (size > 0) {
-            const double g = 65535.0 / size;
-            const double distance = 0.01;
-            const double gammag = crtc_gamma->green[1] / g;
-            const double gammab = crtc_gamma->blue[1] / g;
-            for (int i = 0; i < 20 && temp == -1; i++) {
-                // at least second decimal digit is different, given our table
-                if ((fabs(whitepoints[i].g - gammag) < distance) && (fabs(whitepoints[i].b - gammab) < distance)) {
-                    temp = (i * 500) + 1000;
-                }
-            }
-        }
-
+        temp = get_temp(crtc_gamma->red[1], crtc_gamma->blue[1]);
         XFree(crtc_gamma);
     }
 
-    if (temp == 0 || temp == -1) {
+    if (temp <= 0) {
         *err = 1;
     }
 
