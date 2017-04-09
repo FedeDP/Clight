@@ -21,8 +21,6 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#define _GNU_SOURCE
-
 #include "../inc/bus.h"
 #include "../inc/brightness.h"
 #include "../inc/gamma.h"
@@ -64,12 +62,9 @@ static void init(int argc, char *argv[]) {
     open_log();
     init_opts(argc, argv);
     init_bus();
-    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+    const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
+    for (int i = 0; i < limit && !state.quit; i++) {
         init_module[i]();
-    }
-    if (!state.quit && conf.single_capture_mode) {
-        main_p.cb[CAPTURE_IX]();
-        state.quit = 1;
     }
 }
 
@@ -77,10 +72,12 @@ static void init(int argc, char *argv[]) {
  * Free every used resource
  */
 static void destroy(void) {
-    for (int i = 0; i < MODULES_NUM; i++) {
+    const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
+    for (int i = 0; i < limit; i++) {
         destroy_module[i]();
     }
     destroy_bus();
+    destroy_opts();
     close_log();
 }
 

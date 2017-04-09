@@ -36,9 +36,9 @@ void init_brightness(void) {
         get_current_brightness();
 
         /* Initialize our brightness values array */
-        if (!state.quit && !(br.values = calloc(conf.num_captures, sizeof(double)))) {
+        if (!(br.values = calloc(conf.num_captures, sizeof(double)))) {
             state.quit = 1;
-        } else {
+        } else if (!state.quit) {
             int fd = start_timer(CLOCK_MONOTONIC, 1);
             set_pollfd(fd, CAPTURE_IX, brightness_cb);
             INFO("Brightness module started.\n");
@@ -53,6 +53,9 @@ static void brightness_cb(void) {
         read(main_p.p[CAPTURE_IX].fd, &t, sizeof(uint64_t));
     }
     do_capture();
+    if (conf.single_capture_mode) {
+        state.quit = 1;
+    }
 }
 
 /**
@@ -165,7 +168,7 @@ void destroy_brightness(void) {
         free(br.values);
     }
 
-    if (main_p.p[CAPTURE_IX].fd != -1) {
+    if (main_p.p[CAPTURE_IX].fd > 0) {
         close(main_p.p[CAPTURE_IX].fd);
     }
     INFO("Brightness module destroyed.\n");

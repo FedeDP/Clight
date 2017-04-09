@@ -14,4 +14,4 @@ It is splitted in 2 modules: clight and clightd.
 
 For more details, check each module README.
 
-This softwares are distributed with a GPL license, see [COPYING](https://github.com/FedeDP/Clight/blob/master/COPYING) file for more informations.
+This softwares are distributed with GPL license, see [COPYING](https://github.com/FedeDP/Clight/blob/master/COPYING) file for more informations.

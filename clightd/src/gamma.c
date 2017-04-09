@@ -11,7 +11,7 @@ static double clamp(double x, double max);
 static double get_red(int temp);
 static double get_green(int temp);
 static double get_blue(int temp);
-static double get_temp(const double R, const double B);
+static double get_temp(const unsigned short R, const unsigned short B);
 
 static double clamp(double x, double max) {
     if (x > max) { 
@@ -66,20 +66,19 @@ static double get_blue(int temp) {
 }
 
 /* Thanks to: https://github.com/neilbartlett/color-temperature/blob/master/index.js */
-static double get_temp(const double R, const double B) {
+static double get_temp(const unsigned short R, const unsigned short B) {
     double temperature;
-    double testR,  testB;
     double epsilon=0.4;
-    double minTemperature = 1000;
-    double maxTemperature = 40000;
-    while (maxTemperature - minTemperature > epsilon) {
-        temperature = (maxTemperature + minTemperature) / 2;
-        testR = get_red(temperature);
-        testB = get_blue(temperature);
-        if ((testB / testR) >= (B / R)) {
-            maxTemperature = temperature;
+    double min_temp = 1000;
+    double max_temp = 10000;
+    while (max_temp - min_temp > epsilon) {
+        temperature = (max_temp + min_temp) / 2;
+        unsigned short testR = get_red(temperature);
+        unsigned short testB = get_blue(temperature);
+        if (((double) testB / testR) >= ((double) B / R)) {
+            max_temp = temperature;
         } else {
-            minTemperature = temperature;
+            min_temp = temperature;
         }
     }
     return round(temperature);

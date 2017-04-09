@@ -38,7 +38,7 @@ static void signal_cb(void) {
 }
 
 void destroy_signal(void) {
-    if (main_p.p[SIGNAL_IX].fd != -1) {
+    if (main_p.p[SIGNAL_IX].fd > 0) {
         close(main_p.p[SIGNAL_IX].fd);
     }
     INFO("Signal module destroyed.\n");

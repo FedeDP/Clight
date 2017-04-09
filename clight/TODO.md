@@ -1,10 +1,12 @@
 TODO before release:
 
 ## High Priority:
-- [ ] Very frequent capture at "event" changing (ie: during sunset or sunrise)
+- [x] Very frequent capture at "event" changing (ie: during sunset or sunrise) -> ci siamo quasi
+- [x] add doc for gamma (it is kind of chaotic)
+- [x] fix FIXME in gamma.c
 
 ## Mid Priority:
-- [ ] add settable timers for gamma temp events (eg --sunset 7:00 --sunshine 19:30)
+- [x] add settable timers for gamma temp events (eg --sunset 7:00 --sunshine 19:30)
 - [x] add gpl license file
 
 ## Low Priority:

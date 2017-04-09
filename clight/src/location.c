@@ -28,16 +28,22 @@ static char client[PATH_MAX + 1];
  *
  * Moreover, it stores a callback to be called on updated location event.
  */
-void init_location(void) {
-    int fd;
-
-    if (conf.lat != 0 && conf.lon != 0) {
-        fd = location_conf_init();
-    } else {
-        fd = geoclue_init();
+void init_location(void) {    
+    /* 
+     * if sunrise/sunset times are passed through cmdline,
+     * there is no need to load location module.
+     */
+    if (!conf.events[SUNRISE] || !conf.events[SUNSET]) {
+        int fd;
+        
+        if (conf.lat != 0 && conf.lon != 0) {
+            fd = location_conf_init();
+        } else {
+            fd = geoclue_init();
+        }
+        set_pollfd(fd, LOCATION_IX, location_cb);
+        INFO("Location module started.\n");
     }
-    set_pollfd(fd, LOCATION_IX, location_cb);
-    INFO("Location module started.\n");
 }
 
 /*
@@ -100,6 +106,7 @@ end:
     if (state.quit) {
         ERROR("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
         state.quit = 0;
+        state.time = UNKNOWN;
         location_fd = -1;
     }
     return location_fd;
@@ -143,19 +150,22 @@ static void geoclue_check_initial_location(void) {
  * If we are using geoclue, stop client.
  */
 void destroy_location(void) {
-    if (is_geoclue()) {
-        geoclue_client_stop();
-    } else if (main_p.p[LOCATION_IX].fd != -1) {
-        close(main_p.p[LOCATION_IX].fd);
+    /* if location module is loaded */
+    if (!conf.events[SUNRISE] || !conf.events[SUNSET]) {
+        if (is_geoclue()) {
+            geoclue_client_stop();
+        } else if (main_p.p[LOCATION_IX].fd > 0) {
+            close(main_p.p[LOCATION_IX].fd);
+        }
+        INFO("Location module destroyed.\n");
     }
-    INFO("Location module destroyed.\n");
 }
 
 /*
  * Whether we are using geoclue (thus client object length is > 0)
  */
 static int is_geoclue(void) {
-    return strlen(client) != 0;
+    return strlen(client) > 0;
 }
 
 /*
