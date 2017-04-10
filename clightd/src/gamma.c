@@ -99,11 +99,6 @@ void set_gamma(int temp, int *err) {
     Window root = RootWindow(dpy, screen);
 
     XRRScreenResources *res = XRRGetScreenResourcesCurrent(dpy, root);
-
-    if (temp < 1000 || temp > 10000) {
-        *err = EINVAL;
-        return;
-    }
     
     double red = get_red(temp) / 255;
     double green = get_green(temp) / 255;

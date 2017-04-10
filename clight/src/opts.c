@@ -34,7 +34,7 @@ void init_opts(int argc, char *argv[]) {
         conf.timeout[NIGHT] = 45 * 60;
     }
 
-    if (conf.num_captures <= 0) {
+    if (conf.num_captures <= 0 || conf.num_captures > 20) {
         ERROR("Wrong frames value. Resetting default value.\n");
         conf.num_captures = 5;
     }

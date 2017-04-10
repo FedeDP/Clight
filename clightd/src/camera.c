@@ -8,20 +8,23 @@ static void init_mmap(void);
 static int xioctl(int request, void *arg);
 static void start_stream(void);
 static void stop_stream(void);
-static void capture_frame(void);
+static void capture_frame(int i);
 static double compute_brightness(unsigned int length);
+static double compute_avg_brightness(int num_captures) ;
 static void free_all();
 
 struct state {
     int quit, width, height, device_fd, buf_size;
-    double brightness_value;
+    double *brightness_values;
     uint8_t *buffer;
     tjhandle _jpegDecompressor;
 };
 
 static struct state *state;
 
-double capture_frames(const char *interface, int *err) {
+double capture_frames(const char *interface, int num_captures, int *err) {
+    double avg_brightness = -1;
+    
     /* properly initialize struct with all fields to zero-or-null */
     struct state tmp = {0};
     state = &tmp;
@@ -39,13 +42,18 @@ double capture_frames(const char *interface, int *err) {
         }
         
         state->_jpegDecompressor = tjInitDecompress();
+        state->brightness_values = calloc(num_captures, sizeof(double));
         
         start_stream();
         if (state->quit) {
             goto end;
         }
-        capture_frame();
+        
+        for (int i = 0; i < num_captures; i++) {
+            capture_frame(i);
+        }
         stop_stream();
+        avg_brightness = compute_avg_brightness(num_captures);
     }
     
 end:    
@@ -54,7 +62,7 @@ end:
     }
 
     free_all();
-    return tmp.brightness_value;
+    return avg_brightness;
 }
 
 static void open_device(const char *interface) {
@@ -154,23 +162,11 @@ static int xioctl(int request, void *arg) {
 }
 
 static void start_stream(void) {
-    struct v4l2_buffer buf = {0};
-    
-    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    buf.memory = V4L2_MEMORY_MMAP;
-    buf.index = 0;
-    
     // start stream
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (-1 == xioctl(VIDIOC_STREAMON, &type)) {
         perror("Start Capture");
         return;
-    }
-    
-    // query a buffer from camera
-    if(-1 == xioctl(VIDIOC_QBUF, &buf)) {
-        perror("Query Buffer");
-        stop_stream();
     }
 }
 
@@ -182,11 +178,18 @@ static void stop_stream(void) {
     }
 }
 
-static void capture_frame(void) {
+static void capture_frame(int i) {
     struct v4l2_buffer buf = {0};
     
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
+    buf.index = 0;
+    
+    // query a buffer from camera
+    if(-1 == xioctl(VIDIOC_QBUF, &buf)) {
+        perror("Query Buffer");
+        stop_stream();
+    }
     
     // dequeue the buffer
     if(-1 == xioctl(VIDIOC_DQBUF, &buf)) {
@@ -194,7 +197,7 @@ static void capture_frame(void) {
         return;
     }
 
-    state->brightness_value = compute_brightness(buf.bytesused);
+    state->brightness_values[i] = compute_brightness(buf.bytesused);
 }
 
 static double compute_brightness(unsigned int length) {
@@ -219,6 +222,34 @@ end:
     return brightness / 255;
 }
 
+/*
+ * Compute average captured frames brightness.
+ * It will normalize data removing highest and lowest values.
+ */
+static double compute_avg_brightness(int num_captures) {
+    int lowest = 0, highest = 0;
+    double total = 0.0;
+    
+    for (int i = 0; i < num_captures; i++) {
+        if (state->brightness_values[i] < state->brightness_values[lowest]) {
+            lowest = i;
+        } else if (state->brightness_values[i] > state->brightness_values[highest]) {
+            highest = i;
+        }
+        total += state->brightness_values[i];
+        printf("%lf\n", state->brightness_values[i]);
+    }
+    
+    // total == 0.0 means every captured frame decompression failed
+    if (total != 0.0 && num_captures > 2) {
+        // remove highest and lowest values to normalize
+        total -= (state->brightness_values[highest] + state->brightness_values[lowest]);
+        return total / (num_captures - 2);
+    }
+    
+    return total / num_captures;
+}
+
 static void free_all(void) {
     if (state->device_fd != -1) {
         close(state->device_fd);
@@ -230,6 +261,10 @@ static void free_all(void) {
     
     if (state->_jpegDecompressor) {
         tjDestroy(state->_jpegDecompressor);
+    }
+    
+    if (state->brightness_values) {
+        free(state->brightness_values);
     }
     
     state = NULL;

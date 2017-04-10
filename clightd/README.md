@@ -48,7 +48,7 @@ My idea is that anyone can now implement something similar to clight without mes
 A clight replacement, using clightd, can be something like (pseudo-code):
 
     $ max_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight getmaxbrightness s ""
-    $ ambient_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight captureframe s ""
+    $ ambient_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight captureframes si "" 5
     $ new_br = ambient_br * max_br
     $ busctl call org.clight.backlight /org/clight/backlight org.clight.backlight setbrightness si "" new_br
 
@@ -67,6 +67,6 @@ Note that new brightness value is checked to be between 0 and max_brightness.
 * *setgamma* -> takes a temperature value (int, between 1000 and 10000) and set display temperature. Returns newly setted display temperature (int).
 
 ### If built with frame captures support:
-* *captureframe* -> takes a video sysname (eg: video0). Returns average frame brightness, between 0.0 and 1.0 (double).
+* *captureframes* -> takes a video sysname (eg: video0) and a number of frames to be captured (int, between 1 and 20). Returns average frames brightness, between 0.0 and 1.0 (double).
 
 **It does only support jpeg screen captures. So, if your webcam does not support jpeg frame captures, you are out of luck, sorry.**
