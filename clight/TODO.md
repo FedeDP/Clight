@@ -8,6 +8,8 @@ TODO before release:
 ## Mid Priority:
 - [x] add settable timers for gamma temp events (eg --sunset 7:00 --sunshine 19:30)
 - [x] add gpl license file
+- [x] avoid printing "MODULE x destroyed" if it has never been inited
+- [ ] add a "--no-gamma" cmdline switch to disable gamma correction tool.
 
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream)

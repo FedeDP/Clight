@@ -71,6 +71,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your current longitude.", NULL},
         {"sunrise", 0, POPT_ARG_STRING, &conf.events[SUNRISE], 0, "Force a sunrise time when switch gamma temp.", "Sunrise time, eg: 07:00."},
         {"sunset", 0, POPT_ARG_STRING, &conf.events[SUNSET], 0, "Force a sunset time when switch gamma temp.", "Sunset time, eg: 19:00."},
+        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool.", NULL},
         POPT_AUTOHELP
         {NULL}
     };

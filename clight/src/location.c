@@ -15,6 +15,7 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
+static int inited;
 
 /*
  * init location:
@@ -30,10 +31,11 @@ static char client[PATH_MAX + 1];
  */
 void init_location(void) {    
     /* 
-     * if sunrise/sunset times are passed through cmdline,
+     * if sunrise/sunset times are passed through cmdline, 
+     * or gamma support is disabled,
      * there is no need to load location module.
      */
-    if (!conf.events[SUNRISE] || !conf.events[SUNSET]) {
+    if (!conf.no_gamma && (!conf.events[SUNRISE] || !conf.events[SUNSET])) {
         int fd;
         
         if (conf.lat != 0 && conf.lon != 0) {
@@ -43,6 +45,7 @@ void init_location(void) {
         }
         set_pollfd(fd, LOCATION_IX, location_cb);
         INFO("Location module started.\n");
+        inited = 1;
     }
 }
 
@@ -150,8 +153,7 @@ static void geoclue_check_initial_location(void) {
  * If we are using geoclue, stop client.
  */
 void destroy_location(void) {
-    /* if location module is loaded */
-    if (!conf.events[SUNRISE] || !conf.events[SUNSET]) {
+    if (inited) {
         if (is_geoclue()) {
             geoclue_client_stop();
         } else if (main_p.p[LOCATION_IX].fd > 0) {

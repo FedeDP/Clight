@@ -9,6 +9,8 @@ static double set_brightness(double perc);
 static double capture_frame_brightness(void);
 static double compute_avg_brightness(void);
 
+static int inited;
+
 /*
  * Storage struct for our needed variables.
  */
@@ -42,6 +44,7 @@ void init_brightness(void) {
             int fd = start_timer(CLOCK_MONOTONIC, 1);
             set_pollfd(fd, CAPTURE_IX, brightness_cb);
             INFO("Brightness module started.\n");
+            inited = 1;
         }
     }
 }
@@ -164,12 +167,13 @@ static double compute_avg_brightness(void) {
 }
 
 void destroy_brightness(void) {
-    if (br.values) {
-        free(br.values);
+    if (inited) { 
+        if (br.values) {
+            free(br.values);
+        }
+        if (main_p.p[CAPTURE_IX].fd > 0) {
+            close(main_p.p[CAPTURE_IX].fd);
+        }
+        INFO("Brightness module destroyed.\n");
     }
-
-    if (main_p.p[CAPTURE_IX].fd > 0) {
-        close(main_p.p[CAPTURE_IX].fd);
-    }
-    INFO("Brightness module destroyed.\n");
 }

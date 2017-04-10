@@ -21,7 +21,7 @@ static double clamp(double x, double max) {
 }
 
 static double get_red(int temp) {
-    if (temp < 6600) {
+    if (temp <= 6500) {
         return 255;
     }
     const double a = 351.97690566805693;
@@ -35,7 +35,7 @@ static double get_red(int temp) {
 static double get_green(int temp) {
     double a, b, c;
     double new_temp;
-    if (temp < 6600) {
+    if (temp <= 6500) {
         a = -155.25485562709179;
         b = -0.44596950469579133;
         c = 104.49216199393888;
@@ -50,11 +50,11 @@ static double get_green(int temp) {
 }
 
 static double get_blue(int temp) {
-    if (temp < 1900) {
+    if (temp <= 1900) {
         return 0;
     }
     
-    if (temp < 6600) {
+    if (temp < 6500) {
         const double new_temp = ((double)temp / 100) - 10;
         const double a = -254.76935184120902;
         const double b = 0.8274096064007395;
@@ -67,20 +67,23 @@ static double get_blue(int temp) {
 
 /* Thanks to: https://github.com/neilbartlett/color-temperature/blob/master/index.js */
 static double get_temp(const unsigned short R, const unsigned short B) {
+    const double epsilon=0.4;
     double temperature;
-    double epsilon=0.4;
-    double min_temp = 1000;
-    double max_temp = 10000;
-    while (max_temp - min_temp > epsilon) {
+    double min_temp = B == 255 ? 6500 : 1000; // lower bound
+    double max_temp = R == 255 ? 6500 : 10000; // upper bound
+    do {
         temperature = (max_temp + min_temp) / 2;
         unsigned short testR = get_red(temperature);
         unsigned short testB = get_blue(temperature);
-        if (((double) testB / testR) >= ((double) B / R)) {
+        if (testR == R && testB == B) {
+            break;
+        }
+        if ((double) testB / testR > (double) B / R) {
             max_temp = temperature;
         } else {
             min_temp = temperature;
         }
-    }
+    } while (max_temp - min_temp > epsilon);
     return round(temperature);
 }
 

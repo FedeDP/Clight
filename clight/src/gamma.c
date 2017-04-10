@@ -16,25 +16,32 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
+static int inited;
+
 void init_gamma(void) {
+    if (!conf.no_gamma) {
     int initial_timeout = 0;
-    /* 
-     * if both sunrise and sunset times are passed
-     * through cmdline opts, start immediately gamma module.
-     */
-    if (conf.events[SUNRISE] && conf.events[SUNSET]) {
-        initial_timeout = 1;
+        /* 
+         * if both sunrise and sunset times are passed
+         * through cmdline opts, start immediately gamma module.
+         */
+        if (conf.events[SUNRISE] && conf.events[SUNSET]) {
+            initial_timeout = 1;
+        }
+        int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
+        set_pollfd(gamma_timerfd, GAMMA_IX, gamma_cb);
+        INFO("Gamma module started.\n");
+        inited = 1;
     }
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
-    set_pollfd(gamma_timerfd, GAMMA_IX, gamma_cb);
-    INFO("Gamma module started.\n");
 }
 
 void destroy_gamma(void) {
-    if (main_p.p[GAMMA_IX].fd > 0) {
-        close(main_p.p[GAMMA_IX].fd);
+    if (inited) {
+        if (main_p.p[GAMMA_IX].fd > 0) {
+            close(main_p.p[GAMMA_IX].fd);
+        }
+        INFO("Gamma module destroyed.\n");
     }
-    INFO("Gamma module destroyed.\n");
 }
 
 static void gamma_cb(void) {

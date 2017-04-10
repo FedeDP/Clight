@@ -31,7 +31,9 @@ void log_conf(void) {
         fprintf(log_file, "* Nightly screen temp: %d\n", conf.temp[NIGHT]);
         fprintf(log_file, "* Smooth transitions: %d\n", conf.smooth_transition);
         fprintf(log_file, "* Latitude: %.2lf\n", conf.lat);
-        fprintf(log_file, "* Longitude: %.2lf\n\n", conf.lon);
+        fprintf(log_file, "* Longitude: %.2lf\n", conf.lon);
+        fprintf(log_file, "* User setted sunrise: %s\n", conf.events[SUNRISE]);
+        fprintf(log_file, "* User setted sunset: %s\n\n", conf.events[SUNSET]);
     }
 }
 

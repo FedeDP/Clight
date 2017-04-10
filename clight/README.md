@@ -20,11 +20,11 @@ A systemd user unit is shipped too. Just run "systemctl --user enable clight.ser
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time.
 * more frequent captures inside "events": an event starts 30mins before sunrise/sunset and ends 30mins after sunrise/sunset.
 
-Valgrind is run with:
+### Valgrind is run with:
     
     $ alias valgrind='valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all -v'
     
-cppcheck is run with:
+### Cppcheck is run with:
 
     $  cppcheck --enable=style --enable=performance --enable=unusedFunction 
 
@@ -34,10 +34,11 @@ There is no more option file support through libconfig as cmd line options alrea
 Moreover, with [systemd unit conf files](https://wiki.archlinux.org/index.php/systemd#Drop-in_files), is really easy to reach same behaviour (ie: systemd unit launched with certain cmdline args).
 
 ## Build instructions:
+Build and install:
 
     $ make
     # make install
 
-To uninstall:
+Uninstall:
 
     # make uninstall

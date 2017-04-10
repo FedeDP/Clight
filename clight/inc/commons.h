@@ -30,6 +30,7 @@ struct config {
     double lat;
     double lon;
     char *events[2];
+    int no_gamma;
 };
 
 struct state {
