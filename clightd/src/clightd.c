@@ -316,7 +316,7 @@ static void get_first_matching_device(struct udev_device **dev, const char *subs
 static void get_udev_device(const char *backlight_interface, const char *subsystem,
                             sd_bus_error **ret_error, struct udev_device **dev) {
     // if no backlight_interface is specified, try to get first matching device
-    if (!strlen(backlight_interface)) {
+    if (!backlight_interface || !strlen(backlight_interface)) {
         get_first_matching_device(dev, subsystem);
     } else {
         *dev = udev_device_new_from_subsystem_sysname(udev, subsystem, backlight_interface);

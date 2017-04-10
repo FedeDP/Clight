@@ -36,12 +36,16 @@ Uninstall:
 
     $  cppcheck --enable=style --enable=performance --enable=unusedFunction 
     
-## Info
+## Devel info
+Brightness related bus interface methods make all use of libudev to write and read current values (no fopen or other things like that).  
+If no syspath is passed as parameter to method calls, it uses first subsystem matching device that it finds through libudev.  
+Strict error checking tries to enforce no issue of any kind.  
+
 You may ask why did i developed this solution. The answer is quite simple: on linux there is no simple and unified way of changing screen brightness.  
 So, i thought it could be a good idea to develop a bus service that can be used by every other program.
 
 My idea is that anyone can now implement something similar to clight without messing with videodev or libjpeg.  
-A clight bash replacement, using clightd, can be something like (pseudo-code):
+A clight replacement, using clightd, can be something like (pseudo-code):
 
     $ max_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight getmaxbrightness s ""
     $ ambient_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight captureframe s ""
