@@ -19,6 +19,7 @@ A systemd user unit is shipped too. Just run "systemctl --user enable clight.ser
 * nice log file, placed in $HOME/.clight.log
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time.
 * more frequent captures inside "events": an event starts 30mins before sunrise/sunset and ends 30mins after sunrise/sunset.
+* gamma correction tool support can be disabled at runtime (--no-gamma cmdline switch)
 
 ### Valgrind is run with:
     
