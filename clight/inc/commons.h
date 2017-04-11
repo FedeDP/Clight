@@ -26,7 +26,7 @@ struct config {
     char *dev_name;
     char *screen_path;
     int temp[SIZE_STATES]; // sizeof enum states DAY, NIGHT only
-    int smooth_transition;
+    int no_smooth_transition;
     double lat;
     double lon;
     char *events[2];

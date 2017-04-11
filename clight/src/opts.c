@@ -17,7 +17,6 @@ void init_opts(int argc, char *argv[]) {
     conf.temp[NIGHT] = 4000;
     conf.temp[EVENT] = -1;
     conf.temp[UNKNOWN] = 6500;
-    conf.smooth_transition = 1;
 
     parse_cmd(argc, argv);
 
@@ -64,11 +63,11 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"night_timeout", 0, POPT_ARG_INT, &conf.timeout[NIGHT], 0, "Seconds between each capture during the night. Defaults to 45mins", NULL},
         {"device", 'd', POPT_ARG_STRING, &conf.dev_name, 0, "Path to webcam device. By default, first matching device is used", "/dev/videoX"},
         {"backlight", 'b', POPT_ARG_STRING, &conf.screen_path, 0, "Path to backlight syspath. By default, first matching device is used", "/sys/class/backlight/foo"},
-        {"smooth_transition", 0, POPT_ARG_INT, &conf.smooth_transition, 0, "1 enables/0 disables smooth gamma transition", NULL},
+        {"no-smooth_transition", 0, POPT_ARG_NONE, &conf.no_smooth_transition, 0, "Disable smooth gamma transition", NULL},
         {"day_temp", 0, POPT_ARG_INT, &conf.temp[DAY], 0, "Daily gamma temperature, between 1000 and 10000", NULL},
         {"night_temp", 0, POPT_ARG_INT, &conf.temp[NIGHT], 0, "Nightly gamma temperature, between 1000 and 10000", NULL},
-        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 0, "Your desired latitude", "40.9"},
-        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your desired longitude", "8.60"},
+        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 0, "Your desired latitude", NULL},
+        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, &conf.events[SUNRISE], 0, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, &conf.events[SUNSET], 0, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool", NULL},
@@ -77,7 +76,6 @@ static void parse_cmd(int argc, char *const argv[]) {
     };
 
     pc = poptGetContext(NULL, argc, (const char **)argv, po, 0);
-    // process options and handle each val returned
     int rc = poptGetNextOpt(pc);
     // poptGetNextOpt returns -1 when the final argument has been parsed
     // otherwise an error occured

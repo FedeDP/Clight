@@ -112,6 +112,7 @@ static void init(void) {
     
     if (-1 == xioctl(VIDIOC_S_FMT, &fmt)) {
         perror("Setting Pixel Format");
+        state->quit = 1;
         return;
     }
     

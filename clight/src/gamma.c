@@ -21,7 +21,7 @@ static int inited;
 void init_gamma(void) {
     if (!conf.no_gamma) {
     int initial_timeout = 0;
-        /* 
+        /*
          * if both sunrise and sunset times are passed
          * through cmdline opts, start immediately gamma module.
          */
@@ -66,16 +66,16 @@ static void check_gamma(void) {
     static int transitioning = 0, first_time = 1;
     time_t t;
     enum states old_state = state.time;
-    
-    /* 
+
+    /*
      * Only if we're not doing a smooth transition
      */
     if (!transitioning) {
-        t = time(NULL);        
-        /* 
+        t = time(NULL);
+        /*
          * first time clight is started, get_gamma_events will poll today events.
          * Then, it will be called every day after end of last event (ie: sunset + 30mins)
-         */ 
+         */
         get_gamma_events(&t, conf.lat, conf.lon, state.events[SUNSET] != 0);
         if (state.quit) {
             return;
@@ -96,7 +96,7 @@ static void check_gamma(void) {
         INFO("Next gamma alarm due to: %s", ctime(&t));
         set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p.p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
-        
+
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
         if (old_state != state.time) {
             set_timeout(conf.timeout[state.time], 0, main_p.p[CAPTURE_IX].fd, 0);
@@ -132,11 +132,11 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     // 1. compute the day of the year (timeinfo->tm_yday below)
     time(tt);
     struct tm *timeinfo;
-    
+
     if (conf.events[SUNRISE] && conf.events[SUNSET]) {
-        timeinfo = localtime(tt); 
-    } else { 
-        timeinfo = gmtime(tt); 
+        timeinfo = localtime(tt);
+    } else {
+        timeinfo = gmtime(tt);
     }
     if (!timeinfo) {
         return -1;
@@ -144,7 +144,7 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     // if needed, set tomorrow
     timeinfo->tm_yday += tomorrow;
     timeinfo->tm_mday += tomorrow;
-    
+
     /* If user provided a sunrise/sunset time, use them */
     if (conf.events[SUNRISE] && conf.events[SUNSET]) {
         char *s = strptime(conf.events[event], "%R", timeinfo);
@@ -244,7 +244,7 @@ static int calculate_sunset(const float lat, const float lng, time_t *tt, int to
  */
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day) {
     time_t t;
-        
+
     /* only every new day, after latest event of today finished */
     if (*now >= state.events[SUNSET] + EVENT_DURATION - 1) {
         if (calculate_sunset(lat, lon, &t, day) == 0) {
@@ -252,7 +252,7 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
                 /*
                  * we're between today's sunrise and tomorrow sunrise.
                  * rerun function with tomorrow.
-                 * Useful only first time clight is started 
+                 * Useful only first time clight is started
                  * (ie: if it is started at night time)
                  */
                 return get_gamma_events(now, lat, lon, ++day);
@@ -261,13 +261,13 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
         } else {
             state.events[SUNSET] = -1;
         }
-    
+
         if (calculate_sunrise(lat, lon, &t, day) == 0) {
             state.events[SUNRISE] = t;
         } else {
             state.events[SUNRISE] = -1;
         }
-    
+
         if (state.events[SUNRISE] == -1 && state.events[SUNSET] == -1) {
             // no sunrise/sunset could be found.
             state.time = UNKNOWN;
@@ -295,7 +295,7 @@ static void check_next_event(time_t *now) {
 /*
  * Updates state.time global var, according to now time_t value.
  * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
- * If we're inside an event, checks which side of the events we're in 
+ * If we're inside an event, checks which side of the events we're in
  * (to understand which conf.temp is correct for this state).
  * Then sets state.event_time_range accordingly; ie: 30mins before event, if we're not inside an event;
  * 0 if we just entered an event (so next_event has to be exactly event time, to set new temp),
@@ -348,7 +348,7 @@ static int set_temp(int temp) {
     if (old_temp != temp) {
         struct bus_args args_set = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "setgamma"};
 
-        if (conf.smooth_transition) {
+        if (!conf.no_smooth_transition) {
             if (old_temp > temp) {
                     old_temp = old_temp - step < temp ? temp : old_temp - step;
                 } else {
@@ -356,11 +356,13 @@ static int set_temp(int temp) {
                 }
                 bus_call(&new_temp, "i", &args_set, "i", old_temp);
         } else {
-            // reset old_temp for next call
-            old_temp = 0;
             bus_call(&new_temp, "i", &args_set, "i", temp);
         }
-        INFO("%d gamma temp setted.\n", new_temp);
+        if (new_temp == temp) {
+            // reset old_temp for next call
+            old_temp = 0;
+            INFO("%d gamma temp setted.\n", temp);
+        }
     } else {
         // reset old_temp
         old_temp = 0;

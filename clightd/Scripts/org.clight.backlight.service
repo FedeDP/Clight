@@ -1,4 +1,4 @@
 [D-BUS Service]
-Name=org.clight.brightness  
-Exec=/usr/lib/clight/clightd
+Name=org.clight.backlight
+Exec=/usr/lib/clightd/clightd
 User=root

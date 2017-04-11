@@ -2,7 +2,7 @@ This is clight user service source code.
 
 ## It currently needs:
 * libxcb (xcb.h, xcb/dpms.h)
-* libsystemd (systemd/sd-bus.h)
+* libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
 
 A systemd user unit is shipped too. Just run "systemctl --user enable clight.service" and reboot.
@@ -22,14 +22,14 @@ A systemd user unit is shipped too. Just run "systemctl --user enable clight.ser
 * gamma correction tool support can be disabled at runtime (--no-gamma cmdline switch)
 
 ### Valgrind is run with:
-    
+
     $ alias valgrind='valgrind --tool=memcheck --leak-check=full --track-origins=yes --show-leak-kinds=all -v'
-    
+
 ### Cppcheck is run with:
 
-    $  cppcheck --enable=style --enable=performance --enable=unusedFunction 
+    $  cppcheck --enable=style --enable=performance --enable=unusedFunction
 
-For cmdline options, check clight [-?|--help] [--usage].
+For cmdline options, check clight [-?|--help] [--usage].  
 
 There is no more option file support through libconfig as cmd line options already expose every setting.  
 Moreover, with [systemd unit conf files](https://wiki.archlinux.org/index.php/systemd#Drop-in_files), is really easy to reach same behaviour (ie: systemd unit launched with certain cmdline args).
