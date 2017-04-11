@@ -44,8 +44,8 @@ static void get_udev_device(const char *backlight_interface, const char *subsyst
                             sd_bus_error **ret_error, struct udev_device **dev);
 
 
-static const char object_path[] = "/org/clight/backlight";
-static const char bus_interface[] = "org.clight.backlight";
+static const char object_path[] = "/org/clightd/backlight";
+static const char bus_interface[] = "org.clightd.backlight";
 static struct udev *udev;
 /**
  * Bus spec: https://dbus.freedesktop.org/doc/dbus-specification.html

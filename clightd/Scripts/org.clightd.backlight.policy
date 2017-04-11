@@ -3,7 +3,7 @@
 "http://www.freedesktop.org/software/polkit/policyconfig-1.dtd">
 <policyconfig>
     
-    <action id="org.clight.backlight.setbrightness">
+    <action id="org.clightd.backlight.setbrightness">
         <icon_name>battery</icon_name> 
         <defaults>
             <allow_any>no</allow_any>

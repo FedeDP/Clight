@@ -1,9 +1,9 @@
 BINDIR = /usr/lib/clightd
 BINNAME = clightd
 BUSCONFDIR = /etc/dbus-1/system.d/
-BUSCONFNAME = org.clight.backlight.conf
+BUSCONFNAME = org.clightd.backlight.conf
 BUSSERVICEDIR = /usr/share/dbus-1/system-services/
-BUSSERVICENAME = org.clight.backlight.service
+BUSSERVICENAME = org.clightd.backlight.service
 EXTRADIR = Scripts
 DEBIANDIR = ./Clightd
 DEBOUTPUTDIR = ../Debian
