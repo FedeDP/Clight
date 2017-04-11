@@ -2,8 +2,7 @@
 
 #define ZENITH -0.83
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
-
-enum events { SUNRISE, SUNSET };
+#define EVENT_DURATION 30 * 60
 
 static void gamma_cb(void);
 static void check_gamma(void);
@@ -12,20 +11,37 @@ static double radToDeg(const double angleRad);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng,
                                     time_t *tt, enum events event, int tomorrow);
-static void get_next_gamma_event(const float lat, const float lon);
+static void get_gamma_events(time_t *now, const float lat, const float lon, int day);
+static void check_next_event(time_t *now);
+static void check_state(time_t *now);
 static int set_temp(int temp);
 
+static int inited;
+
 void init_gamma(void) {
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, 0);
-    set_pollfd(gamma_timerfd, GAMMA_IX, gamma_cb);
-    INFO("Gamma module started.\n");
+    if (!conf.no_gamma) {
+    int initial_timeout = 0;
+        /*
+         * if both sunrise and sunset times are passed
+         * through cmdline opts, start immediately gamma module.
+         */
+        if (conf.events[SUNRISE] && conf.events[SUNSET]) {
+            initial_timeout = 1;
+        }
+        int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
+        set_pollfd(gamma_timerfd, GAMMA_IX, gamma_cb);
+        INFO("Gamma module started.\n");
+        inited = 1;
+    }
 }
 
 void destroy_gamma(void) {
-    if (main_p.p[GAMMA_IX].fd != -1) {
-        close(main_p.p[GAMMA_IX].fd);
+    if (inited) {
+        if (main_p.p[GAMMA_IX].fd > 0) {
+            close(main_p.p[GAMMA_IX].fd);
+        }
+        INFO("Gamma module destroyed.\n");
     }
-    INFO("Gamma module destroyed.\n");
 }
 
 static void gamma_cb(void) {
@@ -36,28 +52,55 @@ static void gamma_cb(void) {
 }
 
 /*
- * check current period of time (day or night) and next event (sunrise/sunset).
- * Then call set_temp with correct temp, given current state(night or day).
+ * checks next day events (or current day if clight has started right now).
+ * Then, if needed (ie: first time this func is called or when state.time changed),
+ * calls set_temp with correct temp, given current state(night or day).
  * It returns 0 if: smooth_transition is off or desired temp has finally been setted (after transitioning).
  * If it returns 0, reset transitioning flag and set next event timeout.
  * Else, set a timeout for smooth transition and set transitioning flag to 1.
+ * If ret == 0, it can also mean we haven't called set_temp, and this means an
+ * "event" timeout elapsed. If old_state != state.time (ie: if we entered or left EVENT state),
+ * set new CAPTURE_IX correct timeout according to new state.
  */
 static void check_gamma(void) {
-    static int transitioning = 0;
+    static int transitioning = 0, first_time = 1;
+    time_t t;
+    enum states old_state = state.time;
 
+    /*
+     * Only if we're not doing a smooth transition
+     */
     if (!transitioning) {
-        get_next_gamma_event(conf.lat, conf.lon);
+        t = time(NULL);
+        /*
+         * first time clight is started, get_gamma_events will poll today events.
+         * Then, it will be called every day after end of last event (ie: sunset + 30mins)
+         */
+        get_gamma_events(&t, conf.lat, conf.lon, state.events[SUNSET] != 0);
+        if (state.quit) {
+            return;
+        }
     }
 
-    int ret = set_temp(conf.temp[state.time]);
-    if (state.quit) {
-        return;
+    int ret = 0;
+    if (transitioning || state.event_time_range == EVENT_DURATION || first_time) {
+        first_time = 0;
+        ret = set_temp(conf.temp[state.time]);
+        if (state.quit) {
+            return;
+        }
     }
 
     if (ret == 0) {
-        INFO("Next gamma alarm due to: %s", ctime(&(state.next_event)));
-        set_timeout(state.next_event, 0, main_p.p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        t = state.events[state.next_event] + state.event_time_range;
+        INFO("Next gamma alarm due to: %s", ctime(&t));
+        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p.p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
+
+        /* if we entered/left an event, set correct timeout to CAPTURE_IX */
+        if (old_state != state.time) {
+            set_timeout(conf.timeout[state.time], 0, main_p.p[CAPTURE_IX].fd, 0);
+        }
     } else {
         // here, set a timeout of 300ms from now for smooth gamma transition
         set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p.p[GAMMA_IX].fd, 0);
@@ -82,17 +125,38 @@ static float to_hours(const float rad) {
 /*
  * Just a small function to compute sunset/sunrise for today (or tomorrow).
  * See: http://stackoverflow.com/questions/7064531/sunrise-sunset-times-in-c
+ * IF conf.events are both set, it means sunrise/sunset times are user-setted.
+ * So, only store in *tt their corresponding time_t values.
  */
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow) {
     // 1. compute the day of the year (timeinfo->tm_yday below)
     time(tt);
-    struct tm *timeinfo = gmtime(tt);
+    struct tm *timeinfo;
+
+    if (conf.events[SUNRISE] && conf.events[SUNSET]) {
+        timeinfo = localtime(tt);
+    } else {
+        timeinfo = gmtime(tt);
+    }
     if (!timeinfo) {
         return -1;
     }
     // if needed, set tomorrow
     timeinfo->tm_yday += tomorrow;
     timeinfo->tm_mday += tomorrow;
+
+    /* If user provided a sunrise/sunset time, use them */
+    if (conf.events[SUNRISE] && conf.events[SUNSET]) {
+        char *s = strptime(conf.events[event], "%R", timeinfo);
+        if (!s) {
+            ERROR("Wrong sunrise/sunset time setted by a cmdline arg. Leaving.\n");
+            state.quit = 1;
+            return -1;
+        }
+        timeinfo->tm_sec = 0;
+        *tt = mktime(timeinfo);
+        return 0;
+    }
 
     // 2. convert the longitude to hour value and calculate an approximate time
     float lngHour = to_hours(lng);
@@ -147,12 +211,11 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
 
     double hours;
     double minutes = modf(UT, &hours) * 60;
-    double seconds = modf(minutes, &minutes) * 60;
 
     // set correct values
     timeinfo->tm_hour = hours;
     timeinfo->tm_min = minutes;
-    timeinfo->tm_sec = seconds;
+    timeinfo->tm_sec = 0;
 
     // store in user provided ptr correct data
     *tt = timegm(timeinfo);
@@ -171,33 +234,90 @@ static int calculate_sunset(const float lat, const float lng, time_t *tt, int to
 }
 
 /*
- * Tries to understand next event:
- * first computes today's sunrise and sunset.
- * If now is < sunrise, next event is today's sunrise and we're during the night.
- * Otherwise, if now is < sunset, we're during the day and next event is sunset.
- * Else, next event will be tomorrow's sunrise and we're in night time.
+ * day -> will be 0 first time this func is called, else 1 (tomorrow).
+ * Stores day sunrise/sunset events only if this is first time it is called,
+ * or of today's sunset event is finished.
+ * Firstly computes day's sunrise and sunset; then calls check_next_event and check_state to
+ * update global state.next_event and state.time variables according to new state.
+ * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
+ * Probably it is just some ms in advance, but rounding it to seconds returns 1s in advance.
  */
-static void get_next_gamma_event(const float lat, const float lon) {
-    time_t t, now;
+static void get_gamma_events(time_t *now, const float lat, const float lon, int day) {
+    time_t t;
 
-    time(&now);
+    /* only every new day, after latest event of today finished */
+    if (*now >= state.events[SUNSET] + EVENT_DURATION - 1) {
+        if (calculate_sunset(lat, lon, &t, day) == 0) {
+            if (*now > t + EVENT_DURATION - 1) {
+                /*
+                 * we're between today's sunrise and tomorrow sunrise.
+                 * rerun function with tomorrow.
+                 * Useful only first time clight is started
+                 * (ie: if it is started at night time)
+                 */
+                return get_gamma_events(now, lat, lon, ++day);
+            }
+            state.events[SUNSET] = t;
+        } else {
+            state.events[SUNSET] = -1;
+        }
 
-    // if sunrise time is after now, set next alarm
-    if (calculate_sunrise(lat, lon, &t, 0) == 0 && t > now) {
-        state.time = NIGHT;
-    } else if (calculate_sunset(lat, lon, &t, 0) == 0 && t > now) {
-        state.time = DAY;
-    } else if (calculate_sunrise(lat, lon, &t, 1) == 0) {
-        // we are after sunset time for today. Let's check tomorrow's sunrise
-        state.time = NIGHT;
-    } else {
-        // no sunrise/sunset could be found.
-        state.time = UNKNOWN;
-        // set an alarm to recheck gamma event after 12h...
-        t = now + 12 * 60 * 60;
-        ERROR("Failed to retrieve sunrise/sunset informations.\n");
+        if (calculate_sunrise(lat, lon, &t, day) == 0) {
+            state.events[SUNRISE] = t;
+        } else {
+            state.events[SUNRISE] = -1;
+        }
+
+        if (state.events[SUNRISE] == -1 && state.events[SUNSET] == -1) {
+            // no sunrise/sunset could be found.
+            state.time = UNKNOWN;
+            // set an alarm to recheck gamma event after 12h...
+            state.events[SUNRISE] = *now + 12 * 60 * 60;
+            ERROR("Failed to retrieve sunrise/sunset informations.\n");
+        }
     }
-    state.next_event = t;
+    check_next_event(now);
+    check_state(now);
+}
+
+/*
+ * Updates state.next_event global var, according to now time_t value.
+ * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
+ */
+static void check_next_event(time_t *now) {
+    if (*now < state.events[SUNRISE] + EVENT_DURATION - 1 || state.events[SUNSET] == -1) {
+        state.next_event = SUNRISE;
+    } else {
+        state.next_event = SUNSET;
+    }
+}
+
+/*
+ * Updates state.time global var, according to now time_t value.
+ * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
+ * If we're inside an event, checks which side of the events we're in
+ * (to understand which conf.temp is correct for this state).
+ * Then sets state.event_time_range accordingly; ie: 30mins before event, if we're not inside an event;
+ * 0 if we just entered an event (so next_event has to be exactly event time, to set new temp),
+ * 30mins after event to remove EVENT state.
+ */
+static void check_state(time_t *now) {
+    if (labs(state.events[state.next_event] - *now) <= EVENT_DURATION) {
+        int event_t;
+
+        if (state.events[state.next_event] - *now > 1) {
+            event_t = state.next_event;
+            state.event_time_range = 0;
+        } else {
+            event_t = !state.next_event;
+            state.event_time_range = EVENT_DURATION;
+        }
+        conf.temp[EVENT] = event_t == SUNRISE ? conf.temp[NIGHT] : conf.temp[DAY];
+        state.time = EVENT;
+    } else {
+        state.time = state.next_event == SUNRISE ? NIGHT : DAY;
+        state.event_time_range = -EVENT_DURATION; // 30mins before event
+    }
 }
 
 /*
@@ -228,7 +348,7 @@ static int set_temp(int temp) {
     if (old_temp != temp) {
         struct bus_args args_set = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "setgamma"};
 
-        if (conf.smooth_transition) {
+        if (!conf.no_smooth_transition) {
             if (old_temp > temp) {
                     old_temp = old_temp - step < temp ? temp : old_temp - step;
                 } else {
@@ -236,11 +356,13 @@ static int set_temp(int temp) {
                 }
                 bus_call(&new_temp, "i", &args_set, "i", old_temp);
         } else {
-            // reset old_temp for next call
-            old_temp = 0;
             bus_call(&new_temp, "i", &args_set, "i", temp);
         }
-        INFO("%d gamma temp setted.\n", new_temp);
+        if (new_temp == temp) {
+            // reset old_temp for next call
+            old_temp = 0;
+            INFO("%d gamma temp setted.\n", temp);
+        }
     } else {
         // reset old_temp
         old_temp = 0;

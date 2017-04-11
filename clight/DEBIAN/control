@@ -1,0 +1,8 @@
+Package: clight
+Version: 0.1
+Section: base
+Priority: optional
+Architecture: amd64
+Depends: libpopt0, libsystemd0, libxcb-dpms0
+Maintainer: Federico Di Pierro <nierro92@gmail.com>
+Description: Clightd bus interface to set screen brightness and gamma.

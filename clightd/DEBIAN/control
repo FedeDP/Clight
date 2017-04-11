@@ -1,0 +1,8 @@
+Package: clightd
+Version: 0.1
+Section: base
+Priority: optional
+Architecture: amd64
+Depends: libsystemd0, libudev1, libxrandr2, libx11-xcb1, libjpeg62-turbo
+Maintainer: Federico Di Pierro <nierro92@gmail.com>
+Description: Clightd bus interface to set screen brightness and gamma.

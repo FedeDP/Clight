@@ -11,7 +11,7 @@ static double clamp(double x, double max);
 static double get_red(int temp);
 static double get_green(int temp);
 static double get_blue(int temp);
-static double get_temp(const double R, const double B);
+static double get_temp(const unsigned short R, const unsigned short B);
 
 static double clamp(double x, double max) {
     if (x > max) { 
@@ -21,7 +21,7 @@ static double clamp(double x, double max) {
 }
 
 static double get_red(int temp) {
-    if (temp < 6600) {
+    if (temp <= 6500) {
         return 255;
     }
     const double a = 351.97690566805693;
@@ -35,7 +35,7 @@ static double get_red(int temp) {
 static double get_green(int temp) {
     double a, b, c;
     double new_temp;
-    if (temp < 6600) {
+    if (temp <= 6500) {
         a = -155.25485562709179;
         b = -0.44596950469579133;
         c = 104.49216199393888;
@@ -50,11 +50,11 @@ static double get_green(int temp) {
 }
 
 static double get_blue(int temp) {
-    if (temp < 1900) {
+    if (temp <= 1900) {
         return 0;
     }
     
-    if (temp < 6600) {
+    if (temp < 6500) {
         const double new_temp = ((double)temp / 100) - 10;
         const double a = -254.76935184120902;
         const double b = 0.8274096064007395;
@@ -66,22 +66,24 @@ static double get_blue(int temp) {
 }
 
 /* Thanks to: https://github.com/neilbartlett/color-temperature/blob/master/index.js */
-static double get_temp(const double R, const double B) {
+static double get_temp(const unsigned short R, const unsigned short B) {
+    const double epsilon=0.4;
     double temperature;
-    double testR,  testB;
-    double epsilon=0.4;
-    double minTemperature = 1000;
-    double maxTemperature = 40000;
-    while (maxTemperature - minTemperature > epsilon) {
-        temperature = (maxTemperature + minTemperature) / 2;
-        testR = get_red(temperature);
-        testB = get_blue(temperature);
-        if ((testB / testR) >= (B / R)) {
-            maxTemperature = temperature;
-        } else {
-            minTemperature = temperature;
+    double min_temp = B == 255 ? 6500 : 1000; // lower bound
+    double max_temp = R == 255 ? 6500 : 10000; // upper bound
+    do {
+        temperature = (max_temp + min_temp) / 2;
+        unsigned short testR = get_red(temperature);
+        unsigned short testB = get_blue(temperature);
+        if (testR == R && testB == B) {
+            break;
         }
-    }
+        if ((double) testB / testR > (double) B / R) {
+            max_temp = temperature;
+        } else {
+            min_temp = temperature;
+        }
+    } while (max_temp - min_temp > epsilon);
     return round(temperature);
 }
 
@@ -97,11 +99,6 @@ void set_gamma(int temp, int *err) {
     Window root = RootWindow(dpy, screen);
 
     XRRScreenResources *res = XRRGetScreenResourcesCurrent(dpy, root);
-
-    if (temp < 1000 || temp > 10000) {
-        *err = EINVAL;
-        return;
-    }
     
     double red = get_red(temp) / 255;
     double green = get_green(temp) / 255;

@@ -2,8 +2,11 @@ BINDIR = /usr/bin
 BINNAME = clight
 SYSTEMDDIR = /usr/lib/systemd/user/
 SYSTEMDUNIT = clight.service
+DEBIANDIR = ./Clight
+DEBOUTPUTDIR = ../Debian
 EXTRADIR = Extra
 RM = rm -f
+RMDIR = rm -rf
 INSTALL = install -p
 INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
@@ -39,6 +42,22 @@ clight-debug: objects-debug
 
 clean:
 	@cd $(SRCDIR); $(RM) *.o
+
+deb: all install-deb build-deb clean-deb
+
+install-deb: DESTDIR=$(DEBIANDIR)
+install-deb: install
+
+build-deb:
+	$(info copying debian build script.)
+	@cp -r DEBIAN/ $(DEBIANDIR)
+	@$(INSTALL_DIR) $(DEBOUTPUTDIR)
+	$(info creating debian package.)
+	@dpkg-deb --build $(DEBIANDIR) $(DEBOUTPUTDIR)
+
+clean-deb:
+	$(info cleaning up.)
+	@$(RMDIR) $(DEBIANDIR)
 
 install:
 	$(info installing bin.)

@@ -4,6 +4,8 @@
 
 static void signal_cb(void);
 
+static int inited;
+
 /**
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)
  */
@@ -18,6 +20,7 @@ void init_signal(void) {
     int fd = signalfd(-1, &mask, 0);
     set_pollfd(fd, SIGNAL_IX, signal_cb);
     INFO("Signal module started.\n");
+    inited = 1;
 }
 
 /*
@@ -38,8 +41,10 @@ static void signal_cb(void) {
 }
 
 void destroy_signal(void) {
-    if (main_p.p[SIGNAL_IX].fd != -1) {
-        close(main_p.p[SIGNAL_IX].fd);
+    if (inited) {
+        if (main_p.p[SIGNAL_IX].fd > 0) {
+            close(main_p.p[SIGNAL_IX].fd);
+        }
+        INFO("Signal module destroyed.\n");
     }
-    INFO("Signal module destroyed.\n");
 }

@@ -16,8 +16,7 @@ void init_opts(int argc, char *argv[]) {
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
     conf.temp[EVENT] = -1;
-    conf.temp[UNKNOWN] = -1;
-    conf.smooth_transition = 1;
+    conf.temp[UNKNOWN] = 6500;
 
     parse_cmd(argc, argv);
 
@@ -34,7 +33,7 @@ void init_opts(int argc, char *argv[]) {
         conf.timeout[NIGHT] = 45 * 60;
     }
 
-    if (conf.num_captures <= 0) {
+    if (conf.num_captures <= 0 || conf.num_captures > 20) {
         ERROR("Wrong frames value. Resetting default value.\n");
         conf.num_captures = 5;
     }
@@ -58,34 +57,26 @@ void init_opts(int argc, char *argv[]) {
 static void parse_cmd(int argc, char *const argv[]) {
     poptContext pc;
     struct poptOption po[] = {
-        {"capture", 'c', POPT_ARG_NONE, &conf.single_capture_mode, 0, "Take a fast capture/screen brightness calibration and quit.", NULL},
-        {"frames", 'f', POPT_ARG_INT, &conf.num_captures, 0, "Frames taken for each capture. Defaults to 5.", "Number of frames to be taken."},
-        {"day_timeout", 0, POPT_ARG_INT, &conf.timeout[DAY], 0, "Timeout between captures during the day. Defaults to 10mins.", "Number of seconds between each capture."},
-        {"night_timeout", 0, POPT_ARG_INT, &conf.timeout[NIGHT], 0, "Timeout between captures during the night. Defaults to 45mins.", "Number of seconds between each capture."},
-        {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used.", "Webcam device to be used."},
-        {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used.", "Backlight to be used."},
-        {"smooth_transition", 0, POPT_ARG_INT, &conf.smooth_transition, 0, "Whether to enable smooth gamma transition.", "1 enable/0 disable."},
-        {"day_temp", 0, POPT_ARG_INT, &conf.temp[DAY], 0, "Daily gamma temperature.", "Between 1000 and 10000."},
-        {"night_temp", 0, POPT_ARG_INT, &conf.temp[NIGHT], 0, "Nightly gamma temperature.", "Between 1000 and 10000."},
-        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 0, "Your current latitude.", NULL},
-        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your current longitude.", NULL},
+        {"capture", 'c', POPT_ARG_NONE, &conf.single_capture_mode, 0, "Take a fast capture/screen brightness calibration and quit", NULL},
+        {"frames", 'f', POPT_ARG_INT, &conf.num_captures, 0, "Frames taken for each capture, BBetween 1 and 20. Defaults to 5", NULL},
+        {"day_timeout", 0, POPT_ARG_INT, &conf.timeout[DAY], 0, "Seconds between each capture during the day. Defaults to 10mins", NULL},
+        {"night_timeout", 0, POPT_ARG_INT, &conf.timeout[NIGHT], 0, "Seconds between each capture during the night. Defaults to 45mins", NULL},
+        {"device", 'd', POPT_ARG_STRING, &conf.dev_name, 0, "Path to webcam device. By default, first matching device is used", "/dev/videoX"},
+        {"backlight", 'b', POPT_ARG_STRING, &conf.screen_path, 0, "Path to backlight syspath. By default, first matching device is used", "/sys/class/backlight/foo"},
+        {"no-smooth_transition", 0, POPT_ARG_NONE, &conf.no_smooth_transition, 0, "Disable smooth gamma transition", NULL},
+        {"day_temp", 0, POPT_ARG_INT, &conf.temp[DAY], 0, "Daily gamma temperature, between 1000 and 10000", NULL},
+        {"night_temp", 0, POPT_ARG_INT, &conf.temp[NIGHT], 0, "Nightly gamma temperature, between 1000 and 10000", NULL},
+        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 0, "Your desired latitude", NULL},
+        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your desired longitude", NULL},
+        {"sunrise", 0, POPT_ARG_STRING, &conf.events[SUNRISE], 0, "Force sunrise time for gamma correction", "07:00"},
+        {"sunset", 0, POPT_ARG_STRING, &conf.events[SUNSET], 0, "Force sunset time for gamma correction", "19:00"},
+        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool", NULL},
         POPT_AUTOHELP
         {NULL}
     };
 
     pc = poptGetContext(NULL, argc, (const char **)argv, po, 0);
-    // process options and handle each val returned
-    int rc;
-    while ((rc = poptGetNextOpt(pc)) >= 0) {
-        switch (rc) {
-            case 1:
-                strncpy(conf.dev_name, poptGetOptArg(pc), PATH_MAX);
-                break;
-            case 2:
-                strncpy(conf.screen_path, poptGetOptArg(pc), PATH_MAX);
-                break;
-        }
-    }
+    int rc = poptGetNextOpt(pc);
     // poptGetNextOpt returns -1 when the final argument has been parsed
     // otherwise an error occured
     if (rc != -1) {
@@ -94,4 +85,19 @@ static void parse_cmd(int argc, char *const argv[]) {
         exit(1);
     }
     poptFreeContext(pc);
+}
+
+void destroy_opts(void) {
+    if (conf.events[SUNRISE]) {
+        free(conf.events[SUNRISE]);
+    }
+    if (conf.events[SUNSET]) {
+        free(conf.events[SUNSET]);
+    }
+    if (conf.dev_name) {
+        free(conf.dev_name);
+    }
+    if (conf.screen_path) {
+        free(conf.screen_path);
+    }
 }

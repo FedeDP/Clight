@@ -1,12 +1,8 @@
 TODO before release:
 
-## High Priority:
-- [ ] Very frequent capture at "event" changing (ie: during sunset or sunrise)
-
-## Mid Priority:
-- [ ] add settable timers for gamma temp events (eg --sunset 7:00 --sunshine 19:30)
-- [x] add gpl license file
-
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream)
 - [ ] fix algorithm to set screen brightness based on ambient brightness (needs real world testing)
+- [x] avoid printing "%d gamma value set" when smooth-transitioning
+- [x] smooth_transition is useless. Just set a --no-smooth_transition flag (conf.no_smooth_transition).
+- [x] add debian/ubuntu deb package script

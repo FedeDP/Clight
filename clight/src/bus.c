@@ -2,6 +2,8 @@
 
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 
+static int inited;
+
 /*
  * Open our bus
  */
@@ -11,6 +13,7 @@ void init_bus(void) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
         state.quit = 1;
     } else {
+        inited = 1;
         INFO("Bus support started.\n");
     }
 }
@@ -180,8 +183,10 @@ int check_err(int r, sd_bus_error *err) {
  * Close bus.
  */
 void destroy_bus(void) {
-    if (bus) {
-        sd_bus_flush_close_unref(bus);
+    if (inited) {
+        if (bus) {
+            sd_bus_flush_close_unref(bus);
+        }
+        INFO("Bus destroyed.\n");
     }
-    INFO("Bus destroyed.\n");
 }
