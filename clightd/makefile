@@ -19,14 +19,13 @@ CFLAGS = $(shell pkg-config --cflags libsystemd libudev)
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
-SYSTEMD_VERSION=$(shell pkg-config --modversion --silence-errors systemd || echo 0)
-ifneq ($(shell test $(SYSTEMD_VERSION) -ge 221; echo $$?), 0)
+ifneq ("$(shell pkg-config --atleast-version=221 systemd && echo yes)", "yes")
 $(error systemd minimum required version 221.)
 endif
 
 ifneq ("$(DISABLE_FRAME_CAPTURES)","1")
-CFLAGS+=$(shell pkg-config --cflags libturbojpeg)
-LIBS+=$(shell pkg-config --libs libturbojpeg)
+CFLAGS+=$(shell pkg-config --cflags IL)
+LIBS+=$(shell pkg-config --libs IL)
 $(info Frames capturing support enabled.)
 else
 CFLAGS+=-DDISABLE_FRAME_CAPTURES

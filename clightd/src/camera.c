@@ -1,6 +1,14 @@
 #ifndef DISABLE_FRAME_CAPTURES
 
 #include "../inc/camera.h"
+#include <IL/il.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <linux/videodev2.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <stdint.h>
 
 static void open_device(const char *interface);
 static void init(void);
@@ -9,7 +17,7 @@ static int xioctl(int request, void *arg);
 static void start_stream(void);
 static void stop_stream(void);
 static void capture_frame(int i);
-static double compute_brightness(unsigned int length);
+static double compute_brightness(void);
 static double compute_avg_brightness(int num_captures) ;
 static void free_all();
 
@@ -17,7 +25,6 @@ struct state {
     int quit, width, height, device_fd, buf_size;
     double *brightness_values;
     uint8_t *buffer;
-    tjhandle _jpegDecompressor;
 };
 
 static struct state *state;
@@ -41,7 +48,6 @@ double capture_frames(const char *interface, int num_captures, int *err) {
             goto end;
         }
         
-        state->_jpegDecompressor = tjInitDecompress();
         state->brightness_values = calloc(num_captures, sizeof(double));
         
         start_stream();
@@ -102,22 +108,16 @@ static void init(void) {
         state->quit = 0;
     }
     
-    // query format
     struct v4l2_format fmt = {0};
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = 640;
-    fmt.fmt.pix.height = 480;
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
-    fmt.fmt.pix.field = V4L2_FIELD_NONE;
-    
-    if (-1 == xioctl(VIDIOC_S_FMT, &fmt)) {
-        perror("Setting Pixel Format");
-        state->quit = 1;
+    if (-1 == xioctl(VIDIOC_G_FMT, &fmt)) {
+        perror("Getting Pixel Format");
         return;
     }
     
     state->width = fmt.fmt.pix.width;
     state->height = fmt.fmt.pix.height;
+    ilInit();
 }
 
 static void init_mmap(void) {
@@ -140,7 +140,7 @@ static void init_mmap(void) {
         return;
     }
         
-    state->buffer = mmap (NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, state->device_fd, buf.m.offset);
+    state->buffer = mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, state->device_fd, buf.m.offset);
     if (MAP_FAILED == state->buffer) {
         state->quit = 1;
         perror("mmap");
@@ -163,17 +163,14 @@ static int xioctl(int request, void *arg) {
 }
 
 static void start_stream(void) {
-    // start stream
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (-1 == xioctl(VIDIOC_STREAMON, &type)) {
         perror("Start Capture");
-        return;
     }
 }
 
 static void stop_stream(void) {
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        
     if(-1 == xioctl(VIDIOC_STREAMOFF, &type)) {
         perror("Stop Capture");
     }
@@ -189,7 +186,7 @@ static void capture_frame(int i) {
     // query a buffer from camera
     if(-1 == xioctl(VIDIOC_QBUF, &buf)) {
         perror("Query Buffer");
-        stop_stream();
+        return stop_stream();
     }
     
     // dequeue the buffer
@@ -198,28 +195,30 @@ static void capture_frame(int i) {
         return;
     }
 
-    state->brightness_values[i] = compute_brightness(buf.bytesused);
+    state->brightness_values[i] = compute_brightness();
 }
 
-static double compute_brightness(unsigned int length) {
+static double compute_brightness(void) {
     double brightness = 0.0;
-    size_t total_gray_pixels = state->width * state->height;
-    unsigned char *blob = malloc(total_gray_pixels);
+    size_t pixels = state->width * state->height;
     
-    if (tjDecompress2(state->_jpegDecompressor, state->buffer, length, 
-                    blob, state->width, 0, state->height, 
-                    TJPF_GRAY, TJFLAG_FASTDCT) == -1) {
-        fprintf(stderr, "%s", tjGetErrorStr());
+    if (ilLoadL(IL_TYPE_UNKNOWN, state->buffer, pixels) != IL_TRUE) {
+        fprintf(stderr, "Could not load camera frame.\n");
+        goto end;
+    } 
+    
+    if (ilConvertImage(IL_LUMINANCE, IL_UNSIGNED_BYTE) != IL_TRUE) {
+        fprintf(stderr, "Could not convert camera frame to greyscale.\n");
         goto end;
     }
     
-    for (int i = 0; i < total_gray_pixels; i++ ) {
-        brightness += (int)blob[i];
+    ILubyte *img = ilGetData();
+    for(int i = 0 ; i < pixels; i++ ) {
+        brightness += img[i];
     }
-    brightness /= total_gray_pixels;
-    
+
 end:
-    free(blob);
+    brightness /= pixels;
     return brightness / 255;
 }
 
@@ -252,22 +251,16 @@ static double compute_avg_brightness(int num_captures) {
 }
 
 static void free_all(void) {
+    ilShutDown();
     if (state->device_fd != -1) {
         close(state->device_fd);
     }
-    
     if (state->buffer) {
         munmap(state->buffer, state->buf_size);
     }
-    
-    if (state->_jpegDecompressor) {
-        tjDestroy(state->_jpegDecompressor);
-    }
-    
     if (state->brightness_values) {
         free(state->brightness_values);
     }
-    
     state = NULL;
 }
 

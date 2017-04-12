@@ -5,9 +5,6 @@
 
 #ifndef DISABLE_GAMMA
 
-#include <X11/extensions/Xrandr.h>
-#include <math.h>
-
 #include "commons.h"
 
 void set_gamma(int temp, int *err);

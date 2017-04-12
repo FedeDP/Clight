@@ -337,7 +337,7 @@ static int set_temp(int temp) {
     }
 
     if (old_temp == 0) {
-        struct bus_args args_get = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "getgamma"};
+        struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
 
         bus_call(&old_temp, "i", &args_get, "");
         if (state.quit) {
@@ -346,7 +346,7 @@ static int set_temp(int temp) {
     }
 
     if (old_temp != temp) {
-        struct bus_args args_set = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "setgamma"};
+        struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setgamma"};
 
         if (!conf.no_smooth_transition) {
             if (old_temp > temp) {

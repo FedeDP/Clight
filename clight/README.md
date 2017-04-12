@@ -20,6 +20,7 @@ A systemd user unit is shipped too. Just run "systemctl --user enable clight.ser
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time.
 * more frequent captures inside "events": an event starts 30mins before sunrise/sunset and ends 30mins after sunrise/sunset.
 * gamma correction tool support can be disabled at runtime (--no-gamma cmdline switch)
+* in case of huge brightness drop (> 60%), a new capture will quickly be done (after 15 seconds), to check if that was an accidental event (eg: you changed room and capture happened before you switched on the light) or if brightness has really dropped that much (eg: you switched off the light).
 
 ### Valgrind is run with:
 

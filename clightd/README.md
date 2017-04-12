@@ -9,8 +9,8 @@ This is clight's own bus interface.
 * libx11 (X11/Xlib.h)
 
 ### Needed only if built with frame captures support:
-* libjpeg-turbo (turbojpeg.h)
 * linux-api-headers (linux/videodev2.h)
+* devil (IL/il.h)
 
 ## Build time switches:
 * DISABLE_FRAME_CAPTURES=1 (to disable frame captures support)
@@ -47,10 +47,10 @@ So, i thought it could be a good idea to develop a bus service that can be used 
 My idea is that anyone can now implement something similar to clight without messing with videodev or libjpeg.  
 A clight replacement, using clightd, can be something like (pseudo-code):
 
-    $ max_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight getmaxbrightness s ""
-    $ ambient_br = busctl call org.clight.backlight /org/clight/backlight org.clight.backlight captureframes si "" 5
+    $ max_br = busctl call org.clightd.backlight /org/clightd/backlight org.clightd.backlight getmaxbrightness s ""
+    $ ambient_br = busctl call org.clightd.backlight /org/clightd/backlight org.clightd.backlight captureframes si "" 5
     $ new_br = ambient_br * max_br
-    $ busctl call org.clight.backlight /org/clight/backlight org.clight.backlight setbrightness si "" new_br
+    $ busctl call org.clightd.backlight /org/clightd/backlight org.clightd.backlight setbrightness si "" new_br
 
 Note that passing an empty string as first parameter will make clightd use first subsystem matching device it finds (through libudev). It should be good to go in most cases.
 
@@ -68,5 +68,3 @@ Note that new brightness value is checked to be between 0 and max_brightness.
 
 ### If built with frame captures support:
 * *captureframes* -> takes a video sysname (eg: video0) and a number of frames to be captured (int, between 1 and 20). Returns average frames brightness, between 0.0 and 1.0 (double).
-
-**It does only support jpeg screen captures. So, if your webcam does not support jpeg frame captures, you are out of luck, sorry.**

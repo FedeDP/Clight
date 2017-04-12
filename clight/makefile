@@ -17,8 +17,7 @@ CFLAGS = $(shell pkg-config --cflags xcb xcb-dpms libsystemd popt) -DDEBUG=1
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
-SYSTEMD_VERSION=$(shell pkg-config --modversion --silence-errors systemd || echo 0)
-ifneq ($(shell test $(SYSTEMD_VERSION) -ge 221; echo $$?), 0)
+ifneq ("$(shell pkg-config --atleast-version=221 systemd && echo yes)", "yes")
 $(error systemd minimum required version 221.)
 endif
 

@@ -92,17 +92,18 @@ static void do_capture(void) {
 }
 
 static void get_max_brightness(void) {
-    struct bus_args args = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "getmaxbrightness"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getmaxbrightness"};
     bus_call(&br.max, "i", &args, "s", conf.screen_path);
 }
 
 static void get_current_brightness(void) {
-    struct bus_args args = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "getbrightness"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getbrightness"};
     bus_call(&br.current, "i", &args, "s", conf.screen_path);
 }
 
 static double set_brightness(double perc) {
-    struct bus_args args = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "setbrightness"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
+    br.old = br.current;
     bus_call(&br.current, "i", &args, "si", conf.screen_path, (int) (br.max * perc));
     if (br.current != -1) {
         INFO("New brightness value: %d\n", br.current);
@@ -112,7 +113,7 @@ static double set_brightness(double perc) {
 
 static double capture_frames_brightness(void) {
     double brightness = 0.0;
-    struct bus_args args = {"org.clight.backlight", "/org/clight/backlight", "org.clight.backlight", "captureframes"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
     bus_call(&brightness, "d", &args, "si", conf.dev_name, conf.num_captures);
     return brightness;
 }

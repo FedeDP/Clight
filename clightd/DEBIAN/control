@@ -3,6 +3,6 @@ Version: 0.1
 Section: base
 Priority: optional
 Architecture: amd64
-Depends: libsystemd0, libudev1, libxrandr2, libx11-xcb1, libjpeg62-turbo
+Depends: libsystemd0, libudev1, libxrandr2, libx11-xcb1, libdevil1c2
 Maintainer: Federico Di Pierro <nierro92@gmail.com>
-Description: Clightd bus interface to set screen brightness and gamma.
+Description: Clightd bus interface to set screen brightness and gamma and to capture frames from webcam devices.

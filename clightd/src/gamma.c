@@ -6,6 +6,8 @@
 #ifndef DISABLE_GAMMA
 
 #include "../inc/gamma.h"
+#include <X11/extensions/Xrandr.h>
+#include <math.h>
 
 static double clamp(double x, double max);
 static double get_red(int temp);
