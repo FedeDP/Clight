@@ -23,6 +23,9 @@ endif
 
 endif
 
+CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)
+CFLAGS+=-DVERSION=\"$(CLIGHT_VERSION)\"
+
 all: clight clean
 
 debug: clight-debug clean

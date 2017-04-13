@@ -1,10 +1,9 @@
-TODO before release:
+TODO:
 
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream)
 - [ ] fix algorithm to set screen brightness based on ambient brightness (needs real world testing)
-- [x] avoid printing "%d gamma value set" when smooth-transitioning
-- [x] smooth_transition is useless. Just set a --no-smooth_transition flag (conf.no_smooth_transition).
-- [x] add debian/ubuntu deb package script
-- [x] check TODO in commons.h
 - [ ] add an initial setup to ask user to eg: set desired screen backlight level matching current ambient brightness
+- [ ] update global README with Debian folder/packages
+- [x] add a global version flag
+- [ ] split into 2 github modules?
