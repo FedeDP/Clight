@@ -24,8 +24,6 @@ $(error systemd minimum required version 221.)
 endif
 
 ifneq ("$(DISABLE_FRAME_CAPTURES)","1")
-CFLAGS+=$(shell pkg-config --cflags IL)
-LIBS+=$(shell pkg-config --libs IL)
 $(info Frames capturing support enabled.)
 else
 CFLAGS+=-DDISABLE_FRAME_CAPTURES
@@ -40,7 +38,6 @@ else
 CFLAGS+=-DDISABLE_GAMMA
 $(info Gamma support disabled.)
 endif
-
 endif
 
 all: clightd clean

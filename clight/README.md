@@ -44,3 +44,6 @@ Build and install:
 Uninstall:
 
     # make uninstall
+
+## Gamma support info
+As clightd getgamma function properly supports only 50-steps temperature values (ie if you use "setgamma 6000" and then getgamma, it will return 6000. If you use setgamma 4578, getgamma won't return exactly it; it will return 4566 or something similar.), do not set in your conf not-50-multiple temperatures.

@@ -15,7 +15,6 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
-static int inited;
 
 /*
  * init location:
@@ -43,9 +42,7 @@ void init_location(void) {
         } else {
             fd = geoclue_init();
         }
-        set_pollfd(fd, LOCATION_IX, location_cb);
-        INFO("Location module started.\n");
-        inited = 1;
+        init_module(fd, LOCATION_IX, location_cb, destroy_location);
     }
 }
 
@@ -124,12 +121,12 @@ static void location_cb(void) {
     if (!is_geoclue()) {
         uint64_t t;
         /* it is not from a bus signal as geoclue2 is not being used */
-        read(main_p.p[LOCATION_IX].fd, &t, sizeof(uint64_t));
+        read(main_p[LOCATION_IX].fd, &t, sizeof(uint64_t));
     } else {
         sd_bus_process(bus, NULL);
     }
     INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-    set_timeout(1, 0, main_p.p[GAMMA_IX].fd, 0);
+    set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
 }
 
 /*
@@ -153,13 +150,10 @@ static void geoclue_check_initial_location(void) {
  * If we are using geoclue, stop client.
  */
 void destroy_location(void) {
-    if (inited) {
-        if (is_geoclue()) {
-            geoclue_client_stop();
-        } else if (main_p.p[LOCATION_IX].fd > 0) {
-            close(main_p.p[LOCATION_IX].fd);
-        }
-        INFO("Location module destroyed.\n");
+    if (is_geoclue()) {
+        geoclue_client_stop();
+    } else if (main_p[LOCATION_IX].fd > 0) {
+        close(main_p[LOCATION_IX].fd);
     }
 }
 

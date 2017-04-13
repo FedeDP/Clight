@@ -6,3 +6,5 @@ TODO before release:
 - [x] avoid printing "%d gamma value set" when smooth-transitioning
 - [x] smooth_transition is useless. Just set a --no-smooth_transition flag (conf.no_smooth_transition).
 - [x] add debian/ubuntu deb package script
+- [x] check TODO in commons.h
+- [ ] add an initial setup to ask user to eg: set desired screen backlight level matching current ambient brightness

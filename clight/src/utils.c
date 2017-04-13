@@ -1,5 +1,7 @@
 #include "../inc/utils.h"
 
+static const char *dict[MODULES_NUM] = {"Brightness", "Gamma", "Location", "Signal", "Dpms"};
+
 /**
  * Create timer and returns its fd to
  * the main struct pollfd
@@ -32,15 +34,30 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
-void set_pollfd(int fd, enum modules module, void (*cb)(void)) {
+void init_module(int fd, enum modules module, void (*cb)(void), void (*destroy_func)(void)) {
     if (fd == -1) {
         state.quit = 1;
         return;
     }
 
-    main_p.p[module] = (struct pollfd) {
+    main_p[module] = (struct pollfd) {
         .fd = fd,
         .events = POLLIN,
     };
-    main_p.cb[module] = cb;
+    modules[module].destroy = destroy_func;
+    modules[module].poll_cb = cb;
+    modules[module].inited = 1;
+    INFO("%s module started.\n", dict[module]);
+}
+
+void destroy_module(enum modules module) {
+    /* 
+     * Check even if destroy is a valid pointer. 
+     * For now every module has a destroy func,
+     * but in the future they may not.
+     */
+    if (modules[module].inited && modules[module].destroy) {
+        modules[module].destroy();
+        INFO("%s module destroyed.\n", dict[module]);
+    }
 }

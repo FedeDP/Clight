@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 static xcb_connection_t *connection;
-static int dpms_enabled, inited;
+static int dpms_enabled;
 
 /**
  * Checks through xcb if DPMS is enabled for this xscreen
@@ -21,10 +21,10 @@ void init_dpms(void) {
         if (info->state) {
             dpms_enabled = 1;
         }
-        inited = 1;
+        // -2 means to avoid polling this
+        init_module(-2, DPMS_IX, NULL, destroy_dpms);
         free(info);
     }
-    INFO("Dpms support started.\n");
 }
 
 
@@ -57,10 +57,7 @@ int get_screen_dpms(void) {
 }
 
 void destroy_dpms(void) {
-    if (inited) {
-        if (connection) {
-            xcb_disconnect(connection);
-        }
-        INFO("Dpms destroyed.\n");
+    if (connection) {
+        xcb_disconnect(connection);
     }
 }

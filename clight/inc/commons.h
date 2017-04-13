@@ -13,44 +13,52 @@
 #include <poll.h>
 #include <math.h>
 
+/* List of modules indexes */
 enum modules { CAPTURE_IX, GAMMA_IX, LOCATION_IX, SIGNAL_IX, DPMS_IX, MODULES_NUM };
-
+/*
+ * List of states clight can be through: 
+ * day between sunrise and sunset
+ * night between sunset and sunrise
+ * EVENT from 30mins before until 30mins after an event
+ * unknown if no sunrise/sunset could be found for today (can it happen?)
+ */
 enum states { DAY, NIGHT, EVENT, UNKNOWN, SIZE_STATES };
 
+/* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
+/* Struct that holds global config as passed through cmdline args */
 struct config {
-    int num_captures;
-    int single_capture_mode;
-    int timeout[SIZE_STATES]; // sizeof enum states
-    char *dev_name;
-    char *screen_path;
-    int temp[SIZE_STATES]; // sizeof enum states DAY, NIGHT only
-    int no_smooth_transition;
-    double lat;
-    double lon;
-    char *events[2];
-    int no_gamma;
+    int num_captures;               // number of frame captured for each screen brightness compute
+    int single_capture_mode;        // do a capture and leave
+    int timeout[SIZE_STATES];       // timeout between captures for each state (day/night only exposed through cmdline opts)
+    char *dev_name;                 // video device (eg: /dev/video0) to be used for captures
+    char *screen_path;              // screen syspath (eg: /sys/class/backlight/intel_backlight)
+    int temp[SIZE_STATES];          // screen temperature for each state (day/night only exposed through cmdline opts)
+    int no_smooth_transition;       // disable smooth transitions for gamma
+    double lat;                     // latitude
+    double lon;                     // longitude
+    char *events[SIZE_EVENTS];      // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
+    int no_gamma;                   // disable gamma support (if setted, gamma and location modules won't be started)
 };
 
+/* Global state of program */
 struct state {
-    int quit;
-    enum states time; // whether it is day or night time
-    time_t events[SIZE_EVENTS]; // today events (sunrise/sunset)
-    enum events next_event; // next event index
-    int event_time_range;
+    int quit;                       // should we quit?
+    enum states time;               // whether it is day or night time
+    time_t events[SIZE_EVENTS];     // today events (sunrise/sunset)
+    enum events next_event;         // next event index (sunrise/sunset)
+    int event_time_range;           // variable that holds minutes in advance/after an event to enter/leave EVENT state
 };
 
-struct poll_s {
-    struct pollfd p[MODULES_NUM - 1];
-    /*
-     * pointer to poll callback function for a module
-     */
-    void (*cb[MODULES_NUM - 1])(void);
+/* Struct that holds data for each module */
+struct module {
+    void (*destroy)(void);          // module destroy function
+    void (*poll_cb)(void);          // module poll callback
+    int inited;                     // whether a module has been initialized
 };
 
 struct state state;
 struct config conf;
-int camera_width, camera_height;
-uint8_t *buffer;
-struct poll_s main_p; //cannot be array as poll() wants a &struct pollfd...
+struct module modules[MODULES_NUM];
+struct pollfd main_p[MODULES_NUM];

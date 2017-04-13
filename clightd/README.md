@@ -10,7 +10,6 @@ This is clight's own bus interface.
 
 ### Needed only if built with frame captures support:
 * linux-api-headers (linux/videodev2.h)
-* devil (IL/il.h)
 
 ## Build time switches:
 * DISABLE_FRAME_CAPTURES=1 (to disable frame captures support)
@@ -40,6 +39,8 @@ Uninstall:
 Brightness related bus interface methods make all use of libudev to write and read current values (no fopen or other things like that).  
 If no syspath is passed as parameter to method calls, it uses first subsystem matching device that it finds through libudev.  
 Strict error checking tries to enforce no issue of any kind.  
+
+Getgamma function supports 50-steps temperature values. It tries to fit temperature inside a 50 step (eg: it finds 5238, tries if 5200 or 5250 are fine too, and in case returns them. Otherwise, it returns 5238.)
 
 You may ask why did i developed this solution. The answer is quite simple: on linux there is no simple and unified way of changing screen brightness.  
 So, i thought it could be a good idea to develop a bus service that can be used by every other program.  

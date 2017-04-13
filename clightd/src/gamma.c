@@ -9,20 +9,20 @@
 #include <X11/extensions/Xrandr.h>
 #include <math.h>
 
-static double clamp(double x, double max);
-static double get_red(int temp);
-static double get_green(int temp);
-static double get_blue(int temp);
-static double get_temp(const unsigned short R, const unsigned short B);
+static unsigned short clamp(double x, double max);
+static unsigned short get_red(int temp);
+static unsigned short get_green(int temp);
+static unsigned short get_blue(int temp);
+static int get_temp(const unsigned short R, const unsigned short B);
 
-static double clamp(double x, double max) {
+static unsigned short clamp(double x, double max) {
     if (x > max) { 
         return max; 
     }
     return x;
 }
 
-static double get_red(int temp) {
+static unsigned short get_red(int temp) {
     if (temp <= 6500) {
         return 255;
     }
@@ -34,7 +34,7 @@ static double get_red(int temp) {
     return clamp(a + b * new_temp + c * log(new_temp), 255);
 }
 
-static double get_green(int temp) {
+static unsigned short get_green(int temp) {
     double a, b, c;
     double new_temp;
     if (temp <= 6500) {
@@ -51,7 +51,7 @@ static double get_green(int temp) {
     return clamp(a + b * new_temp + c * log(new_temp), 255);
 }
 
-static double get_blue(int temp) {
+static unsigned short get_blue(int temp) {
     if (temp <= 1900) {
         return 0;
     }
@@ -68,25 +68,38 @@ static double get_blue(int temp) {
 }
 
 /* Thanks to: https://github.com/neilbartlett/color-temperature/blob/master/index.js */
-static double get_temp(const unsigned short R, const unsigned short B) {
-    const double epsilon=0.4;
-    double temperature;
-    double min_temp = B == 255 ? 6500 : 1000; // lower bound
-    double max_temp = R == 255 ? 6500 : 10000; // upper bound
+static int get_temp(const unsigned short R, const unsigned short B) {
+    int temperature;
+    int min_temp = B == 255 ? 6500 : 1000; // lower bound
+    int max_temp = R == 255 ? 6500 : 10000; // upper bound
+    unsigned short testR, testB;
+    
+    /* Compute first temperature with same R and B value as parameters */
     do {
         temperature = (max_temp + min_temp) / 2;
-        unsigned short testR = get_red(temperature);
-        unsigned short testB = get_blue(temperature);
-        if (testR == R && testB == B) {
-            break;
-        }
+        testR = get_red(temperature);
+        testB = get_blue(temperature);
         if ((double) testB / testR > (double) B / R) {
             max_temp = temperature;
         } else {
             min_temp = temperature;
         }
-    } while (max_temp - min_temp > epsilon);
-    return round(temperature);
+    } while (testR != R || testB != B);
+    
+    /* try to fit value in 50-steps temp -> ie: instead of 5238, try 5200 or 5250 */
+    if (temperature % 50 != 0) {
+        int tmp_temp = temperature - temperature % 50;
+        if (get_red(tmp_temp) == R && get_blue(tmp_temp) == B) {
+            temperature = tmp_temp;
+        } else {
+            tmp_temp = temperature + 50 - temperature % 50;
+            if (get_red(tmp_temp) == R && get_blue(tmp_temp) == B) {
+                temperature = tmp_temp;
+            }
+        }
+    }
+    
+    return temperature;
 }
 
 void set_gamma(int temp, int *err) {
@@ -102,9 +115,9 @@ void set_gamma(int temp, int *err) {
 
     XRRScreenResources *res = XRRGetScreenResourcesCurrent(dpy, root);
     
-    double red = get_red(temp) / 255;
-    double green = get_green(temp) / 255;
-    double blue = get_blue(temp) / 255;
+    double red = get_red(temp) / (double)255;
+    double green = get_green(temp) / (double)255;
+    double blue = get_blue(temp) / (double)255;
         
     for (int i = 0; i < res->ncrtc; i++) {
         int crtcxid = res->crtcs[i];
@@ -140,7 +153,7 @@ int get_gamma(int *err) {
 
     if (res->ncrtc > 0) {
         XRRCrtcGamma *crtc_gamma = XRRGetCrtcGamma(dpy, res->crtcs[0]);
-        temp = get_temp(crtc_gamma->red[1], crtc_gamma->blue[1]);
+        temp = get_temp(clamp(crtc_gamma->red[1], 255), clamp(crtc_gamma->blue[1], 255));
         XFree(crtc_gamma);
     }
 

@@ -19,7 +19,6 @@ arch:
         - popt
         - linux-api-headers
         - libx11
-        - libjpeg-turbo
         - libxrandr
     script:
         - "echo $CC"

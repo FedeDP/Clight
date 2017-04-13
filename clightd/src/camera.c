@@ -1,7 +1,6 @@
 #ifndef DISABLE_FRAME_CAPTURES
 
 #include "../inc/camera.h"
-#include <IL/il.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -17,7 +16,7 @@ static int xioctl(int request, void *arg);
 static void start_stream(void);
 static void stop_stream(void);
 static void capture_frame(int i);
-static double compute_brightness(void);
+static double compute_brightness(const unsigned int size);
 static double compute_avg_brightness(int num_captures) ;
 static void free_all();
 
@@ -55,11 +54,14 @@ double capture_frames(const char *interface, int num_captures, int *err) {
             goto end;
         }
         
-        for (int i = 0; i < num_captures; i++) {
+        for (int i = 0; i < num_captures && !state->quit; i++) {
             capture_frame(i);
         }
         stop_stream();
-        avg_brightness = compute_avg_brightness(num_captures);
+        
+        if (!state->quit) {
+            avg_brightness = compute_avg_brightness(num_captures);
+        }
     }
     
 end:    
@@ -110,14 +112,18 @@ static void init(void) {
     
     struct v4l2_format fmt = {0};
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (-1 == xioctl(VIDIOC_G_FMT, &fmt)) {
-        perror("Getting Pixel Format");
+    fmt.fmt.pix.width = 160;
+    fmt.fmt.pix.height = 120;
+    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+    fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
+    if (-1 == xioctl(VIDIOC_S_FMT, &fmt)) {
+        perror("Setting Pixel Format");
         return;
     }
     
     state->width = fmt.fmt.pix.width;
     state->height = fmt.fmt.pix.height;
-    ilInit();
+//     ilInit();
 }
 
 static void init_mmap(void) {
@@ -195,31 +201,17 @@ static void capture_frame(int i) {
         return;
     }
 
-    state->brightness_values[i] = compute_brightness();
+    state->brightness_values[i] = compute_brightness(buf.bytesused);
 }
 
-static double compute_brightness(void) {
+static double compute_brightness(const unsigned int size) {
     double brightness = 0.0;
-    size_t pixels = state->width * state->height;
     
-    if (ilLoadL(IL_TYPE_UNKNOWN, state->buffer, pixels) != IL_TRUE) {
-        fprintf(stderr, "Could not load camera frame.\n");
-        goto end;
-    } 
-    
-    if (ilConvertImage(IL_LUMINANCE, IL_UNSIGNED_BYTE) != IL_TRUE) {
-        fprintf(stderr, "Could not convert camera frame to greyscale.\n");
-        goto end;
+    for (int i = 0; i < size; i += 2) {
+        brightness += (unsigned int) *(state->buffer + i);
     }
-    
-    ILubyte *img = ilGetData();
-    for(int i = 0 ; i < pixels; i++ ) {
-        brightness += img[i];
-    }
-
-end:
-    brightness /= pixels;
-    return brightness / 255;
+    brightness /= state->width * state->height;
+    return brightness;
 }
 
 /*
@@ -237,21 +229,20 @@ static double compute_avg_brightness(int num_captures) {
             highest = i;
         }
         total += state->brightness_values[i];
-        printf("%lf\n", state->brightness_values[i]);
     }
-    
+        
     // total == 0.0 means every captured frame decompression failed
     if (total != 0.0 && num_captures > 2) {
         // remove highest and lowest values to normalize
         total -= (state->brightness_values[highest] + state->brightness_values[lowest]);
-        return total / (num_captures - 2);
+        num_captures -= 2;
     }
-    
+    total /= 255;
     return total / num_captures;
 }
 
 static void free_all(void) {
-    ilShutDown();
+//     ilShutDown();
     if (state->device_fd != -1) {
         close(state->device_fd);
     }

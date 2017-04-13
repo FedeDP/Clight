@@ -36,17 +36,9 @@ static void main_poll(void);
 /*
  * pointers to init modules functions;
  */
-static void (*const init_module[MODULES_NUM])(void) = {
+static void (*const init_m[MODULES_NUM])(void) = {
     init_brightness, init_gamma, init_location, init_signal, init_dpms
 };
-
-/*
- * pointers to destroy modules functions;
- */
-static void (*const destroy_module[MODULES_NUM])(void) = {
-    destroy_brightness, destroy_gamma, destroy_location, destroy_signal, destroy_dpms
-};
-
 
 int main(int argc, char *argv[]) {
     init(argc, argv);
@@ -62,9 +54,10 @@ static void init(int argc, char *argv[]) {
     open_log();
     init_opts(argc, argv);
     init_bus();
+    // do not init every module if we're doing a single capture
     const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
     for (int i = 0; i < limit && !state.quit; i++) {
-        init_module[i]();
+        init_m[i]();
     }
 }
 
@@ -72,9 +65,8 @@ static void init(int argc, char *argv[]) {
  * Free every used resource
  */
 static void destroy(void) {
-    const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
-    for (int i = 0; i < limit; i++) {
-        destroy_module[i]();
+    for (int i = 0; i < MODULES_NUM; i++) {
+        destroy_module(i);
     }
     destroy_bus();
     destroy_opts();
@@ -86,7 +78,7 @@ static void destroy(void) {
  */
 static void main_poll(void) {
     while (!state.quit) {
-        int r = poll(main_p.p, MODULES_NUM - 1, -1);
+        int r = poll(main_p, MODULES_NUM, -1);
         if (r == -1) {
             if (errno == EINTR) {
                 continue;
@@ -95,9 +87,13 @@ static void main_poll(void) {
             return;
         }
 
-        for (int i = 0; i < MODULES_NUM - 1 && r > 0; i++) {
-            if (main_p.p[i].revents & POLLIN) {
-                main_p.cb[i]();
+        for (int i = 0; i < MODULES_NUM && r > 0; i++) {
+            /*
+             * it should never happen that no cb is registered for a polled module.
+             * dpms_module does not register an fd to be listened on poll.
+             */
+            if ((main_p[i].revents & POLLIN) && (modules[i].poll_cb)) {
+                modules[i].poll_cb();
                 r--;
             }
         }

@@ -16,11 +16,9 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
-static int inited;
-
 void init_gamma(void) {
     if (!conf.no_gamma) {
-    int initial_timeout = 0;
+        int initial_timeout = 0;
         /*
          * if both sunrise and sunset times are passed
          * through cmdline opts, start immediately gamma module.
@@ -29,25 +27,20 @@ void init_gamma(void) {
             initial_timeout = 1;
         }
         int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
-        set_pollfd(gamma_timerfd, GAMMA_IX, gamma_cb);
-        INFO("Gamma module started.\n");
-        inited = 1;
+        init_module(gamma_timerfd, GAMMA_IX, gamma_cb, destroy_gamma);
     }
 }
 
 void destroy_gamma(void) {
-    if (inited) {
-        if (main_p.p[GAMMA_IX].fd > 0) {
-            close(main_p.p[GAMMA_IX].fd);
-        }
-        INFO("Gamma module destroyed.\n");
+    if (main_p[GAMMA_IX].fd > 0) {
+        close(main_p[GAMMA_IX].fd);
     }
 }
 
 static void gamma_cb(void) {
     uint64_t t;
 
-    read(main_p.p[GAMMA_IX].fd, &t, sizeof(uint64_t));
+    read(main_p[GAMMA_IX].fd, &t, sizeof(uint64_t));
     check_gamma();
 }
 
@@ -94,16 +87,16 @@ static void check_gamma(void) {
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
-        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p.p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
         if (old_state != state.time) {
-            set_timeout(conf.timeout[state.time], 0, main_p.p[CAPTURE_IX].fd, 0);
+            set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
         }
     } else {
         // here, set a timeout of 300ms from now for smooth gamma transition
-        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p.p[GAMMA_IX].fd, 0);
+        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
         transitioning = 1;
     }
 }
