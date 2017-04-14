@@ -47,7 +47,8 @@ Moreover, since there is still no standard way to deal with gamma correction on 
 If you run clight from wayland or from a tty, gamma support will be automatically disabled.
 
 ## Other info
-You can only run one clight instance per-user: if a clight instance is running, you can only invoke "clight -c" from a terminal/binded to a shortcut to make a fast capture/screen brightness calibration, but you cannot start another full clight instance.  
+You can only run one clight instance per-user: if a clight instance is running, you cannot start another full clight instance.  
+Obviously you can still invoke "clight -c" from a terminal/shortcut to make a fast capture/screen brightness calibration.  
 This is achieved through a clight.lock file placed in current user home.
 
 ## Build instructions:
