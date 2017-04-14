@@ -20,6 +20,7 @@ arch:
         - linux-api-headers
         - libx11
         - libxrandr
+        - libconfig
     script:
         - "echo $CC"
         - make -C clight/ debug
