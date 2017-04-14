@@ -1,6 +1,6 @@
 #include "../inc/utils.h"
 
-static const char *dict[MODULES_NUM] = {"Brightness", "Gamma", "Location", "Signal", "Dpms"};
+static const char *dict[MODULES_NUM] = {"Brightness", "Location", "Gamma", "Signal", "Dpms"};
 
 /**
  * Create timer and returns its fd to
@@ -46,8 +46,16 @@ void init_module(int fd, enum modules module, void (*cb)(void), void (*destroy_f
     };
     modules[module].destroy = destroy_func;
     modules[module].poll_cb = cb;
-    modules[module].inited = 1;
-    INFO("%s module started.\n", dict[module]);
+    
+    /* 
+     * if fd==DONT_POLL_W_ERR, it means a not-critical error happened
+     * while module was setting itself up, before calling init_module.
+     * eg: geoclue2 support is enabled but geoclue2 could not be found.
+     */
+    if (fd != DONT_POLL_W_ERR) {
+        modules[module].inited = 1;
+        INFO("%s module started.\n", dict[module]);
+    }
 }
 
 void destroy_module(enum modules module) {

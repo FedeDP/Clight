@@ -5,6 +5,8 @@ SYSTEMDUNIT = clight.service
 DEBIANDIR = ./Clight
 DEBOUTPUTDIR = ../Debian
 EXTRADIR = Extra
+CONFDIR = /etc/default
+CONFNAME = clight.conf
 RM = rm -f
 RMDIR = rm -rf
 INSTALL = install -p
@@ -12,8 +14,8 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs xcb xcb-dpms libsystemd popt)
-CFLAGS = $(shell pkg-config --cflags xcb xcb-dpms libsystemd popt) -DDEBUG=1
+LIBS = -lm $(shell pkg-config --libs xcb xcb-dpms libsystemd popt libconfig)
+CFLAGS = $(shell pkg-config --cflags xcb xcb-dpms libsystemd popt libconfig) -DDEBUG=1 -DCONFDIR=\"$(CONFDIR)\"
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
@@ -65,6 +67,10 @@ install:
 	$(info installing bin.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(BINDIR)"
 	@$(INSTALL_PROGRAM) $(BINNAME) "$(DESTDIR)$(BINDIR)"
+	
+	$(info installing conf file.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(CONFDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/$(CONFNAME) "$(DESTDIR)$(CONFDIR)"
 
 	$(info installing systemd unit.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
@@ -73,6 +79,9 @@ install:
 uninstall:
 	$(info uninstalling bin.)
 	@$(RM) "$(DESTDIR)$(BINDIR)/$(BINNAME)"
+	
+	$(info uninstalling conf file.)
+	@$(RM) "$(DESTDIR)$(CONFDIR)/$(CONFNAME)"
 
 	$(info uninstalling systemd unit.)
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"

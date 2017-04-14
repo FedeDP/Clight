@@ -21,8 +21,8 @@ void init_dpms(void) {
         if (info->state) {
             dpms_enabled = 1;
         }
-        // -2 means to avoid polling this
-        init_module(-2, DPMS_IX, NULL, destroy_dpms);
+        // avoid polling this
+        init_module(DONT_POLL, DPMS_IX, NULL, destroy_dpms);
         free(info);
     }
 }

@@ -29,6 +29,10 @@
 #include "../inc/dpms.h"
 #include "../inc/opts.h"
 
+#include <sys/file.h>
+
+static void gain_lck(void);
+static void destroy_lck(void);
 static void init(int argc, char *argv[]);
 static void destroy(void);
 static void main_poll(void);
@@ -37,8 +41,10 @@ static void main_poll(void);
  * pointers to init modules functions;
  */
 static void (*const init_m[MODULES_NUM])(void) = {
-    init_brightness, init_gamma, init_location, init_signal, init_dpms
+    init_brightness, init_location, init_gamma, init_signal, init_dpms
 };
+static int lck_fd; // fd on which clight enforces a lock to disable multiple clight instances running
+static char lockfile[PATH_MAX + 1]; // our lock file -> $HOME/.clight.lock
 
 int main(int argc, char *argv[]) {
     init(argc, argv);
@@ -47,12 +53,40 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+static void gain_lck(void) {
+    snprintf(lockfile, PATH_MAX, "%s/.clight.lock", getpwuid(getuid())->pw_dir);
+    lck_fd = open(lockfile, O_RDWR | O_CREAT);
+    if (lck_fd == -1) { 
+        state.quit = 1;
+        ERROR("Failed to open lock.\n");
+        return;
+    }
+    if (flock(lck_fd, LOCK_EX | LOCK_NB) == -1) { 
+        ERROR("Failed to acquire lock.\n");
+        state.quit = 1;
+    }
+    close(lck_fd);
+}
+
+static void destroy_lck(void) {
+    if (lck_fd > 0) {
+        remove(lockfile);
+        flock(lck_fd, LOCK_UN);
+    }
+}
+
 /*
  * Creates every needed struct/variable.
  */
 static void init(int argc, char *argv[]) {
     open_log();
     init_opts(argc, argv);
+    if (!conf.single_capture_mode) {
+        gain_lck();
+        if (state.quit) {
+            return;
+        }
+    }
     init_bus();
     // do not init every module if we're doing a single capture
     const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
@@ -69,6 +103,7 @@ static void destroy(void) {
         destroy_module(i);
     }
     destroy_bus();
+    destroy_lck();
     destroy_opts();
     close_log();
 }

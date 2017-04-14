@@ -12,9 +12,13 @@
 #include <stdarg.h>
 #include <poll.h>
 #include <math.h>
+#include <pwd.h>
+
+#define DONT_POLL -2                // avoid polling a module (used for dpms taht does not need to be polled)
+#define DONT_POLL_W_ERR -3          // avoid polling a module because an error occurred (used in location.c when no geoclue2 is found)
 
 /* List of modules indexes */
-enum modules { CAPTURE_IX, GAMMA_IX, LOCATION_IX, SIGNAL_IX, DPMS_IX, MODULES_NUM };
+enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, MODULES_NUM };
 /*
  * List of states clight can be through: 
  * day between sunrise and sunset

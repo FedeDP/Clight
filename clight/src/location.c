@@ -105,9 +105,10 @@ end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
     if (state.quit) {
         ERROR("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
-        state.quit = 0;
-        state.time = UNKNOWN;
-        location_fd = -1;
+        state.time = UNKNOWN; // without a position, we will never know which time of day we are in 
+        state.quit = 0; // do not leave
+        conf.no_gamma = 1; // disable gamma
+        location_fd = DONT_POLL_W_ERR; // do not poll this fd because an error happened
     }
     return location_fd;
 }
@@ -117,16 +118,19 @@ end:
  * this way, check_gamma will be called and it will correctly set new timer.
  */
 static void location_cb(void) {
+    int r;
     /* we received a new user position */
     if (!is_geoclue()) {
         uint64_t t;
         /* it is not from a bus signal as geoclue2 is not being used */
-        read(main_p[LOCATION_IX].fd, &t, sizeof(uint64_t));
+        r = read(main_p[LOCATION_IX].fd, &t, sizeof(uint64_t));
     } else {
-        sd_bus_process(bus, NULL);
+        r = sd_bus_process(bus, NULL);
     }
-    INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-    set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+    if (r >= 0) {
+        INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
+        set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+    }
 }
 
 /*

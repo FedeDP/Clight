@@ -78,12 +78,10 @@ static void check_gamma(void) {
     int ret = 0;
     if (transitioning || state.event_time_range == EVENT_DURATION || first_time) {
         first_time = 0;
-        ret = set_temp(conf.temp[state.time]);
-        if (state.quit) {
-            return;
-        }
+        ret = set_temp(conf.temp[state.time]); // ret = -1 if an error happens
     }
 
+    /* desired gamma temp has been setted. Set new GAMMA_IX timer and reset transitioning state. */
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
@@ -94,8 +92,8 @@ static void check_gamma(void) {
         if (old_state != state.time) {
             set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
         }
-    } else {
-        // here, set a timeout of 300ms from now for smooth gamma transition
+    } else if (ret == 1) {
+        /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
         set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
         transitioning = 1;
     }

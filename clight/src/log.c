@@ -1,5 +1,4 @@
 #include "../inc/log.h"
-#include <pwd.h>
 
 static FILE *log_file;
 
@@ -20,6 +19,7 @@ void log_conf(void) {
         time_t t = time(NULL);
 
         fprintf(log_file, "Clight\n");
+        fprintf(log_file, "Version: %s\n", VERSION);
         fprintf(log_file, "Time: %s", ctime(&t));
         fprintf(log_file, "\nStarting options:\n");
         fprintf(log_file, "* Number of captures: %d\n", conf.num_captures);
