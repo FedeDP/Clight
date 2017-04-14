@@ -14,14 +14,18 @@ It is splitted in 2 modules: clight and clightd.
 
 For more details, check each module README.
 
+## Arch AUR packages
+In both module Arch folder you can find a PKGBUILD and an install script.  
+I will upload both clight and clightd to aur as soon as i feel they are ready to be used.  
+
 ## Deb packages
-Deb packages for amd64 architecture are provided. You can find it inside [Debian](https://github.com/FedeDP/Clight/blob/master/COPYING) folder.  
+Deb packages for amd64 architecture are provided. You can find it inside [Debian](https://github.com/FedeDP/Clight/tree/master/Debian) folder.  
 Moreover, you can very easily build your own packages, if aforementioned packages happen to be outdated.  
 You only need to move to your desired module (eg: clightd), and issue:
 
     $ make deb
 
-A deb file will be created in [Debian](https://github.com/FedeDP/Clight/blob/master/COPYING) folder.  
+A deb file will be created in [Debian](https://github.com/FedeDP/Clight/tree/master/Debian) folder.  
 Please note that while i am using Debian testing at my job, i am developing clight from archlinux.  
 Thus, you can encounter some packaging issues. Please, report back.  
 
