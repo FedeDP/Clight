@@ -7,3 +7,9 @@ TODO:
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream) [IN-PROGRESS]
 - [ ] upload deb packages after first release
+
+
+
+## Split into two github repositories?
+* clightd can be useful without clight, so it seems correct to remove this strict dep in gh repo 
+* different version numbers
