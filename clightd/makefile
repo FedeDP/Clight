@@ -68,6 +68,8 @@ install-deb: DESTDIR=$(DEBIANDIR)
 install-deb: install
 
 build-deb:
+# 	$(info setting deb package version.)
+# 	@sed -i 's/Version:.*/Version: $(CLIGHT_VERSION)/' ./DEBIAN/control
 	$(info copying debian build script.)
 	@cp -r DEBIAN/ $(DEBIANDIR)
 	@$(INSTALL_DIR) $(DEBOUTPUTDIR)
