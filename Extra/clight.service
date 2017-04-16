@@ -1,0 +1,9 @@
+[Unit]
+Description=C daemon to adjust screen brightness to match ambient brightness, as computed capturing frames from webcam
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/clight
+
+[Install]
+WantedBy=default.target

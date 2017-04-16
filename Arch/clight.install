@@ -1,0 +1,7 @@
+post_install() {
+    echo '--> By default, first matching webcam and backlight interface are used.'
+	echo '--> Therefore, it should work out of the box even without any setup in most cases.'
+	echo '--> Remember to enable the unit file shipped (without sudo): systemctl --now --user enable clight.service'
+	echo '--> For any customization, take a look at settings file placed in /etc/default/clight.conf.'
+}
+
