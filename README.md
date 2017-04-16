@@ -28,7 +28,7 @@ A systemd user unit is shipped too. Just run "systemctl --user enable clight.ser
 * different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable)
 * nice log file, placed in $HOME/.clight.log
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time
-* more frequent captures inside "events": an event starts 30mins before sunrise/sunset and ends 30mins after sunrise/sunset
+* more frequent captures inside "events": an event starts 30mins before sunrise/sunset and ends 30mins after
 * gamma correction tool support can be disabled at runtime (--no-gamma cmdline switch)
 * in case of huge brightness drop (> 60%), a new capture will quickly be done (after 15 seconds), to check if this was an accidental event (eg: you changed room and capture happened before you switched on the light) or if brightness has really dropped that much (eg: you switched off the light)
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
