@@ -16,7 +16,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 A systemd user unit is shipped too. Just run "systemctl --now --user enable clight.service".  
 Systemd unit requires a display manager to be running, as it binds on display-manager.service to knows whether X is started.  
-**If you happen to not use a display manager, just add clight to your .xinitrc or in your DE autostart configuration.**  
+**If you happen to not use a display manager, just add clight to your .xinitrc or in your DE autostart configuration. Remember to also call "xhost +" before starting clight if you're willing to use clight gamma support.**
 
 ## Current features:
 * very lightweight
