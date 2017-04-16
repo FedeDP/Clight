@@ -54,7 +54,8 @@ Both files are checked when clight starts, in this order: global -> user-local -
 ## Gamma support info
 As [clightd](https://github.com/FedeDP/Clightd#devel-info) getgamma function properly supports only 50-steps temperature values (ie if you use "setgamma 6000" and then getgamma, it will return 6000. If you use setgamma 4578, getgamma won't return exactly it; it will return 4566 or something similar.), do not set in your conf not-50-multiple temperatures.  
 Moreover, since there is still no standard way to deal with gamma correction on wayland, it is only supported on X11.  
-If you run clight from wayland or from a tty, gamma support will be automatically disabled.
+If you run clight from wayland or from a tty, gamma support will be automatically disabled.  
+Finally, gamma support needs "xhost +" for your session, as otherwise bus interface running from root cannot access your X screen.
 
 ## Other info
 You can only run one clight instance per-user: if a clight instance is running, you cannot start another full clight instance.  

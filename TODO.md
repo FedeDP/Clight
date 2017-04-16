@@ -5,3 +5,4 @@
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream) [IN-PROGRESS]
 - [ ] upload deb packages after first release
+- [ ] add an autostart script with "xhost + && clight" in /etc/xdg/autostart/
