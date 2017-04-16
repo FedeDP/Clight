@@ -14,7 +14,9 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * libpopt (popt.h)
 * libconfig (libconfig.h)
 
-A systemd user unit is shipped too. Just run "systemctl --now --user enable clight.service".
+A systemd user unit is shipped too. Just run "systemctl --now --user enable clight.service".  
+Systemd unit requires a display manager to be running, as it binds on display-manager.service to knows whether X is started.  
+If you happen to not use a display manager, just add clight to your .xinitrc or in your DE autostart configuration.  
 
 ## Current features:
 * very lightweight

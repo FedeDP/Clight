@@ -1,4 +1,5 @@
-TODO:
+## High Priority
+- [ ] add an autostart script for no-DM configurations (/etc/xdg/autostart/ folder)
 
 ## Mid Priority:
 - [ ] fix algorithm to set screen brightness based on ambient brightness (needs real world testing)
