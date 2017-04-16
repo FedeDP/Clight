@@ -14,7 +14,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * libpopt (popt.h)
 * libconfig (libconfig.h)
 
-A systemd user unit is shipped too. Just run "systemctl --user enable clight.service" and reboot.
+A systemd user unit is shipped too. Just run "systemctl --now --user enable clight.service".
 
 ## Current features:
 * very lightweight
