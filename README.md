@@ -70,8 +70,7 @@ Uninstall:
     # make uninstall
 
 ## Arch AUR packages
-In [Arch](https://github.com/FedeDP/Clight/tree/master/Arch) folder you can find a PKGBUILD and an install script.  
-I will upload clight to aur as soon as i feel they are ready to be used.  
+Clight is available on AUR: https://aur.archlinux.org/packages/clight-git/ .
 
 ## Deb packages
 Deb package for amd64 architecture is provided. You can find it inside [Debian](https://github.com/FedeDP/Clight/tree/master/Debian) folder.  
