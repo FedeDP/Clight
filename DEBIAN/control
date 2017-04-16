@@ -1,5 +1,5 @@
 Package: clight
-Version: 0.1
+Version: 0.9
 Section: base
 Priority: optional
 Architecture: amd64
