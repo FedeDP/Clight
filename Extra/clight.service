@@ -4,6 +4,7 @@ Description=C daemon to adjust screen brightness to match ambient brightness, as
 [Service]
 Type=simple
 ExecStart=/usr/bin/clight
+Wants=clightd.service
 
 [Install]
 WantedBy=default.target
