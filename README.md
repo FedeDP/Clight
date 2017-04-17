@@ -16,7 +16,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * xhost (needed only if using gamma support)
 
 A systemd user unit is shipped too. Just run "systemctl --now --user enable clight.service".  
-Systemd unit requires a display manager to be running, as it binds on display-manager.service to be started after X.  
+Systemd unit requires a display manager to be running, as it binds on display-manager.service to be sure it is started after X.  
 **If you happen to not use a display manager, just add clight to your .xinitrc or in your DE autostart configuration. Remember to also call "xhost +" before starting clight if you're willing to use clight gamma support.**  
 Systemd user unit already calls "xhost +" for you. Please note that if you are not willing to use gamma support, you can edit the systemd user service and remove "ExecStartPre=/usr/bin/xhost +" line.
 
