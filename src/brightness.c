@@ -67,7 +67,7 @@ static void do_capture(void) {
 
     double val = capture_frames_brightness();
     if (!state.quit) {
-        if (val != -1) {
+        if (val >= 0.0) {
             INFO("Average frames brightness: %lf.\n", val);
             drop = set_brightness(val);
         }
@@ -108,7 +108,7 @@ static double set_brightness(double perc) {
 }
 
 static double capture_frames_brightness(void) {
-    double brightness = 0.0;
+    double brightness = -1;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
     bus_call(&brightness, "d", &args, "si", conf.dev_name, conf.num_captures);
     return brightness;
