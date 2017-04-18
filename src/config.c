@@ -121,12 +121,11 @@ void read_config(enum CONFIG file) {
         config_lookup_float(&cfg, "latitude", &conf.lat);
         config_lookup_float(&cfg, "longitude", &conf.lon);
         
-        /* Avoid memleaks when same conf option is setted in both global and local conf file */
         if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, videodev, sizeof(conf.dev_name) - 1);
         }
         if (config_lookup_string(&cfg, "screen_sysname", &screendev) == CONFIG_TRUE) {
-            strncpy(conf.screen_path, screendev, sizeof(screendev) - 1);
+            strncpy(conf.screen_path, screendev, sizeof(conf.screen_path) - 1);
         }
         if (config_lookup_string(&cfg, "sunrise", &sunrise) == CONFIG_TRUE) {
             strncpy(conf.events[SUNRISE], sunrise, sizeof(conf.events[SUNRISE]) - 1);
