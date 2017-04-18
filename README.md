@@ -50,6 +50,7 @@ Systemd user unit already calls "xhost +" for you. Please note that if you are n
     $  cppcheck --enable=style --enable=performance --enable=unusedFunction
 
 For cmdline options, check clight [-?|--help] [--usage].  
+**Please note that cmdline "--device" and "--backlight" switches require only last part of syspath** (eg: "video0" or "intel_backlight")
 
 ## Config file
 A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is all commented.  
