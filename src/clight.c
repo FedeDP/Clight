@@ -104,7 +104,6 @@ static void destroy(void) {
     }
     destroy_bus();
     destroy_lck();
-    destroy_opts();
     close_log();
 }
 

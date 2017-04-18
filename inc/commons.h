@@ -36,13 +36,13 @@ struct config {
     int num_captures;               // number of frame captured for each screen brightness compute
     int single_capture_mode;        // do a capture and leave
     int timeout[SIZE_STATES];       // timeout between captures for each state (day/night only exposed through cmdline opts)
-    char *dev_name;                 // video device (eg: /dev/video0) to be used for captures
-    char *screen_path;              // screen syspath (eg: /sys/class/backlight/intel_backlight)
+    char dev_name[PATH_MAX + 1];                 // video device (eg: /dev/video0) to be used for captures
+    char screen_path[PATH_MAX + 1];              // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];          // screen temperature for each state (day/night only exposed through cmdline opts)
     int no_smooth_transition;       // disable smooth transitions for gamma
     double lat;                     // latitude
     double lon;                     // longitude
-    char *events[SIZE_EVENTS];      // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
+    char events[SIZE_EVENTS][10];      // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int no_gamma;                   // disable gamma support (if setted, gamma and location modules won't be started)
 };
 

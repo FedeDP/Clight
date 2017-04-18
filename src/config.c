@@ -2,7 +2,6 @@
 #include <libconfig.h>
 
 static void init_config_file(enum CONFIG file);
-static void reset_and_store(char **optname, const char *foundopt);
 
 static char config_file[PATH_MAX + 1];
 
@@ -124,16 +123,16 @@ void read_config(enum CONFIG file) {
         
         /* Avoid memleaks when same conf option is setted in both global and local conf file */
         if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {
-            reset_and_store(&conf.dev_name, videodev);
+            strncpy(conf.dev_name, videodev, sizeof(conf.dev_name) - 1);
         }
         if (config_lookup_string(&cfg, "screen_sysname", &screendev) == CONFIG_TRUE) {
-            reset_and_store(&conf.screen_path, screendev);
+            strncpy(conf.screen_path, screendev, sizeof(screendev) - 1);
         }
         if (config_lookup_string(&cfg, "sunrise", &sunrise) == CONFIG_TRUE) {
-            reset_and_store(&conf.events[SUNRISE], sunrise);
+            strncpy(conf.events[SUNRISE], sunrise, sizeof(conf.events[SUNRISE]) - 1);
         }
         if (config_lookup_string(&cfg, "sunset", &sunset) == CONFIG_TRUE) {
-            reset_and_store(&conf.events[SUNSET], sunset);
+            strncpy(conf.events[SUNSET], sunset, sizeof(conf.events[SUNSET]) - 1);
         }
 
     } else {
@@ -142,17 +141,4 @@ void read_config(enum CONFIG file) {
                 config_error_line(&cfg));
     }
     config_destroy(&cfg);
-}
-
-/* 
- * Avoid memleaks when same conf option is setted in both global and local conf file:
- * check if optname option is already setted (non-null) and 
- * free it before pointing it to its new value.
- */
-static void reset_and_store(char **optname, const char *foundopt) {
-    if (*optname != NULL) {
-        free(*optname);
-        *optname = NULL;
-    }
-    *optname = strdup(foundopt);
 }
