@@ -8,11 +8,14 @@ Moreover, it can manage your screen temperature, just like redshift does.
 
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
-## It currently needs:
+## Build deps
 * libxcb (xcb.h, xcb/dpms.h)
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
 * libconfig (libconfig.h)
+
+## Runtime deps:
+* shared objects from build libraries
 * xhost (needed only if using gamma support)
 
 A systemd user unit is shipped too. Just run "systemctl --now --user enable clight.service".  
