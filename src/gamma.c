@@ -23,7 +23,7 @@ void init_gamma(void) {
          * if both sunrise and sunset times are passed
          * through cmdline opts, start immediately gamma module.
          */
-        if (conf.events[SUNRISE] && conf.events[SUNSET]) {
+        if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
             initial_timeout = 1;
         }
         int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
@@ -124,7 +124,7 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     time(tt);
     struct tm *timeinfo;
 
-    if (conf.events[SUNRISE] && conf.events[SUNSET]) {
+    if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
         timeinfo = localtime(tt);
     } else {
         timeinfo = gmtime(tt);
@@ -137,7 +137,7 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     timeinfo->tm_mday += tomorrow;
 
     /* If user provided a sunrise/sunset time, use them */
-    if (conf.events[SUNRISE] && conf.events[SUNSET]) {
+    if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
         char *s = strptime(conf.events[event], "%R", timeinfo);
         if (!s) {
             ERROR("Wrong sunrise/sunset time setted by a cmdline arg. Leaving.\n");
