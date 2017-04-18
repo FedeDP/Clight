@@ -1,12 +1,12 @@
 [Unit]
 Description=C daemon to adjust screen brightness to match ambient brightness, as computed capturing frames from webcam
+Wants=clightd.service
+After=display-manager.service
 
 [Service]
 Type=simple
 ExecStartPre=/usr/bin/xhost +
 ExecStart=/usr/bin/clight
-Wants=clightd.service
-After=display-manager.service
 
 [Install]
 WantedBy=default.target
