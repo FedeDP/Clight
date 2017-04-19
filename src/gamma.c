@@ -264,7 +264,9 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
             state.time = UNKNOWN;
             // set an alarm to recheck gamma event after 12h...
             state.events[SUNRISE] = *now + 12 * 60 * 60;
+            state.next_event = SUNRISE;
             ERROR("Failed to retrieve sunrise/sunset informations.\n");
+            return;
         }
     }
     check_next_event(now);

@@ -5,7 +5,10 @@ static void parse_cmd(int argc, char *const argv[]);
 static void check_conf(void) ;
 
 /*
- * Init default config values and parse cmdline args through popt lib.
+ * Init default config values,
+ * parse both global and user-local config files through libconfig,
+ * and parse cmdline args through popt lib.
+ * Finally, check configuration values and log it.
  */
 void init_opts(int argc, char *argv[]) {
     /* default values */
@@ -17,7 +20,7 @@ void init_opts(int argc, char *argv[]) {
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
     conf.temp[EVENT] = -1;
-    conf.temp[UNKNOWN] = 6500;
+    conf.temp[UNKNOWN] = conf.temp[DAY];
 
     read_config(GLOBAL);
     read_config(LOCAL);

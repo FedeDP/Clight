@@ -26,7 +26,7 @@ enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, MODULES_NU
  * EVENT from 30mins before until 30mins after an event
  * unknown if no sunrise/sunset could be found for today (can it happen?)
  */
-enum states { DAY, NIGHT, EVENT, UNKNOWN, SIZE_STATES };
+enum states { UNKNOWN, DAY, NIGHT, EVENT, SIZE_STATES };
 
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
