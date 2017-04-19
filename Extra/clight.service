@@ -7,6 +7,8 @@ After=display-manager.service
 Type=simple
 ExecStartPre=/usr/bin/xhost +
 ExecStart=/usr/bin/clight
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=default.target
