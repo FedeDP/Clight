@@ -103,7 +103,7 @@ static void check_conf(void) {
         conf.temp[NIGHT] = 4000;
     }
     /* Disable gamma support if we're not in a X session */
-    if (!getenv("DISPLAY") || strstr(getenv("DISPLAY"), "wayland")) {
+    if (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11")) {
         INFO("Disabling gamma support as X is not running.\n");
         conf.no_gamma = 1;
     }

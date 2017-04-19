@@ -5,7 +5,7 @@ static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
 static void get_current_brightness(void);
-static double set_brightness(double perc);
+static void set_brightness(double perc);
 static double capture_frames_brightness(void);
 
 /*
@@ -25,11 +25,8 @@ static struct brightness br;
 void init_brightness(void) {
     get_max_brightness();
     if (!state.quit) {
-        get_current_brightness();
-        if (!state.quit) {
-            int fd = start_timer(CLOCK_MONOTONIC, 1);
-            init_module(fd, CAPTURE_IX, brightness_cb, destroy_brightness);
-        }
+        int fd = start_timer(CLOCK_MONOTONIC, 1);
+        init_module(fd, CAPTURE_IX, brightness_cb, destroy_brightness);
     }
 }
 
@@ -63,26 +60,23 @@ static void do_capture(void) {
         return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[CAPTURE_IX].fd, 0);
     }
 
-    double drop = 0.0;
-
     double val = capture_frames_brightness();
-    if (!state.quit) {
-        if (val >= 0.0) {
-            INFO("Average frames brightness: %lf.\n", val);
-            drop = set_brightness(val);
-        }
-    }
-
-    if (!conf.single_capture_mode && !state.quit) {
-        // if there is too high difference, do a fast recapture to be sure
-        // this is the correct level
-        if (fabs(drop) > drop_limit) {
-            INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
-            // single call after 15s
-            set_timeout(fast_timeout, 0, main_p[CAPTURE_IX].fd, 0);
-        } else {
-            // reset normal timer
-            set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
+    if (!state.quit && val >= 0.0) {
+        INFO("Average frames brightness: %lf.\n", val);
+        set_brightness(val);
+        
+        if (!conf.single_capture_mode && !state.quit) {
+            double drop = (double)(br.current - br.old) / br.max;
+            // if there is too high difference, do a fast recapture to be sure
+            // this is the correct level
+            if (fabs(drop) > drop_limit) {
+                INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
+                // single call after 15s
+                set_timeout(fast_timeout, 0, main_p[CAPTURE_IX].fd, 0);
+            } else {
+                // reset normal timer
+                set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
+            }
         }
     }
 }
@@ -94,17 +88,27 @@ static void get_max_brightness(void) {
 
 static void get_current_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getbrightness"};
-    bus_call(&br.current, "i", &args, "s", conf.screen_path);
+    bus_call(&br.old, "i", &args, "s", conf.screen_path);
 }
 
-static double set_brightness(double perc) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
-    br.old = br.current;
-    bus_call(&br.current, "i", &args, "si", conf.screen_path, (int) (br.max * perc));
-    if (br.current != -1) {
-        INFO("New brightness value: %d\n", br.current);
+static void set_brightness(double perc) {
+    int new_br =  br.max * perc;
+    // store old brightness
+    get_current_brightness();
+    if (state.quit) {
+        return;
     }
-    return (double)(br.current - br.old) / br.max;
+    
+    if (new_br != br.old) {
+        INFO("Old brightness value: %d\n", br.old);
+        struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
+        bus_call(&br.current, "i", &args, "si", conf.screen_path, new_br);
+        if (!state.quit) {
+            INFO("New brightness value: %d\n", br.current);
+        }
+    } else {
+        INFO("Brightness level was already %d.\n", new_br);
+    }
 }
 
 static double capture_frames_brightness(void) {

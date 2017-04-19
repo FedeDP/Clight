@@ -18,10 +18,11 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * shared objects from build libraries
 * xhost (needed only if using gamma support)
 
-A systemd user unit is shipped too. Just run "systemctl --now --user enable clight.service".  
+## How to run it
+A systemd user unit is shipped. Just run "systemctl --now --user enable clight.service".  
 Systemd unit requires a display manager to be running, as it binds on display-manager.service to be sure it is started after X.  
-**If you happen to not use a display manager, just add clight to your .xinitrc or in your DE autostart configuration. Remember to also call "xhost +" before starting clight if you're willing to use clight gamma support.**  
-Systemd user unit already calls "xhost +" for you. Please note that if you are not willing to use gamma support, you can edit the systemd user service and remove "ExecStartPre=/usr/bin/xhost +" line.
+**If you happen to not use a display manager, just add "systemctl --user start clight.service" to your DE autostart configuration/your autostart script.**  
+Please note that if you are not willing to use gamma support, you can edit the systemd user service and comment "ExecStartPre=" line. See [archwiki](https://wiki.archlinux.org/index.php/systemd#Drop-in_files) for more informations.  
 
 ## Current features:
 * very lightweight
@@ -64,8 +65,7 @@ Consequently, on not X environments, gamma correction tool gets autodisabled.
 As [clightd](https://github.com/FedeDP/Clightd#devel-info) getgamma function properly supports only 50-steps temperature values (ie if you use "setgamma 6000" and then getgamma, it will return 6000. If you use setgamma 4578, getgamma won't return exactly it; it will return 4566 or something similar.), do not set in your conf not-50-multiple temperatures.  
 Moreover, since there is still no standard way to deal with gamma correction on wayland, it is only supported on X11.  
 If you run clight from wayland or from a tty, gamma support will be automatically disabled.  
-Finally, gamma support needs "xhost +" for your session, as otherwise bus interface running from root cannot access your X screen.  
-Systemd user service already does this for you. If you are using an autostart script, remember to call "xhost +" before starting clight.
+Finally, gamma support needs "xhost local:root" for your session, as otherwise bus interface running from root cannot access your X screen. Systemd user service already does this for you.  
 
 ## Other info
 You can only run one clight instance per-user: if a clight instance is running, you cannot start another full clight instance.  

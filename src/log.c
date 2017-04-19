@@ -48,14 +48,7 @@ void log_message(const char type, const char *log_msg, ...) {
         vfprintf(log_file, log_msg, file_args);
         fflush(log_file);
     }
-#ifdef DEBUG
     vprintf(log_msg, args);
-#else
-    /* in case of error, write it to stderr */
-    if (type == 'E') {
-        vfprintf(stderr, log_msg, args);
-    }
-#endif
     va_end(args);
     va_end(file_args);
 }

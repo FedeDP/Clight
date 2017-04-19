@@ -4,8 +4,6 @@
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream) [IN-PROGRESS]
 - [x] upload deb packages after first release
-- [ ] add an autostart script with "xhost + && clight" in /etc/xdg/autostart/
-
 
 ## Ideas
 Use "idle" instead of dpms? https://www.freedesktop.org/wiki/Software/systemd/logind/  
@@ -17,3 +15,11 @@ CONS:
 * when session is idle, we have no guarantees that screen is switched off/not being used; even if all major video player will use a logind inhibitor
 
 Catch active session signals from logind. If current session becomes not active, clight should be paused.  
+
+Move gamma support into clight (from clightd)?   
+PROS:  
+* avoid calling xhost
+* drop xhost dep 
+
+CONS:  
+* gamma support would not be exported in clightd bus interface anymore

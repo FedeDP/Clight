@@ -5,7 +5,7 @@ After=display-manager.service
 
 [Service]
 Type=simple
-ExecStartPre=/usr/bin/xhost +
+ExecStartPre=/bin/sh -c '[ "$(env | grep XDG_SESSION_TYPE | sed s/^.*=//)" != "x11" ] || xhost local:root'
 ExecStart=/usr/bin/clight
 Restart=on-failure
 RestartSec=5

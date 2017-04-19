@@ -34,7 +34,7 @@ void init_location(void) {
      * or gamma support is disabled,
      * there is no need to load location module.
      */
-    if (!conf.no_gamma && (!conf.events[SUNRISE] || !conf.events[SUNSET])) {
+    if (!conf.no_gamma && (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNRISE]))) {
         int fd;
         
         if (conf.lat != 0 && conf.lon != 0) {
