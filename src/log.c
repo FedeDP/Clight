@@ -25,6 +25,7 @@ void log_conf(void) {
         fprintf(log_file, "* Number of captures: %d\n", conf.num_captures);
         fprintf(log_file, "* Daily timeout: %d\n", conf.timeout[DAY]);
         fprintf(log_file, "* Nightly timeout: %d\n", conf.timeout[NIGHT]);
+        fprintf(log_file, "* Event timeout: %d\n", conf.timeout[EVENT]);
         fprintf(log_file, "* Webcam device: %s\n", conf.dev_name);
         fprintf(log_file, "* Backlight path: %s\n", conf.screen_path);
         fprintf(log_file, "* Daily screen temp: %d\n", conf.temp[DAY]);

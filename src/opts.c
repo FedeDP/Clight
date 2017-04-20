@@ -41,6 +41,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 0, "Frames taken for each capture, Between 1 and 20.", NULL},
         {"day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[DAY], 0, "Seconds between each capture during the day.", NULL},
         {"night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[NIGHT], 0, "Seconds between each capture during the night.", NULL},
+        {"event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[EVENT], 0, "Seconds between each capture during an event(sunrise, sunset).", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used", "video0"},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used", "intel_backlight"},
         {"no-smooth_transition", 0, POPT_ARG_NONE, &conf.no_smooth_transition, 0, "Disable smooth gamma transition", NULL},
@@ -92,6 +93,10 @@ static void check_conf(void) {
     if (conf.timeout[NIGHT] <= 0) {
         WARN("Wrong night timeout value. Resetting default value.\n");
         conf.timeout[NIGHT] = 45 * 60;
+    }
+    if (conf.timeout[EVENT] <= 0) {
+        WARN("Wrong event timeout value. Resetting default value.\n");
+        conf.timeout[EVENT] = 3 * 60;
     }
     if (conf.num_captures <= 0 || conf.num_captures > 20) {
         WARN("Wrong frames value. Resetting default value.\n");

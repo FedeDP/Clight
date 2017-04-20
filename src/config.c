@@ -114,6 +114,7 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "frames", &conf.num_captures);
         config_lookup_int(&cfg, "day_timeout", &conf.timeout[DAY]);
         config_lookup_int(&cfg, "night_timeout", &conf.timeout[NIGHT]);
+        config_lookup_int(&cfg, "event_timeout", &conf.timeout[EVENT]);
         config_lookup_int(&cfg, "day_temp", &conf.temp[DAY]);
         config_lookup_int(&cfg, "night_temp", &conf.temp[NIGHT]);
         config_lookup_int(&cfg, "no_smooth_gamma_transition", &conf.no_smooth_transition);
