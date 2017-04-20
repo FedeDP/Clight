@@ -22,8 +22,9 @@ Even if a systemd user unit is shipped, proper way to start clight is to put int
 
     $ systemctl --user start clight.service
     
-**This is needed to assure that X is running when clight gets started**. On systemd there is no proper way of knowing whether X has been started or not.  
-Simply enabling the unit would probably cause clight to auto-disabling gamma support as no running X server would be found.  
+**This is needed to assure that X is running when clight gets started**.  
+On systemd there is no proper way of knowing whether X has been started or not.  
+Simply enabling the unit could cause clight to auto-disabling gamma support if it cannot find any running X server.  
 Note that is better to use that command to start the user service instead of just using "clight", because the service kicks in clightd dependency.  
 Moreover, it will make clight restart if any issue happens.
 
