@@ -54,16 +54,18 @@ int main(int argc, char *argv[]) {
 }
 
 static void gain_lck(void) {
-    snprintf(lockfile, PATH_MAX, "%s/.clight.lock", getpwuid(getuid())->pw_dir);
-    lck_fd = open(lockfile, O_RDWR | O_CREAT);
-    if (lck_fd == -1) { 
-        ERROR("Failed to open lock.\n");
-        return;
+    if (!conf.single_capture_mode) {
+        snprintf(lockfile, PATH_MAX, "%s/.clight.lock", getpwuid(getuid())->pw_dir);
+        lck_fd = open(lockfile, O_RDWR | O_CREAT);
+        if (lck_fd == -1) {
+            ERROR("Failed to open lock.\n");
+            return;
+        }
+        if (flock(lck_fd, LOCK_EX | LOCK_NB) == -1) {
+            ERROR("Failed to acquire lock.\n");
+        }
+        close(lck_fd);
     }
-    if (flock(lck_fd, LOCK_EX | LOCK_NB) == -1) { 
-        ERROR("Failed to acquire lock.\n");
-    }
-    close(lck_fd);
 }
 
 static void destroy_lck(void) {
@@ -77,13 +79,14 @@ static void destroy_lck(void) {
  * Creates every needed struct/variable.
  */
 static void init(int argc, char *argv[]) {
+    gain_lck();
+    if (state.quit) {
+        return;
+    }
     open_log();
     init_opts(argc, argv);
-    if (!conf.single_capture_mode) {
-        gain_lck();
-        if (state.quit) {
-            return;
-        }
+    if (state.quit) {
+        return;
     }
     init_bus();
     // do not init every module if we're doing a single capture
@@ -101,8 +104,8 @@ static void destroy(void) {
         destroy_module(i);
     }
     destroy_bus();
-    destroy_lck();
     close_log();
+    destroy_lck();
 }
 
 /*

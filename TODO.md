@@ -9,6 +9,8 @@ Start location; when we receive our first location, start gamma; when gamma fina
 Add inside struct module a struct dep { int refs, enum modules *deps }  
 When refs (ie: total number of deps for this module) is 0, init module. This is needed for module with 2+ deps.
 
+- [ ] split gamma into 2 fds: 1 is for gamma events(sunrise and sunset), the other for time_range_event
+
 ## Low Priority:
 - [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream) [SENT-PR] after this, do a check on SYSTEMD_VERSION >= 234 and use new exposed function in bus_call.
 - [ ] add weather support (WIP) New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness 
