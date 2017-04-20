@@ -11,7 +11,6 @@ void init_bus(void) {
     int r = sd_bus_open_system(&bus);
     if (r < 0) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
-        state.quit = 1;
     } else {
         inited = 1;
         INFO("Bus support started.\n");
@@ -55,7 +54,7 @@ void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a,
                 }
                 break;
             default:
-                ERROR("Wrong signature in bus call: %c.\n", signature[i]);
+                WARN("Wrong signature in bus call: %c.\n", signature[i]);
                 break;
         }
         i++;
@@ -110,7 +109,7 @@ void set_property(const struct bus_args *a, const char type, const char *value) 
             r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "s", value);
             break;
         default:
-            ERROR("Wrong signature in bus call: %c.\n", type);
+            WARN("Wrong signature in bus call: %c.\n", type);
             break;
     }
     check_err(r, &error);
@@ -172,8 +171,8 @@ int check_err(int r, sd_bus_error *err) {
             ERROR("%s\n", strerror(-r));
         }
         /* Don't leave for ebusy errors */
-        if (r != -EBUSY) {
-            state.quit = 1;
+        if (r == -EBUSY) {
+            state.quit = 0;
         }
     }
     return r < 0;

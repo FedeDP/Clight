@@ -25,8 +25,10 @@ void init_opts(int argc, char *argv[]) {
     read_config(GLOBAL);
     read_config(LOCAL);
     parse_cmd(argc, argv);
-    check_conf();
-    log_conf();
+    if (!state.quit) {
+        log_conf();
+        check_conf();
+    }
 }
 
 /**
@@ -75,8 +77,6 @@ static void parse_cmd(int argc, char *const argv[]) {
     // otherwise an error occured
     if (rc != -1) {
         ERROR("%s\n", poptStrerror(rc));
-        poptFreeContext(pc);
-        exit(1);
     }
     poptFreeContext(pc);
 }
@@ -86,28 +86,28 @@ static void check_conf(void) {
      * Reset default values in case of wrong values
      */
     if (conf.timeout[DAY] <= 0) {
-        ERROR("Wrong day timeout value. Resetting default value.\n");
+        WARN("Wrong day timeout value. Resetting default value.\n");
         conf.timeout[DAY] = 10 * 60;
     }
     if (conf.timeout[NIGHT] <= 0) {
-        ERROR("Wrong night timeout value. Resetting default value.\n");
+        WARN("Wrong night timeout value. Resetting default value.\n");
         conf.timeout[NIGHT] = 45 * 60;
     }
     if (conf.num_captures <= 0 || conf.num_captures > 20) {
-        ERROR("Wrong frames value. Resetting default value.\n");
+        WARN("Wrong frames value. Resetting default value.\n");
         conf.num_captures = 5;
     }
     if (conf.temp[DAY] < 1000 || conf.temp[DAY] > 10000) {
-        ERROR("Wrong daily temp value. Resetting default value.\n");
+        WARN("Wrong daily temp value. Resetting default value.\n");
         conf.temp[DAY] = 6500;
     }
     if (conf.temp[NIGHT] < 1000 || conf.temp[NIGHT] > 10000) {
-        ERROR("Wrong nightly temp value. Resetting default value.\n");
+        WARN("Wrong nightly temp value. Resetting default value.\n");
         conf.temp[NIGHT] = 4000;
     }
     /* Disable gamma support if we're not in a X session */
     if (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11")) {
-        INFO("Disabling gamma support as X is not running.\n");
+        WARN("Disabling gamma support as X is not running.\n");
         conf.no_gamma = 1;
     }
 }

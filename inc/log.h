@@ -3,6 +3,7 @@
 #include "commons.h"
 
 #define INFO(msg, ...) log_message('I', msg, ##__VA_ARGS__)
+#define WARN(msg, ...) log_message('W', msg, ##__VA_ARGS__)
 #define ERROR(msg, ...) log_message('E', msg, ##__VA_ARGS__)
 
 void open_log(void);

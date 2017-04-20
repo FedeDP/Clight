@@ -34,7 +34,7 @@ void init_location(void) {
      * or gamma support is disabled,
      * there is no need to load location module.
      */
-    if (!conf.no_gamma && (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNRISE]))) {
+    if (!conf.no_gamma && (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNSET]))) {
         int fd;
         
         if (conf.lat != 0 && conf.lon != 0) {
@@ -56,13 +56,11 @@ static int location_conf_init(void) {
     int location_fd = eventfd(0, 0);
     if (location_fd == -1) {
         ERROR("%s\n", strerror(errno));
-        state.quit = 1;
     } else {
         uint64_t value = 1;
         int r = write(location_fd, &value, sizeof(uint64_t));
         if (r == -1) {
             ERROR("%s\n", strerror(errno));
-            state.quit = 1;
         }
     }
     return location_fd;

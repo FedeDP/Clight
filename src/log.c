@@ -10,7 +10,7 @@ void open_log(void) {
     snprintf(log_path, PATH_MAX, "%s/.%s", getpwuid(getuid())->pw_dir, log_name);
     log_file = fopen(log_path, "w");
     if (!log_file) {
-        ERROR("%s\n", strerror(errno));
+        WARN("%s\n", strerror(errno));
     }
 }
 
@@ -48,6 +48,12 @@ void log_message(const char type, const char *log_msg, ...) {
         vfprintf(log_file, log_msg, file_args);
         fflush(log_file);
     }
+    
+    /* In case of error, set quit flag */
+    if (type == 'E') {
+        state.quit = 1;
+    }
+    
     vprintf(log_msg, args);
     va_end(args);
     va_end(file_args);

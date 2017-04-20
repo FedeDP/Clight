@@ -57,13 +57,11 @@ static void gain_lck(void) {
     snprintf(lockfile, PATH_MAX, "%s/.clight.lock", getpwuid(getuid())->pw_dir);
     lck_fd = open(lockfile, O_RDWR | O_CREAT);
     if (lck_fd == -1) { 
-        state.quit = 1;
         ERROR("Failed to open lock.\n");
         return;
     }
     if (flock(lck_fd, LOCK_EX | LOCK_NB) == -1) { 
         ERROR("Failed to acquire lock.\n");
-        state.quit = 1;
     }
     close(lck_fd);
 }

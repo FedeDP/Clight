@@ -141,7 +141,6 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
         char *s = strptime(conf.events[event], "%R", timeinfo);
         if (!s) {
             ERROR("Wrong sunrise/sunset time setted by a cmdline arg. Leaving.\n");
-            state.quit = 1;
             return -1;
         }
         timeinfo->tm_sec = 0;
@@ -265,7 +264,7 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
             // set an alarm to recheck gamma event after 12h...
             state.events[SUNRISE] = *now + 12 * 60 * 60;
             state.next_event = SUNRISE;
-            ERROR("Failed to retrieve sunrise/sunset informations.\n");
+            WARN("Failed to retrieve sunrise/sunset informations.\n");
             return;
         }
     }
@@ -332,7 +331,7 @@ static int set_temp(int temp) {
     if (old_temp == 0) {
         struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
 
-        bus_call(&old_temp, "i", &args_get, "s", getenv("DISPLAY"));
+        bus_call(&old_temp, "i", &args_get, "ss", getenv("DISPLAY"), getenv("XAUTHORITY"));
         if (state.quit) {
             return -1;
         }
@@ -347,9 +346,9 @@ static int set_temp(int temp) {
                 } else {
                     old_temp = old_temp + step > temp ? temp : old_temp + step;
                 }
-                bus_call(&new_temp, "i", &args_set, "si", getenv("DISPLAY"), old_temp);
+                bus_call(&new_temp, "i", &args_set, "ssi", getenv("DISPLAY"), getenv("XAUTHORITY"), old_temp);
         } else {
-            bus_call(&new_temp, "i", &args_set, "si", getenv("DISPLAY"), temp);
+            bus_call(&new_temp, "i", &args_set, "ssi", getenv("DISPLAY"), getenv("XAUTHORITY"), temp);
         }
         if (new_temp == temp) {
             // reset old_temp for next call
