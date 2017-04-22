@@ -2,7 +2,6 @@
 #include <popt.h>
 
 static void parse_cmd(int argc, char *const argv[]);
-static void check_conf(void) ;
 
 /*
  * Init default config values,
@@ -25,10 +24,6 @@ void init_opts(int argc, char *argv[]) {
     read_config(GLOBAL);
     read_config(LOCAL);
     parse_cmd(argc, argv);
-    if (!state.quit) {
-        log_conf();
-        check_conf();
-    }
 }
 
 /**
@@ -82,7 +77,7 @@ static void parse_cmd(int argc, char *const argv[]) {
     poptFreeContext(pc);
 }
 
-static void check_conf(void) {
+void check_conf(void) {
     /*
      * Reset default values in case of wrong values
      */

@@ -105,8 +105,7 @@ void read_config(enum CONFIG file) {
     
     init_config_file(file);
     if (access(config_file, F_OK) == -1) {
-        fprintf(stderr, "Config file %s not found.\n", config_file);
-        return;
+        return WARN("Config file %s not found.\n", config_file);
     }
     
     config_init(&cfg);
@@ -136,7 +135,7 @@ void read_config(enum CONFIG file) {
         }
 
     } else {
-        fprintf(stderr, "Config file: %s at line %d.\n",
+        WARN("Config file: %s at line %d.\n",
                 config_error_text(&cfg),
                 config_error_line(&cfg));
     }

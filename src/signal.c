@@ -29,11 +29,10 @@ static void signal_cb(void) {
 
     s = read(main_p[SIGNAL_IX].fd, &fdsi, sizeof(struct signalfd_siginfo));
     if (s != sizeof(struct signalfd_siginfo)) {
-        ERROR("an error occurred while getting signalfd data.\n");
-    } else {
-        INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
-        state.quit = 1;
+        return ERROR("an error occurred while getting signalfd data.\n");
     }
+    INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
+    state.quit = 1;
 }
 
 void destroy_signal(void) {

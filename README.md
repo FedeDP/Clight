@@ -16,6 +16,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## Runtime deps:
 * shared objects from build libraries
+* [clightd](https://github.com/FedeDP/Clightd)
 
 ## How to run it
 Even if a systemd user unit is shipped, proper way to start clight is to put into your DE session autostart manager/X autostart script:

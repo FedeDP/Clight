@@ -10,11 +10,10 @@ static int inited;
 void init_bus(void) {
     int r = sd_bus_open_system(&bus);
     if (r < 0) {
-        ERROR("Failed to connect to system bus: %s\n", strerror(-r));
-    } else {
-        inited = 1;
-        INFO("Bus support started.\n");
+        return ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
+    inited = 1;
+    INFO("Bus support started.\n");
 }
 
 /*
@@ -165,14 +164,11 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
  */
 int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
-        if (err->message) {
-            ERROR("%s\n", err->message);
-        } else {
-            ERROR("%s\n", strerror(-r));
-        }
         /* Don't leave for ebusy errors */
         if (r == -EBUSY) {
-            state.quit = 0;
+            WARN("%s\n", err->message ? err->message : strerror(-r));
+        } else {
+            ERROR("%s\n", err->message ? err->message : strerror(-r));
         }
     }
     return r < 0;

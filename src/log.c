@@ -51,11 +51,13 @@ void log_message(const char type, const char *log_msg, ...) {
     }
     
     /* In case of error, set quit flag */
+    FILE *out = stdout;
     if (type == 'E') {
         state.quit = 1;
+        out = stderr;
     }
     
-    vprintf(log_msg, args);
+    vfprintf(out, log_msg, args);
     va_end(args);
     va_end(file_args);
 }

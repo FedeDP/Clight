@@ -102,8 +102,7 @@ static int geoclue_init(void) {
 end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
     if (state.quit) {
-        ERROR("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
-        state.quit = 0; // do not leave
+        WARN("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
         conf.no_gamma = 1; // disable gamma
         location_fd = DONT_POLL_W_ERR; // do not poll this fd because an error happened
     }
