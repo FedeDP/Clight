@@ -2,18 +2,25 @@
 #include <signal.h>
 #include "../inc/signal.h"
 
+static void init(void);
+static void destroy(void);
 static void signal_cb(void);
 
 static struct self_t self = {
     .name = "Signal",
     .idx = SIGNAL_IX,
-    .module = &modules[SIGNAL_IX],
 };
+
+void set_signal_self(void) {
+    modules[self.idx].self = &self;
+    modules[self.idx].init = init;
+    modules[self.idx].destroy = destroy;
+}
 
 /**
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)
  */
-void init_signal(void) {
+static void init(void) {    
     sigset_t mask;
 
     sigemptyset(&mask);
@@ -22,7 +29,13 @@ void init_signal(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
-    init_module(fd, self.idx, signal_cb, destroy_signal, self.name);
+    init_module(fd, self.idx, signal_cb);
+}
+
+static void destroy(void) {
+    if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
+    }
 }
 
 /*
@@ -41,9 +54,3 @@ static void signal_cb(void) {
     state.quit = 1;
 }
 
-void destroy_signal(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
-    }
-    INFO("%s module destroyed.\n", self.name);
-}

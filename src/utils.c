@@ -30,7 +30,15 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
-void init_module(int fd, enum modules module, void (*cb)(void), void (*destroy_func)(void), const char *module_name) {
+void init_modules(const int limit) {
+    for (int i = 0; i < limit && !state.quit; i++) {
+        if (!modules[i].disabled) {
+            modules[i].init();
+        }
+    }
+}
+
+void init_module(int fd, enum modules module, void (*cb)(void)) {
     if (fd == -1) {
         state.quit = 1;
         return;
@@ -40,7 +48,6 @@ void init_module(int fd, enum modules module, void (*cb)(void), void (*destroy_f
         .fd = fd,
         .events = POLLIN,
     };
-    modules[module].destroy = destroy_func;
     modules[module].poll_cb = cb;
     
     /* 
@@ -50,6 +57,30 @@ void init_module(int fd, enum modules module, void (*cb)(void), void (*destroy_f
      */
     if (fd != DONT_POLL_W_ERR) {
         modules[module].inited = 1;
-        INFO("%s module started.\n", module_name);
+        INFO("%s module started.\n", modules[module].self->name);
+    }
+}
+
+void set_deps(struct self_t *self) {
+    for (int i = 0; i < self->num_deps; i++) {
+        enum modules m = self->deps[i];
+        
+        modules[m].dependent_modules++;
+//         modules[m].started_cb = realloc(modules[m].started_cb, modules[m].dependent_modules * sizeof(*(modules[m].started_cb)));
+//         modules[m].started_cb[modules[m].dependent_modules - 1] = cb;
+    }
+}
+
+void destroy_modules(const int limit) {
+    for (int i = 0; i < limit; i++) {
+    /* 
+     * Check even if destroy is a valid pointer. 
+     * For now every module has a destroy func,
+     * but in the future they may not.
+     */
+        if (modules[i].inited && modules[i].destroy) {
+            modules[i].destroy();
+            INFO("%s module destroyed.\n", modules[i].self->name);
+        }
     }
 }

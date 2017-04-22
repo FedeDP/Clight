@@ -3,6 +3,8 @@
 #include <sys/eventfd.h>
 #include <fcntl.h>
 
+static void init(void);
+static void destroy(void);
 static int location_conf_init(void);
 static int geoclue_init(void);
 static void location_cb(void);
@@ -18,8 +20,13 @@ static char client[PATH_MAX + 1];
 static struct self_t self = {
     .name = "Location",
     .idx = LOCATION_IX,
-    .module = &modules[LOCATION_IX],
 };
+
+void set_location_self(void) {
+    modules[self.idx].self = &self;
+    modules[self.idx].init = init;
+    modules[self.idx].destroy = destroy;
+}
 
 /*
  * init location:
@@ -33,8 +40,7 @@ static struct self_t self = {
  *
  * Moreover, it stores a callback to be called on updated location event.
  */
-void init_location(void) {    
-    /* 
+static void init(void) {    /* 
      * if sunrise/sunset times are passed through cmdline, 
      * or gamma support is disabled,
      * there is no need to load location module.
@@ -47,7 +53,7 @@ void init_location(void) {
         } else {
             fd = geoclue_init();
         }
-        init_module(fd, self.idx, location_cb, destroy_location, self.name);
+        init_module(fd, self.idx, location_cb);
     }
 }
 
@@ -154,13 +160,12 @@ static void geoclue_check_initial_location(void) {
 /*
  * If we are using geoclue, stop client.
  */
-void destroy_location(void) {
+static void destroy(void) {
     if (is_geoclue()) {
         geoclue_client_stop();
     } else if (main_p[self.idx].fd > 0) {
         close(main_p[self.idx].fd);
     }
-    INFO("%s module destroyed.\n", self.name);
 }
 
 /*

@@ -1,6 +1,8 @@
 #include "../inc/brightness.h"
 #include "../inc/dpms.h"
 
+static void init(void);
+static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
@@ -21,19 +23,34 @@ static struct brightness br;
 static struct self_t self = {
     .name = "Brightness",
     .idx = CAPTURE_IX,
-    .module = &modules[CAPTURE_IX],
     .num_deps = 1,
     .deps =  { GAMMA_IX }
 };
 
+void set_brightness_self(void) {
+    modules[self.idx].self = &self;
+    modules[self.idx].init = init;
+    modules[self.idx].destroy = destroy;
+}
+
 /*
  * Init brightness values (max and current)
  */
-void init_brightness(void) {
-    get_max_brightness();
-    if (!state.quit) {
-        int fd = start_timer(CLOCK_MONOTONIC, 1);
-        init_module(fd, self.idx, brightness_cb, destroy_brightness, self.name);
+static void init(void) {
+//     if (self.num_deps == self.satisfied_deps) {
+        get_max_brightness();
+        if (!state.quit) {
+            int fd = start_timer(CLOCK_MONOTONIC, 1);
+            init_module(fd, self.idx, brightness_cb);
+        }
+//     } /*else if (self.satisfied_deps == 0) { // set started cb only first time
+//         set_deps_callback(&self, dep_cb);
+//     }*/
+}
+
+static void destroy(void) {
+    if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
     }
 }
 
@@ -123,11 +140,4 @@ static double capture_frames_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
     bus_call(&brightness, "d", &args, "si", conf.dev_name, conf.num_captures);
     return brightness;
-}
-
-void destroy_brightness(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
-    }
-    INFO("%s module destroyed.\n", self.name);
 }

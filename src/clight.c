@@ -37,8 +37,8 @@ static void main_poll(void);
 /*
  * pointers to init modules functions;
  */
-static void (*const init_m[MODULES_NUM])(void) = {
-    init_brightness, init_location, init_gamma, init_signal, init_dpms
+static void (*const set_selfs[MODULES_NUM])(void) = {
+    set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_dpms_self
 };
 
 int main(int argc, char *argv[]) {
@@ -71,19 +71,16 @@ static void init(int argc, char *argv[]) {
     // do not init every module if we're doing a single capture
     const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
     for (int i = 0; i < limit && !state.quit; i++) {
-        init_m[i]();
+        set_selfs[i]();
     }
+    init_modules(limit);
 }
 
 /**
  * Free every used resource
  */
 static void destroy(void) {
-    for (int i = 0; i < MODULES_NUM; i++) {
-        if (modules[i].inited && modules[i].destroy) {
-            modules[i].destroy();
-        }
-    }
+    destroy_modules(conf.single_capture_mode ? 1 : MODULES_NUM);
     destroy_bus();
     close_log();
     destroy_lck();

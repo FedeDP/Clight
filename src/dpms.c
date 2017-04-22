@@ -2,19 +2,27 @@
 #include <xcb/dpms.h>
 #include <stdlib.h>
 
+static void init(void);
+static void destroy(void);
+
 static xcb_connection_t *connection;
 static int dpms_enabled;
 
 static struct self_t self = {
     .name = "Dpms",
     .idx = DPMS_IX,
-    .module = &modules[DPMS_IX],
 };
+
+void set_dpms_self(void) {
+    modules[self.idx].self = &self;
+    modules[self.idx].init = init;
+    modules[self.idx].destroy = destroy;
+}
 
 /**
  * Checks through xcb if DPMS is enabled for this xscreen
  */
-void init_dpms(void) {
+static void init(void) {    
     connection = xcb_connect(NULL, NULL);
 
     if (!xcb_connection_has_error(connection)) {
@@ -28,12 +36,16 @@ void init_dpms(void) {
             dpms_enabled = 1;
         }
         // avoid polling this
-        init_module(DONT_POLL, self.idx, NULL, destroy_dpms, self.name);
+        init_module(DONT_POLL, self.idx, NULL);
         free(info);
     }
 }
 
-
+static void destroy(void) {
+    if (connection) {
+        xcb_disconnect(connection);
+    }
+}
 
 /**
  * info->power_level is one of:
@@ -60,11 +72,4 @@ int get_screen_dpms(void) {
         free(info);
     }
     return ret;
-}
-
-void destroy_dpms(void) {
-    if (connection) {
-        xcb_disconnect(connection);
-    }
-    INFO("%s module destroyed.\n", self.name);
 }
