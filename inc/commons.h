@@ -43,7 +43,6 @@ struct config {
     double lat;                     // latitude
     double lon;                     // longitude
     char events[SIZE_EVENTS][10];      // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
-    int no_gamma;                   // disable gamma support (if setted, gamma and location modules won't be started)
 };
 
 /* Global state of program */
@@ -59,7 +58,20 @@ struct state {
 struct module {
     void (*destroy)(void);          // module destroy function
     void (*poll_cb)(void);          // module poll callback
+    void (**started_cb)(void);      // cb's to be called after module is successfully started
+    int dependent_modules;          // number of dependent-on-this-module modules
     int inited;                     // whether a module has been initialized
+    int disabled;                   // whether this module has been disabled from config (for now useful only for gamma)
+};
+
+/* Struct that holds self module informations, static to each module */
+struct self_t {
+    const char *name;               // name of module
+    enum modules idx;               // idx of a module in enum modules 
+    struct module *module;          // pointer to a module
+    int num_deps;                   // number of deps for a module
+    int satisfied_deps;             // number of satisfied deps
+    enum modules deps[];            // deps of a module
 };
 
 struct state state;

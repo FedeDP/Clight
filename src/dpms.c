@@ -5,6 +5,12 @@
 static xcb_connection_t *connection;
 static int dpms_enabled;
 
+static struct self_t self = {
+    .name = "Dpms",
+    .idx = DPMS_IX,
+    .module = &modules[DPMS_IX],
+};
+
 /**
  * Checks through xcb if DPMS is enabled for this xscreen
  */
@@ -22,7 +28,7 @@ void init_dpms(void) {
             dpms_enabled = 1;
         }
         // avoid polling this
-        init_module(DONT_POLL, DPMS_IX, NULL, destroy_dpms);
+        init_module(DONT_POLL, self.idx, NULL, destroy_dpms, self.name);
         free(info);
     }
 }
@@ -60,4 +66,5 @@ void destroy_dpms(void) {
     if (connection) {
         xcb_disconnect(connection);
     }
+    INFO("%s module destroyed.\n", self.name);
 }

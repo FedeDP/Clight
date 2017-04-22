@@ -4,6 +4,12 @@
 
 static void signal_cb(void);
 
+static struct self_t self = {
+    .name = "Signal",
+    .idx = SIGNAL_IX,
+    .module = &modules[SIGNAL_IX],
+};
+
 /**
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)
  */
@@ -16,7 +22,7 @@ void init_signal(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
-    init_module(fd, SIGNAL_IX, signal_cb, destroy_signal);
+    init_module(fd, self.idx, signal_cb, destroy_signal, self.name);
 }
 
 /*
@@ -27,7 +33,7 @@ static void signal_cb(void) {
     struct signalfd_siginfo fdsi;
     ssize_t s;
 
-    s = read(main_p[SIGNAL_IX].fd, &fdsi, sizeof(struct signalfd_siginfo));
+    s = read(main_p[self.idx].fd, &fdsi, sizeof(struct signalfd_siginfo));
     if (s != sizeof(struct signalfd_siginfo)) {
         return ERROR("an error occurred while getting signalfd data.\n");
     }
@@ -36,7 +42,8 @@ static void signal_cb(void) {
 }
 
 void destroy_signal(void) {
-    if (main_p[SIGNAL_IX].fd > 0) {
-        close(main_p[SIGNAL_IX].fd);
+    if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
     }
+    INFO("%s module destroyed.\n", self.name);
 }

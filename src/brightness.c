@@ -18,6 +18,13 @@ struct brightness {
 };
 
 static struct brightness br;
+static struct self_t self = {
+    .name = "Brightness",
+    .idx = CAPTURE_IX,
+    .module = &modules[CAPTURE_IX],
+    .num_deps = 1,
+    .deps =  { GAMMA_IX }
+};
 
 /*
  * Init brightness values (max and current)
@@ -26,14 +33,14 @@ void init_brightness(void) {
     get_max_brightness();
     if (!state.quit) {
         int fd = start_timer(CLOCK_MONOTONIC, 1);
-        init_module(fd, CAPTURE_IX, brightness_cb, destroy_brightness);
+        init_module(fd, self.idx, brightness_cb, destroy_brightness, self.name);
     }
 }
 
 static void brightness_cb(void) {
     if (!conf.single_capture_mode) {
         uint64_t t;
-        read(main_p[CAPTURE_IX].fd, &t, sizeof(uint64_t));
+        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     }
     do_capture();
     if (conf.single_capture_mode) {
@@ -57,7 +64,7 @@ static void do_capture(void) {
      */
     if (get_screen_dpms() > 0) {
         INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[CAPTURE_IX].fd, 0);
+        return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
     }
 
     double val = capture_frames_brightness();
@@ -72,10 +79,10 @@ static void do_capture(void) {
             if (fabs(drop) > drop_limit) {
                 INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
                 // single call after 15s
-                set_timeout(fast_timeout, 0, main_p[CAPTURE_IX].fd, 0);
+                set_timeout(fast_timeout, 0, main_p[self.idx].fd, 0);
             } else {
                 // reset normal timer
-                set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
+                set_timeout(conf.timeout[state.time], 0, main_p[self.idx].fd, 0);
             }
         }
     }
@@ -119,7 +126,8 @@ static double capture_frames_brightness(void) {
 }
 
 void destroy_brightness(void) {
-    if (main_p[CAPTURE_IX].fd > 0) {
-        close(main_p[CAPTURE_IX].fd);
+    if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
     }
+    INFO("%s module destroyed.\n", self.name);
 }

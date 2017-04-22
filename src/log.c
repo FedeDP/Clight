@@ -35,7 +35,7 @@ void log_conf(void) {
         fprintf(log_file, "* Longitude: %.2lf\n", conf.lon);
         fprintf(log_file, "* User setted sunrise: %s\n", conf.events[SUNRISE]);
         fprintf(log_file, "* User setted sunset: %s\n", conf.events[SUNSET]);
-        fprintf(log_file, "* Gamma correction: %s\n\n", conf.no_gamma ? "disabled" : "enabled");
+        fprintf(log_file, "* Gamma correction: %s\n\n", modules[GAMMA_IX].disabled ? "disabled" : "enabled");
     }
 }
 

@@ -15,6 +15,11 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
+static struct self_t self = {
+    .name = "Location",
+    .idx = LOCATION_IX,
+    .module = &modules[LOCATION_IX],
+};
 
 /*
  * init location:
@@ -34,7 +39,7 @@ void init_location(void) {
      * or gamma support is disabled,
      * there is no need to load location module.
      */
-    if (!conf.no_gamma && (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNSET]))) {
+    if (!modules[GAMMA_IX].disabled && (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNSET]))) {
         int fd;
         
         if (conf.lat != 0 && conf.lon != 0) {
@@ -42,7 +47,7 @@ void init_location(void) {
         } else {
             fd = geoclue_init();
         }
-        init_module(fd, LOCATION_IX, location_cb, destroy_location);
+        init_module(fd, self.idx, location_cb, destroy_location, self.name);
     }
 }
 
@@ -103,7 +108,7 @@ end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
     if (state.quit) {
         WARN("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
-        conf.no_gamma = 1; // disable gamma
+        modules[GAMMA_IX].disabled = 1; // disable gamma
         location_fd = DONT_POLL_W_ERR; // do not poll this fd because an error happened
     }
     return location_fd;
@@ -119,7 +124,7 @@ static void location_cb(void) {
     if (!is_geoclue()) {
         uint64_t t;
         /* it is not from a bus signal as geoclue2 is not being used */
-        r = read(main_p[LOCATION_IX].fd, &t, sizeof(uint64_t));
+        r = read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     } else {
         r = sd_bus_process(bus, NULL);
     }
@@ -152,9 +157,10 @@ static void geoclue_check_initial_location(void) {
 void destroy_location(void) {
     if (is_geoclue()) {
         geoclue_client_stop();
-    } else if (main_p[LOCATION_IX].fd > 0) {
-        close(main_p[LOCATION_IX].fd);
+    } else if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
     }
+    INFO("%s module destroyed.\n", self.name);
 }
 
 /*

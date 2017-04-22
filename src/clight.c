@@ -80,7 +80,9 @@ static void init(int argc, char *argv[]) {
  */
 static void destroy(void) {
     for (int i = 0; i < MODULES_NUM; i++) {
-        destroy_module(i);
+        if (modules[i].inited && modules[i].destroy) {
+            modules[i].destroy();
+        }
     }
     destroy_bus();
     close_log();

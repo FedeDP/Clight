@@ -46,7 +46,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
-        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool", NULL},
+        {"no-gamma", 0, POPT_ARG_NONE, &modules[GAMMA_IX].disabled, 0, "Disable gamma correction tool", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -108,6 +108,6 @@ void check_conf(void) {
     /* Disable gamma support if we're not in a X session */
     if (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11")) {
         WARN("Disabling gamma support as X is not running.\n");
-        conf.no_gamma = 1;
+        modules[GAMMA_IX].disabled = 1;
     }
 }

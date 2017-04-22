@@ -16,8 +16,16 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
+static struct self_t self = {
+    .name = "Gamma",
+    .idx = GAMMA_IX,
+    .module = &modules[GAMMA_IX],
+    .num_deps = 1,
+    .deps =  { LOCATION_IX }
+};
+
 void init_gamma(void) {
-    if (!conf.no_gamma) {
+    if (!modules[self.idx].disabled) {
         int initial_timeout = 0;
         /*
          * if both sunrise and sunset times are passed
@@ -27,20 +35,21 @@ void init_gamma(void) {
             initial_timeout = 1;
         }
         int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
-        init_module(gamma_timerfd, GAMMA_IX, gamma_cb, destroy_gamma);
+        init_module(gamma_timerfd, self.idx, gamma_cb, destroy_gamma, self.name);
     }
 }
 
 void destroy_gamma(void) {
-    if (main_p[GAMMA_IX].fd > 0) {
-        close(main_p[GAMMA_IX].fd);
+    if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
     }
+    INFO("%s module destroyed.\n", self.name);
 }
 
 static void gamma_cb(void) {
     uint64_t t;
 
-    read(main_p[GAMMA_IX].fd, &t, sizeof(uint64_t));
+    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     check_gamma();
 }
 
@@ -85,7 +94,7 @@ static void check_gamma(void) {
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
-        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
@@ -94,7 +103,7 @@ static void check_gamma(void) {
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
-        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
+        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[self.idx].fd, 0);
         transitioning = 1;
     }
 }
