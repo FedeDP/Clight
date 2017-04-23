@@ -18,7 +18,7 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
-static const enum modules dependencies[] = { BUS_IX, LOCATION_IX };
+static const struct dependency dependencies[] = { {HARD, BUS_IX}, {HARD, LOCATION_IX} };
 static struct self_t self = {
     .name = "Gamma",
     .idx = GAMMA_IX,

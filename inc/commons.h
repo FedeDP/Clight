@@ -37,6 +37,9 @@ enum states { UNKNOWN, DAY, NIGHT, EVENT, SIZE_STATES };
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
+/* Whether a inter-module dep is hard (mandatory) or soft dep */
+enum dep_type { HARD, SOFT };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;               // number of frame captured for each screen brightness compute
@@ -60,13 +63,19 @@ struct state {
     int event_time_range;           // variable that holds minutes in advance/after an event to enter/leave EVENT state
 };
 
+/* Struct that holds info about an inter-modules dep */
+struct dependency {
+    enum dep_type type;
+    enum modules dep;
+};
+
 /* Struct that holds self module informations, static to each module */
 struct self_t {
     const char *name;               // name of module
     const enum modules idx;         // idx of a module in enum modules 
     int num_deps;                   // number of deps for a module
     int satisfied_deps;             // number of satisfied deps
-    const enum modules *deps;            // module on which there is a dep
+    const struct dependency *deps;  // module on which there is a dep
 };
 
 /* Struct that holds data for each module */

@@ -1,6 +1,6 @@
 #include "../inc/brightness.h"
 #include "../inc/dpms.h"
-#include <stddef.h>
+
 static void init(void);
 static void destroy(void);
 static void brightness_cb(void);
@@ -20,7 +20,7 @@ struct brightness {
 };
 
 static struct brightness br;
-static const enum modules dependencies[] = { BUS_IX, GAMMA_IX };
+static const struct dependency dependencies[] = { {HARD, BUS_IX}, {SOFT, GAMMA_IX} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = CAPTURE_IX,

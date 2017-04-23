@@ -1,6 +1,7 @@
 #include "../inc/utils.h"
 
 static void started_cb(enum modules module);
+static void disable_module(const enum modules module);
 
 /**
  * Create timer and returns its fd to
@@ -43,7 +44,7 @@ void init_modules(const enum modules module) {
             modules[module].init();
             /* 
              * if module has been correctly inited, and it has no poll_cb,
-             * start right now its dependend modules.
+             * start right now its dependent modules.
              */
             if (modules[module].inited && !modules[module].poll_cb) {
                 poll_cb(module);
@@ -72,6 +73,9 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
     if (fd != DONT_POLL_W_ERR) {
         modules[module].inited = 1;
         INFO("%s module started.\n", modules[module].self->name);
+    } else {
+        /* module should be disabled */
+        disable_module(module); // disable this module and all of dependent module
     }
 }
 
@@ -80,7 +84,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
  */
 void set_self_deps(struct self_t *self) {
     for (int i = 0; i < self->num_deps; i++) {
-        struct module *m = &(modules[self->deps[i]]);
+        struct module *m = &(modules[self->deps[i].dep]);
         m->num_dependent++;
         m->dependent_m = realloc(m->dependent_m, m->num_dependent * sizeof(*(m->dependent_m)));
         if (!m->dependent_m) {
@@ -100,9 +104,11 @@ void set_self_deps(struct self_t *self) {
 static void started_cb(enum modules module) {
     for (int i = 0; i < modules[module].num_dependent; i++) {
         struct self_t *self = modules[module].dependent_m[i];
-        self->satisfied_deps++;
-        INFO("Trying to start %s module as its %s dependency was loaded.\n", self->name, modules[module].self->name);
-        init_modules(self->idx);
+        if (!modules[self->idx].disabled) {
+            self->satisfied_deps++;
+            INFO("Trying to start %s module as its %s dependency was loaded.\n", self->name, modules[module].self->name);
+            init_modules(self->idx);
+        }
     }
 }
 
@@ -111,7 +117,7 @@ static void started_cb(enum modules module) {
  * then, if there are modules depending on this module,
  * try to start them, only once.
  */
-void poll_cb(const enum modules module) {
+void poll_cb(const enum modules module) {    
     if (modules[module].poll_cb) {
         modules[module].poll_cb();
     }
@@ -124,10 +130,34 @@ void poll_cb(const enum modules module) {
 }
 
 /*
+ * Recursively disable a module and all of modules that require it (HARD dep).
+ * If a module had a SOFT dep on "module", increment its 
+ * satisfied_deps counter and try to init it.
+ */
+static void disable_module(const enum modules module) {
+    modules[module].disabled = 1;
+    INFO("Module %s disabled.\n", modules[module].self->name);
+    for (int i = 0; i < modules[module].num_dependent; i++) {
+        struct self_t *self = modules[module].dependent_m[i];
+        for (int j = 0; j < self->num_deps; j++) {
+            if (self->deps[j].dep == module) {
+                if (self->deps[j].type == HARD) {
+                    disable_module(self->idx); // recursive call
+                } else {
+                    self->satisfied_deps++;
+                    init_modules(self->idx);
+                }
+                break;
+            }
+        }
+    }
+}
+
+/*
  * Calls correct destroy function for each module
  */
 void destroy_modules(const enum modules module) {
-    /* Free list of dependent-on-this-module modules */
+    /* Free list of dependent-on-this-module modules if it has still not been freed */
     if (modules[module].dependent_m) {
         free(modules[module].dependent_m);
     }

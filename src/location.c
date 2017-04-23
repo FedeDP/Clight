@@ -17,7 +17,7 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
-static const enum modules dependencies[] = { BUS_IX };
+static const struct dependency dependencies[] = { {HARD, BUS_IX} };
 static struct self_t self = {
     .name = "Location",
     .idx = LOCATION_IX,
@@ -122,7 +122,7 @@ end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
     if (state.quit) {
         WARN("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
-        modules[GAMMA_IX].disabled = 1; // disable gamma
+        state.quit = 0; // do not leave
         location_fd = DONT_POLL_W_ERR; // do not poll this fd because an error happened
     }
     return location_fd;
