@@ -54,13 +54,19 @@ struct state {
     int event_time_range;           // variable that holds minutes in advance/after an event to enter/leave EVENT state
 };
 
+/* Struct to manage inter-module dependencies */
+struct dependency {
+    int hard;                       // whether this is a mandatory dep
+    enum modules dep;               // module on which there is a dep
+};
+
 /* Struct that holds self module informations, static to each module */
 struct self_t {
     const char *name;               // name of module
     enum modules idx;               // idx of a module in enum modules 
     int num_deps;                   // number of deps for a module
     int satisfied_deps;             // number of satisfied deps
-    enum modules deps[];            // deps of a module
+    struct dependency deps[];       // deps of a module
 };
 
 /* Struct that holds data for each module */
@@ -69,7 +75,8 @@ struct module {
     void (*destroy)(void);          // module destroy function
     void (*poll_cb)(void);          // module poll callback
     struct self_t *self;            // pointer to self module informations
-    int dependent_modules;          // number of dependent-on-this-module modules
+    struct self_t **dependent_m;    // pointer to every dependent module self
+    int num_dependent;              // number of dependent-on-this-module modules
     int inited;                     // whether a module has been initialized
     int disabled;                   // whether this module has been disabled from config (for now useful only for gamma)
 };

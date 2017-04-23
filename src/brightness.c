@@ -24,28 +24,29 @@ static struct self_t self = {
     .name = "Brightness",
     .idx = CAPTURE_IX,
     .num_deps = 1,
-    .deps =  { GAMMA_IX }
+    .deps =  { { 0, GAMMA_IX } }
 };
 
 void set_brightness_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
     modules[self.idx].destroy = destroy;
+    /* If in single capture mode, or if gamma is disabled */
+    if (conf.single_capture_mode || modules[self.deps[0].dep].disabled) {
+        self.num_deps = 0;
+    }
+    set_self_deps(&self);
 }
 
 /*
  * Init brightness values (max and current)
  */
 static void init(void) {
-//     if (self.num_deps == self.satisfied_deps) {
-        get_max_brightness();
-        if (!state.quit) {
-            int fd = start_timer(CLOCK_MONOTONIC, 1);
-            init_module(fd, self.idx, brightness_cb);
-        }
-//     } /*else if (self.satisfied_deps == 0) { // set started cb only first time
-//         set_deps_callback(&self, dep_cb);
-//     }*/
+    get_max_brightness();
+    if (!state.quit) {
+        int fd = start_timer(CLOCK_MONOTONIC, 1);
+        init_module(fd, self.idx, brightness_cb);
+    }
 }
 
 static void destroy(void) {

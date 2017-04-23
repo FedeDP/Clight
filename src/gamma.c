@@ -22,25 +22,23 @@ static struct self_t self = {
     .name = "Gamma",
     .idx = GAMMA_IX,
     .num_deps = 1,
-    .deps =  { LOCATION_IX }
+    .deps =  { { 1, LOCATION_IX } }
 };
 
 void set_gamma_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
     modules[self.idx].destroy = destroy;
+    if (conf.single_capture_mode) {
+        modules[self.idx].disabled = 1;
+    } else if (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) {
+        self.num_deps = 0; // if sunrise and sunset times are passed through config, LOCATION is disabled. No need to wait
+    }
+    set_self_deps(&self);
 }
 
 static void init(void) {
-    int initial_timeout = 0;
-    /*
-     * if both sunrise and sunset times are passed
-     * through cmdline opts, start immediately gamma module.
-     */
-    if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
-        initial_timeout = 1;
-    }
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
+    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1);
     init_module(gamma_timerfd, self.idx, gamma_cb);
 }
 
@@ -102,7 +100,7 @@ static void check_gamma(void) {
         transitioning = 0;
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
-        if (old_state != state.time) {
+        if (old_state != state.time && modules[CAPTURE_IX].inited) {
             set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
         }
     } else if (ret == 1) {

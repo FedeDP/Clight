@@ -1,5 +1,7 @@
 #include "../inc/utils.h"
 
+static void started_cb(enum modules module);
+
 /**
  * Create timer and returns its fd to
  * the main struct pollfd
@@ -30,10 +32,14 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
-void init_modules(const int limit) {
-    for (int i = 0; i < limit && !state.quit; i++) {
-        if (!modules[i].disabled) {
-            modules[i].init();
+/* 
+ * Start a module only if it is not disabled and a proper init hook function has been setted.
+ * Check if all deps modules have been started too.
+ */
+void init_modules(const enum modules module) {
+    if (!modules[module].disabled && modules[module].init) {
+        if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
+            modules[module].init();
         }
     }
 }
@@ -61,26 +67,63 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
     }
 }
 
-void set_deps(struct self_t *self) {
+/*
+ * Foreach dep, set self as dependent on that module
+ */
+void set_self_deps(struct self_t *self) {
     for (int i = 0; i < self->num_deps; i++) {
-        enum modules m = self->deps[i];
-        
-        modules[m].dependent_modules++;
-//         modules[m].started_cb = realloc(modules[m].started_cb, modules[m].dependent_modules * sizeof(*(modules[m].started_cb)));
-//         modules[m].started_cb[modules[m].dependent_modules - 1] = cb;
+        struct module *m = &(modules[self->deps[i].dep]);
+        m->num_dependent++;
+        m->dependent_m = realloc(m->dependent_m, m->num_dependent * sizeof(*(m->dependent_m)));
+        if (!m->dependent_m) {
+            ERROR("Could not malloc.\n");
+            break;
+        }
+        m->dependent_m[m->num_dependent - 1] = self;
     }
 }
 
-void destroy_modules(const int limit) {
-    for (int i = 0; i < limit; i++) {
-    /* 
-     * Check even if destroy is a valid pointer. 
-     * For now every module has a destroy func,
-     * but in the future they may not.
-     */
-        if (modules[i].inited && modules[i].destroy) {
-            modules[i].destroy();
-            INFO("%s module destroyed.\n", modules[i].self->name);
-        }
+/*
+ * Callback called when a module that is needed by some others
+ * gets started: it increment satisfied_deps for each dependent modules
+ * and tries to start them.
+ * If these modules have still other unsatisfied deps, they won't start.
+ */
+static void started_cb(enum modules module) {
+    for (int i = 0; i < modules[module].num_dependent; i++) {
+        struct self_t *self = modules[module].dependent_m[i];
+        self->satisfied_deps++;
+        init_modules(self->idx);
+    }
+}
+
+/*
+ * Calls correct cb function;
+ * then, if there are modules depending on this module,
+ * try to start them, only once.
+ */
+void poll_cb(const enum modules module) {
+    if (modules[module].poll_cb) {
+        modules[module].poll_cb();
+    }
+    /* If module has deps, call start cb on them, to start them */
+    if (modules[module].dependent_m) {
+        started_cb(module);
+        free(modules[module].dependent_m);
+        modules[module].dependent_m = NULL;
+    }
+}
+
+/*
+ * Calls correct destroy function for each module
+ */
+void destroy_modules(const enum modules module) {
+    /* Free list of dependent-on-this-module modules */
+    if (modules[module].dependent_m) {
+        free(modules[module].dependent_m);
+    }
+    if (modules[module].inited && modules[module].destroy) {
+        modules[module].destroy();
+        INFO("%s module destroyed.\n", modules[module].self->name);
     }
 }

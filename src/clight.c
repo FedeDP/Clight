@@ -68,19 +68,19 @@ static void init(int argc, char *argv[]) {
     }
     check_conf();
     init_bus();
-    // do not init every module if we're doing a single capture
-    const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
-    for (int i = 0; i < limit && !state.quit; i++) {
+    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
         set_selfs[i]();
+        init_modules(i);
     }
-    init_modules(limit);
 }
 
 /**
  * Free every used resource
  */
 static void destroy(void) {
-    destroy_modules(conf.single_capture_mode ? 1 : MODULES_NUM);
+    for (int i = 0; i < MODULES_NUM; i++) {
+        destroy_modules(i);
+    }
     destroy_bus();
     close_log();
     destroy_lck();
@@ -105,8 +105,8 @@ static void main_poll(void) {
              * it should never happen that no cb is registered for a polled module.
              * dpms_module does not register an fd to be listened on poll.
              */
-            if ((main_p[i].revents & POLLIN) && (modules[i].poll_cb)) {
-                modules[i].poll_cb();
+            if (main_p[i].revents & POLLIN) {
+                poll_cb(i);
                 r--;
             }
         }

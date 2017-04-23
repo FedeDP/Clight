@@ -15,6 +15,7 @@ void set_signal_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
     modules[self.idx].destroy = destroy;
+    set_self_deps(&self);
 }
 
 /**

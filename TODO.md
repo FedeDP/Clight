@@ -4,7 +4,7 @@
 
 ## Mid Priority:
 - [ ] add an initial setup to ask user to eg: set desired screen backlight level matching current ambient brightness, max brightess captured from webcam (eg: ask him to switch on a torch on webcam lens), and min brightness captured (ask him to cover the webcam). Moreover, set lowest backlight level and ask user if it can see (sometimes at 0 backlight display gets completely dimmed off)
-- [ ] add a module dependency management system: before calling init, every module will setup its dependencies on other modules. Then, init only module without dep.  
+- [x] add a module dependency management system: before calling init, every module will setup its dependencies on other modules. Then, init only module without dep.  
 When these modules got started, any of these module should init module that depend on it.  
 Ie:  
 Brightness require gamma (to know correct timeout to set).  

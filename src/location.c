@@ -26,6 +26,17 @@ void set_location_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
     modules[self.idx].destroy = destroy;
+    /* 
+     * If in single capture mode, or if gamma is disabled
+     * or if sunrise and sunset time are setted through conf,
+     * there is no need to start location
+     */
+    if (conf.single_capture_mode || modules[GAMMA_IX].disabled 
+        || (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET]))) {
+        
+        modules[self.idx].disabled = 1;
+    }
+    set_self_deps(&self);
 }
 
 /*
@@ -40,21 +51,15 @@ void set_location_self(void) {
  *
  * Moreover, it stores a callback to be called on updated location event.
  */
-static void init(void) {    /* 
-     * if sunrise/sunset times are passed through cmdline, 
-     * or gamma support is disabled,
-     * there is no need to load location module.
-     */
-    if (!modules[GAMMA_IX].disabled && (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNSET]))) {
-        int fd;
+static void init(void) {    
+    int fd;
         
-        if (conf.lat != 0 && conf.lon != 0) {
-            fd = location_conf_init();
-        } else {
-            fd = geoclue_init();
-        }
-        init_module(fd, self.idx, location_cb);
+    if (conf.lat != 0 && conf.lon != 0) {
+        fd = location_conf_init();
+    } else {
+        fd = geoclue_init();
     }
+    init_module(fd, self.idx, location_cb);
 }
 
 /*
@@ -136,7 +141,9 @@ static void location_cb(void) {
     }
     if (r >= 0) {
         INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-        set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+        if (modules[GAMMA_IX].inited) {
+            set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+        }
     }
 }
 
