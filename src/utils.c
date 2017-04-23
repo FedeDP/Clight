@@ -101,6 +101,7 @@ static void started_cb(enum modules module) {
     for (int i = 0; i < modules[module].num_dependent; i++) {
         struct self_t *self = modules[module].dependent_m[i];
         self->satisfied_deps++;
+        INFO("Trying to start %s module as its %s dependency was loaded.\n", self->name, modules[module].self->name);
         init_modules(self->idx);
     }
 }

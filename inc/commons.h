@@ -14,6 +14,10 @@
 #include <math.h>
 #include <pwd.h>
 
+/* 
+ * Useful macro to check size of global array.
+ * Used in every module to automatically set self.num_deps
+ */
 #define SIZE(a) sizeof(a) / sizeof(*a)
 
 #define DONT_POLL -2                // avoid polling a module (used for dpms taht does not need to be polled)
