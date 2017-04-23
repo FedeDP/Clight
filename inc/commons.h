@@ -14,11 +14,13 @@
 #include <math.h>
 #include <pwd.h>
 
+#define SIZE(a) sizeof(a) / sizeof(*a)
+
 #define DONT_POLL -2                // avoid polling a module (used for dpms taht does not need to be polled)
 #define DONT_POLL_W_ERR -3          // avoid polling a module because an error occurred (used in location.c when no geoclue2 is found)
 
 /* List of modules indexes */
-enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, MODULES_NUM };
+enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, BUS_IX, MODULES_NUM };
 /*
  * List of states clight can be through: 
  * day between sunrise and sunset
@@ -36,13 +38,13 @@ struct config {
     int num_captures;               // number of frame captured for each screen brightness compute
     int single_capture_mode;        // do a capture and leave
     int timeout[SIZE_STATES];       // timeout between captures for each state (day/night only exposed through cmdline opts)
-    char dev_name[PATH_MAX + 1];                 // video device (eg: /dev/video0) to be used for captures
-    char screen_path[PATH_MAX + 1];              // screen syspath (eg: /sys/class/backlight/intel_backlight)
+    char dev_name[PATH_MAX + 1];    // video device (eg: /dev/video0) to be used for captures
+    char screen_path[PATH_MAX + 1]; // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];          // screen temperature for each state (day/night only exposed through cmdline opts)
     int no_smooth_transition;       // disable smooth transitions for gamma
     double lat;                     // latitude
     double lon;                     // longitude
-    char events[SIZE_EVENTS][10];      // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
+    char events[SIZE_EVENTS][10];   // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
 };
 
 /* Global state of program */
@@ -54,19 +56,13 @@ struct state {
     int event_time_range;           // variable that holds minutes in advance/after an event to enter/leave EVENT state
 };
 
-/* Struct to manage inter-module dependencies */
-struct dependency {
-    int hard;                       // whether this is a mandatory dep
-    enum modules dep;               // module on which there is a dep
-};
-
 /* Struct that holds self module informations, static to each module */
 struct self_t {
     const char *name;               // name of module
-    enum modules idx;               // idx of a module in enum modules 
+    const enum modules idx;         // idx of a module in enum modules 
     int num_deps;                   // number of deps for a module
     int satisfied_deps;             // number of satisfied deps
-    struct dependency deps[];       // deps of a module
+    const enum modules *deps;            // module on which there is a dep
 };
 
 /* Struct that holds data for each module */

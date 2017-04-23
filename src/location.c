@@ -17,9 +17,12 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
+static const enum modules dependencies[] = { BUS_IX };
 static struct self_t self = {
     .name = "Location",
     .idx = LOCATION_IX,
+    .num_deps = SIZE(dependencies),
+    .deps =  dependencies
 };
 
 void set_location_self(void) {

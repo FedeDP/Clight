@@ -38,7 +38,7 @@ static void main_poll(void);
  * pointers to init modules functions;
  */
 static void (*const set_selfs[MODULES_NUM])(void) = {
-    set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_dpms_self
+    set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_dpms_self, set_bus_self
 };
 
 int main(int argc, char *argv[]) {
@@ -49,9 +49,9 @@ int main(int argc, char *argv[]) {
 }
 
 /*
- * First of all loads optiosn from both global and local config file,
- * and from cmdline options.
- * If we're not in single_capture_mode, it gains lock and opens log.
+ * First of all loads optiosn from both global and 
+ * local config file, and from cmdline options.
+ * If we're not in single_capture_mode, it gains lock and opens log, logging current configuration.
  * Then checks conf and init needed modules.
  */
 static void init(int argc, char *argv[]) {
@@ -67,10 +67,11 @@ static void init(int argc, char *argv[]) {
         return;
     }
     check_conf();
-    init_bus();
     for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
         set_selfs[i]();
-        init_modules(i);
+        if (!state.quit) {
+            init_modules(i);
+        }
     }
 }
 
@@ -81,7 +82,6 @@ static void destroy(void) {
     for (int i = 0; i < MODULES_NUM; i++) {
         destroy_modules(i);
     }
-    destroy_bus();
     close_log();
     destroy_lck();
 }

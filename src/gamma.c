@@ -18,11 +18,12 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
+static const enum modules dependencies[] = { BUS_IX, LOCATION_IX };
 static struct self_t self = {
     .name = "Gamma",
     .idx = GAMMA_IX,
-    .num_deps = 1,
-    .deps =  { { 1, LOCATION_IX } }
+    .num_deps = SIZE(dependencies),
+    .deps =  dependencies
 };
 
 void set_gamma_self(void) {
@@ -32,7 +33,7 @@ void set_gamma_self(void) {
     if (conf.single_capture_mode) {
         modules[self.idx].disabled = 1;
     } else if (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) {
-        self.num_deps = 0; // if sunrise and sunset times are passed through config, LOCATION is disabled. No need to wait
+        self.num_deps--; // if sunrise and sunset times are passed through config, LOCATION is disabled. No need to wait
     }
     set_self_deps(&self);
 }

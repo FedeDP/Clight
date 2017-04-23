@@ -1,19 +1,39 @@
 #include "../inc/bus.h"
 
+static void init(void);
+static void destroy(void);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 
-static int inited;
+static struct self_t self = {
+    .name = "Bus",
+    .idx = BUS_IX,
+};
+
+void set_bus_self(void) {
+    modules[self.idx].self = &self;
+    modules[self.idx].init = init;
+    modules[self.idx].destroy = destroy;
+    set_self_deps(&self);
+}
 
 /*
  * Open our bus
  */
-void init_bus(void) {
+static void init(void) {
     int r = sd_bus_open_system(&bus);
     if (r < 0) {
         return ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
-    inited = 1;
-    INFO("Bus support started.\n");
+    init_module(DONT_POLL, self.idx, NULL);
+}
+
+/*
+ * Close bus.
+ */
+static void destroy(void) {
+    if (bus) {
+        sd_bus_flush_close_unref(bus);
+    }
 }
 
 /*
@@ -172,16 +192,4 @@ int check_err(int r, sd_bus_error *err) {
         }
     }
     return r < 0;
-}
-
-/*
- * Close bus.
- */
-void destroy_bus(void) {
-    if (inited) {
-        if (bus) {
-            sd_bus_flush_close_unref(bus);
-        }
-        INFO("Bus destroyed.\n");
-    }
 }

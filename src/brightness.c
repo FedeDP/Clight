@@ -1,6 +1,6 @@
 #include "../inc/brightness.h"
 #include "../inc/dpms.h"
-
+#include <stddef.h>
 static void init(void);
 static void destroy(void);
 static void brightness_cb(void);
@@ -20,11 +20,12 @@ struct brightness {
 };
 
 static struct brightness br;
+static const enum modules dependencies[] = { BUS_IX, GAMMA_IX };
 static struct self_t self = {
     .name = "Brightness",
     .idx = CAPTURE_IX,
-    .num_deps = 1,
-    .deps =  { { 0, GAMMA_IX } }
+    .num_deps = SIZE(dependencies),
+    .deps =  dependencies
 };
 
 void set_brightness_self(void) {
@@ -32,8 +33,8 @@ void set_brightness_self(void) {
     modules[self.idx].init = init;
     modules[self.idx].destroy = destroy;
     /* If in single capture mode, or if gamma is disabled */
-    if (conf.single_capture_mode || modules[self.deps[0].dep].disabled) {
-        self.num_deps = 0;
+    if (conf.single_capture_mode || modules[GAMMA_IX].disabled) {
+        self.num_deps--;
     }
     set_self_deps(&self);
 }

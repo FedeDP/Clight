@@ -33,13 +33,21 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
 }
 
 /* 
- * Start a module only if it is not disabled and a proper init hook function has been setted.
+ * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been setted.
  * Check if all deps modules have been started too.
+ * If module has not a poll_cb (it is not waiting on poll), call poll_cb right now as it is fully started already.
  */
 void init_modules(const enum modules module) {
-    if (!modules[module].disabled && modules[module].init) {
+    if (!modules[module].disabled && modules[module].init && !modules[module].inited) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
             modules[module].init();
+            /* 
+             * if module has been correctly inited, and it has no poll_cb,
+             * start right now its dependend modules.
+             */
+            if (modules[module].inited && !modules[module].poll_cb) {
+                poll_cb(module);
+            }
         }
     }
 }
@@ -72,7 +80,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
  */
 void set_self_deps(struct self_t *self) {
     for (int i = 0; i < self->num_deps; i++) {
-        struct module *m = &(modules[self->deps[i].dep]);
+        struct module *m = &(modules[self->deps[i]]);
         m->num_dependent++;
         m->dependent_m = realloc(m->dependent_m, m->num_dependent * sizeof(*(m->dependent_m)));
         if (!m->dependent_m) {
