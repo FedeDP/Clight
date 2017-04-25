@@ -77,7 +77,7 @@ You can only run one clight instance per-user: if a clight instance is running, 
 Obviously you can still invoke "clight -c" from a terminal/shortcut to make a fast capture/screen brightness calibration.  
 This is achieved through a clight.lock file placed in current user home.
 
-Every functionality in clight is achieved through a "module". A inter-modules dependencies system has been created ad-hoc to ease development of such modules.  
+Every functionality in clight is achieved through a "module". An inter-modules dependencies system has been created ad-hoc to ease development of such modules.  
 This way, it does not matter modules' init calls sorting; moreover, each module can be easily disabled if not needed (eg: when --no-gamma option is passed.)
 
 ## Build instructions:
