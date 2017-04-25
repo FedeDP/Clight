@@ -52,6 +52,7 @@ struct config {
     double lat;                     // latitude
     double lon;                     // longitude
     char events[SIZE_EVENTS][10];   // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
+    int no_gamma;                   // whether gamma tool is disabled
 };
 
 /* Global state of program */
@@ -75,7 +76,7 @@ struct self_t {
     const enum modules idx;         // idx of a module in enum modules 
     int num_deps;                   // number of deps for a module
     int satisfied_deps;             // number of satisfied deps
-    const struct dependency *deps;  // module on which there is a dep
+    struct dependency *deps;        // module on which there is a dep
 };
 
 /* Struct that holds data for each module */

@@ -31,6 +31,8 @@
 #include "../inc/lock.h"
 
 static void init(int argc, char *argv[]);
+static void set_modules_selfs(void);
+static void init_all_modules(void);
 static void destroy(void);
 static void main_poll(void);
 
@@ -66,12 +68,24 @@ static void init(int argc, char *argv[]) {
     if (state.quit) {
         return;
     }
-    check_conf();
+    set_modules_selfs();
+    if (!state.quit) {
+        check_conf();
+        init_all_modules();
+    }
+}
+
+/* Set each module self struct */
+static void set_modules_selfs(void) {
     for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
         set_selfs[i]();
-        if (!state.quit) {
-            init_modules(i);
-        }
+    }
+}
+
+/* Init every module */
+static void init_all_modules(void) {
+    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+        init_modules(i);
     }
 }
 

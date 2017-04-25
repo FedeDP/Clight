@@ -20,7 +20,7 @@ struct brightness {
 };
 
 static struct brightness br;
-static const struct dependency dependencies[] = { {HARD, BUS_IX}, {SOFT, GAMMA_IX} };
+static struct dependency dependencies[] = { {HARD, BUS_IX}, {SOFT, GAMMA_IX} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = CAPTURE_IX,
@@ -32,10 +32,6 @@ void set_brightness_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
     modules[self.idx].destroy = destroy;
-    /* If in single capture mode, or if gamma is disabled */
-    if (conf.single_capture_mode || modules[GAMMA_IX].disabled) {
-        self.num_deps--;
-    }
     set_self_deps(&self);
 }
 

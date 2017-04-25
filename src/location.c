@@ -17,7 +17,7 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
-static const struct dependency dependencies[] = { {HARD, BUS_IX} };
+static struct dependency dependencies[] = { {HARD, BUS_IX} };
 static struct self_t self = {
     .name = "Location",
     .idx = LOCATION_IX,
@@ -29,16 +29,6 @@ void set_location_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
     modules[self.idx].destroy = destroy;
-    /* 
-     * If in single capture mode, or if gamma is disabled
-     * or if sunrise and sunset time are setted through conf,
-     * there is no need to start location
-     */
-    if (conf.single_capture_mode || modules[GAMMA_IX].disabled 
-        || (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET]))) {
-        
-        modules[self.idx].disabled = 1;
-    }
     set_self_deps(&self);
 }
 

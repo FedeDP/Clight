@@ -46,28 +46,30 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
-        {"no-gamma", 0, POPT_ARG_NONE, &modules[GAMMA_IX].disabled, 0, "Disable gamma correction tool", NULL},
+        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
 
     pc = poptGetContext(NULL, argc, (const char **)argv, po, 0);
     int rc;
-    while ((rc = poptGetNextOpt(pc)) >= 0) {
+    while ((rc = poptGetNextOpt(pc)) > 0) {
+        char *str = poptGetOptArg(pc);
         switch (rc) {
             case 1:
-                strncpy(conf.dev_name, poptGetOptArg(pc), sizeof(conf.dev_name) - 1);
+                strncpy(conf.dev_name, str, sizeof(conf.dev_name) - 1);
                 break;
             case 2:
-                strncpy(conf.screen_path, poptGetOptArg(pc), sizeof(conf.screen_path) - 1);
+                strncpy(conf.screen_path, str, sizeof(conf.screen_path) - 1);
                 break;
             case 3:
-                strncpy(conf.events[SUNRISE], poptGetOptArg(pc), sizeof(conf.events[SUNRISE]) - 1);
+                strncpy(conf.events[SUNRISE], str, sizeof(conf.events[SUNRISE]) - 1);
                 break;
             case 4:
-                strncpy(conf.events[SUNSET], poptGetOptArg(pc), sizeof(conf.events[SUNSET]) - 1);
+                strncpy(conf.events[SUNSET], str, sizeof(conf.events[SUNSET]) - 1);
                 break;
         }
+        free(str);
     }
     // poptGetNextOpt returns -1 when the final argument has been parsed
     // otherwise an error occured
@@ -77,6 +79,12 @@ static void parse_cmd(int argc, char *const argv[]) {
     poptFreeContext(pc);
 }
 
+/* 
+ * It does all needed checks to correctly reset default values
+ * in case of wrong options setted.
+ * Moreover, it does required check to disable various modules
+ * in case eg: --no-gamma has been passed.
+ */
 void check_conf(void) {
     /*
      * Reset default values in case of wrong values
@@ -105,9 +113,19 @@ void check_conf(void) {
         WARN("Wrong nightly temp value. Resetting default value.\n");
         conf.temp[NIGHT] = 4000;
     }
+    
+    /* Disable gamma if in single capture mode, or if --no-gamma option was setted */
+    if (conf.single_capture_mode || conf.no_gamma) {
+        disable_module(GAMMA_IX);
+    } else if (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) {
+        /* If sunrise and sunset times are both passed, disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) */
+        modules[GAMMA_IX].self->deps[1].type = SOFT;
+        disable_module(LOCATION_IX);
+    }
+    
     /* Disable gamma support if we're not in a X session */
-    if (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11")) {
+    if (!modules[GAMMA_IX].disabled && (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11"))) {
         WARN("Disabling gamma support as X is not running.\n");
-        modules[GAMMA_IX].disabled = 1;
+        disable_module(GAMMA_IX);
     }
 }

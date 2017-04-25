@@ -1,7 +1,6 @@
 #include "../inc/utils.h"
 
 static void started_cb(enum modules module);
-static void disable_module(const enum modules module);
 
 /**
  * Create timer and returns its fd to
@@ -39,14 +38,15 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
  * If module has not a poll_cb (it is not waiting on poll), call poll_cb right now as it is fully started already.
  */
 void init_modules(const enum modules module) {
+    /* Avoid calling init in case module is disabled, is already inited, or init func ptr is NULL */
     if (!modules[module].disabled && modules[module].init && !modules[module].inited) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
             modules[module].init();
             /* 
-             * if module has been correctly inited, and it has no poll_cb,
+             * if module has no poll_cb,
              * start right now its dependent modules.
              */
-            if (modules[module].inited && !modules[module].poll_cb) {
+            if (!modules[module].poll_cb) {
                 poll_cb(module);
             }
         }
@@ -83,15 +83,17 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
  * Foreach dep, set self as dependent on that module
  */
 void set_self_deps(struct self_t *self) {
-    for (int i = 0; i < self->num_deps; i++) {
-        struct module *m = &(modules[self->deps[i].dep]);
-        m->num_dependent++;
-        m->dependent_m = realloc(m->dependent_m, m->num_dependent * sizeof(*(m->dependent_m)));
-        if (!m->dependent_m) {
-            ERROR("Could not malloc.\n");
-            break;
+    if (!modules[self->idx].disabled) {
+        for (int i = 0; i < self->num_deps; i++) {
+            struct module *m = &(modules[self->deps[i].dep]);
+            m->num_dependent++;
+            m->dependent_m = realloc(m->dependent_m, m->num_dependent * sizeof(*(m->dependent_m)));
+            if (!m->dependent_m) {
+                ERROR("Could not malloc.\n");
+                break;
+            }
+            m->dependent_m[m->num_dependent - 1] = self;
         }
-        m->dependent_m[m->num_dependent - 1] = self;
     }
 }
 
@@ -113,19 +115,21 @@ static void started_cb(enum modules module) {
 }
 
 /*
- * Calls correct cb function;
+ * Calls correct poll cb function;
  * then, if there are modules depending on this module,
- * try to start them, only once.
+ * try to start them calling started_cb.
  */
-void poll_cb(const enum modules module) {    
-    if (modules[module].poll_cb) {
-        modules[module].poll_cb();
-    }
-    /* If module has deps, call start cb on them, to start them */
-    if (modules[module].dependent_m) {
-        started_cb(module);
-        free(modules[module].dependent_m);
-        modules[module].dependent_m = NULL;
+void poll_cb(const enum modules module) {
+    if (modules[module].inited && !modules[module].disabled) {
+        if (modules[module].poll_cb) {
+            modules[module].poll_cb();
+        }
+        /* If module has deps, call start cb on them, to start them */
+        if (modules[module].num_dependent > 0) {
+            started_cb(module);
+            free(modules[module].dependent_m);
+            modules[module].num_dependent = 0;
+        }
     }
 }
 
@@ -133,22 +137,48 @@ void poll_cb(const enum modules module) {
  * Recursively disable a module and all of modules that require it (HARD dep).
  * If a module had a SOFT dep on "module", increment its 
  * satisfied_deps counter and try to init it.
+ * Moreover, if "module" is the only dependent module on another module X,
+ * disable X too.
  */
-static void disable_module(const enum modules module) {
-    modules[module].disabled = 1;
-    INFO("Module %s disabled.\n", modules[module].self->name);
-    for (int i = 0; i < modules[module].num_dependent; i++) {
-        struct self_t *self = modules[module].dependent_m[i];
-        for (int j = 0; j < self->num_deps; j++) {
-            if (self->deps[j].dep == module) {
-                if (self->deps[j].type == HARD) {
-                    disable_module(self->idx); // recursive call
-                } else {
-                    self->satisfied_deps++;
-                    init_modules(self->idx);
+void disable_module(const enum modules module) {
+    if (!modules[module].disabled) {
+        modules[module].disabled = 1;
+        INFO("%s module disabled.\n", modules[module].self->name);
+    
+        /* Cycle to disable all modules dependent on "module", if dep is HARD */
+        for (int i = 0; i < modules[module].num_dependent; i++) {
+            struct self_t *self = modules[module].dependent_m[i];
+            if (!modules[self->idx].disabled) {
+                for (int j = 0; j < self->num_deps; j++) {
+                    if (self->deps[j].dep == module) {
+                        if (self->deps[j].type == HARD) {
+                            disable_module(self->idx); // recursive call
+                        } else {
+                            self->satisfied_deps++;
+                            init_modules(self->idx);
+                        }
+                        break;
+                    }
                 }
-                break;
             }
+        }
+    
+        /* 
+         * Cycle to disable all module on which "module" has a dep,
+         * if "module" is the only module dependent on it 
+         */
+        for (int i = 0; i < modules[module].self->num_deps; i++) {
+            const enum modules m = modules[module].self->deps[i].dep;
+            /* if module "module" is only dependent module on it, disable it */
+            if (modules[m].num_dependent == 1) {
+                disable_module(m);
+            }
+        }
+    
+        /* Finally, free dependent_m for this disabled module */
+        if (modules[module].num_dependent > 0) {
+            free(modules[module].dependent_m);
+            modules[module].num_dependent = 0;
         }
     }
 }
@@ -157,10 +187,6 @@ static void disable_module(const enum modules module) {
  * Calls correct destroy function for each module
  */
 void destroy_modules(const enum modules module) {
-    /* Free list of dependent-on-this-module modules if it has still not been freed */
-    if (modules[module].dependent_m) {
-        free(modules[module].dependent_m);
-    }
     if (modules[module].inited && modules[module].destroy) {
         modules[module].destroy();
         INFO("%s module destroyed.\n", modules[module].self->name);
