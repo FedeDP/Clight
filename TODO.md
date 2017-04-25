@@ -8,7 +8,7 @@
 - [x] move "bus" as module
 
 ## Low Priority:
-- [ ] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream) [PR merged] . Add a check on #if LIBSYSTEMD_VERSION >= 234 and use new exposed function in bus_call (sd_bus_message_appendv())
+- [x] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream) [PR merged] . Add a check on #if LIBSYSTEMD_VERSION >= 234 and use new exposed function in bus_call (sd_bus_message_appendv())
 - [ ] add weather support (WIP) New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness 
 - [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection)
 

@@ -52,7 +52,10 @@ void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a,
 
     va_list args;
     va_start(args, signature);
-
+    
+#if LIBSYSTEMD_VERSION >= 234
+    sd_bus_message_appendv(m, signature, args);
+#else
     int i = 0;
     char *s;
     int val;
@@ -78,7 +81,7 @@ void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a,
         }
         i++;
     }
-
+#endif
     va_end(args);
     r = sd_bus_call(bus, m, 0, &error, &reply);
     if (check_err(r, &error)) {
