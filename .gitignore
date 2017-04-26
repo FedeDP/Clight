@@ -2,3 +2,4 @@
 .kdev4/
 clight
 *.o
+Debian/

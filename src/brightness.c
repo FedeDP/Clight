@@ -7,7 +7,7 @@ static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
 static void get_current_brightness(void);
-static void set_brightness(double perc);
+static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 
 /*
@@ -113,8 +113,27 @@ static void get_current_brightness(void) {
     bus_call(&br.old, "i", &args, "s", conf.screen_path);
 }
 
-static void set_brightness(double perc) {
-    int new_br =  br.max * perc;
+/*
+ * Equation for 'b' found with a fitting around these points:
+ * X = 0.0  Y = 0.0          
+ *     0.1      0.15      
+ *     0.2      0.29       
+ *     0.3      0.45       
+ *     0.4      0.61       
+ *     0.5      0.74       
+ *     0.6      0.81       
+ *     0.7      0.88       
+ *     0.8      0.93       
+ *     0.9      0.97       
+ *     1.0      1
+ * Where X is ambient brightness and Y is backlight level.
+ * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
+ * 
+ * FIXME: needs testing and feedbacks!
+ */
+static void set_brightness(const double perc) {
+    const double b = 1.319051 + (0.008722895 - 1.319051) / (1 + pow((perc/0.4479636), 1.540376));
+    int new_br =  br.max * b;
     // store old brightness
     get_current_brightness();
     if (state.quit) {

@@ -58,6 +58,7 @@ Moreover, it will make clight restart if any issue happens.
 
 For cmdline options, check clight [-?|--help] [--usage].  
 **Please note that cmdline "--device" and "--backlight" switches require only last part of syspath** (eg: "video0" or "intel_backlight")
+If your backlight interface will completely dim your screen at 0 backlight level, be sure to set in your conf file (or through cmdline option) the "lowest_backlight_level" option.
 
 ## Config file
 A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is all commented.  

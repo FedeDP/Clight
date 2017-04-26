@@ -53,6 +53,7 @@ struct config {
     double lon;                     // longitude
     char events[SIZE_EVENTS][10];   // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int no_gamma;                   // whether gamma tool is disabled
+    int lowest_backlight_level;     // lowest backlight level to be setted
 };
 
 /* Global state of program */
