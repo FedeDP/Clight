@@ -236,7 +236,7 @@ static int calculate_sunset(const float lat, const float lng, time_t *tt, int to
  * or of today's sunset event is finished.
  * Firstly computes day's sunrise and sunset; then calls check_next_event and check_state to
  * update global state.next_event and state.time variables according to new state.
- * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
+ * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  * Probably it is just some ms in advance, but rounding it to seconds returns 1s in advance.
  */
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day) {
@@ -281,10 +281,10 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
 
 /*
  * Updates state.next_event global var, according to now time_t value.
- * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
+ * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  */
 static void check_next_event(time_t *now) {
-    if (*now < state.events[SUNRISE] + EVENT_DURATION || state.events[SUNSET] == -1) {
+    if (*now + 1 < state.events[SUNRISE] + EVENT_DURATION || state.events[SUNSET] == -1) {
         state.next_event = SUNRISE;
     } else {
         state.next_event = SUNSET;
