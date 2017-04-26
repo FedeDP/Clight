@@ -5,7 +5,7 @@
 - [x] add a conf.lowest_backlight_level to avoid completely darken the screen
 - [x] add a module dependency management system (lazy module loading)
 - [x] move "bus" as module
-- [ ] prepare new release (1.0 or 0.10?)
+- [x] prepare new release (1.0 or 0.10?)
 
 ## Low Priority:
 - [x] follow https://github.com/systemd/systemd/issues/5654 (next systemd release?) (need to make a PR upstream) [PR merged] . Add a check on #if LIBSYSTEMD_VERSION >= 234 and use new exposed function in bus_call (sd_bus_message_appendv())
