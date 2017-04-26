@@ -3,6 +3,8 @@
 #include <sys/eventfd.h>
 #include <fcntl.h>
 
+static void init(void);
+static void destroy(void);
 static int location_conf_init(void);
 static int geoclue_init(void);
 static void location_cb(void);
@@ -15,6 +17,20 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
+static struct dependency dependencies[] = { {HARD, BUS_IX} };
+static struct self_t self = {
+    .name = "Location",
+    .idx = LOCATION_IX,
+    .num_deps = SIZE(dependencies),
+    .deps =  dependencies
+};
+
+void set_location_self(void) {
+    modules[self.idx].self = &self;
+    modules[self.idx].init = init;
+    modules[self.idx].destroy = destroy;
+    set_self_deps(&self);
+}
 
 /*
  * init location:
@@ -28,22 +44,15 @@ static char client[PATH_MAX + 1];
  *
  * Moreover, it stores a callback to be called on updated location event.
  */
-void init_location(void) {    
-    /* 
-     * if sunrise/sunset times are passed through cmdline, 
-     * or gamma support is disabled,
-     * there is no need to load location module.
-     */
-    if (!conf.no_gamma && (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNSET]))) {
-        int fd;
+static void init(void) {    
+    int fd;
         
-        if (conf.lat != 0 && conf.lon != 0) {
-            fd = location_conf_init();
-        } else {
-            fd = geoclue_init();
-        }
-        init_module(fd, LOCATION_IX, location_cb, destroy_location);
+    if (conf.lat != 0 && conf.lon != 0) {
+        fd = location_conf_init();
+    } else {
+        fd = geoclue_init();
     }
+    init_module(fd, self.idx, location_cb);
 }
 
 /*
@@ -103,7 +112,7 @@ end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
     if (state.quit) {
         WARN("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
-        conf.no_gamma = 1; // disable gamma
+        state.quit = 0; // do not leave
         location_fd = DONT_POLL_W_ERR; // do not poll this fd because an error happened
     }
     return location_fd;
@@ -119,13 +128,15 @@ static void location_cb(void) {
     if (!is_geoclue()) {
         uint64_t t;
         /* it is not from a bus signal as geoclue2 is not being used */
-        r = read(main_p[LOCATION_IX].fd, &t, sizeof(uint64_t));
+        r = read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     } else {
         r = sd_bus_process(bus, NULL);
     }
     if (r >= 0) {
         INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-        set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+        if (modules[GAMMA_IX].inited) {
+            set_timeout(1, 0, main_p[GAMMA_IX].fd, 0);
+        }
     }
 }
 
@@ -149,11 +160,11 @@ static void geoclue_check_initial_location(void) {
 /*
  * If we are using geoclue, stop client.
  */
-void destroy_location(void) {
+static void destroy(void) {
     if (is_geoclue()) {
         geoclue_client_stop();
-    } else if (main_p[LOCATION_IX].fd > 0) {
-        close(main_p[LOCATION_IX].fd);
+    } else if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
     }
 }
 

@@ -14,11 +14,17 @@
 #include <math.h>
 #include <pwd.h>
 
+/* 
+ * Useful macro to check size of global array.
+ * Used in every module to automatically set self.num_deps
+ */
+#define SIZE(a) sizeof(a) / sizeof(*a)
+
 #define DONT_POLL -2                // avoid polling a module (used for dpms taht does not need to be polled)
 #define DONT_POLL_W_ERR -3          // avoid polling a module because an error occurred (used in location.c when no geoclue2 is found)
 
 /* List of modules indexes */
-enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, MODULES_NUM };
+enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, BUS_IX, MODULES_NUM };
 /*
  * List of states clight can be through: 
  * day between sunrise and sunset
@@ -31,19 +37,22 @@ enum states { UNKNOWN, DAY, NIGHT, EVENT, SIZE_STATES };
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
+/* Whether a inter-module dep is hard (mandatory) or soft dep */
+enum dep_type { HARD, SOFT };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;               // number of frame captured for each screen brightness compute
     int single_capture_mode;        // do a capture and leave
     int timeout[SIZE_STATES];       // timeout between captures for each state (day/night only exposed through cmdline opts)
-    char dev_name[PATH_MAX + 1];                 // video device (eg: /dev/video0) to be used for captures
-    char screen_path[PATH_MAX + 1];              // screen syspath (eg: /sys/class/backlight/intel_backlight)
+    char dev_name[PATH_MAX + 1];    // video device (eg: /dev/video0) to be used for captures
+    char screen_path[PATH_MAX + 1]; // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];          // screen temperature for each state (day/night only exposed through cmdline opts)
     int no_smooth_transition;       // disable smooth transitions for gamma
     double lat;                     // latitude
     double lon;                     // longitude
-    char events[SIZE_EVENTS][10];      // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
-    int no_gamma;                   // disable gamma support (if setted, gamma and location modules won't be started)
+    char events[SIZE_EVENTS][10];   // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
+    int no_gamma;                   // whether gamma tool is disabled
 };
 
 /* Global state of program */
@@ -55,11 +64,31 @@ struct state {
     int event_time_range;           // variable that holds minutes in advance/after an event to enter/leave EVENT state
 };
 
+/* Struct that holds info about an inter-modules dep */
+struct dependency {
+    enum dep_type type;
+    enum modules dep;
+};
+
+/* Struct that holds self module informations, static to each module */
+struct self_t {
+    const char *name;               // name of module
+    const enum modules idx;         // idx of a module in enum modules 
+    int num_deps;                   // number of deps for a module
+    int satisfied_deps;             // number of satisfied deps
+    struct dependency *deps;        // module on which there is a dep
+};
+
 /* Struct that holds data for each module */
 struct module {
+    void (*init)(void);             // module init function
     void (*destroy)(void);          // module destroy function
     void (*poll_cb)(void);          // module poll callback
+    struct self_t *self;            // pointer to self module informations
+    struct self_t **dependent_m;    // pointer to every dependent module self
+    int num_dependent;              // number of dependent-on-this-module modules
     int inited;                     // whether a module has been initialized
+    int disabled;                   // whether this module has been disabled from config (for now useful only for gamma)
 };
 
 struct state state;

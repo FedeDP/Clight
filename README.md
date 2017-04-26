@@ -46,6 +46,7 @@ Moreover, it will make clight restart if any issue happens.
 * in case of huge brightness drop (> 60%), a new capture will quickly be done (after 15 seconds), to check if this was an accidental event (eg: you changed room and capture happened before you switched on the light) or if brightness has really dropped that much (eg: you switched off the light)
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
 * only 1 clight instance can be running for same user. You can still invoke a fast capture when an instance is already running, obviously
+* sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
 
 ### Valgrind is run with:
 
@@ -75,6 +76,9 @@ If you run clight from wayland or from a tty, gamma support will be automaticall
 You can only run one clight instance per-user: if a clight instance is running, you cannot start another full clight instance.  
 Obviously you can still invoke "clight -c" from a terminal/shortcut to make a fast capture/screen brightness calibration.  
 This is achieved through a clight.lock file placed in current user home.
+
+Every functionality in clight is achieved through a "module". An inter-modules dependencies system has been created ad-hoc to ease development of such modules.  
+This way, it does not matter modules' init calls sorting; moreover, each module can be easily disabled if not needed (eg: when --no-gamma option is passed.)
 
 ## Build instructions:
 Build and install:

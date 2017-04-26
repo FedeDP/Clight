@@ -31,14 +31,16 @@
 #include "../inc/lock.h"
 
 static void init(int argc, char *argv[]);
+static void set_modules_selfs(void);
+static void init_all_modules(void);
 static void destroy(void);
 static void main_poll(void);
 
 /*
  * pointers to init modules functions;
  */
-static void (*const init_m[MODULES_NUM])(void) = {
-    init_brightness, init_location, init_gamma, init_signal, init_dpms
+static void (*const set_selfs[MODULES_NUM])(void) = {
+    set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_dpms_self, set_bus_self
 };
 
 int main(int argc, char *argv[]) {
@@ -49,9 +51,9 @@ int main(int argc, char *argv[]) {
 }
 
 /*
- * First of all loads optiosn from both global and local config file,
- * and from cmdline options.
- * If we're not in single_capture_mode, it gains lock and opens log.
+ * First of all loads optiosn from both global and 
+ * local config file, and from cmdline options.
+ * If we're not in single_capture_mode, it gains lock and opens log, logging current configuration.
  * Then checks conf and init needed modules.
  */
 static void init(int argc, char *argv[]) {
@@ -66,12 +68,24 @@ static void init(int argc, char *argv[]) {
     if (state.quit) {
         return;
     }
-    check_conf();
-    init_bus();
-    // do not init every module if we're doing a single capture
-    const int limit = conf.single_capture_mode ? 1 : MODULES_NUM;
-    for (int i = 0; i < limit && !state.quit; i++) {
-        init_m[i]();
+    set_modules_selfs();
+    if (!state.quit) {
+        check_conf();
+        init_all_modules();
+    }
+}
+
+/* Set each module self struct */
+static void set_modules_selfs(void) {
+    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+        set_selfs[i]();
+    }
+}
+
+/* Init every module */
+static void init_all_modules(void) {
+    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+        init_modules(i);
     }
 }
 
@@ -80,9 +94,8 @@ static void init(int argc, char *argv[]) {
  */
 static void destroy(void) {
     for (int i = 0; i < MODULES_NUM; i++) {
-        destroy_module(i);
+        destroy_modules(i);
     }
-    destroy_bus();
     close_log();
     destroy_lck();
 }
@@ -106,8 +119,8 @@ static void main_poll(void) {
              * it should never happen that no cb is registered for a polled module.
              * dpms_module does not register an fd to be listened on poll.
              */
-            if ((main_p[i].revents & POLLIN) && (modules[i].poll_cb)) {
-                modules[i].poll_cb();
+            if (main_p[i].revents & POLLIN) {
+                poll_cb(i);
                 r--;
             }
         }

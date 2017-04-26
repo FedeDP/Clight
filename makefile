@@ -26,7 +26,8 @@ endif
 endif
 
 CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)
-CFLAGS+=-DVERSION=\"$(CLIGHT_VERSION)\"
+SYSTEMD_VERSION = $(shell pkg-config --modversion systemd)
+CFLAGS+=-DVERSION=\"$(CLIGHT_VERSION)\" -DLIBSYSTEMD_VERSION=$(SYSTEMD_VERSION)
 
 all: clight clean
 

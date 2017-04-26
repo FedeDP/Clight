@@ -4,6 +4,8 @@
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 #define EVENT_DURATION 30 * 60
 
+static void init(void);
+static void destroy(void);
 static void gamma_cb(void);
 static void check_gamma(void);
 static double  degToRad(const double angleDeg);
@@ -16,31 +18,36 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
-void init_gamma(void) {
-    if (!conf.no_gamma) {
-        int initial_timeout = 0;
-        /*
-         * if both sunrise and sunset times are passed
-         * through cmdline opts, start immediately gamma module.
-         */
-        if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
-            initial_timeout = 1;
-        }
-        int gamma_timerfd = start_timer(CLOCK_REALTIME, initial_timeout);
-        init_module(gamma_timerfd, GAMMA_IX, gamma_cb, destroy_gamma);
-    }
+static struct dependency dependencies[] = { {HARD, BUS_IX}, {HARD, LOCATION_IX} };
+static struct self_t self = {
+    .name = "Gamma",
+    .idx = GAMMA_IX,
+    .num_deps = SIZE(dependencies),
+    .deps =  dependencies
+};
+
+void set_gamma_self(void) {
+    modules[self.idx].self = &self;
+    modules[self.idx].init = init;
+    modules[self.idx].destroy = destroy;
+    set_self_deps(&self);
 }
 
-void destroy_gamma(void) {
-    if (main_p[GAMMA_IX].fd > 0) {
-        close(main_p[GAMMA_IX].fd);
+static void init(void) {
+    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, 0);
+    init_module(gamma_timerfd, self.idx, gamma_cb);
+}
+
+static void destroy(void) {
+    if (main_p[self.idx].fd > 0) {
+        close(main_p[self.idx].fd);
     }
 }
 
 static void gamma_cb(void) {
     uint64_t t;
 
-    read(main_p[GAMMA_IX].fd, &t, sizeof(uint64_t));
+    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     check_gamma();
 }
 
@@ -85,16 +92,16 @@ static void check_gamma(void) {
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
-        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p[GAMMA_IX].fd, TFD_TIMER_ABSTIME);
+        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
-        if (old_state != state.time) {
+        if (old_state != state.time && modules[CAPTURE_IX].inited) {
             set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
-        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[GAMMA_IX].fd, 0);
+        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[self.idx].fd, 0);
         transitioning = 1;
     }
 }
