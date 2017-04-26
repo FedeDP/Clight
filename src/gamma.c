@@ -243,9 +243,9 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
     time_t t;
 
     /* only every new day, after latest event of today finished */
-    if (*now >= state.events[SUNSET] + EVENT_DURATION - 1) {
+    if (*now + 1 >= state.events[SUNSET] + EVENT_DURATION) {
         if (calculate_sunset(lat, lon, &t, day) == 0) {
-            if (*now > t + EVENT_DURATION - 1) {
+            if (*now + 1 >= t + EVENT_DURATION) {
                 /*
                  * we're between today's sunrise and tomorrow sunrise.
                  * rerun function with tomorrow.
@@ -284,7 +284,7 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
  * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
  */
 static void check_next_event(time_t *now) {
-    if (*now < state.events[SUNRISE] + EVENT_DURATION - 1 || state.events[SUNSET] == -1) {
+    if (*now < state.events[SUNRISE] + EVENT_DURATION || state.events[SUNSET] == -1) {
         state.next_event = SUNRISE;
     } else {
         state.next_event = SUNSET;
@@ -293,7 +293,7 @@ static void check_next_event(time_t *now) {
 
 /*
  * Updates state.time global var, according to now time_t value.
- * Note that "-1" is because it seems timerfd receives timer end circa 1s in advance.
+ * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  * If we're inside an event, checks which side of the events we're in
  * (to understand which conf.temp is correct for this state).
  * Then sets state.event_time_range accordingly; ie: 30mins before event, if we're not inside an event;
@@ -301,10 +301,10 @@ static void check_next_event(time_t *now) {
  * 30mins after event to remove EVENT state.
  */
 static void check_state(time_t *now) {
-    if (labs(state.events[state.next_event] - *now) <= EVENT_DURATION) {
+    if (labs(state.events[state.next_event] - (*now + 1)) <= EVENT_DURATION) {
         int event_t;
 
-        if (state.events[state.next_event] - *now > 1) {
+        if (state.events[state.next_event] > *now + 1) {
             event_t = state.next_event;
             state.event_time_range = 0;
         } else {
