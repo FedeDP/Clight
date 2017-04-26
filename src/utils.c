@@ -6,12 +6,12 @@ static void started_cb(enum modules module);
  * Create timer and returns its fd to
  * the main struct pollfd
  */
-int start_timer(int clockid, int initial_timeout) {
+int start_timer(int clockid, int initial_ns, int initial_s) {
     int timerfd = timerfd_create(clockid, 0);
     if (timerfd == -1) {
         ERROR("could not start timer: %s\n", strerror(errno));
     } else {
-        set_timeout(initial_timeout, 0, timerfd, 0);
+        set_timeout(initial_s, initial_ns, timerfd, 0);
     }
     return timerfd;
 }

@@ -34,7 +34,7 @@ void set_gamma_self(void) {
 }
 
 static void init(void) {
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1);
+    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, 0);
     init_module(gamma_timerfd, self.idx, gamma_cb);
 }
 

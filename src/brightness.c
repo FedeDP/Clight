@@ -41,7 +41,7 @@ void set_brightness_self(void) {
 static void init(void) {
     get_max_brightness();
     if (!state.quit) {
-        int fd = start_timer(CLOCK_MONOTONIC, 1);
+        int fd = start_timer(CLOCK_MONOTONIC, 1, 0);
         init_module(fd, self.idx, brightness_cb);
     }
 }
