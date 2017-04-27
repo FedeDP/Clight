@@ -1,4 +1,4 @@
-#ifndef DISABLE_DPMS
+#ifdef DPMS_PRESENT
 
 #include "utils.h"
 

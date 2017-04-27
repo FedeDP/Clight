@@ -24,7 +24,7 @@
 #define DONT_POLL_W_ERR -3          // avoid polling a module because an error occurred (used in location.c when no geoclue2 is found)
 
 /* List of modules indexes */
-#ifndef DISABLE_DPMS
+#ifdef DPMS_PRESENT
 enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, BUS_IX, MODULES_NUM };
 #else
 enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, BUS_IX, MODULES_NUM };

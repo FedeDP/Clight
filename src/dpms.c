@@ -1,4 +1,4 @@
-#ifndef DISABLE_DPMS
+#ifdef DPMS_PRESENT
 
 #include "../inc/dpms.h"
 #include <xcb/dpms.h>

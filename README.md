@@ -14,7 +14,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * libconfig (libconfig.h)
 
 ## Optional build deps
-* libxcb (xcb.h, xcb/dpms.h)
+* libxcb (xcb.h, xcb/dpms.h), for dpms support
 
 ## Runtime deps:
 * shared objects from build libraries

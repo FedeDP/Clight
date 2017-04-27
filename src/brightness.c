@@ -72,7 +72,7 @@ static void do_capture(void) {
     static const int fast_timeout = 15;
     static const double drop_limit = 0.6;
 
-#ifndef DISABLE_DPMS
+#ifdef DPMS_PRESENT
     /*
      * if screen is currently blanked thanks to dpms,
      * do not do anything. Set a long timeout and return.

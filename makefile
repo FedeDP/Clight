@@ -24,11 +24,15 @@ $(error systemd minimum required version 221.)
 endif
 
 ifneq ("$(DISABLE_DPMS)","1")
-$(info DPMS support enabled.)
-CFLAGS+=$(shell pkg-config --cflags xcb xcb-dpms)
+DPMS=$(shell pkg-config --silence-errors --libs  xcb xcb-dpms)
+
+ifneq ("$(DPMS)","")
+CFLAGS+=-DDPMS_PRESENT $(shell pkg-config --cflags xcb xcb-dpms)
 LIBS+=$(shell pkg-config --libs xcb xcb-dpms)
+$(info DPMS support enabled.)
+endif
+
 else
-CFLAGS+=-DDISABLE_DPMS
 $(info DPMS support disabled.)
 endif
 
