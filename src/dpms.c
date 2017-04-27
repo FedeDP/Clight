@@ -1,3 +1,5 @@
+#ifndef DISABLE_DPMS
+
 #include "../inc/dpms.h"
 #include <xcb/dpms.h>
 #include <stdlib.h>
@@ -74,3 +76,5 @@ int get_screen_dpms(void) {
     }
     return ret;
 }
+
+#endif

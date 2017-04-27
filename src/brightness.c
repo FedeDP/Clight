@@ -72,6 +72,7 @@ static void do_capture(void) {
     static const int fast_timeout = 15;
     static const double drop_limit = 0.6;
 
+#ifndef DISABLE_DPMS
     /*
      * if screen is currently blanked thanks to dpms,
      * do not do anything. Set a long timeout and return.
@@ -81,6 +82,7 @@ static void do_capture(void) {
         INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
         return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
     }
+#endif
 
     double val = capture_frames_brightness();
     if (!state.quit && val >= 0.0) {

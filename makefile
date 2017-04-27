@@ -14,13 +14,22 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs xcb xcb-dpms libsystemd popt libconfig)
-CFLAGS = $(shell pkg-config --cflags xcb xcb-dpms libsystemd popt libconfig) -DCONFDIR=\"$(CONFDIR)\"
+LIBS = -lm $(shell pkg-config --libs libsystemd popt libconfig)
+CFLAGS = $(shell pkg-config --cflags libsystemd popt libconfig) -DCONFDIR=\"$(CONFDIR)\"
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
 ifneq ("$(shell pkg-config --atleast-version=221 systemd && echo yes)", "yes")
 $(error systemd minimum required version 221.)
+endif
+
+ifneq ("$(DISABLE_DPMS)","1")
+$(info DPMS support enabled.)
+CFLAGS+=$(shell pkg-config --cflags xcb xcb-dpms)
+LIBS+=$(shell pkg-config --libs xcb xcb-dpms)
+else
+CFLAGS+=-DDISABLE_DPMS
+$(info DPMS support disabled.)
 endif
 
 endif

@@ -26,7 +26,9 @@
 #include "../inc/gamma.h"
 #include "../inc/location.h"
 #include "../inc/signal.h"
+#ifndef DISABLE_DPMS
 #include "../inc/dpms.h"
+#endif
 #include "../inc/opts.h"
 #include "../inc/lock.h"
 
@@ -39,9 +41,15 @@ static void main_poll(void);
 /*
  * pointers to init modules functions;
  */
+#ifndef DISABLE_DPMS
 static void (*const set_selfs[MODULES_NUM])(void) = {
     set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_dpms_self, set_bus_self
 };
+#else
+static void (*const set_selfs[MODULES_NUM])(void) = {
+    set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_bus_self
+};
+#endif
 
 int main(int argc, char *argv[]) {
     init(argc, argv);

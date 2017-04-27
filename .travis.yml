@@ -21,6 +21,7 @@ arch:
     script:
         - "echo $CC"
         - make debug
+        - make debug DISABLE_DPMS=1
 
 script:
     - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"

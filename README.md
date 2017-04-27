@@ -9,14 +9,19 @@ Moreover, it can manage your screen temperature, just like redshift does.
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
 ## Build deps
-* libxcb (xcb.h, xcb/dpms.h)
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
 * libconfig (libconfig.h)
 
+## Optional build deps
+* libxcb (xcb.h, xcb/dpms.h)
+
 ## Runtime deps:
 * shared objects from build libraries
 * [clightd](https://github.com/FedeDP/Clightd)
+
+## Build time switches:
+* DISABLE_DPMS=1 (to disable dpms support, useful if you plan to run clight on non-X environments)
 
 ## How to run it
 Even if a systemd user unit is shipped, proper way to start clight is to put into your DE session autostart manager/X autostart script:
