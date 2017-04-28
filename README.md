@@ -24,15 +24,13 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * DISABLE_DPMS=1 (to disable dpms support, useful if you plan to run clight on non-X environments)
 
 ## How to run it
-Even if a systemd user unit is shipped, proper way to start clight is to put into your DE session autostart manager/X autostart script:
-
-    $ systemctl --user start clight.service
-    
-**This is needed to assure that X is running when clight gets started**.  
-On systemd there is no proper way of knowing whether X has been started or not.  
+Even if a systemd user unit is shipped, proper way to start clight is by autostarting clight from your DE autostart.  
+For this reason, clight installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight. User has not to do anything but reboot after installing clight.  
+**This is needed to assure that X is running when clight gets started** as on systemd there is no proper way of knowing whether X has been started or not.  
 Simply enabling the unit could cause clight to auto-disabling gamma support if it cannot find any running X server.  
-Note that is better to use that command to start the user service instead of just using "clight", because the service kicks in clightd dependency.  
-Moreover, it will make clight restart if any issue happens.
+Note that desktop file will just execute "systemctl --user start clight"; clight user service will then kick in clightd dependency and will restart itself in case of crash.  
+
+Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
 
 ## Current features:
 * very lightweight

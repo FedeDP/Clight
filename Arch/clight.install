@@ -1,7 +1,7 @@
 post_install() {
     echo '--> By default, first matching webcam and backlight interface are used.'
 	echo '--> Therefore, it should work out of the box even without any setup in most cases.'
-	echo '--> Remember to add 'systemctl --user start clight.service' to your DE autostart.'
+	echo '--> Clight install a xdg autostart script. This way, clight will be started together with your DE.'
 	echo '--> For any customization, take a look at settings file placed in /etc/default/clight.conf.'
 }
 

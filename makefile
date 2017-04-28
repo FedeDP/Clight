@@ -7,6 +7,10 @@ DEBOUTPUTDIR = ./Debian
 EXTRADIR = Extra
 CONFDIR = /etc/default
 CONFNAME = clight.conf
+ICONSDIR = /usr/share/icons/hicolor/scalable/apps
+ICONNAME = clight.svg
+DESKTOPDIR = /usr/share/applications
+AUTOSTARTDIR = /etc/xdg/autostart
 RM = rm -f
 RMDIR = rm -rf
 INSTALL = install -p
@@ -90,7 +94,18 @@ install:
 
 	$(info installing systemd unit.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
-	@$(INSTALL_DATA) $(EXTRADIR)/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
+	
+	$(info installing icon.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(ICONSDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/icons/$(ICONNAME) "$(DESTDIR)$(ICONSDIR)"
+	
+	$(info installing desktop files.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(AUTOSTARTDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/desktop/clight.desktop "$(DESTDIR)$(AUTOSTARTDIR)"
+	
+	@$(INSTALL_DIR) "$(DESTDIR)$(DESKTOPDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/desktop/clightc.desktop "$(DESTDIR)$(DESKTOPDIR)"
 
 uninstall:
 	$(info uninstalling bin.)
@@ -101,3 +116,10 @@ uninstall:
 
 	$(info uninstalling systemd unit.)
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"
+	
+	$(info uninstalling icon.)
+	@$(RM) "$(DESTDIR)$(ICONSDIR)/$(ICONNAME)"
+	
+	$(info uninstalling desktop files.)
+	@$(RM) "$(DESTDIR)$(AUTOSTARTDIR)/clight.desktop"
+	@$(RM) "$(DESTDIR)$(DESKTOPDIR)/clightc.desktop"
