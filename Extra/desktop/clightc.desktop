@@ -2,7 +2,6 @@
 Type=Application
 Name=Clight
 Exec=clight -c
-NoDisplay=false
-Comment=Takes a fast screen backlight recalibration through clight.
+Comment=Takes a fast screen backlight recalibration through clight
 Icon=clight.svg
 Categories=System

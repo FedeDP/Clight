@@ -4,7 +4,7 @@
 - [x] add an icon for desktop file
 - [x] put clight desktop file in /etc/xdg/autostart (so it will be autostarted), clightc desktop file in /usr/share/applications and UPDATE README
 - [x] install icon to correct folder: /usr/share/icons/hicolor/scalable/apps/clight.svg
-- [ ] fix icon (way too small...don't understand why though)
+- [ ] fix icon -> real svg not embedded one
 
 ### Generic
 - [ ] get_timeout function to retrieve timerfd remaining timer (easy) -> in GAMMA avoid setting new timeout (based on new enum states time) to N minutes (eg: isntead of setting  new timeout to 45mins during the night, set it to 45mins - elapsed time since last timer); same goes for upower module obviously
