@@ -2,7 +2,6 @@
 
 #define ZENITH -0.83
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
-#define EVENT_DURATION 30 * 60
 
 static void init(void);
 static void destroy(void);
@@ -77,13 +76,14 @@ static void check_gamma(void) {
          * Then, it will be called every day after end of last event (ie: sunset + 30mins)
          */
         get_gamma_events(&t, conf.lat, conf.lon, state.events[SUNSET] != 0);
+        /* calculate_sunrise_sunset will fail if wrong sunrise/sunset strings are passed from options */
         if (state.quit) {
             return;
         }
     }
 
     int ret = 0;
-    if (transitioning || state.event_time_range == EVENT_DURATION || first_time) {
+    if (transitioning || state.event_time_range == conf.event_duration || first_time) {
         first_time = 0;
         ret = set_temp(conf.temp[state.time]); // ret = -1 if an error happens
     }
@@ -92,12 +92,19 @@ static void check_gamma(void) {
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
-        set_timeout(state.events[state.next_event] + state.event_time_range, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
+        set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
         if (old_state != state.time && modules[CAPTURE_IX].inited) {
-            set_timeout(conf.timeout[state.time], 0, main_p[CAPTURE_IX].fd, 0);
+            unsigned int elapsed_time = conf.timeout[old_state] - get_timeout(main_p[CAPTURE_IX].fd);
+            /* if we still need to wait some seconds */
+            if (conf.timeout[state.time] - elapsed_time > 0) {
+                set_timeout(conf.timeout[state.time] - elapsed_time, 0, main_p[CAPTURE_IX].fd, 0);
+            } else {
+                /* with new timeout, old_timeout would already been elapsed */
+                set_timeout(0, 1, main_p[CAPTURE_IX].fd, 0);
+            }
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
@@ -243,9 +250,9 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
     time_t t;
 
     /* only every new day, after latest event of today finished */
-    if (*now + 1 >= state.events[SUNSET] + EVENT_DURATION) {
+    if (*now + 1 >= state.events[SUNSET] + conf.event_duration) {
         if (calculate_sunset(lat, lon, &t, day) == 0) {
-            if (*now + 1 >= t + EVENT_DURATION) {
+            if (*now + 1 >= t + conf.event_duration) {
                 /*
                  * we're between today's sunrise and tomorrow sunrise.
                  * rerun function with tomorrow.
@@ -284,7 +291,7 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
  * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  */
 static void check_next_event(time_t *now) {
-    if (*now + 1 < state.events[SUNRISE] + EVENT_DURATION || state.events[SUNSET] == -1) {
+    if (*now + 1 < state.events[SUNRISE] + conf.event_duration || state.events[SUNSET] == -1) {
         state.next_event = SUNRISE;
     } else {
         state.next_event = SUNSET;
@@ -301,7 +308,7 @@ static void check_next_event(time_t *now) {
  * 30mins after event to remove EVENT state.
  */
 static void check_state(time_t *now) {
-    if (labs(state.events[state.next_event] - (*now + 1)) <= EVENT_DURATION) {
+    if (labs(state.events[state.next_event] - (*now + 1)) <= conf.event_duration) {
         int event_t;
 
         if (state.events[state.next_event] > *now + 1) {
@@ -309,13 +316,13 @@ static void check_state(time_t *now) {
             state.event_time_range = 0;
         } else {
             event_t = !state.next_event;
-            state.event_time_range = EVENT_DURATION;
+            state.event_time_range = conf.event_duration;
         }
         conf.temp[EVENT] = event_t == SUNRISE ? conf.temp[NIGHT] : conf.temp[DAY];
         state.time = EVENT;
     } else {
         state.time = state.next_event == SUNRISE ? NIGHT : DAY;
-        state.event_time_range = -EVENT_DURATION; // 30mins before event
+        state.event_time_range = -conf.event_duration; // 30mins before event
     }
 }
 

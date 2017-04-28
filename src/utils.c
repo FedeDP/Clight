@@ -32,6 +32,12 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
+unsigned int get_timeout(int fd) {
+    struct itimerspec curr_value;
+    timerfd_gettime(fd, &curr_value);
+    return curr_value.it_value.tv_sec;
+}
+
 /* 
  * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been setted.
  * Check if all deps modules have been started too.

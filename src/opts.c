@@ -20,6 +20,7 @@ void init_opts(int argc, char *argv[]) {
     conf.temp[NIGHT] = 4000;
     conf.temp[EVENT] = -1;
     conf.temp[UNKNOWN] = conf.temp[DAY];
+    conf.event_duration = 30 * 60;
 
     read_config(GLOBAL);
     read_config(LOCAL);
@@ -48,6 +49,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool", NULL},
         {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 0, "Lowest backlight level that clight can set.", NULL},
+        {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 0, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after.", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -113,6 +115,10 @@ void check_conf(void) {
     if (conf.temp[NIGHT] < 1000 || conf.temp[NIGHT] > 10000) {
         WARN("Wrong nightly temp value. Resetting default value.\n");
         conf.temp[NIGHT] = 4000;
+    }
+    if (conf.event_duration <= 0) {
+        WARN("Wrong event duration value. Resetting default value.\n");
+        conf.event_duration = 30 * 60;
     }
     
     /* Disable gamma if in single capture mode, or if --no-gamma option was setted */
