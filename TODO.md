@@ -13,6 +13,10 @@
 
 ## 0.12
 - [ ] Upower battery/ac signals monitor? Ie: add a match on bus. May be more frequent captures if on AC, and less frequent on battery? (easy)
+- [ ] move sd_bus_get_fd(bus) etc etc from Location to Bus (where it belongs)
+- [ ] Location and Upower will only add a match on bus
+- [ ] change location_cb
+- [ ] drop eventfd in LOCATION module?
 
 ## Later
 ### Mid Priority:

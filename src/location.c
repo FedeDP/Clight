@@ -121,6 +121,9 @@ end:
 /*
  * When a new location is received, reset GAMMA timer to now + 1sec;
  * this way, check_gamma will be called and it will correctly set new timer.
+ * FIXME: when moving sd_bus_get_fd(bus) in Bus module, here we will only enter if location is received from eventfd
+ * may be, change this function and remove eventfd alltogether? Ie: if conf.lat and conf.lon are both available,
+ * just set this module to inited and start GAMMA.
  */
 static void location_cb(void) {
     int r;
