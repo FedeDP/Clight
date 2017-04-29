@@ -38,8 +38,6 @@ static void destroy(void) {
 
 /*
  * Calls a method on bus and store its result of type userptr_type in userptr.
- * Note that this is a variadic function and will correctly handle 's' and 'i' signature types.
- * Follow: https://github.com/systemd/systemd/issues/5654 (i need to propose a patch there)
  */
 void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -172,11 +170,9 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
     if (err) {
         sd_bus_error_free(err);
     }
-
     if (m) {
         sd_bus_message_unref(m);
     }
-
     if (reply) {
         sd_bus_message_unref(reply);
     }
@@ -187,8 +183,8 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
  */
 int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
-        /* Don't leave for ebusy errors */
-        if (r == -EBUSY) {
+        /* Don't leave for ebusy/eperm errors. eperm may mean that a not-active session called a method on clightd */
+        if (r == -EBUSY || r == -EPERM) {
             WARN("%s\n", err->message ? err->message : strerror(-r));
         } else {
             ERROR("%s\n", err->message ? err->message : strerror(-r));

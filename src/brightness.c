@@ -85,6 +85,11 @@ static void do_capture(void) {
 #endif
 
     double val = capture_frames_brightness();
+    /* 
+     * if captureframes clightd method did not return any non-critical error (eg: eperm).
+     * I won't check setbrightness too because if captureframes did not return any error,
+     * it is very very unlikely that setbrightness would return some.
+     */
     if (!state.quit && val >= 0.0) {
         INFO("Average frames brightness: %lf.\n", val);
         set_brightness(val);
@@ -130,8 +135,6 @@ static void get_current_brightness(void) {
  *     1.0      1
  * Where X is ambient brightness and Y is backlight level.
  * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
- * 
- * FIXME: needs testing and feedbacks!
  */
 static void set_brightness(const double perc) {
     const double b = 1.319051 + (0.008722895 - 1.319051) / (1 + pow((perc/0.4479636), 1.540376));

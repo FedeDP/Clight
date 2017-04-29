@@ -335,7 +335,7 @@ static void check_state(time_t *now) {
  */
 static int set_temp(int temp) {
     const int step = 50;
-    int new_temp;
+    int new_temp = -1;
     static int old_temp = 0;
 
     if (temp == -1) {
@@ -368,6 +368,9 @@ static int set_temp(int temp) {
             // reset old_temp for next call
             old_temp = 0;
             INFO("%d gamma temp setted.\n", temp);
+        } else if (new_temp == -1) {
+            /* error in setgamma call (critical/non-critical it doens't matter) */
+            return -1;
         }
     } else {
         // reset old_temp
