@@ -41,7 +41,7 @@ static int upower_init(void) {
 }
 
 /* Callback on upower changes: recheck on_battery boolean value */
-static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
     int on_battery = -1;

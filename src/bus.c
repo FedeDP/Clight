@@ -6,6 +6,7 @@ static void bus_cb(void);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
+static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
     .idx = BUS_IX,
@@ -17,8 +18,6 @@ void set_bus_self(void) {
     modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
-
-static sd_bus *bus;
 
 /*
  * Open our bus
@@ -42,7 +41,9 @@ static void destroy(void) {
     }
 }
 
-/* Callback for bus events */
+/*
+ * Callback for bus events
+ */
 static void bus_cb(void) {
     int r;
     do {

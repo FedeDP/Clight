@@ -3,7 +3,6 @@
 static void init(void);
 static void destroy(void);
 static int geoclue_init(void);
-static void geoclue_check_initial_location(void);
 static void geoclue_get_client(void);
 static void geoclue_hook_update(void);
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -54,7 +53,7 @@ static int geoclue_init(void) {
     if (state.quit) {
         goto end;
     }
-    geoclue_check_initial_location();
+//     geoclue_load_from_cache();
 
 end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
@@ -64,22 +63,6 @@ end:
         r = -1;
     }
     return r;
-}
-
-/*
- * Checks if a location is already available through GeoClue2
- * (a LocationUpdated signal would not be sent until a real location update would happen.)
- */
-static void geoclue_check_initial_location(void) {
-    char loc_obj[PATH_MAX + 1] = {0};
-    struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Location"};
-
-    get_property(&args, "o", loc_obj);
-    if (strcmp(loc_obj, "/")) {
-        on_geoclue_new_location(NULL, loc_obj, NULL);
-    } /*else {
-        get_location_from_cache();
-    }*/
 }
 
 /*
@@ -109,14 +92,10 @@ static void geoclue_hook_update(void) {
  * On new location callback: retrieve new_location object,
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
-static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     const char *new_location, *old_location;
 
-    if (m) {
-        sd_bus_message_read(m, "oo", &old_location, &new_location);
-    } else {
-        new_location = userdata;
-    }
+    sd_bus_message_read(m, "oo", &old_location, &new_location);
 
     struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
     struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
