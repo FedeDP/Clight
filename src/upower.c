@@ -29,22 +29,15 @@ static void init(void) {
 }
 
 static int upower_init(void) {
-    struct bus_args args = {
-        .service = "org.freedesktop.UPower",
-        .interface = "org.freedesktop.DBus.Properties",
-        .member = "PropertiesChanged",
-        .path = "/org/freedesktop/UPower"
-    };
+    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
     add_match(&args, on_upower_change);
-    int ret = 0;
+    
     if (state.quit) {
         state.quit = 0; // do not leave
-        ret = -1;   // disable this module
-    } else {
-        /* check initial AC state */
-        on_upower_change(NULL, NULL, NULL);
+        return -1;   // disable this module
     }
-    return ret;
+    /* check initial AC state */
+    return on_upower_change(NULL, NULL, NULL);
 }
 
 /* Callback on upower changes: recheck on_battery boolean value */

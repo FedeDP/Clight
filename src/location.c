@@ -101,12 +101,7 @@ static void geoclue_get_client(void) {
  * Hook our geoclue_new_location callback to PropertiesChanged dbus signals on GeoClue2 service.
  */
 static void geoclue_hook_update(void) {
-    struct bus_args args = {
-        .path = client,
-        .interface = "org.freedesktop.GeoClue2.Client",
-        .member = "LocationUpdated",
-        .service = "org.freedesktop.GeoClue2"
-    };
+    struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "LocationUpdated" };
     add_match(&args, on_geoclue_new_location);
 }
 

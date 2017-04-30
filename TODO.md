@@ -11,7 +11,7 @@
 - [x] update clight checking if EPERM is returned from bus calls to clightd (it means this clight session is no more active). Do not fail. (easy)
 - [x] make event_duration customizable too (easy)
 
-## 0.12
+### Upower
 - [ ] Upower battery/ac signals monitor? Ie: add a match on bus. May be more frequent captures if on AC, and less frequent on battery? (easy)
 - [x] move sd_bus_get_fd(bus) etc etc from Location to Bus (where it belongs)
 - [x] change location_cb
@@ -19,6 +19,7 @@
 - [x] fix FIXME in location module! -> easy: reset state.events[sunrise/susnet] to force reload of today events in get_gamma_events()!
 - [ ] understand why location is not working anymore... -> it seems geoclue event stays in poll queue until UPower event does not unlock poll...why??
 - [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection)
+- [ ] find a way to start gamma module AFTER a location has been correctly received after new refactor -> ie: location has no cb right now, so as soon as it is started, gamma will be started too, without waiting for a position.
 
 ## Later
 ### Mid Priority:
