@@ -41,13 +41,13 @@ void log_conf(void) {
     }
 }
 
-void log_message(const char type, const char *log_msg, ...) {
+void log_message(const char *filename, int lineno, const char type, const char *log_msg, ...) {
     va_list file_args, args;
 
     va_start(file_args, log_msg);
     va_copy(args, file_args);
     if (log_file) {
-        fprintf(log_file, "(%c) ", type);
+        fprintf(log_file, "(%c) [%s:%d]\t", type, filename, lineno);
         vfprintf(log_file, log_msg, file_args);
         fflush(log_file);
     }

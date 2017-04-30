@@ -17,9 +17,9 @@
 - [x] change location_cb
 - [x] drop eventfd in LOCATION module
 - [x] fix FIXME in location module! -> easy: reset state.events[sunrise/susnet] to force reload of today events in get_gamma_events()!
-- [ ] understand why location is not working anymore... -> it seems geoclue event stays in poll queue until UPower event does not unlock poll...why??
+- [x] understand why location is not working anymore... -> it seems geoclue event stays in poll queue until UPower event does not unlock poll...why??
 - [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection)
-- [ ] find a way to start gamma module AFTER a location has been correctly received after new refactor -> ie: location has no cb right now, so as soon as it is started, gamma will be started too, without waiting for a position. Simplest way: use an eventfd and add a cb. Then, on_location_update() will write in eventfd to wakeup it and let it call our cb. Finally, after our cb, gamma will be started.
+- [x] find a way to start gamma module AFTER a location has been correctly received after new refactor
 
 ## Later
 ### Mid Priority:

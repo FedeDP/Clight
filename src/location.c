@@ -108,6 +108,9 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
     if (modules[GAMMA_IX].inited) {
         state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
         set_timeout(0, 1, main_p[GAMMA_IX].fd, 0);
+    } else {
+        /* if gamma was waiting for location, start it */
+        poll_cb(LOCATION_IX);
     }
     return 0;
 }

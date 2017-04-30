@@ -48,13 +48,6 @@ void init_modules(const enum modules module) {
     if (!modules[module].disabled && modules[module].init && !modules[module].inited) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
             modules[module].init();
-            /* 
-             * if module has no poll_cb,
-             * start right now its dependent modules.
-             */
-            if (!modules[module].poll_cb) {
-                poll_cb(module);
-            }
         }
     }
 }
