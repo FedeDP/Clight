@@ -4,7 +4,6 @@
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 
 static void init(void);
-static void destroy(void);
 static void gamma_cb(void);
 static void check_gamma(void);
 static double  degToRad(const double angleDeg);
@@ -28,19 +27,12 @@ static struct self_t self = {
 void set_gamma_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
-    modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
 static void init(void) {
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, 0);
     init_module(gamma_timerfd, self.idx, gamma_cb);
-}
-
-static void destroy(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
-    }
 }
 
 static void gamma_cb(void) {
@@ -62,10 +54,11 @@ static void gamma_cb(void) {
  * set new CAPTURE_IX correct timeout according to new state.
  */
 static void check_gamma(void) {
-    static int transitioning = 0, first_time = 1;
+    static int transitioning = 0;
     time_t t;
     enum states old_state = state.time;
-
+    int first_time = state.events[SUNSET] == 0;
+    
     /*
      * Only if we're not doing a smooth transition
      */

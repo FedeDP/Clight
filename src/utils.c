@@ -193,8 +193,15 @@ void disable_module(const enum modules module) {
  * Calls correct destroy function for each module
  */
 void destroy_modules(const enum modules module) {
-    if (modules[module].inited && modules[module].destroy) {
-        modules[module].destroy();
+    if (modules[module].inited) {
+        /* If fd is being polled, close it. Do not close BUS fd!! */
+        if (main_p[modules[module].self->idx].fd > 0 && module != BUS_IX) {
+            close(main_p[modules[module].self->idx].fd);
+        }
+        if  (modules[module].destroy) {
+            /* call module destroy func */
+            modules[module].destroy();
+        }
         INFO("%s module destroyed.\n", modules[module].self->name);
     }
 }

@@ -124,8 +124,8 @@ void check_conf(void) {
     /* Disable gamma if in single capture mode, or if --no-gamma option was setted */
     if (conf.single_capture_mode || conf.no_gamma) {
         disable_module(GAMMA_IX);
-    } else if (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) {
-        /* If sunrise and sunset times are both passed, disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) */
+    } else if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
+        /* If sunrise and sunset times, or lat and lon, are both passed, disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) */
         modules[GAMMA_IX].self->deps[1].type = SOFT;
         disable_module(LOCATION_IX);
     }

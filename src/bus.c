@@ -2,7 +2,9 @@
 
 static void init(void);
 static void destroy(void);
+static void bus_cb(void);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
+static int check_err(int r, sd_bus_error *err);
 
 static struct self_t self = {
     .name = "Bus",
@@ -16,6 +18,8 @@ void set_bus_self(void) {
     set_self_deps(&self);
 }
 
+static sd_bus *bus;
+
 /*
  * Open our bus
  */
@@ -24,7 +28,9 @@ static void init(void) {
     if (r < 0) {
         return ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
-    init_module(DONT_POLL, self.idx, NULL);
+    // let main poll listen on bus events
+    int bus_fd = sd_bus_get_fd(bus);
+    init_module(bus_fd, self.idx, bus_cb);
 }
 
 /*
@@ -34,6 +40,14 @@ static void destroy(void) {
     if (bus) {
         sd_bus_flush_close_unref(bus);
     }
+}
+
+/* Callback for bus events */
+static void bus_cb(void) {
+    int r;
+    do {
+        r = sd_bus_process(bus, NULL);
+    } while (r > 0);
 }
 
 /*
@@ -109,7 +123,7 @@ finish:
  */
 void add_match(const struct bus_args *a, sd_bus_message_handler_t cb) {
     char match[500] = {0};
-    snprintf(match, sizeof(match), "type='signal',interface='%s', member='%s', path='%s'", a->interface, a->member, a->path);
+    snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
     int r = sd_bus_add_match(bus, NULL, match, cb, NULL);
     check_err(r, NULL);
 }
@@ -147,7 +161,6 @@ void get_property(const struct bus_args *a, const char *type, void *userptr) {
     if (check_err(r, &error)) {
         goto finish;
     }
-
     if (!strcmp(type, "o")) {
         const char *obj = NULL;
         r = sd_bus_message_read(m, type, &obj);
@@ -181,13 +194,13 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
 /*
  * Check any error. Do not leave for EBUSY errors.
  */
-int check_err(int r, sd_bus_error *err) {
+static int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
         /* Don't leave for ebusy/eperm errors. eperm may mean that a not-active session called a method on clightd */
         if (r == -EBUSY || r == -EPERM) {
-            WARN("%s\n", err->message ? err->message : strerror(-r));
+            WARN("%s\n", err && err->message ? err->message : strerror(-r));
         } else {
-            ERROR("%s\n", err->message ? err->message : strerror(-r));
+            ERROR("%s\n", err && err->message ? err->message : strerror(-r));
         }
     }
     return r < 0;

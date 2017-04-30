@@ -2,7 +2,6 @@
 #include "../inc/dpms.h"
 
 static void init(void);
-static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
@@ -20,7 +19,7 @@ struct brightness {
 };
 
 static struct brightness br;
-static struct dependency dependencies[] = { {HARD, BUS_IX}, {SOFT, GAMMA_IX} };
+static struct dependency dependencies[] = { {HARD, BUS_IX}, {SOFT, GAMMA_IX}, {SOFT, UPOWER_IX} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = CAPTURE_IX,
@@ -31,7 +30,6 @@ static struct self_t self = {
 void set_brightness_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
-    modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
@@ -43,12 +41,6 @@ static void init(void) {
     if (!state.quit) {
         int fd = start_timer(CLOCK_MONOTONIC, 1, 0);
         init_module(fd, self.idx, brightness_cb);
-    }
-}
-
-static void destroy(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
     }
 }
 

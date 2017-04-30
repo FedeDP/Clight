@@ -13,18 +13,16 @@
 
 ## 0.12
 - [ ] Upower battery/ac signals monitor? Ie: add a match on bus. May be more frequent captures if on AC, and less frequent on battery? (easy)
-- [ ] move sd_bus_get_fd(bus) etc etc from Location to Bus (where it belongs)
-- [ ] Location and Upower will only add a match on bus
-- [ ] change location_cb
-- [ ] drop eventfd in LOCATION module?
+- [x] move sd_bus_get_fd(bus) etc etc from Location to Bus (where it belongs)
+- [x] change location_cb
+- [x] drop eventfd in LOCATION module
+- [x] fix FIXME in location module! -> easy: reset state.events[sunrise/susnet] to force reload of today events in get_gamma_events()!
+- [ ] understand why location is not working anymore... -> it seems geoclue event stays in poll queue until UPower event does not unlock poll...why??
+- [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection)
 
 ## Later
 ### Mid Priority:
 - [ ] add an initial setup to ask user to eg: set desired screen backlight level matching current ambient brightness, max brightess captured from webcam (eg: ask him to switch on a torch on webcam lens), and min brightness captured (ask him to cover the webcam). Moreover, set lowest backlight level and ask user if it can see (sometimes at 0 backlight display gets completely dimmed off) (mid/Needed?)
-
-
-### Low Priority:
-- [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection) (easy/Needed?)
 
 ### Ideas
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness (mid)

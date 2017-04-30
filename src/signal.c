@@ -3,7 +3,6 @@
 #include "../inc/signal.h"
 
 static void init(void);
-static void destroy(void);
 static void signal_cb(void);
 
 static struct self_t self = {
@@ -14,7 +13,6 @@ static struct self_t self = {
 void set_signal_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
-    modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
@@ -31,12 +29,6 @@ static void init(void) {
 
     int fd = signalfd(-1, &mask, 0);
     init_module(fd, self.idx, signal_cb);
-}
-
-static void destroy(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
-    }
 }
 
 /*
