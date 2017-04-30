@@ -110,7 +110,7 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
         set_timeout(0, 1, main_p[GAMMA_IX].fd, 0);
     } else {
         /* if gamma was waiting for location, start it */
-        poll_cb(LOCATION_IX);
+        poll_cb(self.idx);
     }
     return 0;
 }

@@ -26,7 +26,7 @@ static void init(void) {
     int r = upower_init();
     /* In case of errors, upower_init returns -1 -> disable upower. */
     init_module(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, self.idx, NULL);
-    poll_cb(UPOWER_IX);
+    poll_cb(self.idx);
 }
 
 static int upower_init(void) {
