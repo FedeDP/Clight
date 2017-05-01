@@ -29,9 +29,8 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## How to run it
 Even if a systemd user unit is shipped, proper way to start clight is by autostarting clight from your DE autostart.  
-For this reason, clight installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight. User has not to do anything but reboot after installing clight.  
-**This is needed to assure that X is running when clight gets started** as on systemd there is no proper way of knowing whether X has been started or not.  
-Simply enabling the unit could cause clight to auto-disabling gamma support if it cannot find any running X server.  
+Clight tries to be a 0-configuration software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight. User has to do nothing but reboot after installing clight.  
+**This is needed to assure that X is running when clight gets started**, as on systemd there is no proper way of knowing whether X has been started or not.  
 Note that desktop file will just execute "systemctl --user start clight"; clight user service will then kick in clightd dependency and will restart itself in case of crash.  
 
 Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
@@ -40,20 +39,22 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 * very lightweight
 * fully valgrind and cppcheck clean
 * external signals catching (sigint/sigterm)
-* systemd user unit shipped
+* systemd user unit and autostart desktop file shipped
 * dpms support: it will check current screen powersave level and won't do anything if screen is currently off
-* a quick single capture mode (ie: do captures, change screen brightness and leave). Together with a desktop file.
+* a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does)
-* geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates
+* geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates. Otherwise gamma support will be disabled.
 * different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable)
 * nice log file, placed in $HOME/.clight.log
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time
-* more frequent captures inside "events": an event starts 30mins before sunrise/sunset and ends 30mins after
+* more frequent captures inside "events": an event starts by default 30mins before sunrise/sunset and ends 30mins after. Configurable.
 * gamma correction tool support can be disabled at runtime (--no-gamma cmdline switch)
 * in case of huge brightness drop (> 60%), a new capture will quickly be done (after 15 seconds), to check if this was an accidental event (eg: you changed room and capture happened before you switched on the light) or if brightness has really dropped that much (eg: you switched off the light)
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
 * only 1 clight instance can be running for same user. You can still invoke a fast capture when an instance is already running, obviously
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
+* UPower support, to set longer timeouts between captures while on battery, in order to save some energy.
+* Gracefully auto-disabling gamma support on non-X environments.
 
 ### Valgrind is run with:
 
