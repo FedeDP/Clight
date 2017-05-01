@@ -29,9 +29,9 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## How to run it
 Even if a systemd user unit is shipped, proper way to start clight is by autostarting clight from your DE autostart.  
-Clight tries to be a 0-configuration software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight. User has to do nothing but reboot after installing clight.  
-**This is needed to assure that X is running when clight gets started**, as on systemd there is no proper way of knowing whether X has been started or not.  
-Note that desktop file will just execute "systemctl --user start clight"; clight user service will then kick in clightd dependency and will restart itself in case of crash.  
+Clight tries to be a 0-conf software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight.   User has to do nothing but reboot after installing clight.  
+**This is needed to ensure that X is running when clight gets started**, as on systemd there is no proper way of knowing whether X has been started or not.  
+Note that desktop file will execute "systemctl --user start clight"; user service will then kick in clightd dependency and will restart itself in case of crash.  
 
 Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
 
@@ -66,7 +66,7 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 
 For cmdline options, check clight [-?|--help] [--usage].  
 **Please note that cmdline "--device" and "--backlight" switches require only last part of syspath** (eg: "video0" or "intel_backlight").  
-If your backlight interface will completely dim your screen at 0 backlight level, be sure to set in your conf file (or through cmdline option) the "lowest_backlight_level" option.
+If your backlight interface will completely dim your screen at 0 backlight level, be sure to set in your conf file (or through cmdline option) *lowest_backlight_level* option.
 
 ## Config file
 A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is all commented.  
