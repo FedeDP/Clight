@@ -45,6 +45,9 @@ enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 /* Whether a inter-module dep is hard (mandatory) or soft dep */
 enum dep_type { HARD, SOFT };
 
+/* Whether laptop is on battery or connected to ac */
+enum ac_state { ON_AC, ON_BATTERY };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;               // number of frame captured for each screen brightness compute
@@ -69,6 +72,7 @@ struct state {
     time_t events[SIZE_EVENTS];     // today events (sunrise/sunset)
     enum events next_event;         // next event index (sunrise/sunset)
     int event_time_range;           // variable that holds minutes in advance/after an event to enter/leave EVENT state
+    enum ac_state on_battery;       // is laptop on battery?
 };
 
 /* Struct that holds info about an inter-modules dep */

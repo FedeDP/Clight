@@ -20,6 +20,10 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * shared objects from build libraries
 * [clightd](https://github.com/FedeDP/Clightd)
 
+## Optional runtime deps:
+* Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
+* Upower to honor timeouts between captures depending on ac state as setted in configuration (otherwise only ON_AC timeout will be used)
+
 ## Build time switches:
 * DISABLE_DPMS=1 (to disable dpms support, useful if you plan to run clight on non-X environments)
 
