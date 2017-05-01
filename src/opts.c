@@ -27,7 +27,7 @@ void init_opts(int argc, char *argv[]) {
     parse_cmd(argc, argv);
 }
 
-/**
+/*
  * Parse cmdline to get cmd line options
  */
 static void parse_cmd(int argc, char *const argv[]) {

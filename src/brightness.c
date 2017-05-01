@@ -55,7 +55,7 @@ static void brightness_cb(void) {
     }
 }
 
-/**
+/*
  * When timerfd timeout expires, check if we are in screen power_save mode,
  * otherwise start streaming on webcam and set CAMERA_IX fd of pollfd struct to
  * webcam device fd. This way our main poll will get events (frames) from webcam device too.

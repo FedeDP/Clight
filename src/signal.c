@@ -16,7 +16,7 @@ void set_signal_self(void) {
     set_self_deps(&self);
 }
 
-/**
+/*
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)
  */
 static void init(void) {    

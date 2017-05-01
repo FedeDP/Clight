@@ -106,12 +106,16 @@ static void check_gamma(void) {
     }
 }
 
-/* Convert degrees to radians */
+/* 
+ * Convert degrees to radians 
+ */
 static double  degToRad(double angleDeg) {
     return (M_PI * angleDeg / 180.0);
 }
 
-/* Convert radians to degrees */
+/* 
+ * Convert radians to degrees 
+ */
 static double radToDeg(double angleRad) {
     return (180.0 * angleRad / M_PI);
 }

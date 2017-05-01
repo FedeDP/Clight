@@ -20,7 +20,7 @@ void set_bus_self(void) {
 }
 
 /*
- * Open our bus
+ * Open our bus and start lisetining on its fd
  */
 static void init(void) {
     int r = sd_bus_open_system(&bus);
@@ -52,7 +52,7 @@ static void bus_cb(void) {
 }
 
 /*
- * Calls a method on bus and store its result of type userptr_type in userptr.
+ * Call a method on bus and store its result of type userptr_type in userptr.
  */
 void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;

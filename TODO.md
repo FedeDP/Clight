@@ -10,6 +10,7 @@
 - [x] get_timeout function to retrieve timerfd remaining timer (easy) -> in GAMMA avoid setting new timeout (based on new enum states time) to N minutes (eg: isntead of setting  new timeout to 45mins during the night, set it to 45mins - elapsed time since last timer); same goes for upower module obviously
 - [x] update clight checking if EPERM is returned from bus calls to clightd (it means this clight session is no more active). Do not fail. (easy)
 - [x] make event_duration customizable too (easy)
+- [x] split modules related functions from utils.c
 
 ### Upower
 - [x] Upower battery/ac signals monitor? Ie: add a match on bus.

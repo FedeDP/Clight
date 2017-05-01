@@ -82,21 +82,25 @@ static void init(int argc, char *argv[]) {
     }
 }
 
-/* Set each module self struct */
+/* 
+ * Set each module self struct 
+ */
 static void set_modules_selfs(void) {
     for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
         set_selfs[i]();
     }
 }
 
-/* Init every module */
+/* 
+ * Init every module 
+ */
 static void init_all_modules(void) {
     for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
         init_modules(i);
     }
 }
 
-/**
+/*
  * Free every used resource
  */
 static void destroy(void) {

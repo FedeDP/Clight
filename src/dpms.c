@@ -22,7 +22,7 @@ void set_dpms_self(void) {
     set_self_deps(&self);
 }
 
-/**
+/*
  * Checks through xcb if DPMS is enabled for this xscreen
  */
 static void init(void) {    
@@ -50,7 +50,7 @@ static void destroy(void) {
     }
 }
 
-/**
+/*
  * info->power_level is one of:
  * DPMS Extension Power Levels
  * 0     DPMSModeOn          In use
