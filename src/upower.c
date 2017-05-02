@@ -47,8 +47,11 @@ static int upower_init(void) {
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
-    int on_battery = -1;
-    get_property(&power_args, "b", &on_battery);
-    INFO(on_battery ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
+    int on_battery = state.ac_state;
+    get_property(&power_args, "b", &state.ac_state);
+    if (state.ac_state != on_battery && modules[CAPTURE_IX].inited) {
+        INFO(on_battery ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
+        reset_timer(main_p[CAPTURE_IX].fd, conf.timeout[on_battery][state.time]);
+    }
     return 0;
 }

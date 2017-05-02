@@ -72,7 +72,7 @@ static void do_capture(void) {
      */
     if (get_screen_dpms() > 0) {
         INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
+        return set_timeout(2 * conf.timeout[state.ac_state][state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
     }
 #endif
 
@@ -96,7 +96,7 @@ static void do_capture(void) {
                 set_timeout(fast_timeout, 0, main_p[self.idx].fd, 0);
             } else {
                 // reset normal timer
-                set_timeout(conf.timeout[state.time], 0, main_p[self.idx].fd, 0);
+                set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
             }
         }
     }

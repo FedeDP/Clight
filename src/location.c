@@ -58,7 +58,6 @@ static int geoclue_init(void) {
 end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
     if (state.quit) {
-        WARN("Error while loading geoclue2 support. Gamma correction tool disabled.\n");
         state.quit = 0; // do not leave
         r = -1;
     }

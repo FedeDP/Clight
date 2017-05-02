@@ -12,10 +12,14 @@ static void parse_cmd(int argc, char *const argv[]);
 void init_opts(int argc, char *argv[]) {
     /* default values */
     conf.num_captures = 5;
-    conf.timeout[DAY] = 10 * 60; // 10 mins during the day
-    conf.timeout[NIGHT] = 45 * 60; // 45 mins during the night
-    conf.timeout[EVENT] = 3 * 60; // 3 mins during an event
-    conf.timeout[UNKNOWN] = conf.timeout[DAY]; // if unknown, fallback to 10mins
+    conf.timeout[ON_AC][DAY] = 10 * 60;
+    conf.timeout[ON_AC][NIGHT] = 45 * 60;
+    conf.timeout[ON_AC][EVENT] = 3 * 60;
+    conf.timeout[ON_BATTERY][DAY] = 20 * 60;
+    conf.timeout[ON_BATTERY][NIGHT] = 60 * 60;
+    conf.timeout[ON_BATTERY][EVENT] = 6 * 60;
+    conf.timeout[ON_AC][UNKNOWN] = conf.timeout[ON_AC][DAY]; // if unknown, fallback to 10mins
+    conf.timeout[ON_BATTERY][UNKNOWN] = conf.timeout[ON_BATTERY][DAY]; // if unknown, fallback to 10mins
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
     conf.temp[EVENT] = -1;
@@ -34,10 +38,13 @@ static void parse_cmd(int argc, char *const argv[]) {
     poptContext pc;
     struct poptOption po[] = {
         {"capture", 'c', POPT_ARG_NONE, &conf.single_capture_mode, 0, "Take a fast capture/screen brightness calibration and quit", NULL},
-        {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 0, "Frames taken for each capture, Between 1 and 20.", NULL},
-        {"day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[DAY], 0, "Seconds between each capture during the day.", NULL},
-        {"night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[NIGHT], 0, "Seconds between each capture during the night.", NULL},
-        {"event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[EVENT], 0, "Seconds between each capture during an event(sunrise, sunset).", NULL},
+        {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 0, "Frames taken for each capture, Between 1 and 20", NULL},
+        {"ac_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][DAY], 0, "Seconds between each capture during the day on AC", NULL},
+        {"ac_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][NIGHT], 0, "Seconds between each capture during the night on AC", NULL},
+        {"ac_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][EVENT], 0, "Seconds between each capture during an event(sunrise, sunset) on AC", NULL},
+        {"batt_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][DAY], 0, "Seconds between each capture during the day on battery", NULL},
+        {"batt_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][NIGHT], 0, "Seconds between each capture during the night on battery", NULL},
+        {"batt_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][EVENT], 0, "Seconds between each capture during an event(sunrise, sunset) on battery", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used", "video0"},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used", "intel_backlight"},
         {"no-smooth_transition", 0, POPT_ARG_NONE, &conf.no_smooth_transition, 0, "Disable smooth gamma transition", NULL},
@@ -48,8 +55,8 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool", NULL},
-        {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 0, "Lowest backlight level that clight can set.", NULL},
-        {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 0, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after.", NULL},
+        {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 0, "Lowest backlight level that clight can set", NULL},
+        {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 0, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -92,17 +99,29 @@ void check_conf(void) {
     /*
      * Reset default values in case of wrong values
      */
-    if (conf.timeout[DAY] <= 0) {
+    if (conf.timeout[ON_AC][DAY] <= 0) {
         WARN("Wrong day timeout value. Resetting default value.\n");
-        conf.timeout[DAY] = 10 * 60;
+        conf.timeout[ON_AC][DAY] = 10 * 60;
     }
-    if (conf.timeout[NIGHT] <= 0) {
+    if (conf.timeout[ON_AC][NIGHT] <= 0) {
         WARN("Wrong night timeout value. Resetting default value.\n");
-        conf.timeout[NIGHT] = 45 * 60;
+        conf.timeout[ON_AC][NIGHT] = 45 * 60;
     }
-    if (conf.timeout[EVENT] <= 0) {
+    if (conf.timeout[ON_AC][EVENT] <= 0) {
         WARN("Wrong event timeout value. Resetting default value.\n");
-        conf.timeout[EVENT] = 3 * 60;
+        conf.timeout[ON_AC][EVENT] = 3 * 60;
+    }
+    if (conf.timeout[ON_BATTERY][DAY] <= 0) {
+        WARN("Wrong day timeout value. Resetting default value.\n");
+        conf.timeout[ON_BATTERY][DAY] = 10 * 60;
+    }
+    if (conf.timeout[ON_BATTERY][NIGHT] <= 0) {
+        WARN("Wrong night timeout value. Resetting default value.\n");
+        conf.timeout[ON_BATTERY][NIGHT] = 45 * 60;
+    }
+    if (conf.timeout[ON_BATTERY][EVENT] <= 0) {
+        WARN("Wrong event timeout value. Resetting default value.\n");
+        conf.timeout[ON_BATTERY][EVENT] = 3 * 60;
     }
     if (conf.num_captures <= 0 || conf.num_captures > 20) {
         WARN("Wrong frames value. Resetting default value.\n");

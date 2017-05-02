@@ -90,14 +90,7 @@ static void check_gamma(void) {
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
         if (old_state != state.time && modules[CAPTURE_IX].inited) {
-            unsigned int elapsed_time = conf.timeout[old_state] - get_timeout(main_p[CAPTURE_IX].fd);
-            /* if we still need to wait some seconds */
-            if (conf.timeout[state.time] - elapsed_time > 0) {
-                set_timeout(conf.timeout[state.time] - elapsed_time, 0, main_p[CAPTURE_IX].fd, 0);
-            } else {
-                /* with new timeout, old_timeout would already been elapsed */
-                set_timeout(0, 1, main_p[CAPTURE_IX].fd, 0);
-            }
+            reset_timer(main_p[CAPTURE_IX].fd, conf.timeout[state.ac_state][old_state]);
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */

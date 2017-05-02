@@ -35,3 +35,15 @@ unsigned int get_timeout(int fd) {
     timerfd_gettime(fd, &curr_value);
     return curr_value.it_value.tv_sec;
 }
+
+void reset_timer(int fd, int old_timer) {
+    unsigned int elapsed_time = old_timer - get_timeout(fd);
+    /* if we still need to wait some seconds */
+    if (conf.timeout[state.ac_state][state.time] - elapsed_time > 0) {
+        set_timeout(conf.timeout[state.ac_state][state.time] - elapsed_time, 0, fd, 0);
+    } else {
+        /* with new timeout, old_timeout would already been elapsed */
+        set_timeout(0, 1, fd, 0);
+    }
+    DEBUG("New timeout: %u\n", get_timeout(fd));
+}

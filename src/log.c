@@ -23,9 +23,9 @@ void log_conf(void) {
         fprintf(log_file, "Time: %s", ctime(&t));
         fprintf(log_file, "\nStarting options:\n");
         fprintf(log_file, "* Number of captures: %d\n", conf.num_captures);
-        fprintf(log_file, "* Daily timeout: %d\n", conf.timeout[DAY]);
-        fprintf(log_file, "* Nightly timeout: %d\n", conf.timeout[NIGHT]);
-        fprintf(log_file, "* Event timeout: %d\n", conf.timeout[EVENT]);
+        fprintf(log_file, "* Daily timeout: AC %d, BATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
+        fprintf(log_file, "* Nightly timeout: AC %d, BATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
+        fprintf(log_file, "* Event timeout: AC %d, BATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
         fprintf(log_file, "* Webcam device: %s\n", conf.dev_name);
         fprintf(log_file, "* Backlight path: %s\n", conf.screen_path);
         fprintf(log_file, "* Daily screen temp: %d\n", conf.temp[DAY]);

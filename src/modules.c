@@ -38,6 +38,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
         INFO("%s module started.\n", modules[module].self->name);
     } else {
         /* module should be disabled */
+        WARN("Error while loading %s module.\n", modules[module].self->name);
         disable_module(module); // disable this module and all of dependent module
     }
 }

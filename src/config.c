@@ -32,9 +32,12 @@ void read_config(enum CONFIG file) {
     config_init(&cfg);
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
         config_lookup_int(&cfg, "frames", &conf.num_captures);
-        config_lookup_int(&cfg, "day_timeout", &conf.timeout[DAY]);
-        config_lookup_int(&cfg, "night_timeout", &conf.timeout[NIGHT]);
-        config_lookup_int(&cfg, "event_timeout", &conf.timeout[EVENT]);
+        config_lookup_int(&cfg, "ac_day_timeout", &conf.timeout[ON_AC][DAY]);
+        config_lookup_int(&cfg, "ac_night_timeout", &conf.timeout[ON_AC][NIGHT]);
+        config_lookup_int(&cfg, "batt_day_timeout", &conf.timeout[ON_BATTERY][DAY]);
+        config_lookup_int(&cfg, "batt_night_timeout", &conf.timeout[ON_BATTERY][NIGHT]);
+        config_lookup_int(&cfg, "ac_event_timeout", &conf.timeout[ON_AC][EVENT]);
+        config_lookup_int(&cfg, "batt_event_timeout", &conf.timeout[ON_BATTERY][EVENT]);
         config_lookup_int(&cfg, "day_temp", &conf.temp[DAY]);
         config_lookup_int(&cfg, "night_temp", &conf.temp[NIGHT]);
         config_lookup_int(&cfg, "no_smooth_gamma_transition", &conf.no_smooth_transition);

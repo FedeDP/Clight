@@ -11,10 +11,14 @@
 - [x] update clight checking if EPERM is returned from bus calls to clightd (it means this clight session is no more active). Do not fail. (easy)
 - [x] make event_duration customizable too (easy)
 - [x] split modules related functions from utils.c
+- [x] add a DEBUG log function that logs more things while debugging
+- [ ] use more often DEBUG log function
 
 ### Upower
 - [x] Upower battery/ac signals monitor? Ie: add a match on bus.
- -[ ] More frequent captures if on AC, and less frequent on battery; customizable. (easy)
+- [x] More frequent captures if on AC, and less frequent on battery; customizable. (easy)
+- [x] restart CAPTURE timer when ac state changes (same way i do in gamma when we switch gamma state, eg: DAY -> NIGHT)
+- [ ] Add a backlight correction when on battery (eg: on battery, Max brightness should be 60% of max value.) By default correction should be 0 and will be, in percentage, value of the lower-correction (in our example, it should be 40 -> 100 - 40 = 60%)
 - [x] move sd_bus_get_fd(bus) etc etc from Location to Bus (where it belongs)
 - [x] change location_cb
 - [x] drop eventfd in LOCATION module
