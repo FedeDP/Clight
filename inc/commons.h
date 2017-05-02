@@ -20,8 +20,8 @@
  */
 #define SIZE(a) sizeof(a) / sizeof(*a)
 
-#define DONT_POLL -2                        // avoid polling a module (used for dpms taht does not need to be polled)
-#define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used in location.c when no geoclue2 is found)
+#define DONT_POLL -2                        // avoid polling a module (used for modules that do not need to be polled)
+#define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used eg when no geoclue2 is found)
 
 /* List of modules indexes */
 #ifdef DPMS_PRESENT
@@ -46,13 +46,13 @@ enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 enum dep_type { HARD, SOFT };
 
 /* Whether laptop is on battery or connected to ac */
-enum ac_state { ON_AC, ON_BATTERY, SIZE_AC };
+enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
     int single_capture_mode;                // do a capture and leave
-    int timeout[SIZE_AC][SIZE_STATES];      // timeout between captures for each state (day/night only exposed through cmdline opts)
+    int timeout[SIZE_AC][SIZE_STATES];      // timeout between captures for each ac_state and time state (day/night/event)
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
@@ -72,7 +72,7 @@ struct state {
     time_t events[SIZE_EVENTS];             // today events (sunrise/sunset)
     enum events next_event;                 // next event index (sunrise/sunset)
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
-    enum ac_state ac_state;                 // is laptop on battery?
+    enum ac_states ac_state;                 // is laptop on battery?
 };
 
 /* Struct that holds info about an inter-modules dep */
