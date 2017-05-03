@@ -1,3 +1,5 @@
+#pragma once
+
 #include "log.h"
 
 void init_modules(const enum modules module);

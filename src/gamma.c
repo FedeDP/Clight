@@ -31,7 +31,7 @@ void set_gamma_self(void) {
 }
 
 static void init(void) {
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, 0);
+    int gamma_timerfd = start_timer(0, 1);
     init_module(gamma_timerfd, self.idx, gamma_cb);
 }
 
@@ -85,7 +85,7 @@ static void check_gamma(void) {
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
-        set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
+        set_timeout(t - time(NULL), 0, main_p[self.idx].fd);
         transitioning = 0;
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
@@ -94,7 +94,7 @@ static void check_gamma(void) {
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
-        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[self.idx].fd, 0);
+        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[self.idx].fd);
         transitioning = 1;
     }
 }
@@ -310,6 +310,7 @@ static void check_state(time_t *now) {
         }
         conf.temp[EVENT] = event_t == SUNRISE ? conf.temp[NIGHT] : conf.temp[DAY];
         state.time = EVENT;
+        DEBUG("We are currently inside an event!\n");
     } else {
         state.time = state.next_event == SUNRISE ? NIGHT : DAY;
         state.event_time_range = -conf.event_duration; // 30mins before event

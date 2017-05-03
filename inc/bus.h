@@ -1,7 +1,7 @@
 #pragma once
 
 #include <systemd/sd-bus.h>
-#include "utils.h"
+#include "timer.h"
 
 /*
  * Object wrapper for bus calls

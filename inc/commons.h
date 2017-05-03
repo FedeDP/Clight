@@ -72,13 +72,13 @@ struct state {
     time_t events[SIZE_EVENTS];             // today events (sunrise/sunset)
     enum events next_event;                 // next event index (sunrise/sunset)
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
-    enum ac_states ac_state;                 // is laptop on battery?
+    enum ac_states ac_state;                // is laptop on battery?
 };
 
 /* Struct that holds info about an inter-modules dep */
 struct dependency {
-    enum dep_type type;
-    enum modules dep;
+    enum dep_type type;                    // soft or hard dependency 
+    enum modules dep;                      // dependency module
 };
 
 /* Struct that holds self module informations, static to each module */

@@ -12,7 +12,7 @@
 - [x] make event_duration customizable too (easy)
 - [x] split modules related functions from utils.c
 - [x] add a DEBUG log function that logs more things while debugging
-- [ ] use more often DEBUG log function
+- [x] use more often DEBUG log function
 
 ### Upower
 - [x] Upower battery/ac signals monitor? Ie: add a match on bus.

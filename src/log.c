@@ -22,22 +22,22 @@ void log_conf(void) {
         fprintf(log_file, "Version: %s\n", VERSION);
         fprintf(log_file, "Time: %s", ctime(&t));
         fprintf(log_file, "\nStarting options:\n");
-        fprintf(log_file, "* Number of captures: %d\n", conf.num_captures);
-        fprintf(log_file, "* Daily timeout: AC %d, BATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
-        fprintf(log_file, "* Nightly timeout: AC %d, BATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
-        fprintf(log_file, "* Event timeout: AC %d, BATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
-        fprintf(log_file, "* Webcam device: %s\n", conf.dev_name);
-        fprintf(log_file, "* Backlight path: %s\n", conf.screen_path);
-        fprintf(log_file, "* Daily screen temp: %d\n", conf.temp[DAY]);
-        fprintf(log_file, "* Nightly screen temp: %d\n", conf.temp[NIGHT]);
-        fprintf(log_file, "* Smooth transitions: %s\n", conf.no_smooth_transition ? "disabled" : "enabled");
-        fprintf(log_file, "* Latitude: %.2lf\n", conf.lat);
-        fprintf(log_file, "* Longitude: %.2lf\n", conf.lon);
-        fprintf(log_file, "* User setted sunrise: %s\n", conf.events[SUNRISE]);
-        fprintf(log_file, "* User setted sunset: %s\n", conf.events[SUNSET]);
-        fprintf(log_file, "* Gamma correction: %s\n", conf.no_gamma ? "disabled" : "enabled");
-        fprintf(log_file, "* Lowest backlight level allowed: %d\n", conf.lowest_backlight_level);
-        fprintf(log_file, "* Event duration: %d\n\n", conf.event_duration);
+        fprintf(log_file, "* Number of captures:\t%d\n", conf.num_captures);
+        fprintf(log_file, "* Daily timeouts:\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
+        fprintf(log_file, "* Nightly timeout:\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
+        fprintf(log_file, "* Event timeouts:\tAC %d\tBATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
+        fprintf(log_file, "* Webcam device:\t%s\n", conf.dev_name);
+        fprintf(log_file, "* Backlight path:\t%s\n", conf.screen_path);
+        fprintf(log_file, "* Daily screen temp:\t%d\n", conf.temp[DAY]);
+        fprintf(log_file, "* Nightly screen temp:\t%d\n", conf.temp[NIGHT]);
+        fprintf(log_file, "* Smooth transitions:\t%d\n", conf.no_smooth_transition);
+        fprintf(log_file, "* User latitude:\t%.2lf\n", conf.lat);
+        fprintf(log_file, "* User longitude:\t%.2lf\n", conf.lon);
+        fprintf(log_file, "* User setted sunrise:\t%s\n", conf.events[SUNRISE]);
+        fprintf(log_file, "* User setted sunset:\t%s\n", conf.events[SUNSET]);
+        fprintf(log_file, "* Gamma correction:\t%d\n", conf.no_gamma);
+        fprintf(log_file, "* Lowest backlight:\t%d\n", conf.lowest_backlight_level);
+        fprintf(log_file, "* Event duration:\t%d\n\n", conf.event_duration);
     }
 }
 
