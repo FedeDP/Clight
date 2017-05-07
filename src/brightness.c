@@ -39,7 +39,7 @@ void set_brightness_self(void) {
 static void init(void) {
     get_max_brightness();
     if (!state.quit) {
-        int fd = start_timer(0, 1);
+        int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
         init_module(fd, self.idx, brightness_cb);
     }
 }
@@ -72,7 +72,7 @@ static void do_capture(void) {
      */
     if (get_screen_dpms() > 0) {
         INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        return set_timeout(2 * conf.timeout[state.ac_state][state.time] * get_screen_dpms(), 0, main_p[self.idx].fd);
+        return set_timeout(2 * conf.timeout[state.ac_state][state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
     }
 #endif
 
@@ -92,10 +92,10 @@ static void do_capture(void) {
             if (fabs(drop) > drop_limit) {
                 INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
                 // single call after 15s
-                set_timeout(fast_timeout, 0, main_p[self.idx].fd);
+                set_timeout(fast_timeout, 0, main_p[self.idx].fd, 0);
             } else {
                 // reset normal timer
-                set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd);
+                set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
             }
         }
     }

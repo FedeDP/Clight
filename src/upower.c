@@ -32,7 +32,6 @@ static void init(void) {
 static int upower_init(void) {
     struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
     add_match(&args, on_upower_change);
-    
     if (state.quit) {
         state.quit = 0; // do not leave
         return -1;   // disable this module

@@ -77,7 +77,6 @@ static void destroy(void) {
 static void geoclue_get_client(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient"};
     bus_call(client, "o", &args, "");
-    DEBUG("Geoclue client: %s\n", client);
 }
 
 /*
@@ -107,7 +106,7 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
     INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
     if (modules[GAMMA_IX].inited) {
         state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-        set_timeout(0, 1, main_p[GAMMA_IX].fd);
+        set_timeout(0, 1, main_p[GAMMA_IX].fd, 0);
     } else {
         /* if gamma was waiting for location, start it */
         poll_cb(self.idx);
