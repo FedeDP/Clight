@@ -134,7 +134,7 @@ static void get_current_brightness(void) {
 static void set_brightness(const double perc) {
     const double b = 1.319051 + (0.008722895 - 1.319051) / (1 + pow((perc/0.4479636), 1.540376));
     /* Correctly honor conf.max_backlight_pct */
-    int new_br =  br.max / 100 * conf.max_backlight_pct[state.ac_state] * b;
+    int new_br =  (float)br.max / 100 * conf.max_backlight_pct[state.ac_state] * b;
     // store old brightness
     get_current_brightness();
     if (state.quit) {
