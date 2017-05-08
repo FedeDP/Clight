@@ -48,9 +48,11 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribu
     
     int on_battery = state.ac_state;
     get_property(&power_args, "b", &state.ac_state);
-    if (state.ac_state != on_battery && modules[CAPTURE_IX].inited) {
-        INFO(on_battery ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
-        reset_timer(main_p[CAPTURE_IX].fd, conf.timeout[on_battery][state.time]);
+    if (state.ac_state != on_battery) {
+        INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
+        if (modules[CAPTURE_IX].inited && !state.fast_recapture) {
+            reset_timer(main_p[CAPTURE_IX].fd, conf.timeout[on_battery][state.time]);
+        }
     }
     return 0;
 }

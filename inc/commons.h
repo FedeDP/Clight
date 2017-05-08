@@ -62,6 +62,7 @@ struct config {
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int no_gamma;                           // whether gamma tool is disabled
     int lowest_backlight_level;             // lowest backlight level to be setted
+    int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
 };
 
@@ -73,6 +74,7 @@ struct state {
     enum events next_event;                 // next event index (sunrise/sunset)
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
+    int fast_recapture;                     // fast recapture after huge brightness drop?
 };
 
 /* Struct that holds info about an inter-modules dep */

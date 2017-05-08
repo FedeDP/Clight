@@ -29,7 +29,7 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
         return ERROR("%s\n", strerror(errno));
     }
     if (flag == 0) {
-        DEBUG("Setted timeout of %ds %dns on %d fd.\n", sec, nsec, fd);
+        DEBUG("Setted timeout of %ds %dns on fd %d.\n", sec, nsec, fd);
     }
 }
 

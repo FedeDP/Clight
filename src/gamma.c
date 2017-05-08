@@ -89,7 +89,7 @@ static void check_gamma(void) {
         transitioning = 0;
 
         /* if we entered/left an event, set correct timeout to CAPTURE_IX */
-        if (old_state != state.time && modules[CAPTURE_IX].inited) {
+        if (old_state != state.time && modules[CAPTURE_IX].inited && !state.fast_recapture) {
             reset_timer(main_p[CAPTURE_IX].fd, conf.timeout[state.ac_state][old_state]);
         }
     } else if (ret == 1) {

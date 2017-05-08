@@ -18,13 +18,16 @@
 - [x] Upower battery/ac signals monitor? Ie: add a match on bus.
 - [x] More frequent captures if on AC, and less frequent on battery; customizable. (easy)
 - [x] restart CAPTURE timer when ac state changes (same way i do in gamma when we switch gamma state, eg: DAY -> NIGHT)
-- [ ] Add a backlight correction when on battery (eg: on battery, Max brightness should be 60% of max value.) By default correction should be 0 and will be, in percentage, value of the lower-correction (in our example, it should be 40 -> 100 - 40 = 60%)
+- [x] Add a backlight correction when on battery (eg: on battery, Max brightness should be 60% of max value.) By default correction should be 0 and will be, in percentage, value of the lower-correction (in our example, it should be 40 -> 100 - 40 = 60%)
 - [x] move sd_bus_get_fd(bus) etc etc from Location to Bus (where it belongs)
 - [x] change location_cb
 - [x] drop eventfd in LOCATION module
 - [x] fix FIXME in location module! -> easy: reset state.events[sunrise/susnet] to force reload of today events in get_gamma_events()!
 - [x] understand why location is not working anymore... -> it seems geoclue event stays in poll queue until UPower event does not unlock poll...why??
 - [x] find a way to start gamma module AFTER a location has been correctly received after new refactor
+
+## 0.12
+- [ ] add a backlight dimmer module
 
 ## Later
 - [ ] add an initial setup to ask user to eg: set desired screen backlight level matching current ambient brightness, max brightess captured from webcam (eg: ask him to switch on a torch on webcam lens), and min brightness captured (ask him to cover the webcam). Moreover, set lowest backlight level and ask user if it can see (sometimes at 0 backlight display gets completely dimmed off) (mid/Needed?)

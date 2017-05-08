@@ -45,6 +45,7 @@ void read_config(enum CONFIG file) {
         config_lookup_float(&cfg, "latitude", &conf.lat);
         config_lookup_float(&cfg, "longitude", &conf.lon);
         config_lookup_int(&cfg, "lowest_backlight_level", &conf.lowest_backlight_level);
+        config_lookup_int(&cfg, "batt_max_backlight_pct", &conf.max_backlight_pct[ON_BATTERY]);
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
         
         if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {

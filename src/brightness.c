@@ -63,6 +63,9 @@ static void brightness_cb(void) {
 static void do_capture(void) {
     static const int fast_timeout = 15;
     static const double drop_limit = 0.6;
+    
+    /* reset fast recapture */
+    state.fast_recapture = 0;
 
 #ifdef DPMS_PRESENT
     /*
@@ -93,6 +96,7 @@ static void do_capture(void) {
                 INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
                 // single call after 15s
                 set_timeout(fast_timeout, 0, main_p[self.idx].fd, 0);
+                state.fast_recapture = 1;
             } else {
                 // reset normal timer
                 set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
@@ -129,7 +133,8 @@ static void get_current_brightness(void) {
  */
 static void set_brightness(const double perc) {
     const double b = 1.319051 + (0.008722895 - 1.319051) / (1 + pow((perc/0.4479636), 1.540376));
-    int new_br =  br.max * b;
+    /* Correctly honor conf.max_backlight_pct */
+    int new_br =  br.max / 100 * conf.max_backlight_pct[state.ac_state] * b;
     // store old brightness
     get_current_brightness();
     if (state.quit) {
