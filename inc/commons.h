@@ -62,7 +62,7 @@ struct config {
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int no_gamma;                           // whether gamma tool is disabled
     int lowest_backlight_level;             // lowest backlight level to be setted
-    int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state
+    int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state (for now, only ON_BATTERY is exported though)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
 };
 

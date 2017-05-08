@@ -12,6 +12,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
 * libconfig (libconfig.h)
+* gcc or clang
 
 ## Optional build deps
 * libxcb (xcb.h, xcb/dpms.h), for dpms support
