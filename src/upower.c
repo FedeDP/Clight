@@ -4,10 +4,10 @@ static void init(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
-static struct dependency dependencies[] = { {HARD, BUS_IX} };
+static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .name = "Upower",
-    .idx = UPOWER_IX,
+    .idx = UPOWER,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
@@ -50,8 +50,13 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribu
     get_property(&power_args, "b", &state.ac_state);
     if (state.ac_state != on_battery) {
         INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
-        if (modules[CAPTURE_IX].inited && !state.fast_recapture) {
-            reset_timer(main_p[CAPTURE_IX].fd, conf.timeout[on_battery][state.time]);
+        if (modules[BRIGHTNESS].inited && !state.fast_recapture) {
+            if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
+                /* if different max values is set, do a capture right now to set correct new brightness value */
+                set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
+            } else {
+                reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[on_battery][state.time]);
+            }
         }
     }
     return 0;

@@ -149,16 +149,16 @@ void check_conf(void) {
     
     /* Disable gamma if in single capture mode, or if --no-gamma option was setted */
     if (conf.single_capture_mode || conf.no_gamma) {
-        disable_module(GAMMA_IX);
+        disable_module(GAMMA);
     } else if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
         /* If sunrise and sunset times, or lat and lon, are both passed, disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) */
-        modules[GAMMA_IX].self->deps[1].type = SOFT;
-        disable_module(LOCATION_IX);
+        modules[GAMMA].self->deps[1].type = SOFT;
+        disable_module(LOCATION);
     }
     
     /* Disable gamma support if we're not in a X session */
-    if (!modules[GAMMA_IX].disabled && (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11"))) {
+    if (!modules[GAMMA].disabled && (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11"))) {
         WARN("Disabling gamma support as X is not running.\n");
-        disable_module(GAMMA_IX);
+        disable_module(GAMMA);
     }
 }

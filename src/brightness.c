@@ -19,10 +19,10 @@ struct brightness {
 };
 
 static struct brightness br;
-static struct dependency dependencies[] = { {HARD, BUS_IX}, {SOFT, GAMMA_IX}, {SOFT, UPOWER_IX} };
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
 static struct self_t self = {
     .name = "Brightness",
-    .idx = CAPTURE_IX,
+    .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
@@ -57,7 +57,7 @@ static void brightness_cb(void) {
 
 /*
  * When timerfd timeout expires, check if we are in screen power_save mode,
- * otherwise start streaming on webcam and set CAMERA_IX fd of pollfd struct to
+ * otherwise start streaming on webcam and set BRIGHTNESS fd of pollfd struct to
  * webcam device fd. This way our main poll will get events (frames) from webcam device too.
  */
 static void do_capture(void) {

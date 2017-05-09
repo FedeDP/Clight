@@ -53,7 +53,7 @@ void set_self_deps(struct self_t *self) {
             m->num_dependent++;
             m->dependent_m = realloc(m->dependent_m, m->num_dependent * sizeof(*(m->dependent_m)));
             if (!m->dependent_m) {
-                ERROR("Could not malloc.\n");
+                ERROR("%s\n", strerror(errno));
                 break;
             }
             m->dependent_m[m->num_dependent - 1] = self;
@@ -153,7 +153,7 @@ void disable_module(const enum modules module) {
 void destroy_modules(const enum modules module) {
     if (modules[module].inited) {
         /* If fd is being polled, close it. Do not close BUS fd!! */
-        if (main_p[modules[module].self->idx].fd > 0 && module != BUS_IX) {
+        if (main_p[modules[module].self->idx].fd > 0 && module != BUS) {
             close(main_p[modules[module].self->idx].fd);
         }
         if  (modules[module].destroy) {

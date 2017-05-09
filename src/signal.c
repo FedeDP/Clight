@@ -7,7 +7,7 @@ static void signal_cb(void);
 
 static struct self_t self = {
     .name = "Signal",
-    .idx = SIGNAL_IX,
+    .idx = SIGNAL,
 };
 
 void set_signal_self(void) {

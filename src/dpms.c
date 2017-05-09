@@ -12,7 +12,7 @@ static int dpms_enabled;
 
 static struct self_t self = {
     .name = "Dpms",
-    .idx = DPMS_IX,
+    .idx = DPMS,
 };
 
 void set_dpms_self(void) {

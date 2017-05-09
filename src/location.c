@@ -10,10 +10,10 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 
 static char client[PATH_MAX + 1];
-static struct dependency dependencies[] = { {HARD, BUS_IX} };
+static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .name = "Location",
-    .idx = LOCATION_IX,
+    .idx = LOCATION,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
@@ -104,9 +104,9 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
     
     /* Updated GAMMA module sunrise/sunset for new location */
     INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-    if (modules[GAMMA_IX].inited) {
+    if (modules[GAMMA].inited) {
         state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-        set_timeout(0, 1, main_p[GAMMA_IX].fd, 0);
+        set_timeout(0, 1, main_p[GAMMA].fd, 0);
     } else {
         /* if gamma was waiting for location, start it */
         poll_cb(self.idx);

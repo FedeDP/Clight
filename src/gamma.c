@@ -16,10 +16,10 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
-static struct dependency dependencies[] = { {HARD, BUS_IX}, {HARD, LOCATION_IX} };
+static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION} };
 static struct self_t self = {
     .name = "Gamma",
-    .idx = GAMMA_IX,
+    .idx = GAMMA,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
@@ -51,7 +51,7 @@ static void gamma_cb(void) {
  * Else, set a timeout for smooth transition and set transitioning flag to 1.
  * If ret == 0, it can also mean we haven't called set_temp, and this means an
  * "event" timeout elapsed. If old_state != state.time (ie: if we entered or left EVENT state),
- * set new CAPTURE_IX correct timeout according to new state.
+ * set new BRIGHTNESS correct timeout according to new state.
  */
 static void check_gamma(void) {
     static int transitioning = 0;
@@ -81,16 +81,16 @@ static void check_gamma(void) {
         ret = set_temp(conf.temp[state.time]); // ret = -1 if an error happens
     }
 
-    /* desired gamma temp has been setted. Set new GAMMA_IX timer and reset transitioning state. */
+    /* desired gamma temp has been setted. Set new GAMMA timer and reset transitioning state. */
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
         set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
 
-        /* if we entered/left an event, set correct timeout to CAPTURE_IX */
-        if (old_state != state.time && modules[CAPTURE_IX].inited && !state.fast_recapture) {
-            reset_timer(main_p[CAPTURE_IX].fd, conf.timeout[state.ac_state][old_state]);
+        /* if we entered/left an event, set correct timeout to BRIGHTNESS */
+        if (old_state != state.time && modules[BRIGHTNESS].inited && !state.fast_recapture) {
+            reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state]);
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */

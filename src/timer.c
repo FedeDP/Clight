@@ -22,8 +22,6 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
 
     timerValue.it_value.tv_sec = sec;
     timerValue.it_value.tv_nsec = nsec;
-    timerValue.it_interval.tv_sec = 0;
-    timerValue.it_interval.tv_nsec = 0;
     int r = timerfd_settime(fd, flag, &timerValue, NULL);
     if (r == -1) {
         return ERROR("%s\n", strerror(errno));

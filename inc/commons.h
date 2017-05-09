@@ -1,5 +1,3 @@
-#define __USE_XOPEN
-
 #include <time.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -25,9 +23,9 @@
 
 /* List of modules indexes */
 #ifdef DPMS_PRESENT
-enum modules { CAPTURE_IX, LOCATION_IX, UPOWER_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, BUS_IX, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, DPMS, BUS, MODULES_NUM };
 #else
-enum modules { CAPTURE_IX, LOCATION_IX, UPOWER_IX, GAMMA_IX, SIGNAL_IX, BUS_IX, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, MODULES_NUM };
 #endif
 
 /*
