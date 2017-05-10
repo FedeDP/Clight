@@ -1,6 +1,7 @@
 #include "../inc/location.h"
 
 static void init(void);
+static int check(void);
 static void destroy(void);
 static int geoclue_init(void);
 static void geoclue_get_client(void);
@@ -21,6 +22,7 @@ static struct self_t self = {
 void set_location_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
     modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
@@ -53,7 +55,6 @@ static int geoclue_init(void) {
     if (state.quit) {
         goto end;
     }
-//     geoclue_load_from_cache();
 
 end:
     /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
@@ -69,6 +70,18 @@ end:
  */
 static void destroy(void) {
     geoclue_client_stop();
+}
+
+static int check(void) {
+    /* 
+     * If sunrise and sunset times, or lat and lon, are both passed, 
+     * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) 
+     */
+    if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
+        modules[GAMMA].self->deps[1].type = SOFT;
+        return 1;
+    }
+    return conf.single_capture_mode || conf.no_gamma;
 }
 
 /*

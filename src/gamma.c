@@ -4,6 +4,8 @@
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 
 static void init(void);
+static int check(void);
+static void destroy(void);
 static void gamma_cb(void);
 static void check_gamma(void);
 static double  degToRad(const double angleDeg);
@@ -16,6 +18,7 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
+static const char *xauthority, *display;
 static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION} };
 static struct self_t self = {
     .name = "Gamma",
@@ -27,12 +30,31 @@ static struct self_t self = {
 void set_gamma_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
+    modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
 static void init(void) {
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
-    init_module(gamma_timerfd, self.idx, gamma_cb);
+    display = getenv("DISPLAY");
+    xauthority = getenv("XAUTHORITY");
+    
+    if (display && xauthority) {
+        int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
+        init_module(gamma_timerfd, self.idx, gamma_cb);
+    } else {
+        /* This should never happen as check function already checks we're inside X environment */
+        disable_module(self.idx);
+    }
+}
+
+static int check(void) {
+    return conf.single_capture_mode || conf.no_gamma || !getenv("XDG_SESSION_TYPE") 
+                || strcmp(getenv("XDG_SESSION_TYPE"), "x11");
+}
+
+static void destroy(void) {
+    /* Skeleton function needed for modules interface */
 }
 
 static void gamma_cb(void) {
@@ -336,7 +358,7 @@ static int set_temp(int temp) {
     if (old_temp == 0) {
         struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
 
-        bus_call(&old_temp, "i", &args_get, "ss", getenv("DISPLAY"), getenv("XAUTHORITY"));
+        bus_call(&old_temp, "i", &args_get, "ss", display, xauthority);
         if (state.quit) {
             return -1;
         }
@@ -351,9 +373,9 @@ static int set_temp(int temp) {
                 } else {
                     old_temp = old_temp + step > temp ? temp : old_temp + step;
                 }
-                bus_call(&new_temp, "i", &args_set, "ssi", getenv("DISPLAY"), getenv("XAUTHORITY"), old_temp);
+                bus_call(&new_temp, "i", &args_set, "ssi", display, xauthority, old_temp);
         } else {
-            bus_call(&new_temp, "i", &args_set, "ssi", getenv("DISPLAY"), getenv("XAUTHORITY"), temp);
+            bus_call(&new_temp, "i", &args_set, "ssi", display, xauthority, temp);
         }
         if (new_temp == temp) {
             // reset old_temp for next call

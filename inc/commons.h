@@ -93,6 +93,7 @@ struct self_t {
 /* Struct that holds data for each module */
 struct module {
     void (*init)(void);                   // module init function
+    int (*check)(void);                   // module check-before-init function
     void (*destroy)(void);                // module destroy function
     void (*poll_cb)(void);                // module poll callback
     struct self_t *self;                  // pointer to self module informations

@@ -2,6 +2,7 @@
 #include <popt.h>
 
 static void parse_cmd(int argc, char *const argv[]);
+static void check_conf(void);
 
 /*
  * Init default config values,
@@ -31,6 +32,7 @@ void init_opts(int argc, char *argv[]) {
     read_config(GLOBAL);
     read_config(LOCAL);
     parse_cmd(argc, argv);
+    check_conf();
 }
 
 /*
@@ -95,10 +97,8 @@ static void parse_cmd(int argc, char *const argv[]) {
 /* 
  * It does all needed checks to correctly reset default values
  * in case of wrong options setted.
- * Moreover, it does required check to disable various modules
- * in case eg: --no-gamma has been passed.
  */
-void check_conf(void) {
+static void check_conf(void) {
     /*
      * Reset default values in case of wrong values
      */
@@ -145,20 +145,5 @@ void check_conf(void) {
     if (conf.max_backlight_pct[ON_BATTERY] > 100 || conf.max_backlight_pct[ON_BATTERY] < 0) {
         WARN("Wrong on battery max backlight percentage value. Resetting default value.\n");
         conf.max_backlight_pct[ON_BATTERY] = 100;
-    }
-    
-    /* Disable gamma if in single capture mode, or if --no-gamma option was setted */
-    if (conf.single_capture_mode || conf.no_gamma) {
-        disable_module(GAMMA);
-    } else if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
-        /* If sunrise and sunset times, or lat and lon, are both passed, disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) */
-        modules[GAMMA].self->deps[1].type = SOFT;
-        disable_module(LOCATION);
-    }
-    
-    /* Disable gamma support if we're not in a X session */
-    if (!modules[GAMMA].disabled && (!getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11"))) {
-        WARN("Disabling gamma support as X is not running.\n");
-        disable_module(GAMMA);
     }
 }

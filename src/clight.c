@@ -77,7 +77,6 @@ static void init(int argc, char *argv[]) {
     }
     set_modules_selfs();
     if (!state.quit) {
-        check_conf();
         init_all_modules();
     }
 }

@@ -3,6 +3,8 @@
 #include "../inc/signal.h"
 
 static void init(void);
+static int check(void);
+static void destroy(void);
 static void signal_cb(void);
 
 static struct self_t self = {
@@ -13,6 +15,8 @@ static struct self_t self = {
 void set_signal_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
+    modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
@@ -29,6 +33,14 @@ static void init(void) {
 
     int fd = signalfd(-1, &mask, 0);
     init_module(fd, self.idx, signal_cb);
+}
+
+static int check(void) {
+    return 0; /* Skeleton function needed for modules interface */
+}
+
+static void destroy(void) {
+    /* Skeleton function needed for modules interface */
 }
 
 /*

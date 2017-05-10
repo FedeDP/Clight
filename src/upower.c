@@ -1,6 +1,8 @@
 #include "../inc/upower.h"
 
 static void init(void);
+static int check(void);
+static void destroy(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
@@ -15,6 +17,8 @@ static struct self_t self = {
 void set_upower_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
+    modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
@@ -29,6 +33,14 @@ static void init(void) {
     poll_cb(self.idx);
 }
 
+static int check(void) {
+    return conf.single_capture_mode;
+}
+
+static void destroy(void) {
+    /* Skeleton function needed for modules interface */
+}
+
 static int upower_init(void) {
     struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
     add_match(&args, on_upower_change);
@@ -41,7 +53,7 @@ static int upower_init(void) {
 }
 
 /* 
- *Callback on upower changes: recheck on_battery boolean value 
+ * Callback on upower changes: recheck on_battery boolean value 
  */
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};

@@ -11,7 +11,11 @@ void init_modules(const enum modules module) {
     /* Avoid calling init in case module is disabled, is already inited, or init func ptr is NULL */
     if (!modules[module].disabled && modules[module].init && !modules[module].inited) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
-            modules[module].init();
+            if (modules[module].check()) {
+                disable_module(module);
+            } else {
+                modules[module].init();
+            }
         }
     }
 }
@@ -156,10 +160,8 @@ void destroy_modules(const enum modules module) {
         if (main_p[modules[module].self->idx].fd > 0 && module != BUS) {
             close(main_p[modules[module].self->idx].fd);
         }
-        if  (modules[module].destroy) {
-            /* call module destroy func */
-            modules[module].destroy();
-        }
+        /* call module destroy func */
+        modules[module].destroy();
         INFO("%s module destroyed.\n", modules[module].self->name);
     }
 }

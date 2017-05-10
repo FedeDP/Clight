@@ -2,6 +2,8 @@
 #include "../inc/dpms.h"
 
 static void init(void);
+static int check(void);
+static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
@@ -19,7 +21,11 @@ struct brightness {
 };
 
 static struct brightness br;
+#ifdef DPMS_PRESENT
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, DPMS} };
+#else
 static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
+#endif
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
@@ -30,6 +36,8 @@ static struct self_t self = {
 void set_brightness_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
+    modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
@@ -43,6 +51,15 @@ static void init(void) {
         init_module(fd, self.idx, brightness_cb);
     }
 }
+
+static int check(void) {
+    return 0; /* Skeleton function needed for modules interface */
+}
+
+static void destroy(void) {
+    /* Skeleton function needed for modules interface */
+}
+
 
 static void brightness_cb(void) {
     if (!conf.single_capture_mode) {

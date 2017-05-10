@@ -1,6 +1,7 @@
 #include "../inc/bus.h"
 
 static void init(void);
+static int check(void);
 static void destroy(void);
 static void bus_cb(void);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
@@ -15,6 +16,7 @@ static struct self_t self = {
 void set_bus_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
     modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
@@ -30,6 +32,10 @@ static void init(void) {
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(bus);
     init_module(bus_fd, self.idx, bus_cb);
+}
+
+static int check(void) {
+    return 0; /* Skeleton function needed for modules interface */
 }
 
 /*
