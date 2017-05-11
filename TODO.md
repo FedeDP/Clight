@@ -1,34 +1,7 @@
-## 0.11
-### Desktop file
-- [x] add a desktop file
-- [x] add an icon for desktop file
-- [x] put clight desktop file in /etc/xdg/autostart (so it will be autostarted), clightc desktop file in /usr/share/applications and UPDATE README
-- [x] install icon to correct folder: /usr/share/icons/hicolor/scalable/apps/clight.svg
-- [x] fix icon -> real svg not embedded one
-
-### Generic
-- [x] get_timeout function to retrieve timerfd remaining timer (easy) -> in GAMMA avoid setting new timeout (based on new enum states time) to N minutes (eg: isntead of setting  new timeout to 45mins during the night, set it to 45mins - elapsed time since last timer); same goes for upower module obviously
-- [x] update clight checking if EPERM is returned from bus calls to clightd (it means this clight session is no more active). Do not fail. (easy)
-- [x] make event_duration customizable too (easy)
-- [x] split modules related functions from utils.c
-- [x] add a DEBUG log function that logs more things while debugging
-- [x] use more often DEBUG log function
-- [x] add a module.skel with inside module interface functions explanation
-
-### Upower
-- [x] Upower battery/ac signals monitor? Ie: add a match on bus.
-- [x] More frequent captures if on AC, and less frequent on battery; customizable. (easy)
-- [x] restart CAPTURE timer when ac state changes (same way i do in gamma when we switch gamma state, eg: DAY -> NIGHT)
-- [x] Add a backlight correction when on battery (eg: on battery, Max brightness should be 60% of max value.) By default correction should be 0 and will be, in percentage, value of the lower-correction (in our example, it should be 40 -> 100 - 40 = 60%)
-- [x] move sd_bus_get_fd(bus) etc etc from Location to Bus (where it belongs)
-- [x] change location_cb
-- [x] drop eventfd in LOCATION module
-- [x] fix FIXME in location module! -> easy: reset state.events[sunrise/susnet] to force reload of today events in get_gamma_events()!
-- [x] understand why location is not working anymore... -> it seems geoclue event stays in poll queue until UPower event does not unlock poll...why??
-- [x] find a way to start gamma module AFTER a location has been correctly received after new refactor
-
 ## 0.12
-- [ ] load brightness curve coefficients from a file and use libgsl to perform a regression on them
+- [ ] load brightness curve coefficients from a file and use libgsl to perform a regression on them.
+In config file, add an array of floats -> [0, 1.4, 2.3, ...] . Then malloc(config_setting_length) parameters and store inside it each config_setting_get_elem(config_setting_get_member("floats"), i).
+Finally, do a regression with gsl on these parameters and store new curve parameters.
 - [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection) -> use a timerfd on LOCATION module: if in 5s (or less?) geoclue2 does not provide us any location, load from cache.
 
 ## Later
