@@ -29,6 +29,7 @@
 #include "../inc/dpms.h"
 #include "../inc/opts.h"
 #include "../inc/lock.h"
+#include "../inc/upower.h"
 
 static void init(int argc, char *argv[]);
 static void set_modules_selfs(void);
@@ -41,11 +42,11 @@ static void main_poll(void);
  */
 #ifdef DPMS_PRESENT
 static void (*const set_selfs[MODULES_NUM])(void) = {
-    set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_dpms_self, set_bus_self
+    set_brightness_self, set_location_self, set_upower_self, set_gamma_self, set_signal_self, set_dpms_self, set_bus_self
 };
 #else
 static void (*const set_selfs[MODULES_NUM])(void) = {
-    set_brightness_self, set_location_self, set_gamma_self, set_signal_self, set_bus_self
+    set_brightness_self, set_location_self, set_upower_self, set_gamma_self, set_signal_self, set_bus_self
 };
 #endif
 
@@ -57,7 +58,7 @@ int main(int argc, char *argv[]) {
 }
 
 /*
- * First of all loads optiosn from both global and 
+ * First of all loads options from both global and 
  * local config file, and from cmdline options.
  * If we're not in single_capture_mode, it gains lock and opens log, logging current configuration.
  * Then checks conf and init needed modules.
@@ -76,26 +77,29 @@ static void init(int argc, char *argv[]) {
     }
     set_modules_selfs();
     if (!state.quit) {
-        check_conf();
         init_all_modules();
     }
 }
 
-/* Set each module self struct */
+/* 
+ * Set each module self struct 
+ */
 static void set_modules_selfs(void) {
     for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
         set_selfs[i]();
     }
 }
 
-/* Init every module */
+/* 
+ * Init every module 
+ */
 static void init_all_modules(void) {
     for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
         init_modules(i);
     }
 }
 
-/**
+/*
  * Free every used resource
  */
 static void destroy(void) {
@@ -121,10 +125,6 @@ static void main_poll(void) {
         }
 
         for (int i = 0; i < MODULES_NUM && r > 0; i++) {
-            /*
-             * it should never happen that no cb is registered for a polled module.
-             * dpms_module does not register an fd to be listened on poll.
-             */
             if (main_p[i].revents & POLLIN) {
                 poll_cb(i);
                 r--;

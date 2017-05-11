@@ -1,30 +1,41 @@
 #include "../inc/bus.h"
 
 static void init(void);
+static int check(void);
 static void destroy(void);
+static void bus_cb(void);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
+static int check_err(int r, sd_bus_error *err);
 
+static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
-    .idx = BUS_IX,
+    .idx = BUS,
 };
 
 void set_bus_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
     modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
 /*
- * Open our bus
+ * Open our bus and start lisetining on its fd
  */
 static void init(void) {
     int r = sd_bus_open_system(&bus);
     if (r < 0) {
         return ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
-    init_module(DONT_POLL, self.idx, NULL);
+    // let main poll listen on bus events
+    int bus_fd = sd_bus_get_fd(bus);
+    init_module(bus_fd, self.idx, bus_cb);
+}
+
+static int check(void) {
+    return 0; /* Skeleton function needed for modules interface */
 }
 
 /*
@@ -37,7 +48,17 @@ static void destroy(void) {
 }
 
 /*
- * Calls a method on bus and store its result of type userptr_type in userptr.
+ * Callback for bus events
+ */
+static void bus_cb(void) {
+    int r;
+    do {
+        r = sd_bus_process(bus, NULL);
+    } while (r > 0);
+}
+
+/*
+ * Call a method on bus and store its result of type userptr_type in userptr.
  */
 void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -109,7 +130,7 @@ finish:
  */
 void add_match(const struct bus_args *a, sd_bus_message_handler_t cb) {
     char match[500] = {0};
-    snprintf(match, sizeof(match), "type='signal',interface='%s', member='%s', path='%s'", a->interface, a->member, a->path);
+    snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
     int r = sd_bus_add_match(bus, NULL, match, cb, NULL);
     check_err(r, NULL);
 }
@@ -147,7 +168,6 @@ void get_property(const struct bus_args *a, const char *type, void *userptr) {
     if (check_err(r, &error)) {
         goto finish;
     }
-
     if (!strcmp(type, "o")) {
         const char *obj = NULL;
         r = sd_bus_message_read(m, type, &obj);
@@ -181,13 +201,13 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
 /*
  * Check any error. Do not leave for EBUSY errors.
  */
-int check_err(int r, sd_bus_error *err) {
+static int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
         /* Don't leave for ebusy/eperm errors. eperm may mean that a not-active session called a method on clightd */
         if (r == -EBUSY || r == -EPERM) {
-            WARN("%s\n", err->message ? err->message : strerror(-r));
+            WARN("%s\n", err && err->message ? err->message : strerror(-r));
         } else {
-            ERROR("%s\n", err->message ? err->message : strerror(-r));
+            ERROR("%s\n", err && err->message ? err->message : strerror(-r));
         }
     }
     return r < 0;

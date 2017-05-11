@@ -1,5 +1,3 @@
-#define __USE_XOPEN
-
 #include <time.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -20,14 +18,14 @@
  */
 #define SIZE(a) sizeof(a) / sizeof(*a)
 
-#define DONT_POLL -2                // avoid polling a module (used for dpms taht does not need to be polled)
-#define DONT_POLL_W_ERR -3          // avoid polling a module because an error occurred (used in location.c when no geoclue2 is found)
+#define DONT_POLL -2                        // avoid polling a module (used for modules that do not need to be polled)
+#define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used eg when no geoclue2 is found)
 
 /* List of modules indexes */
 #ifdef DPMS_PRESENT
-enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, DPMS_IX, BUS_IX, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, DPMS, BUS, MODULES_NUM };
 #else
-enum modules { CAPTURE_IX, LOCATION_IX, GAMMA_IX, SIGNAL_IX, BUS_IX, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, MODULES_NUM };
 #endif
 
 /*
@@ -45,57 +43,64 @@ enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 /* Whether a inter-module dep is hard (mandatory) or soft dep */
 enum dep_type { HARD, SOFT };
 
+/* Whether laptop is on battery or connected to ac */
+enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
-    int num_captures;               // number of frame captured for each screen brightness compute
-    int single_capture_mode;        // do a capture and leave
-    int timeout[SIZE_STATES];       // timeout between captures for each state (day/night only exposed through cmdline opts)
-    char dev_name[PATH_MAX + 1];    // video device (eg: /dev/video0) to be used for captures
-    char screen_path[PATH_MAX + 1]; // screen syspath (eg: /sys/class/backlight/intel_backlight)
-    int temp[SIZE_STATES];          // screen temperature for each state (day/night only exposed through cmdline opts)
-    int no_smooth_transition;       // disable smooth transitions for gamma
-    double lat;                     // latitude
-    double lon;                     // longitude
-    char events[SIZE_EVENTS][10];   // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
-    int no_gamma;                   // whether gamma tool is disabled
-    int lowest_backlight_level;     // lowest backlight level to be setted
-    int event_duration;             // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
+    int num_captures;                       // number of frame captured for each screen brightness compute
+    int single_capture_mode;                // do a capture and leave
+    int timeout[SIZE_AC][SIZE_STATES];      // timeout between captures for each ac_state and time state (day/night/event)
+    char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
+    char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
+    int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
+    int no_smooth_transition;               // disable smooth transitions for gamma
+    double lat;                             // latitude
+    double lon;                             // longitude
+    char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
+    int no_gamma;                           // whether gamma tool is disabled
+    int lowest_backlight_level;             // lowest backlight level to be setted
+    int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state (for now, only ON_BATTERY is exported though)
+    int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
 };
 
 /* Global state of program */
 struct state {
-    int quit;                       // should we quit?
-    enum states time;               // whether it is day or night time
-    time_t events[SIZE_EVENTS];     // today events (sunrise/sunset)
-    enum events next_event;         // next event index (sunrise/sunset)
-    int event_time_range;           // variable that holds minutes in advance/after an event to enter/leave EVENT state
+    int quit;                               // should we quit?
+    enum states time;                       // whether it is day or night time
+    time_t events[SIZE_EVENTS];             // today events (sunrise/sunset)
+    enum events next_event;                 // next event index (sunrise/sunset)
+    int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
+    enum ac_states ac_state;                // is laptop on battery?
+    int fast_recapture;                     // fast recapture after huge brightness drop?
 };
 
 /* Struct that holds info about an inter-modules dep */
 struct dependency {
-    enum dep_type type;
-    enum modules dep;
+    enum dep_type type;                    // soft or hard dependency 
+    enum modules dep;                      // dependency module
 };
 
 /* Struct that holds self module informations, static to each module */
 struct self_t {
-    const char *name;               // name of module
-    const enum modules idx;         // idx of a module in enum modules 
-    int num_deps;                   // number of deps for a module
-    int satisfied_deps;             // number of satisfied deps
-    struct dependency *deps;        // module on which there is a dep
+    const char *name;                     // name of module
+    const enum modules idx;               // idx of a module in enum modules 
+    int num_deps;                         // number of deps for a module
+    int satisfied_deps;                   // number of satisfied deps
+    struct dependency *deps;              // module on which there is a dep
 };
 
 /* Struct that holds data for each module */
 struct module {
-    void (*init)(void);             // module init function
-    void (*destroy)(void);          // module destroy function
-    void (*poll_cb)(void);          // module poll callback
-    struct self_t *self;            // pointer to self module informations
-    struct self_t **dependent_m;    // pointer to every dependent module self
-    int num_dependent;              // number of dependent-on-this-module modules
-    int inited;                     // whether a module has been initialized
-    int disabled;                   // whether this module has been disabled from config (for now useful only for gamma)
+    void (*init)(void);                   // module init function
+    int (*check)(void);                   // module check-before-init function
+    void (*destroy)(void);                // module destroy function
+    void (*poll_cb)(void);                // module poll callback
+    struct self_t *self;                  // pointer to self module informations
+    struct self_t **dependent_m;          // pointer to every dependent module self
+    int num_dependent;                    // number of dependent-on-this-module modules
+    int inited;                           // whether a module has been initialized
+    int disabled;                         // whether this module has been disabled from config (for now useful only for gamma)
 };
 
 struct state state;

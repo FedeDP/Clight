@@ -22,32 +22,33 @@ void log_conf(void) {
         fprintf(log_file, "Version: %s\n", VERSION);
         fprintf(log_file, "Time: %s", ctime(&t));
         fprintf(log_file, "\nStarting options:\n");
-        fprintf(log_file, "* Number of captures: %d\n", conf.num_captures);
-        fprintf(log_file, "* Daily timeout: %d\n", conf.timeout[DAY]);
-        fprintf(log_file, "* Nightly timeout: %d\n", conf.timeout[NIGHT]);
-        fprintf(log_file, "* Event timeout: %d\n", conf.timeout[EVENT]);
-        fprintf(log_file, "* Webcam device: %s\n", conf.dev_name);
-        fprintf(log_file, "* Backlight path: %s\n", conf.screen_path);
-        fprintf(log_file, "* Daily screen temp: %d\n", conf.temp[DAY]);
-        fprintf(log_file, "* Nightly screen temp: %d\n", conf.temp[NIGHT]);
-        fprintf(log_file, "* Smooth transitions: %s\n", conf.no_smooth_transition ? "disabled" : "enabled");
-        fprintf(log_file, "* Latitude: %.2lf\n", conf.lat);
-        fprintf(log_file, "* Longitude: %.2lf\n", conf.lon);
-        fprintf(log_file, "* User setted sunrise: %s\n", conf.events[SUNRISE]);
-        fprintf(log_file, "* User setted sunset: %s\n", conf.events[SUNSET]);
-        fprintf(log_file, "* Gamma correction: %s\n", conf.no_gamma ? "disabled" : "enabled");
-        fprintf(log_file, "* Lowest backlight level allowed: %d\n", conf.lowest_backlight_level);
-        fprintf(log_file, "* Event duration: %d\n\n", conf.event_duration);
+        fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
+        fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
+        fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
+        fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
+        fprintf(log_file, "* Webcam device:\t\t%s\n", conf.dev_name);
+        fprintf(log_file, "* Backlight path:\t\t%s\n", conf.screen_path);
+        fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
+        fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
+        fprintf(log_file, "* Smooth transitions:\t\t%s\n", conf.no_smooth_transition ? "disabled" : "enabled");
+        fprintf(log_file, "* User latitude:\t\t%.2lf\n", conf.lat);
+        fprintf(log_file, "* User longitude:\t\t%.2lf\n", conf.lon);
+        fprintf(log_file, "* User setted sunrise:\t\t%s\n", conf.events[SUNRISE]);
+        fprintf(log_file, "* User setted sunset:\t\t%s\n", conf.events[SUNSET]);
+        fprintf(log_file, "* Gamma correction:\t\t%s\n", conf.no_gamma ? "disabled" : "enabled");
+        fprintf(log_file, "* Min backlight level:\t\t%d\n", conf.lowest_backlight_level);
+        fprintf(log_file, "* Max backlight pct:\t\tAC %d%%\tBATT %d%%\n", conf.max_backlight_pct[ON_AC], conf.max_backlight_pct[ON_BATTERY]);
+        fprintf(log_file, "* Event duration:\t\t%d\n\n", conf.event_duration);
     }
 }
 
-void log_message(const char type, const char *log_msg, ...) {
+void log_message(const char *filename, int lineno, const char type, const char *log_msg, ...) {
     va_list file_args, args;
 
     va_start(file_args, log_msg);
     va_copy(args, file_args);
     if (log_file) {
-        fprintf(log_file, "(%c) ", type);
+        fprintf(log_file, "(%c) [%s:%d]\t", type, filename, lineno);
         vfprintf(log_file, log_msg, file_args);
         fflush(log_file);
     }

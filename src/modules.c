@@ -1,42 +1,6 @@
-#include "../inc/utils.h"
+#include "../inc/modules.h"
 
 static void started_cb(enum modules module);
-
-/**
- * Create timer and returns its fd to
- * the main struct pollfd
- */
-int start_timer(int clockid, int initial_ns, int initial_s) {
-    int timerfd = timerfd_create(clockid, 0);
-    if (timerfd == -1) {
-        ERROR("could not start timer: %s\n", strerror(errno));
-    } else {
-        set_timeout(initial_s, initial_ns, timerfd, 0);
-    }
-    return timerfd;
-}
-
-/**
- * Helper to set a new trigger on timerfd in $start seconds
- */
-void set_timeout(int sec, int nsec, int fd, int flag) {
-    struct itimerspec timerValue = {{0}};
-
-    timerValue.it_value.tv_sec = sec;
-    timerValue.it_value.tv_nsec = nsec;
-    timerValue.it_interval.tv_sec = 0;
-    timerValue.it_interval.tv_nsec = 0;
-    int r = timerfd_settime(fd, flag, &timerValue, NULL);
-    if (r == -1) {
-        ERROR("%s\n", strerror(errno));
-    }
-}
-
-unsigned int get_timeout(int fd) {
-    struct itimerspec curr_value;
-    timerfd_gettime(fd, &curr_value);
-    return curr_value.it_value.tv_sec;
-}
 
 /* 
  * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been setted.
@@ -47,13 +11,10 @@ void init_modules(const enum modules module) {
     /* Avoid calling init in case module is disabled, is already inited, or init func ptr is NULL */
     if (!modules[module].disabled && modules[module].init && !modules[module].inited) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
-            modules[module].init();
-            /* 
-             * if module has no poll_cb,
-             * start right now its dependent modules.
-             */
-            if (!modules[module].poll_cb) {
-                poll_cb(module);
+            if (modules[module].check()) {
+                disable_module(module);
+            } else {
+                modules[module].init();
             }
         }
     }
@@ -64,7 +25,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
         state.quit = 1;
         return;
     }
-
+    
     main_p[module] = (struct pollfd) {
         .fd = fd,
         .events = POLLIN,
@@ -81,6 +42,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
         INFO("%s module started.\n", modules[module].self->name);
     } else {
         /* module should be disabled */
+        WARN("Error while loading %s module.\n", modules[module].self->name);
         disable_module(module); // disable this module and all of dependent module
     }
 }
@@ -95,7 +57,7 @@ void set_self_deps(struct self_t *self) {
             m->num_dependent++;
             m->dependent_m = realloc(m->dependent_m, m->num_dependent * sizeof(*(m->dependent_m)));
             if (!m->dependent_m) {
-                ERROR("Could not malloc.\n");
+                ERROR("%s\n", strerror(errno));
                 break;
             }
             m->dependent_m[m->num_dependent - 1] = self;
@@ -114,7 +76,7 @@ static void started_cb(enum modules module) {
         struct self_t *self = modules[module].dependent_m[i];
         if (!modules[self->idx].disabled) {
             self->satisfied_deps++;
-            INFO("Trying to start %s module as its %s dependency was loaded...\n", self->name, modules[module].self->name);
+            DEBUG("Trying to start %s module as its %s dependency was loaded...\n", self->name, modules[module].self->name);
             init_modules(self->idx);
         }
     }
@@ -150,7 +112,7 @@ void disable_module(const enum modules module) {
     if (!modules[module].disabled) {
         modules[module].disabled = 1;
         INFO("%s module disabled.\n", modules[module].self->name);
-    
+        
         /* Cycle to disable all modules dependent on "module", if dep is HARD */
         for (int i = 0; i < modules[module].num_dependent; i++) {
             struct self_t *self = modules[module].dependent_m[i];
@@ -168,7 +130,7 @@ void disable_module(const enum modules module) {
                 }
             }
         }
-    
+        
         /* 
          * Cycle to disable all module on which "module" has a dep,
          * if "module" is the only module dependent on it 
@@ -180,7 +142,7 @@ void disable_module(const enum modules module) {
                 disable_module(m);
             }
         }
-    
+        
         /* Finally, free dependent_m for this disabled module */
         if (modules[module].num_dependent > 0) {
             free(modules[module].dependent_m);
@@ -193,8 +155,14 @@ void disable_module(const enum modules module) {
  * Calls correct destroy function for each module
  */
 void destroy_modules(const enum modules module) {
-    if (modules[module].inited && modules[module].destroy) {
+    if (modules[module].inited) {
+        /* If fd is being polled, close it. Do not close BUS fd!! */
+        if (main_p[modules[module].self->idx].fd > 0 && module != BUS) {
+            close(main_p[modules[module].self->idx].fd);
+        }
+        /* call module destroy func */
         modules[module].destroy();
         INFO("%s module destroyed.\n", modules[module].self->name);
     }
 }
+

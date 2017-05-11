@@ -2,6 +2,7 @@
 #include "../inc/dpms.h"
 
 static void init(void);
+static int check(void);
 static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
@@ -20,10 +21,14 @@ struct brightness {
 };
 
 static struct brightness br;
-static struct dependency dependencies[] = { {HARD, BUS_IX}, {SOFT, GAMMA_IX} };
+#ifdef DPMS_PRESENT
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, DPMS} };
+#else
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
+#endif
 static struct self_t self = {
     .name = "Brightness",
-    .idx = CAPTURE_IX,
+    .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
@@ -31,6 +36,7 @@ static struct self_t self = {
 void set_brightness_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
     modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
@@ -41,16 +47,19 @@ void set_brightness_self(void) {
 static void init(void) {
     get_max_brightness();
     if (!state.quit) {
-        int fd = start_timer(CLOCK_MONOTONIC, 1, 0);
+        int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
         init_module(fd, self.idx, brightness_cb);
     }
 }
 
-static void destroy(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
-    }
+static int check(void) {
+    return 0; /* Skeleton function needed for modules interface */
 }
+
+static void destroy(void) {
+    /* Skeleton function needed for modules interface */
+}
+
 
 static void brightness_cb(void) {
     if (!conf.single_capture_mode) {
@@ -63,14 +72,17 @@ static void brightness_cb(void) {
     }
 }
 
-/**
+/*
  * When timerfd timeout expires, check if we are in screen power_save mode,
- * otherwise start streaming on webcam and set CAMERA_IX fd of pollfd struct to
+ * otherwise start streaming on webcam and set BRIGHTNESS fd of pollfd struct to
  * webcam device fd. This way our main poll will get events (frames) from webcam device too.
  */
 static void do_capture(void) {
     static const int fast_timeout = 15;
     static const double drop_limit = 0.6;
+    
+    /* reset fast recapture */
+    state.fast_recapture = 0;
 
 #ifdef DPMS_PRESENT
     /*
@@ -80,7 +92,7 @@ static void do_capture(void) {
      */
     if (get_screen_dpms() > 0) {
         INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        return set_timeout(2 * conf.timeout[state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
+        return set_timeout(2 * conf.timeout[state.ac_state][state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
     }
 #endif
 
@@ -91,7 +103,6 @@ static void do_capture(void) {
      * it is very very unlikely that setbrightness would return some.
      */
     if (!state.quit && val >= 0.0) {
-        INFO("Average frames brightness: %lf.\n", val);
         set_brightness(val);
         
         if (!conf.single_capture_mode && !state.quit) {
@@ -102,9 +113,10 @@ static void do_capture(void) {
                 INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
                 // single call after 15s
                 set_timeout(fast_timeout, 0, main_p[self.idx].fd, 0);
+                state.fast_recapture = 1;
             } else {
                 // reset normal timer
-                set_timeout(conf.timeout[state.time], 0, main_p[self.idx].fd, 0);
+                set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
             }
         }
     }
@@ -138,7 +150,8 @@ static void get_current_brightness(void) {
  */
 static void set_brightness(const double perc) {
     const double b = 1.319051 + (0.008722895 - 1.319051) / (1 + pow((perc/0.4479636), 1.540376));
-    int new_br =  br.max * b;
+    /* Correctly honor conf.max_backlight_pct */
+    int new_br =  (float)br.max / 100 * conf.max_backlight_pct[state.ac_state] * b;
     // store old brightness
     get_current_brightness();
     if (state.quit) {
@@ -153,6 +166,7 @@ static void set_brightness(const double perc) {
             INFO("New brightness value: %d\n", br.current);
         }
     } else {
+        br.current = new_br;
         INFO("Brightness level was already %d.\n", new_br);
     }
 }
@@ -161,5 +175,6 @@ static double capture_frames_brightness(void) {
     double brightness = -1;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
     bus_call(&brightness, "d", &args, "si", conf.dev_name, conf.num_captures);
+    DEBUG("Average frames brightness: %lf.\n", brightness);
     return brightness;
 }

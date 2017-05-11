@@ -8,9 +8,11 @@ pkgdesc="A C daemon that turns your webcam into a light sensor. It can also chan
 arch=('i686' 'x86_64')
 url="https://github.com/FedeDP/${_gitname}"
 license=('GPL')
+backup=(etc/default/clight.conf)
 depends=('systemd' 'libxcb' 'popt' 'libconfig' 'clightd-git')
 makedepends=('git')
-optdepends=('geoclue2: to retrieve user location through geoclue2.')
+optdepends=('geoclue2: to retrieve user location through geoclue2.'
+            'upower: to save energy by increasing timeouts between captures while on battery.')
 source=("git://github.com/FedeDP/${_gitname}.git")
 install=clight.install
 sha256sums=("SKIP")

@@ -3,22 +3,24 @@
 #include "../inc/signal.h"
 
 static void init(void);
+static int check(void);
 static void destroy(void);
 static void signal_cb(void);
 
 static struct self_t self = {
     .name = "Signal",
-    .idx = SIGNAL_IX,
+    .idx = SIGNAL,
 };
 
 void set_signal_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
     modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
-/**
+/*
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)
  */
 static void init(void) {    
@@ -33,10 +35,12 @@ static void init(void) {
     init_module(fd, self.idx, signal_cb);
 }
 
+static int check(void) {
+    return 0; /* Skeleton function needed for modules interface */
+}
+
 static void destroy(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
-    }
+    /* Skeleton function needed for modules interface */
 }
 
 /*

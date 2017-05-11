@@ -12,6 +12,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
 * libconfig (libconfig.h)
+* gcc or clang
 
 ## Optional build deps
 * libxcb (xcb.h, xcb/dpms.h), for dpms support
@@ -20,15 +21,17 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * shared objects from build libraries
 * [clightd](https://github.com/FedeDP/Clightd)
 
+## Optional runtime deps:
+* Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
+* Upower to honor timeouts between captures depending on ac state as setted in configuration (otherwise only ON_AC timeout will be used)
+
 ## Build time switches:
 * DISABLE_DPMS=1 (to disable dpms support, useful if you plan to run clight on non-X environments)
 
 ## How to run it
-Even if a systemd user unit is shipped, proper way to start clight is by autostarting clight from your DE autostart.  
-For this reason, clight installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight. User has not to do anything but reboot after installing clight.  
-**This is needed to assure that X is running when clight gets started** as on systemd there is no proper way of knowing whether X has been started or not.  
-Simply enabling the unit could cause clight to auto-disabling gamma support if it cannot find any running X server.  
-Note that desktop file will just execute "systemctl --user start clight"; clight user service will then kick in clightd dependency and will restart itself in case of crash.  
+Clight tries to be a 0-conf software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight.   User has to do nothing but reboot after installing clight.  
+**This is needed to ensure that X is running when clight gets started**, as on systemd there is no proper way of knowing whether X has been started or not.  
+Note that desktop file will execute "systemctl --user start clight"; user service will then kick in clightd dependency and will restart itself in case of crash.  
 
 Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
 
@@ -36,20 +39,23 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 * very lightweight
 * fully valgrind and cppcheck clean
 * external signals catching (sigint/sigterm)
-* systemd user unit shipped
+* systemd user unit and autostart desktop file shipped
 * dpms support: it will check current screen powersave level and won't do anything if screen is currently off
-* a quick single capture mode (ie: do captures, change screen brightness and leave). Together with a desktop file.
+* a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does)
-* geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates
+* geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates. Otherwise gamma support will be disabled.
 * different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable)
 * nice log file, placed in $HOME/.clight.log
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time
-* more frequent captures inside "events": an event starts 30mins before sunrise/sunset and ends 30mins after
+* more frequent captures inside "events": an event starts by default 30mins before sunrise/sunset and ends 30mins after. Configurable.
 * gamma correction tool support can be disabled at runtime (--no-gamma cmdline switch)
 * in case of huge brightness drop (> 60%), a new capture will quickly be done (after 15 seconds), to check if this was an accidental event (eg: you changed room and capture happened before you switched on the light) or if brightness has really dropped that much (eg: you switched off the light)
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
 * only 1 clight instance can be running for same user. You can still invoke a fast capture when an instance is already running, obviously
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
+* UPower support, to set longer timeouts between captures while on battery, in order to save some energy.  
+Moreover, you can set a percentage of maximum settable brightness while on battery.
+* Gracefully auto-disabling gamma support on non-X environments.
 
 ### Valgrind is run with:
 
@@ -61,7 +67,7 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 
 For cmdline options, check clight [-?|--help] [--usage].  
 **Please note that cmdline "--device" and "--backlight" switches require only last part of syspath** (eg: "video0" or "intel_backlight").  
-If your backlight interface will completely dim your screen at 0 backlight level, be sure to set in your conf file (or through cmdline option) the "lowest_backlight_level" option.
+If your backlight interface will completely dim your screen at 0 backlight level, be sure to set in your conf file (or through cmdline option) *lowest_backlight_level* option.
 
 ## Config file
 A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is all commented.  

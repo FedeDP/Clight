@@ -4,6 +4,7 @@
 #define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 
 static void init(void);
+static int check(void);
 static void destroy(void);
 static void gamma_cb(void);
 static void check_gamma(void);
@@ -17,10 +18,11 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
-static struct dependency dependencies[] = { {HARD, BUS_IX}, {HARD, LOCATION_IX} };
+static const char *xauthority, *display;
+static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION} };
 static struct self_t self = {
     .name = "Gamma",
-    .idx = GAMMA_IX,
+    .idx = GAMMA,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
@@ -28,19 +30,31 @@ static struct self_t self = {
 void set_gamma_self(void) {
     modules[self.idx].self = &self;
     modules[self.idx].init = init;
+    modules[self.idx].check = check;
     modules[self.idx].destroy = destroy;
     set_self_deps(&self);
 }
 
 static void init(void) {
-    int gamma_timerfd = start_timer(CLOCK_REALTIME, 1, 0);
-    init_module(gamma_timerfd, self.idx, gamma_cb);
+    display = getenv("DISPLAY");
+    xauthority = getenv("XAUTHORITY");
+    
+    if (display && xauthority) {
+        int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
+        init_module(gamma_timerfd, self.idx, gamma_cb);
+    } else {
+        /* This should never happen as check function already checks we're inside X environment */
+        disable_module(self.idx);
+    }
+}
+
+static int check(void) {
+    return conf.single_capture_mode || conf.no_gamma || !getenv("XDG_SESSION_TYPE") 
+                || strcmp(getenv("XDG_SESSION_TYPE"), "x11");
 }
 
 static void destroy(void) {
-    if (main_p[self.idx].fd > 0) {
-        close(main_p[self.idx].fd);
-    }
+    /* Skeleton function needed for modules interface */
 }
 
 static void gamma_cb(void) {
@@ -59,13 +73,14 @@ static void gamma_cb(void) {
  * Else, set a timeout for smooth transition and set transitioning flag to 1.
  * If ret == 0, it can also mean we haven't called set_temp, and this means an
  * "event" timeout elapsed. If old_state != state.time (ie: if we entered or left EVENT state),
- * set new CAPTURE_IX correct timeout according to new state.
+ * set new BRIGHTNESS correct timeout according to new state.
  */
 static void check_gamma(void) {
-    static int transitioning = 0, first_time = 1;
+    static int transitioning = 0;
     time_t t;
     enum states old_state = state.time;
-
+    int first_time = state.events[SUNSET] == 0;
+    
     /*
      * Only if we're not doing a smooth transition
      */
@@ -88,23 +103,16 @@ static void check_gamma(void) {
         ret = set_temp(conf.temp[state.time]); // ret = -1 if an error happens
     }
 
-    /* desired gamma temp has been setted. Set new GAMMA_IX timer and reset transitioning state. */
+    /* desired gamma temp has been setted. Set new GAMMA timer and reset transitioning state. */
     if (ret == 0) {
         t = state.events[state.next_event] + state.event_time_range;
         INFO("Next gamma alarm due to: %s", ctime(&t));
         set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
         transitioning = 0;
 
-        /* if we entered/left an event, set correct timeout to CAPTURE_IX */
-        if (old_state != state.time && modules[CAPTURE_IX].inited) {
-            unsigned int elapsed_time = conf.timeout[old_state] - get_timeout(main_p[CAPTURE_IX].fd);
-            /* if we still need to wait some seconds */
-            if (conf.timeout[state.time] - elapsed_time > 0) {
-                set_timeout(conf.timeout[state.time] - elapsed_time, 0, main_p[CAPTURE_IX].fd, 0);
-            } else {
-                /* with new timeout, old_timeout would already been elapsed */
-                set_timeout(0, 1, main_p[CAPTURE_IX].fd, 0);
-            }
+        /* if we entered/left an event, set correct timeout to BRIGHTNESS */
+        if (old_state != state.time && modules[BRIGHTNESS].inited && !state.fast_recapture) {
+            reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state]);
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
@@ -113,12 +121,16 @@ static void check_gamma(void) {
     }
 }
 
-/* Convert degrees to radians */
+/* 
+ * Convert degrees to radians 
+ */
 static double  degToRad(double angleDeg) {
     return (M_PI * angleDeg / 180.0);
 }
 
-/* Convert radians to degrees */
+/* 
+ * Convert radians to degrees 
+ */
 static double radToDeg(double angleRad) {
     return (180.0 * angleRad / M_PI);
 }
@@ -320,6 +332,7 @@ static void check_state(time_t *now) {
         }
         conf.temp[EVENT] = event_t == SUNRISE ? conf.temp[NIGHT] : conf.temp[DAY];
         state.time = EVENT;
+        DEBUG("Currently inside an event.\n");
     } else {
         state.time = state.next_event == SUNRISE ? NIGHT : DAY;
         state.event_time_range = -conf.event_duration; // 30mins before event
@@ -345,7 +358,7 @@ static int set_temp(int temp) {
     if (old_temp == 0) {
         struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
 
-        bus_call(&old_temp, "i", &args_get, "ss", getenv("DISPLAY"), getenv("XAUTHORITY"));
+        bus_call(&old_temp, "i", &args_get, "ss", display, xauthority);
         if (state.quit) {
             return -1;
         }
@@ -360,9 +373,9 @@ static int set_temp(int temp) {
                 } else {
                     old_temp = old_temp + step > temp ? temp : old_temp + step;
                 }
-                bus_call(&new_temp, "i", &args_set, "ssi", getenv("DISPLAY"), getenv("XAUTHORITY"), old_temp);
+                bus_call(&new_temp, "i", &args_set, "ssi", display, xauthority, old_temp);
         } else {
-            bus_call(&new_temp, "i", &args_set, "ssi", getenv("DISPLAY"), getenv("XAUTHORITY"), temp);
+            bus_call(&new_temp, "i", &args_set, "ssi", display, xauthority, temp);
         }
         if (new_temp == temp) {
             // reset old_temp for next call
