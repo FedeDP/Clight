@@ -166,6 +166,7 @@ static void set_brightness(const double perc) {
             INFO("New brightness value: %d\n", br.current);
         }
     } else {
+        br.current = new_br;
         INFO("Brightness level was already %d.\n", new_br);
     }
 }
