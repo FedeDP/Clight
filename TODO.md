@@ -13,6 +13,7 @@
 - [x] split modules related functions from utils.c
 - [x] add a DEBUG log function that logs more things while debugging
 - [x] use more often DEBUG log function
+- [x] add a module.skel with inside module interface functions explanation
 
 ### Upower
 - [x] Upower battery/ac signals monitor? Ie: add a match on bus.
@@ -27,11 +28,10 @@
 - [x] find a way to start gamma module AFTER a location has been correctly received after new refactor
 
 ## 0.12
-- [ ] add a backlight dimmer module
+- [ ] load brightness curve coefficients from a file and use libgsl to perform a regression on them
+- [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection)
 
 ## Later
 - [ ] add an initial setup to ask user to eg: set desired screen backlight level matching current ambient brightness, max brightess captured from webcam (eg: ask him to switch on a torch on webcam lens), and min brightness captured (ask him to cover the webcam). Moreover, set lowest backlight level and ask user if it can see (sometimes at 0 backlight display gets completely dimmed off) (mid/Needed?)
-
-## Ideas
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness (mid)
-- [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection) (needed?)
+- [ ] add a backlight dimmer module
