@@ -14,8 +14,8 @@
  * Moreover, a callback function for poll can be provided for this module
  * (obviously only if a fd is passed inside init_module call).
  *
- * Finally, module.h should expose a set_module_self function that bind
- * module's internal own self_t struct to modules[SKEL] and sets 
+ * Finally, module.h should expose a set_module_self function that binds
+ * module's internal own self_t struct to global <struct module modules> and sets 
  * mandatory functions.
  */
 
