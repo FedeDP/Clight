@@ -53,7 +53,8 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
 * only 1 clight instance can be running for same user. You can still invoke a fast capture when an instance is already running, obviously
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
-* UPower support, to set longer timeouts between captures while on battery, in order to save some energy.
+* UPower support, to set longer timeouts between captures while on battery, in order to save some energy.  
+Moreover, you can set a percentage of maximum settable brightness while on battery.
 * Gracefully auto-disabling gamma support on non-X environments.
 
 ### Valgrind is run with:
