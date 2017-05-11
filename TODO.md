@@ -29,7 +29,7 @@
 
 ## 0.12
 - [ ] load brightness curve coefficients from a file and use libgsl to perform a regression on them
-- [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection)
+- [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection) -> use a timerfd on LOCATION module: if in 5s (or less?) geoclue2 does not provide us any location, load from cache.
 
 ## Later
 - [ ] add an initial setup to ask user to eg: set desired screen backlight level matching current ambient brightness, max brightess captured from webcam (eg: ask him to switch on a torch on webcam lens), and min brightness captured (ask him to cover the webcam). Moreover, set lowest backlight level and ask user if it can see (sometimes at 0 backlight display gets completely dimmed off) (mid/Needed?)
