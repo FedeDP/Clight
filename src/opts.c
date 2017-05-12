@@ -123,15 +123,15 @@ static void check_conf(void) {
     }
     if (conf.timeout[ON_BATTERY][DAY] <= 0) {
         WARN("Wrong day timeout value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][DAY] = 10 * 60;
+        conf.timeout[ON_BATTERY][DAY] = 20 * 60;
     }
     if (conf.timeout[ON_BATTERY][NIGHT] <= 0) {
         WARN("Wrong night timeout value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][NIGHT] = 45 * 60;
+        conf.timeout[ON_BATTERY][NIGHT] = 90 * 60;
     }
     if (conf.timeout[ON_BATTERY][EVENT] <= 0) {
         WARN("Wrong event timeout value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][EVENT] = 3 * 60;
+        conf.timeout[ON_BATTERY][EVENT] = 6 * 60;
     }
     if (conf.num_captures <= 0 || conf.num_captures > 20) {
         WARN("Wrong frames value. Resetting default value.\n");
