@@ -18,8 +18,8 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs libsystemd popt libconfig)
-CFLAGS = $(shell pkg-config --cflags libsystemd popt libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
+LIBS = -lm $(shell pkg-config --libs libsystemd popt)
+CFLAGS = $(shell pkg-config --cflags libsystemd popt) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
@@ -29,18 +29,32 @@ endif
 
 ifneq ("$(DISABLE_DPMS)","1")
 DPMS=$(shell pkg-config --silence-errors --libs  xcb xcb-dpms)
-
 ifneq ("$(DPMS)","")
 CFLAGS+=-DDPMS_PRESENT $(shell pkg-config --cflags xcb xcb-dpms)
 LIBS+=$(shell pkg-config --libs xcb xcb-dpms)
 $(info DPMS support enabled.)
+else
+$(info DPMS support disabled.)
 endif
-
 else
 $(info DPMS support disabled.)
 endif
 
+ifneq ("$(DISABLE_LIBCONFIG)","1")
+LIBCONFIG=$(shell pkg-config --silence-errors --libs  libconfig)
+ifneq ("$(LIBCONFIG)","")
+CFLAGS+=-DLIBCONFIG_PRESENT $(shell pkg-config --cflags libconfig)
+LIBS+=$(shell pkg-config --libs libconfig)
+$(info Libconfig support enabled.)
+else
+$(info Libconfig support disabled.)
 endif
+else
+$(info Libconfig support disabled.)
+endif
+
+endif
+
 
 CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)
 SYSTEMD_VERSION = $(shell pkg-config --modversion systemd)

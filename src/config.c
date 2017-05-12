@@ -1,3 +1,5 @@
+#ifdef LIBCONFIG_PRESENT
+
 #include "../inc/config.h"
 #include <libconfig.h>
 
@@ -68,3 +70,5 @@ void read_config(enum CONFIG file) {
     }
     config_destroy(&cfg);
 }
+
+#endif

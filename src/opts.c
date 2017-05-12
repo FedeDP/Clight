@@ -1,3 +1,8 @@
+#ifdef LIBCONFIG_PRESENT
+#include "../inc/config.h"
+#else
+#include "../inc/modules.h"
+#endif
 #include "../inc/opts.h"
 #include <popt.h>
 
@@ -29,8 +34,10 @@ void init_opts(int argc, char *argv[]) {
     conf.max_backlight_pct[ON_AC] = 100;
     conf.max_backlight_pct[ON_BATTERY] = 100;
 
+#ifdef LIBCONFIG_PRESENT
     read_config(GLOBAL);
     read_config(LOCAL);
+#endif
     parse_cmd(argc, argv);
     check_conf();
 }

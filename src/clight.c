@@ -40,15 +40,13 @@ static void main_poll(void);
 /*
  * pointers to init modules functions;
  */
+static void (*const set_selfs[])(void) = {
+    set_brightness_self, set_location_self, set_upower_self, 
+    set_gamma_self, set_signal_self, set_bus_self
 #ifdef DPMS_PRESENT
-static void (*const set_selfs[MODULES_NUM])(void) = {
-    set_brightness_self, set_location_self, set_upower_self, set_gamma_self, set_signal_self, set_dpms_self, set_bus_self
-};
-#else
-static void (*const set_selfs[MODULES_NUM])(void) = {
-    set_brightness_self, set_location_self, set_upower_self, set_gamma_self, set_signal_self, set_bus_self
-};
+    , set_dpms_self
 #endif
+};
 
 int main(int argc, char *argv[]) {
     init(argc, argv);
