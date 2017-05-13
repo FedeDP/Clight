@@ -48,6 +48,7 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 * a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does)
 * geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates. Otherwise gamma support will be disabled.
+Location received will be then cached when clight exit. This way, if no internet connection is present (thus geoclue2 cannot give us any location) instead of hanging, clight will load latest available location from cache file.
 * different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable)
 * nice log file, placed in $HOME/.clight.log
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time
@@ -59,7 +60,7 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
 * UPower support, to set longer timeouts between captures while on battery, in order to save some energy.  
 Moreover, you can set a percentage of maximum settable brightness while on battery.
-* You can specify curve points to be used to match ambient brightness to screen backlight from config file. Clight will then find best-fit through gsl polynomial fit and use that curve. Have a look at clight.conf file.
+* You can specify curve points to be used to match ambient brightness to screen backlight from config file thanks to [gsl Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit).
 * Gracefully auto-disabling gamma support on non-X environments.
 
 ### Valgrind is run with:
