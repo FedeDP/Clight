@@ -25,7 +25,6 @@ static void init_config_file(enum CONFIG file) {
 void read_config(enum CONFIG file) {
     config_t cfg;
     const char *videodev, *screendev, *sunrise, *sunset;
-    config_setting_t *points, *root;
     
     init_config_file(file);
     if (access(config_file, F_OK) == -1) {
@@ -64,6 +63,7 @@ void read_config(enum CONFIG file) {
             strncpy(conf.events[SUNSET], sunset, sizeof(conf.events[SUNSET]) - 1);
         }
         
+        config_setting_t *points, *root;
         root = config_root_setting(&cfg);
         if ((points = config_setting_get_member(root, "brightness_regression_points"))) {
             if (config_setting_length(points) >= SIZE_POINTS) {
