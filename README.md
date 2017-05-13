@@ -11,6 +11,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 ## Build deps
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
+* gsl (gsl/gsl_multifit.h)
 * gcc or clang
 
 ## Optional build deps
@@ -58,6 +59,7 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
 * UPower support, to set longer timeouts between captures while on battery, in order to save some energy.  
 Moreover, you can set a percentage of maximum settable brightness while on battery.
+* You can specify curve points to be used to match ambient brightness to screen backlight from config file. Clight will then find best-fit through gsl polynomial fit and use that curve. Have a look at clight.conf file.
 * Gracefully auto-disabling gamma support on non-X environments.
 
 ### Valgrind is run with:
@@ -76,6 +78,12 @@ If your backlight interface will completely dim your screen at 0 backlight level
 A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is all commented.  
 You can customize it or you can copy it in your $XDG_CONFIG_HOME folder (fallbacks to $HOME/.config/) and customize it there.  
 Both files are checked when clight starts, in this order: global -> user-local -> cmdline opts.  
+
+## Polynomial fit
+Clight makes use of Gnu Scientific Library to compute best-fit around data points as read by clight.conf file.  
+Default values are [ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 ]; indexes (from 0 to 10 included) are our X axys (ambient brightness), while values are Y axys (screen backlight).  
+For example, with default values, at 0.5 ambient brightness (6th value in this array) clight will set a 74% of max backlight level.  
+By customizing these values, you can adapt screen backlight curve to meet your needs. Note that values must be between 0.0 and 1.0 obviously.  
 
 ## Gamma support info
 *Gamma support is only available on X. Sadly on wayland there is still no standard way to achieve gamma correction. Let's way with fingers crossed.*  

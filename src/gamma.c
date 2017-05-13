@@ -36,21 +36,18 @@ void set_gamma_self(void) {
 }
 
 static void init(void) {
-    display = getenv("DISPLAY");
-    xauthority = getenv("XAUTHORITY");
-    
-    if (display && xauthority) {
-        int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
-        init_module(gamma_timerfd, self.idx, gamma_cb);
-    } else {
-        /* This should never happen as check function already checks we're inside X environment */
-        disable_module(self.idx);
-    }
+    int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
+    init_module(gamma_timerfd, self.idx, gamma_cb);
 }
 
 static int check(void) {
-    return conf.single_capture_mode || conf.no_gamma || !getenv("XDG_SESSION_TYPE") 
-                || strcmp(getenv("XDG_SESSION_TYPE"), "x11");
+    display = getenv("DISPLAY");
+    xauthority = getenv("XAUTHORITY");
+    
+    return  conf.single_capture_mode || 
+            conf.no_gamma || 
+            !display || 
+            !xauthority;
 }
 
 static void destroy(void) {

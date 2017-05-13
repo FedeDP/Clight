@@ -39,11 +39,11 @@ static int check(void) {
 }
 
 /*
- * Close bus.
+ * Close bus
  */
 static void destroy(void) {
     if (bus) {
-        sd_bus_flush_close_unref(bus);
+        bus = sd_bus_flush_close_unref(bus);
     }
 }
 

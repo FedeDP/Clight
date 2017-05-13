@@ -33,6 +33,26 @@ void init_opts(int argc, char *argv[]) {
     conf.event_duration = 30 * 60;
     conf.max_backlight_pct[ON_AC] = 100;
     conf.max_backlight_pct[ON_BATTERY] = 100;
+    
+    /*
+     * Default polynomial regression points:
+     * X = 0  Y = 0.00
+     *     1      0.15
+     *     2      0.29
+     *     3      0.45
+     *     4      0.61
+     *     5      0.74
+     *     6      0.81
+     *     7      0.88
+     *     8      0.93
+     *     9      0.97
+     *    10      1.00
+     * Where X is ambient brightness and Y is backlight level.
+     * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
+     */
+    memcpy(conf.regression_points, 
+           (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
+           SIZE_POINTS * sizeof(double));
 
 #ifdef LIBCONFIG_PRESENT
     read_config(GLOBAL);
@@ -47,28 +67,28 @@ void init_opts(int argc, char *argv[]) {
  */
 static void parse_cmd(int argc, char *const argv[]) {
     poptContext pc;
-    struct poptOption po[] = {
-        {"capture", 'c', POPT_ARG_NONE, &conf.single_capture_mode, 0, "Take a fast capture/screen brightness calibration and quit", NULL},
-        {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 0, "Frames taken for each capture, Between 1 and 20", NULL},
-        {"ac_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][DAY], 0, "Seconds between each capture during the day on AC", NULL},
-        {"ac_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][NIGHT], 0, "Seconds between each capture during the night on AC", NULL},
-        {"ac_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][EVENT], 0, "Seconds between each capture during an event(sunrise, sunset) on AC", NULL},
-        {"batt_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][DAY], 0, "Seconds between each capture during the day on battery", NULL},
-        {"batt_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][NIGHT], 0, "Seconds between each capture during the night on battery", NULL},
-        {"batt_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][EVENT], 0, "Seconds between each capture during an event(sunrise, sunset) on battery", NULL},
+    const struct poptOption po[] = {
+        {"capture", 'c', POPT_ARG_NONE, &conf.single_capture_mode, 100, "Take a fast capture/screen brightness calibration and quit", NULL},
+        {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 100, "Frames taken for each capture, Between 1 and 20", NULL},
+        {"ac_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][DAY], 100, "Seconds between each capture during the day on AC", NULL},
+        {"ac_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][NIGHT], 100, "Seconds between each capture during the night on AC", NULL},
+        {"ac_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on AC", NULL},
+        {"batt_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][DAY], 100, "Seconds between each capture during the day on battery", NULL},
+        {"batt_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][NIGHT], 100, "Seconds between each capture during the night on battery", NULL},
+        {"batt_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on battery", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used", "video0"},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used", "intel_backlight"},
-        {"no-smooth_transition", 0, POPT_ARG_NONE, &conf.no_smooth_transition, 0, "Disable smooth gamma transition", NULL},
-        {"day_temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 0, "Daily gamma temperature, between 1000 and 10000", NULL},
-        {"night_temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 0, "Nightly gamma temperature, between 1000 and 10000", NULL},
-        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 0, "Your desired latitude", NULL},
-        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 0, "Your desired longitude", NULL},
+        {"no-smooth_transition", 0, POPT_ARG_NONE, &conf.no_smooth_transition, 100, "Disable smooth gamma transition", NULL},
+        {"day_temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
+        {"night_temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
+        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 100, "Your desired latitude", NULL},
+        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 100, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
-        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 0, "Disable gamma correction tool", NULL},
-        {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 0, "Lowest backlight level that clight can set", NULL},
-        {"batt_max_backlight_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.max_backlight_pct[ON_BATTERY], 0, "Max backlight level that clight can set while on battery, in percentage", NULL},
-        {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 0, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
+        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 100, "Disable gamma correction tool", NULL},
+        {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 100, "Lowest backlight level that clight can set", NULL},
+        {"batt_max_backlight_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.max_backlight_pct[ON_BATTERY], 100, "Max backlight level that clight can set while on battery, in percentage", NULL},
+        {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -90,8 +110,12 @@ static void parse_cmd(int argc, char *const argv[]) {
             case 4:
                 strncpy(conf.events[SUNSET], str, sizeof(conf.events[SUNSET]) - 1);
                 break;
+            default:
+                break;
         }
-        free(str);
+        if (str) {
+            free(str);
+        }
     }
     // poptGetNextOpt returns -1 when the final argument has been parsed
     // otherwise an error occured
@@ -152,5 +176,18 @@ static void check_conf(void) {
     if (conf.max_backlight_pct[ON_BATTERY] > 100 || conf.max_backlight_pct[ON_BATTERY] < 0) {
         WARN("Wrong on battery max backlight percentage value. Resetting default value.\n");
         conf.max_backlight_pct[ON_BATTERY] = 100;
+    }
+    
+    int i;
+    for (i = 0; i < SIZE_POINTS; i++) {
+        if (conf.regression_points[i] < 0.0 || conf.regression_points[i] > 10.0) {
+            break;
+        }
+    }
+    if (i != SIZE_POINTS) {
+        WARN("Wrong regression points. Resetting default values.\n");
+        memcpy(conf.regression_points, 
+               (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
+               SIZE_POINTS * sizeof(double));
     }
 }

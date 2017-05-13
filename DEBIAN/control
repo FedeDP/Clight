@@ -3,7 +3,7 @@ Version: 0.11
 Section: base
 Priority: optional
 Architecture: amd64
-Depends: libpopt0, libsystemd0, libxcb-dpms0, libconfig9, clightd
+Depends: libpopt0, libsystemd0, libxcb-dpms0, libconfig9, libgsl2, clightd
 Suggests: geoclue-2.0, upower
 Maintainer: Federico Di Pierro <nierro92@gmail.com>
 Description: Clightd bus interface to set screen brightness and gamma temperature.

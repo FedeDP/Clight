@@ -25,6 +25,7 @@ static void init_config_file(enum CONFIG file) {
 void read_config(enum CONFIG file) {
     config_t cfg;
     const char *videodev, *screendev, *sunrise, *sunset;
+    config_setting_t *points, *root;
     
     init_config_file(file);
     if (access(config_file, F_OK) == -1) {
@@ -62,7 +63,17 @@ void read_config(enum CONFIG file) {
         if (config_lookup_string(&cfg, "sunset", &sunset) == CONFIG_TRUE) {
             strncpy(conf.events[SUNSET], sunset, sizeof(conf.events[SUNSET]) - 1);
         }
-
+        
+        root = config_root_setting(&cfg);
+        if ((points = config_setting_get_member(root, "brightness_regression_points"))) {
+            if (config_setting_length(points) >= SIZE_POINTS) {
+                for (int i = 0; i < SIZE_POINTS; i++) {
+                    conf.regression_points[i] = config_setting_get_float_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of brightness_regression_points array elements.\n");
+            }
+        }
     } else {
         WARN("Config file: %s at line %d.\n",
                 config_error_text(&cfg),

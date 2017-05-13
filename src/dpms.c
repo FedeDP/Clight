@@ -45,12 +45,11 @@ static void init(void) {
      * if any error happens or info->state == 0 it means
      * dpms is disabled. Disable this module.
      */
-    DEBUG("It seems dpms is disabled.\n");
     disable_module(self.idx);
 }
 
 static int check(void) {
-    return conf.single_capture_mode || !getenv("XDG_SESSION_TYPE") || strcmp(getenv("XDG_SESSION_TYPE"), "x11");
+    return conf.single_capture_mode || !getenv("Xauthorithy");
 }
 
 static void destroy(void) {

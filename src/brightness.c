@@ -1,5 +1,6 @@
 #include "../inc/brightness.h"
 #include "../inc/dpms.h"
+#include <gsl/gsl_multifit.h>
 
 static void init(void);
 static int check(void);
@@ -10,6 +11,8 @@ static void get_max_brightness(void);
 static void get_current_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
+static void polynomialfit(void);
+static double clamp(double value, double max, double min);
 
 /*
  * Storage struct for our needed variables.
@@ -47,6 +50,8 @@ void set_brightness_self(void) {
 static void init(void) {
     get_max_brightness();
     if (!state.quit) {
+        /* Compute polynomial best-fit parameters */
+        polynomialfit();
         int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
         init_module(fd, self.idx, brightness_cb);
     }
@@ -103,7 +108,7 @@ static void do_capture(void) {
      * it is very very unlikely that setbrightness would return some.
      */
     if (!state.quit && val >= 0.0) {
-        set_brightness(val);
+        set_brightness(val * 10);
         
         if (!conf.single_capture_mode && !state.quit) {
             double drop = (double)(br.current - br.old) / br.max;
@@ -132,26 +137,11 @@ static void get_current_brightness(void) {
     bus_call(&br.old, "i", &args, "s", conf.screen_path);
 }
 
-/*
- * Equation for 'b' found with a fitting around these points:
- * X = 0.0  Y = 0.0          
- *     0.1      0.15      
- *     0.2      0.29       
- *     0.3      0.45       
- *     0.4      0.61       
- *     0.5      0.74       
- *     0.6      0.81       
- *     0.7      0.88       
- *     0.8      0.93       
- *     0.9      0.97       
- *     1.0      1
- * Where X is ambient brightness and Y is backlight level.
- * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
- */
 static void set_brightness(const double perc) {
-    const double b = 1.319051 + (0.008722895 - 1.319051) / (1 + pow((perc/0.4479636), 1.540376));
+    /* y = a0 + a1x + a2x^2 */
+    const double b = state.fit_parameters[0] + state.fit_parameters[1] * perc + state.fit_parameters[2] * pow(perc, 2);
     /* Correctly honor conf.max_backlight_pct */
-    int new_br =  (float)br.max / 100 * conf.max_backlight_pct[state.ac_state] * b;
+    int new_br =  (float)br.max / 100 * conf.max_backlight_pct[state.ac_state] * clamp(b, 1, 0);
     // store old brightness
     get_current_brightness();
     if (state.quit) {
@@ -178,3 +168,52 @@ static double capture_frames_brightness(void) {
     DEBUG("Average frames brightness: %lf.\n", brightness);
     return brightness;
 }
+
+/*
+ * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C 
+ */
+static void polynomialfit(void) {
+    gsl_multifit_linear_workspace *ws;
+    gsl_matrix *cov, *X;
+    gsl_vector *y, *c;
+    double chisq;
+    int i, j;
+    
+    X = gsl_matrix_alloc(SIZE_POINTS, DEGREE);
+    y = gsl_vector_alloc(SIZE_POINTS);
+    c = gsl_vector_alloc(DEGREE);
+    cov = gsl_matrix_alloc(DEGREE, DEGREE);
+    
+    for(i=0; i < SIZE_POINTS; i++) {
+        for(j=0; j < DEGREE; j++) {
+            gsl_matrix_set(X, i, j, pow(i, j));
+        }
+        gsl_vector_set(y, i, conf.regression_points[i]);
+    }
+    
+    ws = gsl_multifit_linear_alloc(SIZE_POINTS, DEGREE);
+    gsl_multifit_linear(X, y, c, cov, &chisq, ws);
+    
+    /* store results ... */
+    for(i=0; i < DEGREE; i++) {
+        state.fit_parameters[i] = gsl_vector_get(c, i);
+    }
+    DEBUG("y = %lf + %lfx + %lfx^2\n", state.fit_parameters[0], state.fit_parameters[1], state.fit_parameters[2]);
+    
+    gsl_multifit_linear_free(ws);
+    gsl_matrix_free(X);
+    gsl_matrix_free(cov);
+    gsl_vector_free(y);
+    gsl_vector_free(c);
+}
+
+static double clamp(double value, double max, double min) {
+    if (value > max) { 
+        return max; 
+    }
+    if (value < min) {
+        return min;
+    }
+    return value;
+}
+

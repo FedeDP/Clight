@@ -20,6 +20,8 @@
 
 #define DONT_POLL -2                        // avoid polling a module (used for modules that do not need to be polled)
 #define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used eg when no geoclue2 is found)
+#define SIZE_POINTS 11                      // number of points (from 0 to 10 included)
+#define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
 #ifdef DPMS_PRESENT
@@ -62,6 +64,7 @@ struct config {
     int lowest_backlight_level;             // lowest backlight level to be setted
     int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state (for now, only ON_BATTERY is exported though)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
+    double regression_points[SIZE_POINTS];  // points used for regression through libgsl
 };
 
 /* Global state of program */
@@ -73,6 +76,7 @@ struct state {
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
+    double fit_parameters[DEGREE];          // best-fit parameters
 };
 
 /* Struct that holds info about an inter-modules dep */
@@ -97,7 +101,7 @@ struct module {
     void (*destroy)(void);                // module destroy function
     void (*poll_cb)(void);                // module poll callback
     struct self_t *self;                  // pointer to self module informations
-    struct self_t **dependent_m;          // pointer to every dependent module self
+    enum modules *dependent_m;            // pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
     int inited;                           // whether a module has been initialized
     int disabled;                         // whether this module has been disabled from config (for now useful only for gamma)
@@ -106,4 +110,4 @@ struct module {
 struct state state;
 struct config conf;
 struct module modules[MODULES_NUM];
-struct pollfd main_p[MODULES_NUM];
+struct pollfd main_p[MODULES_NUM]; 

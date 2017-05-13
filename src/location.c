@@ -105,24 +105,26 @@ static void geoclue_hook_update(void) {
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
 static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    const char *new_location, *old_location;
+    if (modules[self.idx].inited && !modules[self.idx].disabled) { 
+        const char *new_location, *old_location;
 
-    sd_bus_message_read(m, "oo", &old_location, &new_location);
+        sd_bus_message_read(m, "oo", &old_location, &new_location);
 
-    struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
-    struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
+        struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
+        struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
 
-    get_property(&lat_args, "d", &conf.lat);
-    get_property(&lon_args, "d", &conf.lon);
+        get_property(&lat_args, "d", &conf.lat);
+        get_property(&lon_args, "d", &conf.lon);
     
-    /* Updated GAMMA module sunrise/sunset for new location */
-    INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-    if (modules[GAMMA].inited) {
-        state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-        set_timeout(0, 1, main_p[GAMMA].fd, 0);
-    } else {
-        /* if gamma was waiting for location, start it */
-        poll_cb(self.idx);
+        /* Updated GAMMA module sunrise/sunset for new location */
+        INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
+        if (modules[GAMMA].inited) {
+            state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+            set_timeout(0, 1, main_p[GAMMA].fd, 0);
+        } else {
+            /* if gamma was waiting for location, start it */
+            poll_cb(self.idx);
+        }
     }
     return 0;
 }
