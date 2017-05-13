@@ -60,7 +60,7 @@ Location received will be then cached when clight exit. This way, if no internet
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
 * UPower support, to set longer timeouts between captures while on battery, in order to save some energy.  
 Moreover, you can set a percentage of maximum settable brightness while on battery.
-* You can specify curve points to be used to match ambient brightness to screen backlight from config file thanks to [gsl Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit).
+* You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
 * Gracefully auto-disabling gamma support on non-X environments.
 
 ### Valgrind is run with:
