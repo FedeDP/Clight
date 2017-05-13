@@ -3,7 +3,7 @@
 - [x] load brightness curve coefficients from a file 
 - [x] update readme
 - [x] update PKGBUILD/debian control with gsl new dep
-- [ ] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection) -> use a timerfd on LOCATION module: if in 5s (or less?) geoclue2 does not provide us any location, load from cache.
+- [x] cache latest location retrieved to be taken next time clight starts if geoclue does not give us any location (eg: no/poor internet connection) -> use a timerfd on LOCATION module: if in 5s (or less?) geoclue2 does not provide us any location, load from cache.
 - [x] make libconfig optional
 - [x] fix popt memleak
 - [x] fix issue with double free or corruption in disable_module

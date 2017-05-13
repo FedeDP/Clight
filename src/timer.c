@@ -5,7 +5,7 @@
  * the main struct pollfd
  */
 int start_timer(int clockid, int initial_s, int initial_ns) {
-    int timerfd = timerfd_create(clockid, 0);
+    int timerfd = timerfd_create(clockid, TFD_NONBLOCK);
     if (timerfd == -1) {
         ERROR("could not start timer: %s\n", strerror(errno));
     } else {
@@ -27,7 +27,11 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
         return ERROR("%s\n", strerror(errno));
     }
     if (flag == 0) {
-        DEBUG("Setted timeout of %ds %dns on fd %d.\n", sec, nsec, fd);
+        if (sec != 0 || nsec != 0) {
+            DEBUG("Setted timeout of %ds %dns on fd %d.\n", sec, nsec, fd);
+        } else {
+            DEBUG("Disarmed timerfd on fd %d.\n", fd);
+        }
     }
 }
 
