@@ -15,16 +15,13 @@ compiler:
 arch:
     packages:
         - systemd
-        - libxcb
         - popt
         - libconfig
         - gsl
     script:
         - "echo $CC"
         - make debug
-        - make debug DISABLE_DPMS=1
         - make debug DISABLE_LIBCONFIG=1
-        - make debug DISABLE_DPMS=1 DISABLE_LIBCONFIG=1
 
 script:
     - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"
