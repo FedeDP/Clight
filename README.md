@@ -15,7 +15,6 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * gcc or clang
 
 ## Optional build deps
-* libxcb (xcb.h, xcb/dpms.h), for dpms support
 * libconfig (libconfig.h), for config files support
 
 ## Runtime deps:
@@ -27,7 +26,6 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * Upower to honor timeouts between captures depending on ac state as setted in configuration (otherwise only ON_AC timeout will be used)
 
 ## Build time switches:
-* DISABLE_DPMS=1 (to disable dpms support, useful if you plan to run clight on non-X environments)
 * DISABLE_LIBCONFIG=1 (to disable libconfig support)
 
 Note that optional build deps are automatically disabled if they are not installed at build time.

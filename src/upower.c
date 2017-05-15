@@ -56,20 +56,18 @@ static int upower_init(void) {
  * Callback on upower changes: recheck on_battery boolean value 
  */
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    if (modules[self.idx].inited && !modules[self.idx].disabled) { 
-        struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
+    struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
-        int on_battery = state.ac_state;
-        get_property(&power_args, "b", &state.ac_state);
-        if (state.ac_state != on_battery) {
-            INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
-            if (modules[BRIGHTNESS].inited && !state.fast_recapture) {
-                if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
-                    /* if different max values is set, do a capture right now to set correct new brightness value */
-                    set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
-                } else {
-                    reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[on_battery][state.time]);
-                }
+    int on_battery = state.ac_state;
+    get_property(&power_args, "b", &state.ac_state);
+    if (state.ac_state != on_battery) {
+        INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
+        if (modules[BRIGHTNESS].inited && !state.fast_recapture) {
+            if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
+                /* if different max values is set, do a capture right now to set correct new brightness value */
+                set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
+            } else {
+                reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[on_battery][state.time]);
             }
         }
     }

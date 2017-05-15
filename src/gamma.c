@@ -18,7 +18,6 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static int set_temp(int temp);
 
-static const char *xauthority, *display;
 static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION} };
 static struct self_t self = {
     .name = "Gamma",
@@ -41,13 +40,13 @@ static void init(void) {
 }
 
 static int check(void) {
-    display = getenv("DISPLAY");
-    xauthority = getenv("XAUTHORITY");
+    state.display = getenv("DISPLAY");
+    state.xauthority = getenv("XAUTHORITY");
     
     return  conf.single_capture_mode || 
             conf.no_gamma || 
-            !display || 
-            !xauthority;
+            !state.display || 
+            !state.xauthority;
 }
 
 static void destroy(void) {
@@ -355,7 +354,7 @@ static int set_temp(int temp) {
     if (old_temp == 0) {
         struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
 
-        bus_call(&old_temp, "i", &args_get, "ss", display, xauthority);
+        bus_call(&old_temp, "i", &args_get, "ss", state.display, state.xauthority);
         if (state.quit) {
             return -1;
         }
@@ -370,9 +369,9 @@ static int set_temp(int temp) {
                 } else {
                     old_temp = old_temp + step > temp ? temp : old_temp + step;
                 }
-                bus_call(&new_temp, "i", &args_set, "ssi", display, xauthority, old_temp);
+                bus_call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, old_temp);
         } else {
-            bus_call(&new_temp, "i", &args_set, "ssi", display, xauthority, temp);
+            bus_call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, temp);
         }
         if (new_temp == temp) {
             // reset old_temp for next call

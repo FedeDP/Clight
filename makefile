@@ -27,24 +27,11 @@ ifneq ("$(shell pkg-config --atleast-version=221 systemd && echo yes)", "yes")
 $(error systemd minimum required version 221.)
 endif
 
-ifneq ("$(DISABLE_DPMS)","1")
-DPMS=$(shell pkg-config --silence-errors --libs  xcb xcb-dpms)
-ifneq ("$(DPMS)","")
-CFLAGS+=-DDPMS_PRESENT $(shell pkg-config --cflags xcb xcb-dpms)
-LIBS+=$(shell pkg-config --libs xcb xcb-dpms)
-$(info DPMS support enabled.)
-else
-$(info DPMS support disabled.)
-endif
-else
-$(info DPMS support disabled.)
-endif
-
 ifneq ("$(DISABLE_LIBCONFIG)","1")
-LIBCONFIG=$(shell pkg-config --silence-errors --libs  libconfig)
+LIBCONFIG=$(shell pkg-config --silence-errors --libs libconfig)
 ifneq ("$(LIBCONFIG)","")
 CFLAGS+=-DLIBCONFIG_PRESENT $(shell pkg-config --cflags libconfig)
-LIBS+=$(shell pkg-config --libs libconfig)
+LIBS+=$(LIBCONFIG)
 $(info Libconfig support enabled.)
 else
 $(info Libconfig support disabled.)
@@ -54,7 +41,6 @@ $(info Libconfig support disabled.)
 endif
 
 endif
-
 
 CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)
 SYSTEMD_VERSION = $(shell pkg-config --modversion systemd)

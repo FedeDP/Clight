@@ -24,11 +24,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-#ifdef DPMS_PRESENT
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, DPMS, BUS, MODULES_NUM };
-#else
 enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, MODULES_NUM };
-#endif
 
 /*
  * List of states clight can be through: 
@@ -77,6 +73,8 @@ struct state {
     enum ac_states ac_state;                // is laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
     double fit_parameters[DEGREE];          // best-fit parameters
+    const char *xauthority;                 // xauthority env variable, to be used in gamma calls
+    const char *display;                    // display env variable, to be used in gamma calls
 };
 
 /* Struct that holds info about an inter-modules dep */

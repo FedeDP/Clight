@@ -24,11 +24,7 @@ struct brightness {
 };
 
 static struct brightness br;
-#ifdef DPMS_PRESENT
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, DPMS} };
-#else
 static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
-#endif
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
@@ -89,17 +85,16 @@ static void do_capture(void) {
     /* reset fast recapture */
     state.fast_recapture = 0;
 
-#ifdef DPMS_PRESENT
     /*
      * if screen is currently blanked thanks to dpms,
      * do not do anything. Set a long timeout and return.
      * Timeout will increase as screen power management goes deeper.
      */
-    if (get_screen_dpms() > 0) {
+    int dpms_state = get_screen_dpms();
+    if (dpms_state > 0) {
         INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        return set_timeout(2 * conf.timeout[state.ac_state][state.time] * get_screen_dpms(), 0, main_p[self.idx].fd, 0);
+        return set_timeout(2 * conf.timeout[state.ac_state][state.time] * dpms_state, 0, main_p[self.idx].fd, 0);
     }
-#endif
 
     double val = capture_frames_brightness();
     /* 
