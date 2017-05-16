@@ -11,6 +11,10 @@ sudo inotifywait -t 5 -e access -m /dev/input/* . It seems inotify requires root
 - [x] port DPMS to xscreensaver instead of xcb
 - [x] move dpms to clightd
 - [x] dpms won't be a module anymore: just check its state before every capture (dpms may be switched on and off by DE(at least kde does so), thus we may have a disabled DPMS module but dpms gets enabled afterwards.
+- [x] remove match on sd_bus when a module gets disabled (location, upower...)
+- [x] properly decrement num_dependent for each dependency when a module gets disabled
+- [x] increased EVENT timeout to 5/10mins (ac/batt)
+- [ ] understand why upower does not send event at starting anymore ...
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness (mid)

@@ -13,6 +13,7 @@ static void geoclue_client_start(void);
 static void geoclue_client_stop(void);
 static void cache_location(void);
 
+static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
@@ -55,7 +56,7 @@ static void location_cb(void) {
         FILE *f = fopen(cache_file, "r");
         if (f) {
             fscanf(f, "%lf %lf", &conf.lat, &conf.lon);
-            DEBUG("Location %lf %lf loaded from cache file!\n", conf.lat, conf.lon);
+            DEBUG("Location %.2lf %.2lf loaded from cache file!\n", conf.lat, conf.lon);
             fclose(f);
         } else {
             DEBUG("Loading loc from cache file: %s\n", strerror(errno));
@@ -108,6 +109,10 @@ end:
 static void destroy(void) {
     geoclue_client_stop();
     cache_location();
+    /* Destroy this match slot */
+    if (slot) {
+        sd_bus_slot_unref(slot);
+    }
 }
 
 static int check(void) {
@@ -116,7 +121,7 @@ static int check(void) {
      * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) 
      */
     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
-        modules[GAMMA].self->deps[1].type = SOFT;
+        change_dep_type(GAMMA, self.idx, SOFT);
         return 1;
     }
     return conf.single_capture_mode || conf.no_gamma;
@@ -135,7 +140,7 @@ static void geoclue_get_client(void) {
  */
 static void geoclue_hook_update(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "LocationUpdated" };
-    add_match(&args, on_geoclue_new_location);
+    add_match(&args, &slot, on_geoclue_new_location);
 }
 
 /*
@@ -143,27 +148,24 @@ static void geoclue_hook_update(void) {
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
 static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    // FIXME: on module disable we should call something like sd_bus_remove_match (it seems it does not exist though!)
-    if (modules[self.idx].inited && !modules[self.idx].disabled) {
-        const char *new_location, *old_location;
+    const char *new_location, *old_location;
 
-        sd_bus_message_read(m, "oo", &old_location, &new_location);
+    sd_bus_message_read(m, "oo", &old_location, &new_location);
 
-        struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
-        struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
+    struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
+    struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
 
-        get_property(&lat_args, "d", &conf.lat);
-        get_property(&lon_args, "d", &conf.lon);
+    get_property(&lat_args, "d", &conf.lat);
+    get_property(&lon_args, "d", &conf.lon);
     
-        /* Updated GAMMA module sunrise/sunset for new location */
-        INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-        if (modules[GAMMA].inited) {
-            state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-            set_timeout(0, 1, main_p[GAMMA].fd, 0);
-        } else {
-            /* if gamma was waiting for location, start it */
-            poll_cb(self.idx);
-        }
+    /* Updated GAMMA module sunrise/sunset for new location */
+    INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
+    if (modules[GAMMA].inited) {
+        state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+        set_timeout(0, 1, main_p[GAMMA].fd, 0);
+    } else {
+        /* if gamma was waiting for location, start it */
+        poll_cb(self.idx);
     }
     return 0;
 }

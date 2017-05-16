@@ -55,7 +55,7 @@ void set_self_deps(struct self_t *self) {
         for (int i = 0; i < self->num_deps; i++) {
             enum modules m = self->deps[i].dep;
             modules[m].num_dependent++;
-            modules[m].dependent_m = realloc(modules[m].dependent_m, modules[m].num_dependent * sizeof(modules[m].dependent_m));
+            modules[m].dependent_m = realloc(modules[m].dependent_m, modules[m].num_dependent * sizeof(*modules[m].dependent_m));
             if (!modules[m].dependent_m) {
                 ERROR("%s\n", strerror(errno));
                 break;
@@ -73,11 +73,23 @@ void set_self_deps(struct self_t *self) {
  */
 static void started_cb(enum modules module) {
     for (int i = 0; i < modules[module].num_dependent; i++) {
+        /* store current num_dependent. It can be changed by init_modules call */
+        int num_dependent = modules[module].num_dependent;
         enum modules m = modules[module].dependent_m[i];
-        if (!modules[m].disabled) {
+        if (!modules[m].disabled && !modules[m].inited) {
             modules[m].self->satisfied_deps++;
             DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
             init_modules(m);
+                        
+            /* 
+             * If init_modules did disable some module, 
+             * modules[module].num_dependent can be different from num_dependent.
+             * If that's the case, we have no way to understand which modules got disabled.
+             * Reset i to restart this cycle.
+             */
+            if (num_dependent != modules[module].num_dependent) {
+                i = 0;
+            }
         }
     }
 }
@@ -98,6 +110,15 @@ void poll_cb(const enum modules module) {
             free(modules[module].dependent_m);
             modules[module].dependent_m = NULL;
             modules[module].num_dependent = 0;
+        }
+    }
+}
+
+void change_dep_type(const enum modules mod, const enum modules mod_dep, const enum dep_type type) {
+    for (int i = 0; i < modules[mod].self->num_deps; i++) {
+        if (modules[mod].self->deps[i].dep == mod_dep) {
+            modules[mod].self->deps[i].type = type;
+            break;
         }
     }
 }
@@ -140,12 +161,24 @@ void disable_module(const enum modules module) {
          */
         for (int i = 0; i < modules[module].self->num_deps; i++) {
             const enum modules m = modules[module].self->deps[i].dep;
-            /* if module "module" is only dependent module on it, disable it */
-            if (modules[m].num_dependent == 1) {
+            int j;
+            for (j = 0; j < modules[m].num_dependent; j++) {
+                if (modules[m].dependent_m[j] == module) {
+                    break;
+                }
+            }
+            
+            /* properly decrement num_dependent and realloc array of dependent_m */
+            if (j + 1 < modules[m].num_dependent) {
+                memmove(&modules[m].dependent_m[j], &modules[m].dependent_m[j + 1], (modules[m].num_dependent - j - 1) * sizeof(*modules[m].dependent_m));
+            }
+            modules[m].dependent_m = realloc(modules[m].dependent_m, (--modules[m].num_dependent) * sizeof(*modules[m].dependent_m));
+            
+            /* if there are no more dependent_m on this module, disable it */
+            if (modules[m].num_dependent == 0) {
                 disable_module(m);
             }
         }
-        
         /* Finally, free dependent_m for this disabled module and destroy it */
         if (modules[module].dependent_m) {
             free(modules[module].dependent_m);

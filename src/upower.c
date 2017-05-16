@@ -6,6 +6,7 @@ static void destroy(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
+static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .name = "Upower",
@@ -38,12 +39,15 @@ static int check(void) {
 }
 
 static void destroy(void) {
-    /* Skeleton function needed for modules interface */
+    /* Destroy this match slot */
+    if (slot) {
+        sd_bus_slot_unref(slot);
+    }
 }
 
 static int upower_init(void) {
     struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
-    add_match(&args, on_upower_change);
+    add_match(&args, &slot, on_upower_change);
     if (state.quit) {
         state.quit = 0; // do not leave
         return -1;   // disable this module

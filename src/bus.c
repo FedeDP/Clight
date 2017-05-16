@@ -128,10 +128,10 @@ finish:
 /*
  * Add a match on bus on certain signal for cb callback
  */
-void add_match(const struct bus_args *a, sd_bus_message_handler_t cb) {
+void add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(bus, NULL, match, cb, NULL);
+    int r = sd_bus_add_match(bus, slot, match, cb, NULL);
     check_err(r, NULL);
 }
 
