@@ -8,13 +8,5 @@ sudo inotifywait -t 5 -e access -m /dev/input/* . It seems inotify requires root
 -> after timeout has passed for any client, it send "dimmed" signal to that client, using a sd_bus_message_new_signal passing in a sd_bus_message *m that already has correct clight client destination.
 -> as soon as a new event is received, if we were in dimmed state, send a dimmed = false signal.
 
-- [x] port DPMS to xscreensaver instead of xcb
-- [x] move dpms to clightd
-- [x] dpms won't be a module anymore: just check its state before every capture (dpms may be switched on and off by DE(at least kde does so), thus we may have a disabled DPMS module but dpms gets enabled afterwards.
-- [x] remove match on sd_bus when a module gets disabled (location, upower...)
-- [x] properly decrement num_dependent for each dependency when a module gets disabled
-- [x] increased EVENT timeout to 5/10mins (ac/batt)
-- [ ] understand why upower does not send event at starting anymore ...
-
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness (mid)
