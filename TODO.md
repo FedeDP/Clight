@@ -1,4 +1,4 @@
-## 0.13
+## 0.14
 - [ ] add a backlight dimmer module (http://stackoverflow.com/questions/15472585/track-keyboard-and-mouse-events-in-c-on-linux); i'd use inotify on /dev/input/*; at every notification from it, it means user has moved mouse/used keyboard. In conjunction with a timerfd of conf.dimmer_timeout. When conf.dimmer_timeout is reached, dim screen and at next inotify notification leave dimmed state.
 sudo inotifywait -t 5 -e access -m /dev/input/* . It seems inotify requires root access. Put this code in clightd: clightd will send a signal when conf.dimmer_timeout is reached.
 -> clight client calls a method like "setdimmer_timeout" passing a timeout, on clightd.
