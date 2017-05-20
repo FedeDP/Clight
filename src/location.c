@@ -56,7 +56,7 @@ static void location_cb(void) {
         FILE *f = fopen(cache_file, "r");
         if (f) {
             fscanf(f, "%lf %lf", &conf.lat, &conf.lon);
-            DEBUG("Location %.2lf %.2lf loaded from cache file!\n", conf.lat, conf.lon);
+            INFO("Location %.2lf %.2lf loaded from cache file!\n", conf.lat, conf.lon);
             fclose(f);
         } else {
             DEBUG("Loading loc from cache file: %s\n", strerror(errno));
