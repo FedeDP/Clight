@@ -39,7 +39,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
      */
     if (fd != DONT_POLL_W_ERR) {
         modules[module].inited = 1;
-        INFO("%s module started.\n", modules[module].self->name);
+        DEBUG("%s module started.\n", modules[module].self->name);
     } else {
         /* module should be disabled */
         WARN("Error while loading %s module.\n", modules[module].self->name);
@@ -133,7 +133,7 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
 void disable_module(const enum modules module) {
     if (!modules[module].disabled) {
         modules[module].disabled = 1;
-        INFO("%s module disabled.\n", modules[module].self->name);
+        DEBUG("%s module disabled.\n", modules[module].self->name);
         
         /* Cycle to disable all modules dependent on "module", if dep is HARD */
         for (int i = 0; i < modules[module].num_dependent; i++) {
@@ -200,7 +200,7 @@ void destroy_modules(const enum modules module) {
         }
         /* call module destroy func */
         modules[module].destroy();
-        INFO("%s module destroyed.\n", modules[module].self->name);
+        DEBUG("%s module destroyed.\n", modules[module].self->name);
         modules[module].inited = 0;
     }
 }
