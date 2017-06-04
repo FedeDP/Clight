@@ -52,6 +52,7 @@ static void destroy(void) {
 static void dimmer_cb(void) {
     uint64_t t;
     int r;
+    // FIXME: read all inotify events here...
     do {
         r = read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     } while (r > 0);
@@ -62,6 +63,7 @@ static void dimmer_cb(void) {
             printf("Dimmed!\n");
             // TODO: lower backlight
             inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS);
+            // TODO: check if inot_wd == -1
             main_p[self.idx].fd = inot_fd;
         } else if (idle_time != -1) {
             set_timeout(30 - idle_time, 0, main_p[self.idx].fd, 0);
@@ -73,8 +75,7 @@ static void dimmer_cb(void) {
         inotify_rm_watch(inot_fd, inot_wd);
         main_p[self.idx].fd = timer_fd;
         set_timeout(30, 0, main_p[self.idx].fd, 0);
-        // TODO: restore previous backlight level
-        // and set new timeout on backlight
+        // TODO: restore correct backlight level
     }
 }
 
@@ -99,9 +100,7 @@ static void check_afk_time(void) {
     idle_time = get_idle_time();
     if (idle_time != -1) {
         /* -1 as it seems we receive events circa 1s before */
-        if (idle_time >= 30 - 1) {
-            state.is_dimmed = 1;
-        }
+        state.is_dimmed = idle_time >= (30 - 1);
     }
 }
 
