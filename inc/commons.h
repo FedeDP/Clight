@@ -24,7 +24,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -75,6 +75,7 @@ struct state {
     double fit_parameters[DEGREE];          // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
+    int is_dimmed;                          // whether display is dimmed
 };
 
 /* Struct that holds info about an inter-modules dep */

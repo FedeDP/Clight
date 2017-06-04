@@ -30,6 +30,7 @@
 #include "../inc/opts.h"
 #include "../inc/lock.h"
 #include "../inc/upower.h"
+#include "../inc/dimmer.h"
 
 static void init(int argc, char *argv[]);
 static void set_modules_selfs(void);
@@ -42,7 +43,7 @@ static void main_poll(void);
  */
 static void (*const set_selfs[])(void) = {
     set_brightness_self, set_location_self, set_upower_self, 
-    set_gamma_self, set_signal_self, set_bus_self
+    set_gamma_self, set_signal_self, set_bus_self, set_dimmer_self
 };
 
 int main(int argc, char *argv[]) {
