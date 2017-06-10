@@ -15,7 +15,7 @@
 - [ ] fix: when leaving dimmed state, set backlight level used before entering dimmed state and check if it is needed to do a capture (ie: store last backlight level and re-set it in case a capture is not needed)
 - [ ] fix: check if 20% of max backlight level is > current backlight level and if true, do not touch current backlight
 - [x] fix travis build
-- [ ] update PKGBUILD and debian PKG 
+- [ ] move libx11 -> getIdleTime support to clightd and drop libx11 requirement in clight
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness
