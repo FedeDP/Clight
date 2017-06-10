@@ -61,6 +61,9 @@ struct config {
     int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state (for now, only ON_BATTERY is exported though)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_POINTS];  // points used for regression through libgsl
+    int dimmer_timeout[SIZE_AC];            // dimmer timeout
+    int dimmer_pct;                         // pct of max brightness to be used while dimming
+    int no_dimmer;                          // disable dimmer
 };
 
 /* Global state of program */

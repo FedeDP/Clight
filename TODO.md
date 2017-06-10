@@ -1,15 +1,19 @@
 ## 0.14
 
 ### Backlight dimmer module
-- [ ] avoid using Xlib functions as module has to work on both x and wayland!! If not possible, add proper check in check() function! And make x11 optdep
+- [x] add proper check in check() function for X11
+- [ ] make libx11 optdep
 - [x] timerfd with duration N seconds. When timer ends, check afk time
 - [x] When we enter dimmed mode, add an inotify watcher on /dev/input folder; dim screen backlight.
 - [x] When inotify watcher wakes up (receives an event on /dev/input), we have to leave dimmed mode. Destroy watcher and dimmed = false
-- [ ] Dimmed = true -> brightness module won't change brightness until screen is dimmed (but will do capture anyway until eventually dpms kicks in. This way, when we leave dimmed state, we can set correct backlight level for current brightness)
-- [ ] when we enter dimmed state, lower backlight level
-- [ ] when we leave dimmed state, set latest backlight level.
+- [x] Dimmed = true -> brightness module won't do any capture
+- [x] when we enter dimmed state, lower backlight level (only if current backlight level is > conf.dim_pct)
+- [x] when we leave dimmed state, reset timer on brightness module to do a capture and set correct new backlight level
 - [ ] add conf.dimmer_timeout[ON_AC/ON_BATT] and conf.dim_pct to both cmdline and conf file. Defaults to 5min, 2min, 20%?
 - [ ] add a conf.no_dimmer config option as not everybody may wish a dimmer inside clight
+- [x] fix bug while consuming inotify data...
+- [ ] fix: when leaving dimmed state, set backlight level used before entering dimmed state and check if it is needed to do a capture (ie: store last backlight level and re-set it in case a capture is not needed)
+- [ ] fix: check if 20% of max backlight level is > current backlight level and if true, do not touch current backlight
 
 ## Later
-- [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness (mid)
+- [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness

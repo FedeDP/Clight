@@ -9,7 +9,6 @@ static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
 static void get_current_brightness(void);
-static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void polynomialfit(void);
 static double clamp(double value, double max, double min);
@@ -103,7 +102,7 @@ static void do_capture(void) {
      * it is very very unlikely that setbrightness would return some.
      */
     if (!state.quit && val >= 0.0) {
-        set_brightness(val * 10);
+        set_brightness(val * 10, 1);
         
         if (!conf.single_capture_mode && !state.quit) {
             double drop = (double)(br.current - br.old) / br.max;
@@ -132,11 +131,16 @@ static void get_current_brightness(void) {
     bus_call(&br.old, "i", &args, "s", conf.screen_path);
 }
 
-static void set_brightness(const double perc) {
-    /* y = a0 + a1x + a2x^2 */
-    const double b = state.fit_parameters[0] + state.fit_parameters[1] * perc + state.fit_parameters[2] * pow(perc, 2);
-    /* Correctly honor conf.max_backlight_pct */
-    int new_br =  (float)br.max / 100 * conf.max_backlight_pct[state.ac_state] * clamp(b, 1, 0);
+void set_brightness(const double perc, int from_capture) {
+    int new_br;
+    if (from_capture) {
+        /* y = a0 + a1x + a2x^2 */
+        const double b = state.fit_parameters[0] + state.fit_parameters[1] * perc + state.fit_parameters[2] * pow(perc, 2);
+        /* Correctly honor conf.max_backlight_pct */
+        new_br =  (float)br.max / 100 * conf.max_backlight_pct[state.ac_state] * clamp(b, 1, 0);
+    } else {
+        new_br = br.max * perc / 100;
+    }
     // store old brightness
     get_current_brightness();
     if (state.quit) {
@@ -144,7 +148,7 @@ static void set_brightness(const double perc) {
     }
     
     if (new_br != br.old) {
-        INFO("Old brightness value: %d\n", br.old);
+        DEBUG("Old brightness value: %d\n", br.old);
         struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
         bus_call(&br.current, "i", &args, "si", conf.screen_path, new_br >= conf.lowest_backlight_level ? new_br : conf.lowest_backlight_level);
         if (!state.quit) {

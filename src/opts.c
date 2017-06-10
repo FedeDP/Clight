@@ -33,6 +33,9 @@ void init_opts(int argc, char *argv[]) {
     conf.event_duration = 30 * 60;
     conf.max_backlight_pct[ON_AC] = 100;
     conf.max_backlight_pct[ON_BATTERY] = 100;
+    conf.dimmer_timeout[ON_AC] = 5; // FIXME to test
+    conf.dimmer_timeout[ON_BATTERY] = 120;
+    conf.dimmer_pct = 20;
     
     /*
      * Default polynomial regression points:

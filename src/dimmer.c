@@ -1,20 +1,25 @@
 #include "../inc/dimmer.h"
+#include "../inc/brightness.h"
 #include <sys/inotify.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/scrnsaver.h>
+
+#define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
 
 static void init(void);
 static int check(void);
 static void destroy(void);
 static void dimmer_cb(void);
 static int get_idle_time(void);
-static void check_afk_time(void);
 
-static int inot_wd, inot_fd, timer_fd, idle_time;
+static int inot_wd, inot_fd, timer_fd;
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
+    .num_deps = SIZE(dependencies),
+    .deps =  dependencies
 };
 
 void set_dimmer_self(void) {
@@ -28,19 +33,20 @@ void set_dimmer_self(void) {
 static void init(void) {
     inot_fd = inotify_init();
     if (inot_fd != -1) {
-        timer_fd = start_timer(CLOCK_MONOTONIC, 30, 0);
+        timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
         init_module(timer_fd, self.idx, dimmer_cb);
     }
 }
 
-// TODO: check we're on X?
+/* Check we're on X */
 static int check(void) {
-    return 0; /* Skeleton function needed for modules interface */
+    return  conf.single_capture_mode ||
+    conf.no_dimmer || !getenv("DISPLAY");
 }
 
 static void destroy(void) {
     if (state.is_dimmed) {
-        inotify_rm_watch(main_p[self.idx].fd, inot_wd);
+        inotify_rm_watch(inot_fd, inot_wd);
         if (timer_fd > 0) {
             close(timer_fd);
         }
@@ -50,32 +56,37 @@ static void destroy(void) {
 }
 
 static void dimmer_cb(void) {
-    uint64_t t;
-    int r;
-    // FIXME: read all inotify events here...
-    do {
-        r = read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-    } while (r > 0);
-    
     if (!state.is_dimmed) {
-        check_afk_time();
-        if (state.is_dimmed) {
-            printf("Dimmed!\n");
-            // TODO: lower backlight
-            inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS);
-            // TODO: check if inot_wd == -1
-            main_p[self.idx].fd = inot_fd;
-        } else if (idle_time != -1) {
-            set_timeout(30 - idle_time, 0, main_p[self.idx].fd, 0);
-            printf("timeout of %d\n", 30 - idle_time);
+        uint64_t t;
+        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+        
+        int idle_t = get_idle_time();
+        if (idle_t != -1) {
+            /* -1 as it seems we receive events circa 1s before */
+            state.is_dimmed = idle_t >= (conf.dimmer_timeout[state.ac_state] - 1);
+            if (state.is_dimmed) {
+                inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
+                if (inot_wd != -1) {
+                    main_p[self.idx].fd = inot_fd;
+                    set_brightness(conf.dimmer_pct, 0);
+                } else {
+                    // in case of error, reset is_dimmed state
+                    state.is_dimmed = 0;
+                }
+            } else {
+                /* Set a timeout of conf.dimmer_timeout - elapsed time since latest user activity */
+                set_timeout(conf.dimmer_timeout[state.ac_state] - idle_t, 0, main_p[self.idx].fd, 0);
+            }
         }
     } else {
-        printf("out of dimmed state!\n");
-        state.is_dimmed = 0;
-        inotify_rm_watch(inot_fd, inot_wd);
-        main_p[self.idx].fd = timer_fd;
-        set_timeout(30, 0, main_p[self.idx].fd, 0);
-        // TODO: restore correct backlight level
+        char buffer[BUF_LEN];
+        int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
+        if (length > 0) {
+            state.is_dimmed = 0;
+            main_p[self.idx].fd = timer_fd;
+            set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
+            set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
+        }
     }
 }
 
@@ -84,6 +95,7 @@ static int get_idle_time(void) {
     static XScreenSaverInfo *mit_info;
     Display *display;
     int screen;
+    
     mit_info = XScreenSaverAllocInfo();
     if (!(display=XOpenDisplay(NULL))) { 
         return -1; 
@@ -95,12 +107,3 @@ static int get_idle_time(void) {
     XCloseDisplay(display); 
     return idle_time;
 }
-
-static void check_afk_time(void) {
-    idle_time = get_idle_time();
-    if (idle_time != -1) {
-        /* -1 as it seems we receive events circa 1s before */
-        state.is_dimmed = idle_time >= (30 - 1);
-    }
-}
-
