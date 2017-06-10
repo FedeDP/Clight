@@ -1,8 +1,8 @@
+#ifdef LIBX11_PRESENT
+
 #include "../inc/dimmer.h"
 #include "../inc/brightness.h"
 #include <sys/inotify.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
 #include <X11/extensions/scrnsaver.h>
 
 #define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
@@ -97,7 +97,7 @@ static int get_idle_time(void) {
     int screen;
     
     mit_info = XScreenSaverAllocInfo();
-    if (!(display=XOpenDisplay(NULL))) { 
+    if (!(display=XOpenDisplay(NULL))) {
         return -1; 
     }
     screen = DefaultScreen(display);
@@ -107,3 +107,5 @@ static int get_idle_time(void) {
     XCloseDisplay(display); 
     return idle_time;
 }
+
+#endif

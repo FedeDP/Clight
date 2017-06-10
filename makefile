@@ -18,8 +18,8 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl x11 xscrnsaver xext)
-CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl x11 xscrnsaver xext) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
+LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl)
+CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
@@ -38,6 +38,19 @@ $(info Libconfig support disabled.)
 endif
 else
 $(info Libconfig support disabled.)
+endif
+
+ifneq ("$(DISABLE_LIBX11)","1")
+LIBX11=$(shell pkg-config --silence-errors --libs x11 xscrnsaver)
+ifneq ("$(LIBX11)","")
+CFLAGS+=-DLIBX11_PRESENT $(shell pkg-config --cflags x11 xscrnsaver)
+LIBS+=$(LIBX11)
+$(info Libx11 support enabled.)
+else
+$(info Libx11 support disabled.)
+endif
+else
+$(info Libx11 support disabled.)
 endif
 
 endif

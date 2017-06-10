@@ -49,6 +49,10 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "lowest_backlight_level", &conf.lowest_backlight_level);
         config_lookup_int(&cfg, "batt_max_backlight_pct", &conf.max_backlight_pct[ON_BATTERY]);
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
+        config_lookup_int(&cfg, "no_dimmer", &conf.no_dimmer);
+        config_lookup_int(&cfg, "dimmer_pct", &conf.dimmer_pct);
+        config_lookup_int(&cfg, "ac_dimmer_timeout", &conf.dimmer_timeout[ON_AC]);
+        config_lookup_int(&cfg, "batt_dimmer_timeout", &conf.dimmer_timeout[ON_BATTERY]);
         
         if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, videodev, sizeof(conf.dev_name) - 1);

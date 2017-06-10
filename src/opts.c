@@ -92,6 +92,8 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 100, "Lowest backlight level that clight can set", NULL},
         {"batt_max_backlight_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.max_backlight_pct[ON_BATTERY], 100, "Max backlight level that clight can set while on battery, in percentage", NULL},
         {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
+        {"dimmer_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
+        {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -180,6 +182,11 @@ static void check_conf(void) {
         WARN("Wrong on battery max backlight percentage value. Resetting default value.\n");
         conf.max_backlight_pct[ON_BATTERY] = 100;
     }
+    if (conf.dimmer_pct > 100 || conf.dimmer_pct < 0) {
+        WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
+        conf.dimmer_pct = 20;
+    }
+    
     
     int i;
     for (i = 0; i < SIZE_POINTS; i++) {

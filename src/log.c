@@ -38,7 +38,10 @@ void log_conf(void) {
         fprintf(log_file, "* Gamma correction:\t\t%s\n", conf.no_gamma ? "disabled" : "enabled");
         fprintf(log_file, "* Min backlight level:\t\t%d\n", conf.lowest_backlight_level);
         fprintf(log_file, "* Max backlight pct:\t\tAC %d%%\tBATT %d%%\n", conf.max_backlight_pct[ON_AC], conf.max_backlight_pct[ON_BATTERY]);
-        fprintf(log_file, "* Event duration:\t\t%d\n\n", conf.event_duration);
+        fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
+        fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", conf.no_dimmer ? "disabled" : "enabled");
+        fprintf(log_file, "* Dimmer backlight:\t\t%d%%\n", conf.dimmer_pct);
+        fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
     }
 }
 
