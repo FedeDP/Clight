@@ -56,6 +56,9 @@ void init_opts(int argc, char *argv[]) {
     memcpy(conf.regression_points, 
            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
            SIZE_POINTS * sizeof(double));
+    
+    state.display = getenv("DISPLAY");
+    state.xauthority = getenv("XAUTHORITY");
 
 #ifdef LIBCONFIG_PRESENT
     read_config(GLOBAL);

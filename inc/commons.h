@@ -24,11 +24,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-#ifdef LIBX11_PRESENT
 enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, MODULES_NUM };
-#else
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, MODULES_NUM };
-#endif
 
 /*
  * List of states clight can be through: 

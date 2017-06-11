@@ -1,9 +1,7 @@
-#ifdef LIBX11_PRESENT
-
 #include "../inc/dimmer.h"
 #include "../inc/brightness.h"
+#include "../inc/bus.h"
 #include <sys/inotify.h>
-#include <X11/extensions/scrnsaver.h>
 
 #define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
 
@@ -14,7 +12,7 @@ static void dimmer_cb(void);
 static int get_idle_time(void);
 
 static int inot_wd, inot_fd, timer_fd;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
@@ -41,7 +39,7 @@ static void init(void) {
 /* Check we're on X */
 static int check(void) {
     return  conf.single_capture_mode ||
-    conf.no_dimmer || !getenv("DISPLAY");
+    conf.no_dimmer || !state.display || !state.xauthority;
 }
 
 static void destroy(void) {
@@ -91,21 +89,8 @@ static void dimmer_cb(void) {
 }
 
 static int get_idle_time(void) {
-    time_t idle_time;
-    static XScreenSaverInfo *mit_info;
-    Display *display;
-    int screen;
-    
-    mit_info = XScreenSaverAllocInfo();
-    if (!(display=XOpenDisplay(NULL))) {
-        return -1; 
-    }
-    screen = DefaultScreen(display);
-    XScreenSaverQueryInfo(display, RootWindow(display,screen), mit_info);
-    idle_time = (mit_info->idle) / 1000;
-    XFree(mit_info);
-    XCloseDisplay(display); 
+    int idle_time;
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getidletime"};
+    bus_call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
     return idle_time;
 }
-
-#endif

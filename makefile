@@ -40,19 +40,6 @@ else
 $(info Libconfig support disabled.)
 endif
 
-ifneq ("$(DISABLE_LIBX11)","1")
-LIBX11=$(shell pkg-config --silence-errors --libs x11 xscrnsaver)
-ifneq ("$(LIBX11)","")
-CFLAGS+=-DLIBX11_PRESENT $(shell pkg-config --cflags x11 xscrnsaver)
-LIBS+=$(LIBX11)
-$(info Libx11 support enabled.)
-else
-$(info Libx11 support disabled.)
-endif
-else
-$(info Libx11 support disabled.)
-endif
-
 endif
 
 CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)

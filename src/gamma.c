@@ -40,9 +40,6 @@ static void init(void) {
 }
 
 static int check(void) {
-    state.display = getenv("DISPLAY");
-    state.xauthority = getenv("XAUTHORITY");
-    
     return  conf.single_capture_mode || 
             conf.no_gamma || 
             !state.display || 

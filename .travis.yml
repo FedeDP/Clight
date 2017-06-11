@@ -18,13 +18,10 @@ arch:
         - popt
         - libconfig
         - gsl
-        - libxss
     script:
         - "echo $CC"
         - make debug
         - make debug DISABLE_LIBCONFIG=1
-        - make debug DISABLE_LIBX11=1
-        - make debug DISABLE_LIBCONFIG=1 DISABLE_LIBX11=1
 
 script:
     - "curl -s https://raw.githubusercontent.com/mikkeloscar/arch-travis/master/arch-travis.sh | bash"
