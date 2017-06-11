@@ -9,9 +9,10 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void dimmer_cb(void);
+static void dim_backlight(void);
 static int get_idle_time(void);
 
-static int inot_wd, inot_fd, timer_fd;
+static int inot_wd, inot_fd, timer_fd, bright_fd, is_dimmed;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
 static struct self_t self = {
     .name = "Dimmer",
@@ -43,7 +44,7 @@ static int check(void) {
 }
 
 static void destroy(void) {
-    if (state.is_dimmed) {
+    if (is_dimmed) {
         inotify_rm_watch(inot_fd, inot_wd);
         if (timer_fd > 0) {
             close(timer_fd);
@@ -53,23 +54,38 @@ static void destroy(void) {
     }
 }
 
+/*
+ * If is_dimmed is false, check how many seconds are passed since latest user activity.
+ * If > of conf.dimmer_timeout, we're in dimmed state:
+ *      add an inotify_watcher on /dev/input to be woken as soon as a new activity happens.
+ *      Note the IN_ONESHOT flag, that is needed to just wait to capture a single inotify event.
+ *      Then, stop listening on BRIGHTNESS module (as it is disabled while in dimmed state),
+ *      and dim backlight.
+ * Else set a timeout of conf.dimmer_timeout - elapsed time since latest user activity.
+ *
+ * Else, read single event from inotify, leave dimmed state,
+ * resume BACKLIGHT module and reset latest backlight level. 
+ */
 static void dimmer_cb(void) {
-    if (!state.is_dimmed) {
+    if (!is_dimmed) {
         uint64_t t;
         read(main_p[self.idx].fd, &t, sizeof(uint64_t));
         
         int idle_t = get_idle_time();
         if (idle_t != -1) {
             /* -1 as it seems we receive events circa 1s before */
-            state.is_dimmed = idle_t >= (conf.dimmer_timeout[state.ac_state] - 1);
-            if (state.is_dimmed) {
+            is_dimmed = idle_t >= (conf.dimmer_timeout[state.ac_state] - 1);
+            if (is_dimmed) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
                     main_p[self.idx].fd = inot_fd;
-                    set_brightness(conf.dimmer_pct, 0);
+                    bright_fd = main_p[BRIGHTNESS].fd;
+                    /* stop listening BRIGHTNESS module fd */
+                    main_p[BRIGHTNESS].fd = 0;
+                    dim_backlight();
                 } else {
                     // in case of error, reset is_dimmed state
-                    state.is_dimmed = 0;
+                    is_dimmed = 0;
                 }
             } else {
                 /* Set a timeout of conf.dimmer_timeout - elapsed time since latest user activity */
@@ -80,11 +96,27 @@ static void dimmer_cb(void) {
         char buffer[BUF_LEN];
         int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
         if (length > 0) {
-            state.is_dimmed = 0;
+            is_dimmed = 0;
             main_p[self.idx].fd = timer_fd;
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
-            set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
+            /* restore previous backlight level */
+            set_backlight_level(state.br.old);
+            /* restart listening BRIGHTNESS module fd */
+            main_p[BRIGHTNESS].fd = bright_fd;
         }
+    }
+}
+
+static void dim_backlight(void) {
+    int lowered_br = state.br.max * conf.dimmer_pct / 100;
+    // store old brightness
+    get_current_brightness();
+    if (state.quit) {
+        return;
+    }
+    
+    if (lowered_br < state.br.old) {
+        set_backlight_level(lowered_br);
     }
 }
 

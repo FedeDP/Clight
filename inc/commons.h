@@ -66,6 +66,15 @@ struct config {
     int no_dimmer;                          // disable dimmer
 };
 
+/*
+ * Storage struct for our needed variables.
+ */
+struct brightness {
+    int current;
+    int max;
+    int old;
+};
+
 /* Global state of program */
 struct state {
     int quit;                               // should we quit?
@@ -78,7 +87,7 @@ struct state {
     double fit_parameters[DEGREE];          // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
-    int is_dimmed;                          // whether display is dimmed
+    struct brightness br;                   // struct that hold screen backlight info
 };
 
 /* Struct that holds info about an inter-modules dep */

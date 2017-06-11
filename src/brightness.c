@@ -8,21 +8,12 @@ static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
-static void get_current_brightness(void);
+void get_current_brightness(void);
+static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void polynomialfit(void);
 static double clamp(double value, double max, double min);
 
-/*
- * Storage struct for our needed variables.
- */
-struct brightness {
-    int current;
-    int max;
-    int old;
-};
-
-static struct brightness br;
 static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
 static struct self_t self = {
     .name = "Brightness",
@@ -102,10 +93,10 @@ static void do_capture(void) {
      * it is very very unlikely that setbrightness would return some.
      */
     if (!state.quit && val >= 0.0) {
-        set_brightness(val * 10, 1);
+        set_brightness(val * 10);
         
         if (!conf.single_capture_mode && !state.quit) {
-            double drop = (double)(br.current - br.old) / br.max;
+            double drop = (double)(state.br.current - state.br.old) / state.br.max;
             // if there is too high difference, do a fast recapture to be sure
             // this is the correct level
             if (fabs(drop) > drop_limit) {
@@ -123,40 +114,35 @@ static void do_capture(void) {
 
 static void get_max_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getmaxbrightness"};
-    bus_call(&br.max, "i", &args, "s", conf.screen_path);
+    bus_call(&state.br.max, "i", &args, "s", conf.screen_path);
 }
 
-static void get_current_brightness(void) {
+void get_current_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getbrightness"};
-    bus_call(&br.old, "i", &args, "s", conf.screen_path);
+    bus_call(&state.br.old, "i", &args, "s", conf.screen_path);
 }
 
-void set_brightness(const double perc, int from_capture) {
-    int new_br;
-    if (from_capture) {
-        /* y = a0 + a1x + a2x^2 */
-        const double b = state.fit_parameters[0] + state.fit_parameters[1] * perc + state.fit_parameters[2] * pow(perc, 2);
-        /* Correctly honor conf.max_backlight_pct */
-        new_br =  (float)br.max / 100 * conf.max_backlight_pct[state.ac_state] * clamp(b, 1, 0);
-    } else {
-        new_br = br.max * perc / 100;
-    }
-    // store old brightness
+static void set_brightness(const double perc) {
+    /* y = a0 + a1x + a2x^2 */
+    const double b = state.fit_parameters[0] + state.fit_parameters[1] * perc + state.fit_parameters[2] * pow(perc, 2);
+    /* Correctly honor conf.max_backlight_pct */
+    int new_br =  (float)state.br.max / 100 * conf.max_backlight_pct[state.ac_state] * clamp(b, 1, 0);
+   
     get_current_brightness();
-    if (state.quit) {
-        return;
-    }
-    
-    if (new_br != br.old) {
-        DEBUG("Old brightness value: %d\n", br.old);
-        struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
-        bus_call(&br.current, "i", &args, "si", conf.screen_path, new_br >= conf.lowest_backlight_level ? new_br : conf.lowest_backlight_level);
-        if (!state.quit) {
-            INFO("New brightness value: %d\n", br.current);
-        }
+    if (!state.quit && new_br != state.br.old) {
+        set_backlight_level(new_br);
     } else {
-        br.current = new_br;
+        state.br.current = new_br;
         INFO("Brightness level was already %d.\n", new_br);
+    }
+}
+
+void set_backlight_level(int level) {
+    DEBUG("Old brightness value: %d\n", state.br.old);
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
+    bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level >= conf.lowest_backlight_level ? level : conf.lowest_backlight_level);
+    if (!state.quit) {
+        INFO("New brightness value: %d\n", state.br.current);
     }
 }
 
@@ -193,8 +179,8 @@ static void polynomialfit(void) {
     ws = gsl_multifit_linear_alloc(SIZE_POINTS, DEGREE);
     gsl_multifit_linear(X, y, c, cov, &chisq, ws);
     
-    /* store results ... */
-    for(i=0; i < DEGREE; i++) {
+    /* store results */
+    for(i = 0; i < DEGREE; i++) {
         state.fit_parameters[i] = gsl_vector_get(c, i);
     }
     DEBUG("y = %lf + %lfx + %lfx^2\n", state.fit_parameters[0], state.fit_parameters[1], state.fit_parameters[2]);

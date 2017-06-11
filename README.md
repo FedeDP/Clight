@@ -2,9 +2,10 @@
 
 [![Build Status](https://travis-ci.org/FedeDP/Clight.svg?branch=master)](https://travis-ci.org/FedeDP/Clight)
 
-Clight is a C daemon utility to automagically change screen backlight level to match ambient brightness.  
-Ambient brightness is computed by capturing frames from webcam.  
+Clight is a C user daemon utility that aims to fully manage your display.  
+It will automagically change screen backlight level to match ambient brightness, as computed by capturing frames from webcam.  
 Moreover, it can manage your screen temperature, just like redshift does.  
+Finally, it can dim your screen after a timeout.  
 
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
