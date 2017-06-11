@@ -80,7 +80,6 @@ static void started_cb(enum modules module) {
             modules[m].self->satisfied_deps++;
             DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
             init_modules(m);
-                        
             /* 
              * If init_modules did disable some module, 
              * modules[module].num_dependent can be different from num_dependent.
