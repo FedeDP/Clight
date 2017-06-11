@@ -66,15 +66,21 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribu
     get_property(&power_args, "b", &state.ac_state);
     if (state.ac_state != on_battery) {
         INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
-        // FIXME: reset all modules-dependent-on-upower timers (ie: dimmer too!)
+        
+        /* Reset BRIGHTNESS and DIMMER modules timers */
         if (modules[BRIGHTNESS].inited && !state.fast_recapture) {
             if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
-                /* if different max values is set, do a capture right now to set correct new brightness value */
+                /* if different max value is set, do a capture right now to correctly set new brightness value */
                 set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
             } else {
-                reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[on_battery][state.time]);
+                reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[on_battery][state.time], conf.timeout[state.ac_state][state.time]);
             }
         }
+        
+        if (modules[DIMMER].inited && !state.is_dimmed) {
+            reset_timer(main_p[DIMMER].fd, conf.dimmer_timeout[on_battery], conf.dimmer_timeout[state.ac_state]);
+        }
+        
     }
     return 0;
 }

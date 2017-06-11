@@ -103,7 +103,7 @@ void poll_cb(const enum modules module) {
         if (modules[module].poll_cb) {
             modules[module].poll_cb();
         }
-        /* If module has deps, call start cb on them, to start them */
+        /* If module has dependent modules upon it, try to start them */
         if (modules[module].dependent_m) {
             started_cb(module);
             free(modules[module].dependent_m);

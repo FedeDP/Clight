@@ -88,6 +88,7 @@ struct state {
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
     struct brightness br;                   // struct that hold screen backlight info
+    int is_dimmed;                          // whether we are currently in dimmed state
 };
 
 /* Struct that holds info about an inter-modules dep */

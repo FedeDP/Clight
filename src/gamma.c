@@ -105,7 +105,7 @@ static void check_gamma(void) {
 
         /* if we entered/left an event, set correct timeout to BRIGHTNESS */
         if (old_state != state.time && modules[BRIGHTNESS].inited && !state.fast_recapture) {
-            reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state]);
+            reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
