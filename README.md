@@ -45,7 +45,8 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 * systemd user unit and autostart desktop file shipped
 * dpms support: it will check current screen powersave level and won't do anything if screen is currently off
 * a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
-* gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does)
+* gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does) -> **X only**
+* dimmer support: it will dim your screen after specified timeout of user inactivity (ie: no mouse/keyboard) -> **X only**
 * geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates. Otherwise gamma support will be disabled.
 Location received will be then cached when clight exit. This way, if no internet connection is present (thus geoclue2 cannot give us any location) instead of hanging, clight will load latest available location from cache file.
 * different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable)
@@ -61,6 +62,7 @@ Location received will be then cached when clight exit. This way, if no internet
 Moreover, you can set a percentage of maximum settable brightness while on battery.
 * You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
 * Gracefully auto-disabling gamma support on non-X environments.
+* Gracefully auto-disabling dimmer support on non-X environments.
 
 ### Valgrind is run with:
 
