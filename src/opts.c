@@ -33,7 +33,7 @@ void init_opts(int argc, char *argv[]) {
     conf.event_duration = 30 * 60;
     conf.max_backlight_pct[ON_AC] = 100;
     conf.max_backlight_pct[ON_BATTERY] = 100;
-    conf.dimmer_timeout[ON_AC] = 5; // FIXME to test
+    conf.dimmer_timeout[ON_AC] = 300;
     conf.dimmer_timeout[ON_BATTERY] = 120;
     conf.dimmer_pct = 20;
     
@@ -142,27 +142,27 @@ static void check_conf(void) {
      * Reset default values in case of wrong values
      */
     if (conf.timeout[ON_AC][DAY] <= 0) {
-        WARN("Wrong day timeout value. Resetting default value.\n");
+        WARN("Wrong day timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][DAY] = 10 * 60;
     }
     if (conf.timeout[ON_AC][NIGHT] <= 0) {
-        WARN("Wrong night timeout value. Resetting default value.\n");
+        WARN("Wrong night timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][NIGHT] = 45 * 60;
     }
     if (conf.timeout[ON_AC][EVENT] <= 0) {
-        WARN("Wrong event timeout value. Resetting default value.\n");
+        WARN("Wrong event timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][EVENT] = 5 * 60;
     }
     if (conf.timeout[ON_BATTERY][DAY] <= 0) {
-        WARN("Wrong day timeout value. Resetting default value.\n");
+        WARN("Wrong day timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][DAY] = 20 * 60;
     }
     if (conf.timeout[ON_BATTERY][NIGHT] <= 0) {
-        WARN("Wrong night timeout value. Resetting default value.\n");
+        WARN("Wrong night timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][NIGHT] = 90 * 60;
     }
     if (conf.timeout[ON_BATTERY][EVENT] <= 0) {
-        WARN("Wrong event timeout value. Resetting default value.\n");
+        WARN("Wrong event timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][EVENT] = 10 * 60;
     }
     if (conf.num_captures <= 0 || conf.num_captures > 20) {
@@ -188,6 +188,14 @@ static void check_conf(void) {
     if (conf.dimmer_pct > 100 || conf.dimmer_pct < 0) {
         WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
         conf.dimmer_pct = 20;
+    }
+    if (conf.dimmer_timeout[ON_AC] <= 0) {
+        WARN("Wrong dimmer timeout on AC value. Resetting default value.\n");
+        conf.dimmer_timeout[ON_AC] = 300;
+    }
+    if (conf.dimmer_timeout[ON_BATTERY] <= 0) {
+        WARN("Wrong dimmer timeout on BATT value. Resetting default value.\n");
+        conf.dimmer_timeout[ON_BATTERY] = 120;
     }
     
     
