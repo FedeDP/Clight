@@ -8,7 +8,6 @@ static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
 static void get_max_brightness(void);
-void get_current_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void polynomialfit(void);
