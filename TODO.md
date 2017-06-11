@@ -17,8 +17,6 @@
 - [x] fix travis build
 - [x] move libx11 -> getIdleTime support to clightd and drop libx11 requirement in clight
 - [ ] FIXME: Upower should restart dimmer module timer on ac state changes too (find a way to make upower restart correct timers: modules dependent on it)
-- [ ] FIXME: upower call to poll_cb in init is wrong because it assumes that its dependent modules have already been inited.
-
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness
