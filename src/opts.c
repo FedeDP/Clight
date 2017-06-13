@@ -97,6 +97,8 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
         {"dimmer_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
+        {"ac_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
+        {"batt_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };

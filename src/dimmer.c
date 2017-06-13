@@ -74,7 +74,7 @@ static void dimmer_cb(void) {
         int idle_t = get_idle_time();
         if (idle_t != -1) {
             /* -1 as it seems we receive events circa 1s before */
-            state.is_dimmed = idle_t >= (conf.dimmer_timeout[state.ac_state] - 1);
+            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
             if (state.is_dimmed) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
@@ -126,5 +126,6 @@ static int get_idle_time(void) {
     int idle_time;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getidletime"};
     bus_call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
-    return idle_time;
+    /* clightd returns ms of inactivity. We need seconds */
+    return round(idle_time / 1000);
 }
