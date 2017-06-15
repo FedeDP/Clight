@@ -18,7 +18,8 @@ static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps =  dependencies,
+    .mandatory = 1
 };
 
 void set_brightness_self(void) {
@@ -52,10 +53,8 @@ static void destroy(void) {
 
 
 static void brightness_cb(void) {
-    if (!conf.single_capture_mode) {
-        uint64_t t;
-        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-    }
+    uint64_t t;
+    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     do_capture();
     if (conf.single_capture_mode) {
         state.quit = 1;

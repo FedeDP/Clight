@@ -51,17 +51,14 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
  * Foreach dep, set self as dependent on that module
  */
 void set_self_deps(struct self_t *self) {
-    if (!modules[self->idx].disabled) {
-        for (int i = 0; i < self->num_deps; i++) {
-            enum modules m = self->deps[i].dep;
-            modules[m].num_dependent++;
-            modules[m].dependent_m = realloc(modules[m].dependent_m, modules[m].num_dependent * sizeof(*modules[m].dependent_m));
-            if (!modules[m].dependent_m) {
-                ERROR("%s\n", strerror(errno));
-                break;
-            }
-            modules[m].dependent_m[modules[m].num_dependent - 1] = self->idx;
+    for (int i = 0; i < self->num_deps; i++) {
+        enum modules m = self->deps[i].dep;
+        modules[m].dependent_m = realloc(modules[m].dependent_m, (++modules[m].num_dependent) * sizeof(enum modules));
+        if (!modules[m].dependent_m) {
+            ERROR("%s\n", strerror(errno));
+            break;
         }
+        modules[m].dependent_m[modules[m].num_dependent - 1] = self->idx;
     }
 }
 
@@ -84,10 +81,10 @@ static void started_cb(enum modules module) {
              * If init_modules did disable some module, 
              * modules[module].num_dependent can be different from num_dependent.
              * If that's the case, we have no way to understand which modules got disabled.
-             * Reset i to restart this cycle.
+             * Return started_cb again.
              */
             if (num_dependent != modules[module].num_dependent) {
-                i = 0;
+                return started_cb(module);
             }
         }
     }
@@ -103,13 +100,7 @@ void poll_cb(const enum modules module) {
         if (modules[module].poll_cb) {
             modules[module].poll_cb();
         }
-        /* If module has dependent modules upon it, try to start them */
-        if (modules[module].dependent_m) {
-            started_cb(module);
-            free(modules[module].dependent_m);
-            modules[module].dependent_m = NULL;
-            modules[module].num_dependent = 0;
-        }
+        started_cb(module);
     }
 }
 
@@ -127,13 +118,13 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
  * If a module had a SOFT dep on "module", increment its 
  * satisfied_deps counter and try to init it.
  * Moreover, if "module" is the only dependent module on another module X,
- * disable X too.
+ * and X is not mandatory for clight, disable X too.
  */
 void disable_module(const enum modules module) {
     if (!modules[module].disabled) {
         modules[module].disabled = 1;
         DEBUG("%s module disabled.\n", modules[module].self->name);
-        
+
         /* Cycle to disable all modules dependent on "module", if dep is HARD */
         for (int i = 0; i < modules[module].num_dependent; i++) {
             enum modules m = modules[module].dependent_m[i];
@@ -160,31 +151,32 @@ void disable_module(const enum modules module) {
          */
         for (int i = 0; i < modules[module].self->num_deps; i++) {
             const enum modules m = modules[module].self->deps[i].dep;
-            int j;
-            for (j = 0; j < modules[m].num_dependent; j++) {
+            for (int j = 0; j < modules[m].num_dependent; j++) {
                 if (modules[m].dependent_m[j] == module) {
+                    /* properly decrement num_dependent and realloc array of dependent_m */
+                    if (j + 1 < modules[m].num_dependent) {
+                        memmove(&modules[m].dependent_m[j], &modules[m].dependent_m[j + 1], (modules[m].num_dependent - j - 1) * sizeof(enum modules));
+                    }
+                    modules[m].dependent_m = realloc(modules[m].dependent_m, (--modules[m].num_dependent) * sizeof(enum modules));
+                    
+                    /* 
+                     * if there are no more dependent_m on this module, 
+                     * and it is not a mandatory module, disable it 
+                     */
+                    if (modules[m].num_dependent == 0 && !modules[m].self->mandatory) {
+                        disable_module(m);
+                    }
                     break;
                 }
             }
-            
-            /* properly decrement num_dependent and realloc array of dependent_m */
-            if (j + 1 < modules[m].num_dependent) {
-                memmove(&modules[m].dependent_m[j], &modules[m].dependent_m[j + 1], (modules[m].num_dependent - j - 1) * sizeof(*modules[m].dependent_m));
-            }
-            modules[m].dependent_m = realloc(modules[m].dependent_m, (--modules[m].num_dependent) * sizeof(*modules[m].dependent_m));
-            
-            /* if there are no more dependent_m on this module, disable it */
-            if (modules[m].num_dependent == 0) {
-                disable_module(m);
-            }
         }
-        /* Finally, free dependent_m for this disabled module and destroy it */
-        if (modules[module].dependent_m) {
-            free(modules[module].dependent_m);
-            modules[module].dependent_m = NULL;
-            modules[module].num_dependent = 0;
-        }
+        
+        /* Finally, destroy this module */
         destroy_modules(module);
+        /* if module is a mandatory for clight module, quit */
+        if (modules[module].self->mandatory) {
+            state.quit = 1;
+        }
     }
 }
 
@@ -192,13 +184,21 @@ void disable_module(const enum modules module) {
  * Calls correct destroy function for each module
  */
 void destroy_modules(const enum modules module) {
+    if (modules[module].num_dependent) {
+        free(modules[module].dependent_m);
+        modules[module].dependent_m = NULL;
+        modules[module].num_dependent = 0;
+    }
+    
     if (modules[module].inited) {
-        /* If fd is being polled, close it. Do not close BUS fd!! */
-        if (main_p[modules[module].self->idx].fd > 0 && module != BUS) {
-            close(main_p[modules[module].self->idx].fd);
-        }
         /* call module destroy func */
         modules[module].destroy();
+        /* If fd is being polled, close it. */
+        if (main_p[modules[module].self->idx].fd > 0) {
+            close(main_p[modules[module].self->idx].fd);
+            /* stop polling on this module! */
+            main_p[modules[module].self->idx].fd = 0;
+        }
         DEBUG("%s module destroyed.\n", modules[module].self->name);
         modules[module].inited = 0;
     }

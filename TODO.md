@@ -17,6 +17,10 @@
 - [x] fix travis build
 - [x] move libx11 -> getIdleTime support to clightd and drop libx11 requirement in clight
 - [x] FIXME: Upower should restart dimmer module timer on ac state changes too
+- [ ] add dpms support
+- [x] fix clight on wayland (high cpu usage) (don't understand...to test just need to unset XAUTHORITY and run clight) -> check valgrind issues
+- [x] fix disable_modules (it must not kill BRIGHTNESS module if dimmer gets disabled!)
+- [x] FIXME: fix Argument 'size' of function malloc has a fishy (possibly negative) value: -4 with "clight -c" after unset XAUTHORITY
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness

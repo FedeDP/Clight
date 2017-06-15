@@ -104,6 +104,7 @@ struct self_t {
     int num_deps;                         // number of deps for a module
     int satisfied_deps;                   // number of satisfied deps
     struct dependency *deps;              // module on which there is a dep
+    int mandatory;                        // whether a module is mandatory for clight to run
 };
 
 /* Struct that holds data for each module */
