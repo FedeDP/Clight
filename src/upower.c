@@ -47,7 +47,6 @@ static void destroy(void) {
     if (callbacks) {
         free(callbacks);
     }
-    num_callbacks = 0;
 }
 
 static int upower_init(void) {
