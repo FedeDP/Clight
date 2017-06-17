@@ -24,7 +24,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -43,6 +43,9 @@ enum dep_type { HARD, SOFT };
 
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
+
+/* Dpms states */
+enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
 /* Struct that holds global config as passed through cmdline args */
 struct config {
@@ -64,6 +67,8 @@ struct config {
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
     int dimmer_pct;                         // pct of max brightness to be used while dimming
     int no_dimmer;                          // disable dimmer
+    int no_dpms;                            // disable dpms
+    int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
 };
 
 /*

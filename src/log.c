@@ -41,7 +41,12 @@ void log_conf(void) {
         fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
         fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", conf.no_dimmer ? "disabled" : "enabled");
         fprintf(log_file, "* Dimmer backlight:\t\t%d%%\n", conf.dimmer_pct);
-        fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
+        fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
+        fprintf(log_file, "* Screen dpms tool:\t\t%s\n", conf.no_dpms ? "disabled" : "enabled");
+        fprintf(log_file, "* Dpms timeouts:\t\tAC %d:%d:%d\tBATT %d:%d:%d\n\n",
+                conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],
+                conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]
+        );
     }
 }
 

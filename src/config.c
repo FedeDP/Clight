@@ -53,6 +53,7 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "dimmer_pct", &conf.dimmer_pct);
         config_lookup_int(&cfg, "ac_dimmer_timeout", &conf.dimmer_timeout[ON_AC]);
         config_lookup_int(&cfg, "batt_dimmer_timeout", &conf.dimmer_timeout[ON_BATTERY]);
+        config_lookup_int(&cfg, "no_dpms", &conf.no_dpms);
         
         if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, videodev, sizeof(conf.dev_name) - 1);
@@ -67,8 +68,10 @@ void read_config(enum CONFIG file) {
             strncpy(conf.events[SUNSET], sunset, sizeof(conf.events[SUNSET]) - 1);
         }
         
-        config_setting_t *points, *root;
+        config_setting_t *points, *root, *dpms_timeouts;
         root = config_root_setting(&cfg);
+        
+        /* Load regression points for brightness curve */
         if ((points = config_setting_get_member(root, "brightness_regression_points"))) {
             if (config_setting_length(points) >= SIZE_POINTS) {
                 for (int i = 0; i < SIZE_POINTS; i++) {
@@ -78,6 +81,29 @@ void read_config(enum CONFIG file) {
                 WARN("Wrong number of brightness_regression_points array elements.\n");
             }
         }
+        
+        /* Load dpms timeout while on ac */
+        if ((dpms_timeouts = config_setting_get_member(root, "ac_dpms_timeouts"))) {
+            if (config_setting_length(dpms_timeouts) >= SIZE_DPMS) {
+                for (int i = 0; i < SIZE_DPMS; i++) {
+                    conf.dpms_timeouts[ON_AC][i] = config_setting_get_int_elem(dpms_timeouts, i);
+                }
+            } else {
+                WARN("Wrong number of dpms timeouts array elements.\n");
+            }
+        }
+        
+        /* Load dpms timeout while on battery */
+        if ((dpms_timeouts = config_setting_get_member(root, "batt_dpms_timeouts"))) {
+            if (config_setting_length(dpms_timeouts) >= SIZE_DPMS) {
+                for (int i = 0; i < SIZE_DPMS; i++) {
+                    conf.dpms_timeouts[ON_BATTERY][i] = config_setting_get_int_elem(dpms_timeouts, i);
+                }
+            } else {
+                WARN("Wrong number of dpms timeouts array elements.\n");
+            }
+        }
+        
     } else {
         WARN("Config file: %s at line %d.\n",
                 config_error_text(&cfg),

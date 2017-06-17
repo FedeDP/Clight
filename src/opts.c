@@ -57,6 +57,17 @@ void init_opts(int argc, char *argv[]) {
            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
            SIZE_POINTS * sizeof(double));
     
+    /* Default dpms timeouts ON AC */
+    memcpy(conf.dpms_timeouts[ON_AC], 
+           (int[]){ 900, 1200, 1800 }, 
+           SIZE_DPMS * sizeof(int));
+    
+    /* Default dpms timeouts ON BATT */
+    memcpy(conf.dpms_timeouts[ON_BATTERY], 
+           (int[]){ 600, 720, 900 }, 
+           SIZE_DPMS * sizeof(int));
+    
+    
     state.display = getenv("DISPLAY");
     state.xauthority = getenv("XAUTHORITY");
 
@@ -99,6 +110,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
         {"ac_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
         {"batt_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
+        {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -200,10 +212,10 @@ static void check_conf(void) {
         conf.dimmer_timeout[ON_BATTERY] = 120;
     }
     
-    
     int i;
+    /* Check regression points values */
     for (i = 0; i < SIZE_POINTS; i++) {
-        if (conf.regression_points[i] < 0.0 || conf.regression_points[i] > 10.0) {
+        if (conf.regression_points[i] < 0.0 || conf.regression_points[i] > 1.0) {
             break;
         }
     }
@@ -213,4 +225,31 @@ static void check_conf(void) {
                (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
                SIZE_POINTS * sizeof(double));
     }
+    
+    /* Check dpms timeout on AC values */
+    for (i = 0; i < SIZE_DPMS; i++) {
+        if (conf.dpms_timeouts[ON_AC][i] < 0) {
+            break;
+        }
+    }
+    if (i != SIZE_DPMS) {
+        WARN("Wrong regression points. Resetting default values.\n");
+        memcpy(conf.dpms_timeouts[ON_AC], 
+               (int[]){ 900, 1200, 1800 }, 
+               SIZE_DPMS * sizeof(int));
+    }
+    
+    /* Check dpms timeout on BATT values */
+    for (i = 0; i < SIZE_DPMS; i++) {
+        if (conf.dpms_timeouts[ON_BATTERY][i] < 0) {
+            break;
+        }
+    }
+    if (i != SIZE_DPMS) {
+        WARN("Wrong regression points. Resetting default values.\n");
+        memcpy(conf.dpms_timeouts[ON_BATTERY], 
+               (int[]){ 600, 720, 900 }, 
+               SIZE_DPMS * sizeof(int));
+    }
+    
 }

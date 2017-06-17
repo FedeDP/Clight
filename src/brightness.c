@@ -1,5 +1,6 @@
 #include "../inc/brightness.h"
 #include "../inc/dpms.h"
+#include "../inc/upower.h"
 #include <gsl/gsl_multifit.h>
 
 static void init(void);
@@ -12,8 +13,9 @@ static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void polynomialfit(void);
 static double clamp(double value, double max, double min);
+static void upower_callback(int old_state);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, DPMS} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
@@ -40,6 +42,9 @@ static void init(void) {
         polynomialfit();
         int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
         init_module(fd, self.idx, brightness_cb);
+        if (!state.quit && !modules[self.idx].disabled) {
+            add_upower_module_callback(upower_callback);
+        }
     }
 }
 
@@ -200,3 +205,14 @@ static double clamp(double value, double max, double min) {
     return value;
 }
 
+static void upower_callback(int old_state) {
+    /* Reset BRIGHTNESS modules timer */
+    if (!state.fast_recapture) {
+        if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
+            /* if different max value is set, do a capture right now to correctly set new brightness value */
+            set_timeout(0, 1, main_p[self.idx].fd, 0);
+        } else {
+            reset_timer(main_p[self.idx].fd, conf.timeout[old_state][state.time], conf.timeout[state.ac_state][state.time]);
+        }
+    }
+}

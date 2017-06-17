@@ -1,6 +1,6 @@
 #include "../inc/modules.h"
 
-static void started_cb(enum modules module);
+static void started_cb(enum modules module, int need_increase);
 
 /* 
  * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been setted.
@@ -30,6 +30,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
         .fd = fd,
         .events = POLLIN,
     };
+
     modules[module].poll_cb = cb;
     
     /* 
@@ -40,6 +41,14 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
     if (fd != DONT_POLL_W_ERR) {
         modules[module].inited = 1;
         DEBUG("%s module started.\n", modules[module].self->name);
+        /* 
+         * If NULL poll cb is passed, 
+         * consider this module as started right now.
+         */
+        if (!cb) {
+            started_cb(module, 1);
+        }
+        
     } else {
         /* module should be disabled */
         WARN("Error while loading %s module.\n", modules[module].self->name);
@@ -67,24 +76,28 @@ void set_self_deps(struct self_t *self) {
  * gets started: it increment satisfied_deps for each dependent modules
  * and tries to start them.
  * If these modules have still other unsatisfied deps, they won't start.
+ * 
+ * need_increase: whether we need to increase self->satisfied_deps (ie: if this is not a recursive call)
  */
-static void started_cb(enum modules module) {
+static void started_cb(enum modules module, int need_increase) {
     for (int i = 0; i < modules[module].num_dependent; i++) {
         /* store current num_dependent. It can be changed by init_modules call */
         int num_dependent = modules[module].num_dependent;
         enum modules m = modules[module].dependent_m[i];
         if (!modules[m].disabled && !modules[m].inited) {
-            modules[m].self->satisfied_deps++;
-            DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
+            if (need_increase) {
+                modules[m].self->satisfied_deps++;
+                DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
+            }
             init_modules(m);
             /* 
              * If init_modules did disable some module, 
              * modules[module].num_dependent can be different from num_dependent.
              * If that's the case, we have no way to understand which modules got disabled.
-             * Return started_cb again.
+             * Return started_cb again, this time without the need to increase its satisfied_deps counter though.
              */
             if (num_dependent != modules[module].num_dependent) {
-                return started_cb(module);
+                return started_cb(module, 0);
             }
         }
     }
@@ -100,7 +113,7 @@ void poll_cb(const enum modules module) {
         if (modules[module].poll_cb) {
             modules[module].poll_cb();
         }
-        started_cb(module);
+        started_cb(module, 1);
     }
 }
 

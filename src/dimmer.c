@@ -1,4 +1,5 @@
 #include "../inc/dimmer.h"
+#include "../inc/upower.h"
 #include "../inc/brightness.h"
 #include "../inc/bus.h"
 #include <sys/inotify.h>
@@ -11,6 +12,7 @@ static void destroy(void);
 static void dimmer_cb(void);
 static void dim_backlight(void);
 static int get_idle_time(void);
+static void upower_callback(int old_state);
 
 static int inot_wd, inot_fd, timer_fd, bright_fd;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
@@ -34,6 +36,9 @@ static void init(void) {
     if (inot_fd != -1) {
         timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
         init_module(timer_fd, self.idx, dimmer_cb);
+        if (!state.quit && !modules[self.idx].disabled) {
+            add_upower_module_callback(upower_callback);
+        }
     }
 }
 
@@ -128,4 +133,11 @@ static int get_idle_time(void) {
     bus_call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
     /* clightd returns ms of inactivity. We need seconds */
     return round(idle_time / 1000);
+}
+
+/* Reset dimmer timeout */
+static void upower_callback(int old_state) {
+    if (!state.is_dimmed) {
+        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_state], conf.dimmer_timeout[state.ac_state]);
+    }
 }

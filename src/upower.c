@@ -7,6 +7,8 @@ static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
+static int num_callbacks;
+static upower_cb *callbacks;
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .name = "Upower",
@@ -31,7 +33,6 @@ static void init(void) {
     int r = upower_init();
     /* In case of errors, upower_init returns -1 -> disable upower. */
     init_module(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, self.idx, NULL);
-    poll_cb(self.idx);
 }
 
 static int check(void) {
@@ -43,6 +44,10 @@ static void destroy(void) {
     if (slot) {
         sd_bus_slot_unref(slot);
     }
+    if (callbacks) {
+        free(callbacks);
+    }
+    num_callbacks = 0;
 }
 
 static int upower_init(void) {
@@ -67,20 +72,21 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribu
     if (state.ac_state != on_battery) {
         INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
         
-        /* Reset BRIGHTNESS and DIMMER modules timers */
-        if (modules[BRIGHTNESS].inited && !state.fast_recapture) {
-            if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
-                /* if different max value is set, do a capture right now to correctly set new brightness value */
-                set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
-            } else {
-                reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[on_battery][state.time], conf.timeout[state.ac_state][state.time]);
-            }
+        for (int i = 0; i < num_callbacks; i++) {
+            callbacks[i](on_battery);
         }
-        
-        if (modules[DIMMER].inited && !state.is_dimmed) {
-            reset_timer(main_p[DIMMER].fd, conf.dimmer_timeout[on_battery], conf.dimmer_timeout[state.ac_state]);
-        }
-        
     }
     return 0;
+}
+
+/* Hook a callback to upower change event */
+void add_upower_module_callback(upower_cb callback) {
+    if (modules[self.idx].inited) {
+        callbacks = realloc(callbacks, sizeof(upower_cb) * (++num_callbacks));
+        if (callbacks) {
+            callbacks[num_callbacks - 1] = callback;
+        } else {
+            ERROR("%s\n", strerror(errno));
+        }
+    }
 }
