@@ -206,10 +206,12 @@ static double clamp(double value, double max, double min) {
 }
 
 static void upower_callback(int old_state) {
-    /* Reset BRIGHTNESS modules timer */
     if (!state.fast_recapture) {
         if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
-            /* if different max value is set, do a capture right now to correctly set new brightness value */
+            /* 
+             *if different max value is set, do a capture right now 
+             * to correctly set brightness value considering new upper limit 
+             */
             set_timeout(0, 1, main_p[self.idx].fd, 0);
         } else {
             reset_timer(main_p[self.idx].fd, conf.timeout[old_state][state.time], conf.timeout[state.ac_state][state.time]);
