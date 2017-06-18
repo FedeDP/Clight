@@ -45,7 +45,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
          * If NULL poll cb is passed, 
          * consider this module as started right now.
          */
-        if (!cb) {
+        if (fd == DONT_POLL) {
             started_cb(module, 1);
         }
         
@@ -210,7 +210,7 @@ void destroy_modules(const enum modules module) {
         if (main_p[modules[module].self->idx].fd > 0) {
             close(main_p[modules[module].self->idx].fd);
             /* stop polling on this module! */
-            main_p[modules[module].self->idx].fd = 0;
+            main_p[modules[module].self->idx].fd = -1;
         }
         DEBUG("%s module destroyed.\n", modules[module].self->name);
         modules[module].inited = 0;
