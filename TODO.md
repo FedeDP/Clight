@@ -24,8 +24,10 @@
 - [x] finish dpms support: add conf.dpms_timeouts[ON_AC/ON_BATTERY][STANDBY/SUSPEND/OFF] (as integers)
 - [x] FIXME: --no-dpms option will make clight don't wait for LOCATION module...
 - [x] improvement: automate calls to  poll_cb(self.idx); if 1) no POLL_CB is passed
-- [ ] dimmer and dpms modules disabled by default
-- [ ] geoclue2 does not send position at startup anymore ...
+
+### Other
+- [ ] geoclue2 does not send position at startup anymore (is it clight fault? i did not touch that module...)
+- [ ] specify regression points for both AC and BATTERY? This would remove the need for -batt_max_backlight_pct=INT option and would be a really nice feature
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness
