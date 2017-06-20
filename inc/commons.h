@@ -24,7 +24,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -44,6 +44,9 @@ enum dep_type { HARD, SOFT };
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 
+/* Dpms states */
+enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
@@ -61,6 +64,20 @@ struct config {
     int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state (for now, only ON_BATTERY is exported though)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_POINTS];  // points used for regression through libgsl
+    int dimmer_timeout[SIZE_AC];            // dimmer timeout
+    int dimmer_pct;                         // pct of max brightness to be used while dimming
+    int no_dimmer;                          // disable dimmer
+    int no_dpms;                            // disable dpms
+    int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
+};
+
+/*
+ * Storage struct for our needed variables.
+ */
+struct brightness {
+    int current;
+    int max;
+    int old;
 };
 
 /* Global state of program */
@@ -75,6 +92,8 @@ struct state {
     double fit_parameters[DEGREE];          // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
+    struct brightness br;                   // struct that hold screen backlight info
+    int is_dimmed;                          // whether we are currently in dimmed state
 };
 
 /* Struct that holds info about an inter-modules dep */
@@ -90,6 +109,7 @@ struct self_t {
     int num_deps;                         // number of deps for a module
     int satisfied_deps;                   // number of satisfied deps
     struct dependency *deps;              // module on which there is a dep
+    int mandatory;                        // whether a module is mandatory for clight to run
 };
 
 /* Struct that holds data for each module */

@@ -4,6 +4,7 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void location_cb(void);
+static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
 static void geoclue_get_client(void);
@@ -34,6 +35,9 @@ void set_location_self(void) {
 /*
  * init location:
  * init geoclue and set a match on bus on new location signal
+ * if geoclue is not present, go ahead and try to load a location
+ * from cache file. If it fails, DONT_POLL_W_ERR this module (ie: disable it),
+ * else, DONT_POLL this module and consider it started.
  */
 static void init(void) {
     int r = geoclue_init();
@@ -42,29 +46,40 @@ static void init(void) {
      * any location. Otherwise, attempt to load it from cache
      */
     int fd;
+    init_cache_file();
     if (r == 0) {
-        init_cache_file();
         fd = start_timer(CLOCK_MONOTONIC, 3, 0);
+    } else {
+        int ret = load_cache_location();
+        fd = ret == 0 ? DONT_POLL : DONT_POLL_W_ERR;
     }
     /* In case of errors, geoclue_init returns -1 -> disable location. */
-    init_module(r == 0 ? fd : DONT_POLL_W_ERR, self.idx, location_cb);
+    init_module(fd, self.idx, location_cb);
 }
 
 static void location_cb(void) {
     uint64_t t;
     if (read(main_p[self.idx].fd, &t, sizeof(uint64_t)) != -1) {
-        FILE *f = fopen(cache_file, "r");
-        if (f) {
-            fscanf(f, "%lf %lf", &conf.lat, &conf.lon);
-            INFO("Location %.2lf %.2lf loaded from cache file!\n", conf.lat, conf.lon);
-            fclose(f);
-        } else {
-            DEBUG("Loading loc from cache file: %s\n", strerror(errno));
-        }
+        load_cache_location();
     } else {
         /* Disarm timerfd as we received a location before it triggered */
         set_timeout(0, 0, main_p[self.idx].fd, 0);
     }
+}
+
+static int load_cache_location(void) {
+    int ret;
+    FILE *f = fopen(cache_file, "r");
+    if (f) {
+        fscanf(f, "%lf %lf", &conf.lat, &conf.lon);
+        INFO("Location %.2lf %.2lf loaded from cache file!\n", conf.lat, conf.lon);
+        fclose(f);
+        ret = 0;
+    } else {
+        DEBUG("Loading loc from cache file: %s\n", strerror(errno));
+        ret = -1;
+    }
+    return ret;
 }
 
 static void init_cache_file(void) {

@@ -33,6 +33,9 @@ void init_opts(int argc, char *argv[]) {
     conf.event_duration = 30 * 60;
     conf.max_backlight_pct[ON_AC] = 100;
     conf.max_backlight_pct[ON_BATTERY] = 100;
+    conf.dimmer_timeout[ON_AC] = 300;
+    conf.dimmer_timeout[ON_BATTERY] = 120;
+    conf.dimmer_pct = 20;
     
     /*
      * Default polynomial regression points:
@@ -53,6 +56,20 @@ void init_opts(int argc, char *argv[]) {
     memcpy(conf.regression_points, 
            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
            SIZE_POINTS * sizeof(double));
+    
+    /* Default dpms timeouts ON AC */
+    memcpy(conf.dpms_timeouts[ON_AC], 
+           (int[]){ 900, 1200, 1800 }, 
+           SIZE_DPMS * sizeof(int));
+    
+    /* Default dpms timeouts ON BATT */
+    memcpy(conf.dpms_timeouts[ON_BATTERY], 
+           (int[]){ 600, 720, 900 }, 
+           SIZE_DPMS * sizeof(int));
+    
+    
+    state.display = getenv("DISPLAY");
+    state.xauthority = getenv("XAUTHORITY");
 
 #ifdef LIBCONFIG_PRESENT
     read_config(GLOBAL);
@@ -89,6 +106,11 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 100, "Lowest backlight level that clight can set", NULL},
         {"batt_max_backlight_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.max_backlight_pct[ON_BATTERY], 100, "Max backlight level that clight can set while on battery, in percentage", NULL},
         {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
+        {"dimmer_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
+        {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
+        {"ac_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
+        {"batt_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
+        {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -134,27 +156,27 @@ static void check_conf(void) {
      * Reset default values in case of wrong values
      */
     if (conf.timeout[ON_AC][DAY] <= 0) {
-        WARN("Wrong day timeout value. Resetting default value.\n");
+        WARN("Wrong day timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][DAY] = 10 * 60;
     }
     if (conf.timeout[ON_AC][NIGHT] <= 0) {
-        WARN("Wrong night timeout value. Resetting default value.\n");
+        WARN("Wrong night timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][NIGHT] = 45 * 60;
     }
     if (conf.timeout[ON_AC][EVENT] <= 0) {
-        WARN("Wrong event timeout value. Resetting default value.\n");
+        WARN("Wrong event timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][EVENT] = 5 * 60;
     }
     if (conf.timeout[ON_BATTERY][DAY] <= 0) {
-        WARN("Wrong day timeout value. Resetting default value.\n");
+        WARN("Wrong day timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][DAY] = 20 * 60;
     }
     if (conf.timeout[ON_BATTERY][NIGHT] <= 0) {
-        WARN("Wrong night timeout value. Resetting default value.\n");
+        WARN("Wrong night timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][NIGHT] = 90 * 60;
     }
     if (conf.timeout[ON_BATTERY][EVENT] <= 0) {
-        WARN("Wrong event timeout value. Resetting default value.\n");
+        WARN("Wrong event timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][EVENT] = 10 * 60;
     }
     if (conf.num_captures <= 0 || conf.num_captures > 20) {
@@ -177,10 +199,23 @@ static void check_conf(void) {
         WARN("Wrong on battery max backlight percentage value. Resetting default value.\n");
         conf.max_backlight_pct[ON_BATTERY] = 100;
     }
+    if (conf.dimmer_pct > 100 || conf.dimmer_pct < 0) {
+        WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
+        conf.dimmer_pct = 20;
+    }
+    if (conf.dimmer_timeout[ON_AC] <= 0) {
+        WARN("Wrong dimmer timeout on AC value. Resetting default value.\n");
+        conf.dimmer_timeout[ON_AC] = 300;
+    }
+    if (conf.dimmer_timeout[ON_BATTERY] <= 0) {
+        WARN("Wrong dimmer timeout on BATT value. Resetting default value.\n");
+        conf.dimmer_timeout[ON_BATTERY] = 120;
+    }
     
     int i;
+    /* Check regression points values */
     for (i = 0; i < SIZE_POINTS; i++) {
-        if (conf.regression_points[i] < 0.0 || conf.regression_points[i] > 10.0) {
+        if (conf.regression_points[i] < 0.0 || conf.regression_points[i] > 1.0) {
             break;
         }
     }
@@ -190,4 +225,31 @@ static void check_conf(void) {
                (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
                SIZE_POINTS * sizeof(double));
     }
+    
+    /* Check dpms timeout on AC values */
+    for (i = 0; i < SIZE_DPMS; i++) {
+        if (conf.dpms_timeouts[ON_AC][i] < 0) {
+            break;
+        }
+    }
+    if (i != SIZE_DPMS) {
+        WARN("Wrong regression points. Resetting default values.\n");
+        memcpy(conf.dpms_timeouts[ON_AC], 
+               (int[]){ 900, 1200, 1800 }, 
+               SIZE_DPMS * sizeof(int));
+    }
+    
+    /* Check dpms timeout on BATT values */
+    for (i = 0; i < SIZE_DPMS; i++) {
+        if (conf.dpms_timeouts[ON_BATTERY][i] < 0) {
+            break;
+        }
+    }
+    if (i != SIZE_DPMS) {
+        WARN("Wrong regression points. Resetting default values.\n");
+        memcpy(conf.dpms_timeouts[ON_BATTERY], 
+               (int[]){ 600, 720, 900 }, 
+               SIZE_DPMS * sizeof(int));
+    }
+    
 }
