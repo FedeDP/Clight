@@ -38,6 +38,16 @@ Note that desktop file will execute "systemctl --user start clight"; user servic
 
 Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
 
+## Default Enabled Modules
+By default Clight enables all its functions, fallbacking to disable them when they are not supported.
+This means that these features are all enabled with default values:  
+* BRIGHTNESS: to make webcam captures and change screen backlight level to match ambient brightness
+* GAMMA: to change screen temperature based on current time of day
+* DIMMER: to dim screen after a certain idle time
+* DPMS: to switch off screen after a certain idle time
+
+**All these features but BRIGHTNESS can be turned off through cmdline and config file options.**
+
 ## Current features:
 * very lightweight
 * fully valgrind and cppcheck clean
