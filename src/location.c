@@ -122,7 +122,9 @@ end:
  * Stop geoclue2 client and store latest location to cache.
  */
 static void destroy(void) {
-    geoclue_client_stop();
+    if (strlen(client)) {
+        geoclue_client_stop();
+    }
     cache_location();
     /* Destroy this match slot */
     if (slot) {
