@@ -4,7 +4,7 @@
 - [x] drop libconfig optionality (some settings are only available through config file)
 - [x] in case of EHOSTUNREACH (#define EHOSTUNREACH    113 /* No route to host */) error from busctl call, do not leave (and drop if (state.quit) { state.quit = 0 }  in location and upower modules)
 - [x] use setjmp before entering main_poll and use a longjmp in case of critical error (to avoid ugly nested ifs)
-- [ ] Leave for EHOSTUNREACH error related only to org.clightd.backlight
+- [x] Leave for EHOSTUNREACH error related only to org.clightd.backlight
 
 ## 0.16
 - [ ] add a CRITICAL_ON_BATT level to customize even more various timeouts/actions

@@ -207,12 +207,21 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
  */
 static int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
-        /* Don't leave for ebusy/eperm errors. eperm may mean that a not-active session called a method on clightd */
+        /* Only leave for EHOSTUNREACH if it comes from clightd */
+        if (r == -EHOSTUNREACH && err && err->message) {
+            if (strstr(err->message, "/org/clightd/backlight")) {
+                ERROR("%s\n", err->message);
+                goto end;
+            }
+        }
+        /* Don't leave for ebusy/eperm/EHOSTUNREACH errors. eperm may mean that a not-active session called a method on clightd */
         if (r == -EBUSY || r == -EPERM || r == -EHOSTUNREACH) {
             WARN("%s\n", err && err->message ? err->message : strerror(-r));
         } else {
             ERROR("%s\n", err && err->message ? err->message : strerror(-r));
         }
     }
+
+end:
     return r < 0;
 }

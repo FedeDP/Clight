@@ -128,8 +128,6 @@ void get_current_brightness(void) {
 
 static void set_brightness(const double perc) {
     /* y = a0 + a1x + a2x^2 */
-    INFO("%d: y = %lf + %lfx + %lfx^2\n", state.ac_state, state.fit_parameters[ state.ac_state][0], 
-         state.fit_parameters[ state.ac_state][1], state.fit_parameters[ state.ac_state][2]);
     const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     int new_br =  (float)state.br.max * clamp(b, 1, 0);
    
