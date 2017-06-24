@@ -2,6 +2,8 @@
 - [ ] specify regression points for both AC and BATTERY? This would remove the need for -batt_max_backlight_pct=INT option and would be a really nice feature
 - [ ] only change brightness if backlight_sysfs has /sys/class/backlight/*/device/enabled == "enabled" (maybe do this check in clightd, only if a syspath is not passed though, otherwise avoid this check) -> eg: when using external monitor in my case, i got device/enabled == "disabled". It is useless to change brightness on a disabled device.
 - [ ] drop libconfig optionality (some settings are only available through config file)
+- [ ] in case of EHOSTUNREACH error from busctl call, do not leave (and drop if (state.quit) { state.quit = 0 }  in location and upower modules)
+- [ ] use setjmp before entering main_poll and use a longjmp in case of critical error (to avoid ugly nested ifs)
 
 ## 0.16
 - [ ] add a CRITICAL_ON_BATT level to customize even more various timeouts/actions

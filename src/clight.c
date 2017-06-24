@@ -117,7 +117,6 @@ static void main_poll(void) {
                 continue;
             }
             state.quit = 1;
-            return;
         }
 
         for (int i = 0; i < MODULES_NUM && r > 0; i++) {
