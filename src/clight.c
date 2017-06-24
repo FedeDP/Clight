@@ -47,8 +47,11 @@ static void (*const set_selfs[])(void) = {
 };
 
 int main(int argc, char *argv[]) {
-    init(argc, argv);
-    main_poll();
+    setjmp(quit_buf);
+    if (!state.quit) {
+        init(argc, argv);
+        main_poll();
+    }
     destroy();
     return 0;
 }
@@ -61,27 +64,20 @@ int main(int argc, char *argv[]) {
  */
 static void init(int argc, char *argv[]) {
     init_opts(argc, argv);
-    if (!conf.single_capture_mode && !state.quit) {
+    if (!conf.single_capture_mode) {
         gain_lck();
-        if (!state.quit) { 
-            open_log();
-            log_conf();
-        }
-    }
-    if (state.quit) {
-        return;
+        open_log();
+        log_conf();
     }
     set_modules_selfs();
-    if (!state.quit) {
-        init_all_modules();
-    }
+    init_all_modules();
 }
 
 /* 
  * Set each module self struct 
  */
 static void set_modules_selfs(void) {
-    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+    for (int i = 0; i < MODULES_NUM; i++) {
         set_selfs[i]();
     }
 }
@@ -90,7 +86,7 @@ static void set_modules_selfs(void) {
  * Init every module 
  */
 static void init_all_modules(void) {
-    for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+    for (int i = 0; i < MODULES_NUM; i++) {
         init_modules(i);
     }
 }

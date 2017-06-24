@@ -51,9 +51,8 @@ static void destroy(void) {
 
 static int upower_init(void) {
     struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
-    add_match(&args, &slot, on_upower_change);
-    if (state.quit) {
-        state.quit = 0; // do not leave
+    int r = add_match(&args, &slot, on_upower_change);
+    if (r < 0) {
         return -1;   // disable this module
     }
     /* check initial AC state */

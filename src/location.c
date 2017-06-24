@@ -7,10 +7,10 @@ static void location_cb(void);
 static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
-static void geoclue_get_client(void);
-static void geoclue_hook_update(void);
+static int geoclue_get_client(void);
+static int geoclue_hook_update(void);
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void geoclue_client_start(void);
+static int geoclue_client_start(void);
 static void geoclue_client_stop(void);
 static void cache_location(void);
 
@@ -93,29 +93,20 @@ static void init_cache_file(void) {
 /*
  * Init geoclue, then checks if a location is already available.
  */
-static int geoclue_init(void) {
-    int r = 0;
-    
-    geoclue_get_client();
-    if (state.quit) {
+static int geoclue_init(void) {    
+    int r = geoclue_get_client();
+    if (r < 0) {
         goto end;
     }
-    geoclue_hook_update();
-    if (state.quit) {
+    r = geoclue_hook_update();
+    if (r < 0) {
         goto end;
     }
-    geoclue_client_start();
-    if (state.quit) {
-        goto end;
-    }
+    r = geoclue_client_start();
 
 end:
-    /* In case of geoclue2 error, do not leave. Just disable gamma support as geoclue2 is an opt-dep. */
-    if (state.quit) {
-        state.quit = 0; // do not leave
-        r = -1;
-    }
-    return r;
+    /* In case of geoclue2 error, do not leave. Just disable this module */
+    return -(r < 0);  // - 1 on error
 }
 
 /*
@@ -147,17 +138,17 @@ static int check(void) {
 /*
  * Store Client object path in client (static) global var
  */
-static void geoclue_get_client(void) {
+static int geoclue_get_client(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient"};
-    bus_call(client, "o", &args, "");
+    return bus_call(client, "o", &args, "");
 }
 
 /*
  * Hook our geoclue_new_location callback to PropertiesChanged dbus signals on GeoClue2 service.
  */
-static void geoclue_hook_update(void) {
+static int geoclue_hook_update(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "LocationUpdated" };
-    add_match(&args, &slot, on_geoclue_new_location);
+    return add_match(&args, &slot, on_geoclue_new_location);
 }
 
 /*
@@ -190,14 +181,14 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
 /*
  * Start our geoclue2 client after having correctly set needed properties.
  */
-static void geoclue_client_start(void) {
+static int geoclue_client_start(void) {
     struct bus_args call_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Start"};
     struct bus_args id_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId"};
     struct bus_args thres_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold"};
 
     set_property(&id_args, 's', "clight");
     set_property(&thres_args, 'u', "50000"); // 50kms
-    bus_call(NULL, "", &call_args, "");
+    return bus_call(NULL, "", &call_args, "");
 }
 
 /*

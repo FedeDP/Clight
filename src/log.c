@@ -37,7 +37,6 @@ void log_conf(void) {
         fprintf(log_file, "* User setted sunset:\t\t%s\n", conf.events[SUNSET]);
         fprintf(log_file, "* Gamma correction:\t\t%s\n", conf.no_gamma ? "disabled" : "enabled");
         fprintf(log_file, "* Min backlight level:\t\t%d\n", conf.lowest_backlight_level);
-        fprintf(log_file, "* Max backlight pct:\t\tAC %d%%\tBATT %d%%\n", conf.max_backlight_pct[ON_AC], conf.max_backlight_pct[ON_BATTERY]);
         fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
         fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", conf.no_dimmer ? "disabled" : "enabled");
         fprintf(log_file, "* Dimmer backlight:\t\t%d%%\n", conf.dimmer_pct);
@@ -71,6 +70,11 @@ void log_message(const char *filename, int lineno, const char type, const char *
     vfprintf(out, log_msg, args);
     va_end(args);
     va_end(file_args);
+    
+    if (type == 'E') {
+        /* leave */
+        longjmp(quit_buf, 1);
+    }
 }
 
 void close_log(void) {

@@ -60,7 +60,7 @@ static void bus_cb(void) {
 /*
  * Call a method on bus and store its result of type userptr_type in userptr.
  */
-void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
+int bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
 
@@ -123,22 +123,24 @@ void bus_call(void *userptr, const char *userptr_type, const struct bus_args *a,
 
 finish:
     free_bus_structs(&error, m, reply);
+    return r;
 }
 
 /*
  * Add a match on bus on certain signal for cb callback
  */
-void add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
+int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
     int r = sd_bus_add_match(bus, slot, match, cb, NULL);
     check_err(r, NULL);
+    return r;
 }
 
 /*
  * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
  */
-void set_property(const struct bus_args *a, const char type, const char *value) {
+int set_property(const struct bus_args *a, const char type, const char *value) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
 
@@ -155,12 +157,13 @@ void set_property(const struct bus_args *a, const char type, const char *value) 
     }
     check_err(r, &error);
     free_bus_structs(&error, NULL, NULL);
+    return r;
 }
 
 /*
  * Get a property of type "type" into userptr.
  */
-void get_property(const struct bus_args *a, const char *type, void *userptr) {
+int get_property(const struct bus_args *a, const char *type, void *userptr) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
 
@@ -181,6 +184,7 @@ void get_property(const struct bus_args *a, const char *type, void *userptr) {
 
 finish:
     free_bus_structs(&error, m, NULL);
+    return r;
 }
 
 /*
@@ -204,7 +208,7 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
 static int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
         /* Don't leave for ebusy/eperm errors. eperm may mean that a not-active session called a method on clightd */
-        if (r == -EBUSY || r == -EPERM) {
+        if (r == -EBUSY || r == -EPERM || r == -EHOSTUNREACH) {
             WARN("%s\n", err && err->message ? err->message : strerror(-r));
         } else {
             ERROR("%s\n", err && err->message ? err->message : strerror(-r));

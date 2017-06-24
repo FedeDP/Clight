@@ -1,5 +1,3 @@
-#ifdef LIBCONFIG_PRESENT
-
 #include "../inc/config.h"
 #include <libconfig.h>
 
@@ -47,7 +45,6 @@ void read_config(enum CONFIG file) {
         config_lookup_float(&cfg, "latitude", &conf.lat);
         config_lookup_float(&cfg, "longitude", &conf.lon);
         config_lookup_int(&cfg, "lowest_backlight_level", &conf.lowest_backlight_level);
-        config_lookup_int(&cfg, "batt_max_backlight_pct", &conf.max_backlight_pct[ON_BATTERY]);
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
         config_lookup_int(&cfg, "no_dimmer", &conf.no_dimmer);
         config_lookup_int(&cfg, "dimmer_pct", &conf.dimmer_pct);
@@ -72,13 +69,24 @@ void read_config(enum CONFIG file) {
         root = config_root_setting(&cfg);
         
         /* Load regression points for brightness curve */
-        if ((points = config_setting_get_member(root, "brightness_regression_points"))) {
+        if ((points = config_setting_get_member(root, "ac_brightness_regression_points"))) {
             if (config_setting_length(points) >= SIZE_POINTS) {
                 for (int i = 0; i < SIZE_POINTS; i++) {
-                    conf.regression_points[i] = config_setting_get_float_elem(points, i);
+                    conf.regression_points[ON_AC][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of brightness_regression_points array elements.\n");
+                WARN("Wrong number of ac_brightness_regression_points array elements.\n");
+            }
+        }
+        
+        /* Load regression points for brightness curve */
+        if ((points = config_setting_get_member(root, "batt_brightness_regression_points"))) {
+            if (config_setting_length(points) >= SIZE_POINTS) {
+                for (int i = 0; i < SIZE_POINTS; i++) {
+                    conf.regression_points[ON_BATTERY][i] = config_setting_get_float_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of batt_brightness_regression_points array elements.\n");
             }
         }
         
@@ -111,5 +119,3 @@ void read_config(enum CONFIG file) {
     }
     config_destroy(&cfg);
 }
-
-#endif

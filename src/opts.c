@@ -1,8 +1,4 @@
-#ifdef LIBCONFIG_PRESENT
 #include "../inc/config.h"
-#else
-#include "../inc/modules.h"
-#endif
 #include "../inc/opts.h"
 #include <popt.h>
 
@@ -31,30 +27,32 @@ void init_opts(int argc, char *argv[]) {
     conf.temp[EVENT] = -1;
     conf.temp[UNKNOWN] = conf.temp[DAY];
     conf.event_duration = 30 * 60;
-    conf.max_backlight_pct[ON_AC] = 100;
-    conf.max_backlight_pct[ON_BATTERY] = 100;
     conf.dimmer_timeout[ON_AC] = 300;
     conf.dimmer_timeout[ON_BATTERY] = 120;
     conf.dimmer_pct = 20;
     
     /*
      * Default polynomial regression points:
-     * X = 0  Y = 0.00
-     *     1      0.15
-     *     2      0.29
-     *     3      0.45
-     *     4      0.61
-     *     5      0.74
-     *     6      0.81
-     *     7      0.88
-     *     8      0.93
-     *     9      0.97
-     *    10      1.00
+     * ON AC                ON BATTERY
+     * X = 0  Y = 0.00      X = 0  Y = 0.00
+     *     1      0.15          1      0.15 
+     *     2      0.29          2      0.23
+     *     3      0.45          3      0.36
+     *     4      0.61          4      0.52
+     *     5      0.74          5      0.59 
+     *     6      0.81          6      0.65
+     *     7      0.88          7      0.71
+     *     8      0.93          8      0.75 
+     *     9      0.97          9      0.78
+     *    10      1.00         10      0.80
      * Where X is ambient brightness and Y is backlight level.
      * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
      */
-    memcpy(conf.regression_points, 
+    memcpy(conf.regression_points[ON_AC], 
            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
+           SIZE_POINTS * sizeof(double));
+    memcpy(conf.regression_points[ON_BATTERY], 
+           (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
            SIZE_POINTS * sizeof(double));
     
     /* Default dpms timeouts ON AC */
@@ -71,10 +69,8 @@ void init_opts(int argc, char *argv[]) {
     state.display = getenv("DISPLAY");
     state.xauthority = getenv("XAUTHORITY");
 
-#ifdef LIBCONFIG_PRESENT
     read_config(GLOBAL);
     read_config(LOCAL);
-#endif
     parse_cmd(argc, argv);
     check_conf();
 }
@@ -104,7 +100,6 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 100, "Disable gamma correction tool", NULL},
         {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 100, "Lowest backlight level that clight can set", NULL},
-        {"batt_max_backlight_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.max_backlight_pct[ON_BATTERY], 100, "Max backlight level that clight can set while on battery, in percentage", NULL},
         {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
         {"dimmer_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
@@ -195,10 +190,6 @@ static void check_conf(void) {
         WARN("Wrong event duration value. Resetting default value.\n");
         conf.event_duration = 30 * 60;
     }
-    if (conf.max_backlight_pct[ON_BATTERY] > 100 || conf.max_backlight_pct[ON_BATTERY] < 0) {
-        WARN("Wrong on battery max backlight percentage value. Resetting default value.\n");
-        conf.max_backlight_pct[ON_BATTERY] = 100;
-    }
     if (conf.dimmer_pct > 100 || conf.dimmer_pct < 0) {
         WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
         conf.dimmer_pct = 20;
@@ -212,17 +203,28 @@ static void check_conf(void) {
         conf.dimmer_timeout[ON_BATTERY] = 120;
     }
     
-    int i;
+    int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */
-    for (i = 0; i < SIZE_POINTS; i++) {
-        if (conf.regression_points[i] < 0.0 || conf.regression_points[i] > 1.0) {
-            break;
+    for (i = 0; i < SIZE_POINTS && !reg_points_batt_needed && !reg_points_ac_needed; i++) {
+        if (!reg_points_ac_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
+            reg_points_ac_needed = 1;
         }
+        
+        if (!reg_points_batt_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
+            reg_points_batt_needed = 1;
+        }
+        
     }
-    if (i != SIZE_POINTS) {
-        WARN("Wrong regression points. Resetting default values.\n");
-        memcpy(conf.regression_points, 
+    if (reg_points_ac_needed) {
+        WARN("Wrong ac_regression points. Resetting default values.\n");
+        memcpy(conf.regression_points[ON_AC], 
                (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
+               SIZE_POINTS * sizeof(double));
+    }
+    if (reg_points_batt_needed) {
+        WARN("Wrong batt_regression points. Resetting default values.\n");
+        memcpy(conf.regression_points[ON_BATTERY], 
+               (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
                SIZE_POINTS * sizeof(double));
     }
     

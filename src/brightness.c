@@ -11,7 +11,7 @@ static void do_capture(void);
 static void get_max_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
-static void polynomialfit(void);
+static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
 static void upower_callback(int old_state);
 
@@ -39,7 +39,8 @@ static void init(void) {
     get_max_brightness();
     if (!state.quit) {
         /* Compute polynomial best-fit parameters */
-        polynomialfit();
+        polynomialfit(ON_AC);
+        polynomialfit(ON_BATTERY);
         int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
         init_module(fd, self.idx, brightness_cb);
         if (!state.quit && !modules[self.idx].disabled) {
@@ -127,9 +128,10 @@ void get_current_brightness(void) {
 
 static void set_brightness(const double perc) {
     /* y = a0 + a1x + a2x^2 */
-    const double b = state.fit_parameters[0] + state.fit_parameters[1] * perc + state.fit_parameters[2] * pow(perc, 2);
-    /* Correctly honor conf.max_backlight_pct */
-    int new_br =  (float)state.br.max / 100 * conf.max_backlight_pct[state.ac_state] * clamp(b, 1, 0);
+    INFO("%d: y = %lf + %lfx + %lfx^2\n", state.ac_state, state.fit_parameters[ state.ac_state][0], 
+         state.fit_parameters[ state.ac_state][1], state.fit_parameters[ state.ac_state][2]);
+    const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
+    int new_br =  (float)state.br.max * clamp(b, 1, 0);
    
     get_current_brightness();
     if (!state.quit && new_br != state.br.old) {
@@ -160,7 +162,7 @@ static double capture_frames_brightness(void) {
 /*
  * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C 
  */
-static void polynomialfit(void) {
+static void polynomialfit(enum ac_states s) {
     gsl_multifit_linear_workspace *ws;
     gsl_matrix *cov, *X;
     gsl_vector *y, *c;
@@ -176,7 +178,7 @@ static void polynomialfit(void) {
         for(j=0; j < DEGREE; j++) {
             gsl_matrix_set(X, i, j, pow(i, j));
         }
-        gsl_vector_set(y, i, conf.regression_points[i]);
+        gsl_vector_set(y, i, conf.regression_points[s][i]);
     }
     
     ws = gsl_multifit_linear_alloc(SIZE_POINTS, DEGREE);
@@ -184,9 +186,10 @@ static void polynomialfit(void) {
     
     /* store results */
     for(i = 0; i < DEGREE; i++) {
-        state.fit_parameters[i] = gsl_vector_get(c, i);
+        state.fit_parameters[s][i] = gsl_vector_get(c, i);
     }
-    DEBUG("y = %lf + %lfx + %lfx^2\n", state.fit_parameters[0], state.fit_parameters[1], state.fit_parameters[2]);
+    DEBUG("%d: y = %lf + %lfx + %lfx^2\n", s, state.fit_parameters[s][0], 
+          state.fit_parameters[s][1], state.fit_parameters[s][2]);
     
     gsl_multifit_linear_free(ws);
     gsl_matrix_free(X);
@@ -207,14 +210,10 @@ static double clamp(double value, double max, double min) {
 
 static void upower_callback(int old_state) {
     if (!state.fast_recapture) {
-        if (conf.max_backlight_pct[ON_BATTERY] != conf.max_backlight_pct[ON_AC]) {
-            /* 
-             *if different max value is set, do a capture right now 
-             * to correctly set brightness value considering new upper limit 
-             */
-            set_timeout(0, 1, main_p[self.idx].fd, 0);
-        } else {
-            reset_timer(main_p[self.idx].fd, conf.timeout[old_state][state.time], conf.timeout[state.ac_state][state.time]);
-        }
+        /* 
+         * do a capture right now as we have 2 different curves for 
+         * different AC_STATES, so let's properly honor new curve
+         */
+        set_timeout(0, 1, main_p[self.idx].fd, 0);
     }
 }

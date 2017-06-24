@@ -18,26 +18,13 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl)
-CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
+LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl libconfig)
+CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
 ifneq ("$(shell pkg-config --atleast-version=221 systemd && echo yes)", "yes")
 $(error systemd minimum required version 221.)
-endif
-
-ifneq ("$(DISABLE_LIBCONFIG)","1")
-LIBCONFIG=$(shell pkg-config --silence-errors --libs libconfig)
-ifneq ("$(LIBCONFIG)","")
-CFLAGS+=-DLIBCONFIG_PRESENT $(shell pkg-config --cflags libconfig)
-LIBS+=$(LIBCONFIG)
-$(info Libconfig support enabled.)
-else
-$(info Libconfig support disabled.)
-endif
-else
-$(info Libconfig support disabled.)
 endif
 
 endif

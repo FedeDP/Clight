@@ -11,8 +11,9 @@
 #include <poll.h>
 #include <math.h>
 #include <pwd.h>
+#include <setjmp.h>
 
-/* 
+/*
  * Useful macro to check size of global array.
  * Used in every module to automatically set self.num_deps
  */
@@ -61,9 +62,8 @@ struct config {
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int no_gamma;                           // whether gamma tool is disabled
     int lowest_backlight_level;             // lowest backlight level to be setted
-    int max_backlight_pct[SIZE_AC];         // max backlight percentage per-ac state (for now, only ON_BATTERY is exported though)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
-    double regression_points[SIZE_POINTS];  // points used for regression through libgsl
+    double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
     int dimmer_pct;                         // pct of max brightness to be used while dimming
     int no_dimmer;                          // disable dimmer
@@ -89,7 +89,7 @@ struct state {
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
-    double fit_parameters[DEGREE];          // best-fit parameters
+    double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
     struct brightness br;                   // struct that hold screen backlight info
@@ -128,4 +128,5 @@ struct module {
 struct state state;
 struct config conf;
 struct module modules[MODULES_NUM];
-struct pollfd main_p[MODULES_NUM]; 
+struct pollfd main_p[MODULES_NUM];
+jmp_buf quit_buf;

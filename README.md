@@ -13,10 +13,8 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
 * gsl (gsl/gsl_multifit.h)
+* libconfig (libconfig.h)
 * gcc or clang
-
-## Optional build deps
-* libconfig (libconfig.h), for config files support
 
 ## Runtime deps:
 * shared objects from build libraries
@@ -25,11 +23,6 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
 * Upower to honor timeouts between captures depending on ac state as setted in configuration (otherwise only ON_AC timeout will be used)
-
-## Build time switches:
-* DISABLE_LIBCONFIG=1 (to disable libconfig support)
-
-Note that optional build deps are automatically disabled if they are not installed at build time.
 
 ## How to run it
 Clight tries to be a 0-conf software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight.   User has to do nothing but reboot after installing clight.  

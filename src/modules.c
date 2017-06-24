@@ -22,8 +22,7 @@ void init_modules(const enum modules module) {
 
 void init_module(int fd, enum modules module, void (*cb)(void)) {
     if (fd == -1) {
-        state.quit = 1;
-        return;
+        return ERROR("%s\n", strerror(errno));
     }
     
     main_p[module] = (struct pollfd) {
@@ -188,7 +187,7 @@ void disable_module(const enum modules module) {
         destroy_modules(module);
         /* if module is a mandatory for clight module, quit */
         if (modules[module].self->mandatory) {
-            state.quit = 1;
+            return ERROR("A mandatory modules has been destroyed.\n");
         }
     }
 }
