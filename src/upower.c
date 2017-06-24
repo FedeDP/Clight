@@ -80,10 +80,14 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribu
 /* Hook a callback to upower change event */
 void add_upower_module_callback(upower_cb callback) {
     if (modules[self.idx].inited) {
-        callbacks = realloc(callbacks, sizeof(upower_cb) * (++num_callbacks));
-        if (callbacks) {
+        upower_cb *tmp = realloc(callbacks, sizeof(upower_cb) * (++num_callbacks));
+        if (tmp) {
+            callbacks = tmp;
             callbacks[num_callbacks - 1] = callback;
         } else {
+            if (callbacks) {
+                free(callbacks);
+            }
             ERROR("%s\n", strerror(errno));
         }
     }

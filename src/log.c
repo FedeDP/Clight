@@ -69,11 +69,6 @@ void log_message(const char *filename, int lineno, const char type, const char *
     vfprintf(out, log_msg, args);
     va_end(args);
     va_end(file_args);
-    
-    if (type == 'E') {
-        /* leave */
-        longjmp(quit_buf, 1);
-    }
 }
 
 void close_log(void) {

@@ -27,7 +27,7 @@ void set_bus_self(void) {
 static void init(void) {
     int r = sd_bus_open_system(&bus);
     if (r < 0) {
-        return ERROR("Failed to connect to system bus: %s\n", strerror(-r));
+        ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(bus);
@@ -203,7 +203,11 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
 }
 
 /*
- * Check any error. Do not leave for EBUSY errors.
+ * Check any error. Do not leave for EBUSY, EPERM and EHOSTUNREACH errors.
+ * Only leave for EHOSTUNREACH if from clightd. (it can't be missing).
+ * Will return 1 if an error happened, 0 otherwise.
+ * Note that this function will only return 1 if a not fatal error happened (ie: WARN has been called),
+ * as ERROR() macro does a longjmp
  */
 static int check_err(int r, sd_bus_error *err) {
     if (r < 0) {
@@ -211,7 +215,7 @@ static int check_err(int r, sd_bus_error *err) {
         if (r == -EHOSTUNREACH && err && err->message) {
             if (strstr(err->message, "/org/clightd/backlight")) {
                 ERROR("%s\n", err->message);
-                goto end;
+                goto end; // this line won't be executed as ERROR() macro does a longjmp for error handling and leave
             }
         }
         /* Don't leave for ebusy/eperm/EHOSTUNREACH errors. eperm may mean that a not-active session called a method on clightd */

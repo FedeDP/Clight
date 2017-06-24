@@ -53,7 +53,7 @@ static void signal_cb(void) {
 
     s = read(main_p[self.idx].fd, &fdsi, sizeof(struct signalfd_siginfo));
     if (s != sizeof(struct signalfd_siginfo)) {
-        return ERROR("an error occurred while getting signalfd data.\n");
+        ERROR("an error occurred while getting signalfd data.\n");
     }
     INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
     state.quit = 1;

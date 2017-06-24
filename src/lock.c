@@ -8,9 +8,10 @@ void gain_lck(void) {
     snprintf(lockfile, PATH_MAX, "%s/.clight.lock", getpwuid(getuid())->pw_dir);
     lck_fd = open(lockfile, O_RDWR | O_CREAT);
     if (lck_fd == -1) {
-        return ERROR("Failed to open lockfile.\n");
+        ERROR("Failed to open lockfile.\n");
     }
     if (flock(lck_fd, LOCK_EX | LOCK_NB) == -1) {
+        close(lck_fd);
         ERROR("Failed to acquire lock.\n");
     }
     close(lck_fd);
