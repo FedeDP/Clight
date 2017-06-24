@@ -46,7 +46,7 @@ This means that these features are all enabled with default values:
 * fully valgrind and cppcheck clean
 * external signals catching (sigint/sigterm)
 * systemd user unit and autostart desktop file shipped
-* dpms support: it will check current screen powersave level and won't do anything if screen is currently off
+* dpms support: it will check current screen powersave level and won't do anything if screen is currently off. Moreover, it will set dpms timeouts according to config options. -> **X only**
 * a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does) -> **X only**
 * dimmer support: it will dim your screen after specified timeout of user inactivity (ie: no mouse/keyboard) -> **X only**
@@ -86,9 +86,10 @@ Both files are checked when clight starts, in this order: global -> user-local -
 
 ## Polynomial fit
 Clight makes use of Gnu Scientific Library to compute best-fit around data points as read by clight.conf file.  
-Default values are [ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 ]; indexes (from 0 to 10 included) are our X axys (ambient brightness), while values are Y axys (screen backlight).  
+Default values on AC are [ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 ]; indexes (from 0 to 10 included) are our X axys (ambient brightness), while values are Y axys (screen backlight).  
 For example, with default values, at 0.5 ambient brightness (6th value in this array) clight will set a 74% of max backlight level.  
 By customizing these values, you can adapt screen backlight curve to meet your needs. Note that values must be between 0.0 and 1.0 obviously.  
+Clight supports different curves on different ac states. In fact, by default on BATT points are different from above. See config file for more info.  
 
 ## Gamma support info
 *Gamma support is only available on X. Sadly on wayland there is still no standard way to achieve gamma correction. Let's way with fingers crossed.*  
