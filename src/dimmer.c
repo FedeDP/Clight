@@ -36,7 +36,7 @@ static void init(void) {
     if (inot_fd != -1) {
         timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
         init_module(timer_fd, self.idx, dimmer_cb);
-        if (!state.quit && !modules[self.idx].disabled) {
+        if (!modules[self.idx].disabled) {
             add_upower_module_callback(upower_callback);
         }
     }
@@ -77,7 +77,7 @@ static void dimmer_cb(void) {
         read(main_p[self.idx].fd, &t, sizeof(uint64_t));
         
         int idle_t = get_idle_time();
-        if (!state.quit && idle_t > 0) {
+        if (idle_t > 0) {
             /* -1 as it seems we receive events circa 1s before */
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
             if (state.is_dimmed) {
@@ -116,9 +116,6 @@ static void dim_backlight(void) {
     int lowered_br = state.br.max * conf.dimmer_pct / 100;
     // store old brightness
     get_current_brightness();
-    if (state.quit) {
-        return;
-    }
     
     if (lowered_br < state.br.old) {
         set_backlight_level(lowered_br);

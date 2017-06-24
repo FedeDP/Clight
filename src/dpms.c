@@ -27,11 +27,9 @@ void set_dpms_self(void) {
 
 static void init(void) {
     set_dpms();
-    if (!state.quit) {
-        init_module(DONT_POLL, self.idx, NULL);
-        if (!state.quit && !modules[self.idx].disabled) {
-            add_upower_module_callback(upower_callback);
-        }
+    init_module(DONT_POLL, self.idx, NULL);
+    if (!modules[self.idx].disabled) {
+        add_upower_module_callback(upower_callback);
     }
 }
 

@@ -84,10 +84,6 @@ static void check_gamma(void) {
          * Then, it will be called every day after end of last event (ie: sunset + 30mins)
          */
         get_gamma_events(&t, conf.lat, conf.lon, state.events[SUNSET] != 0);
-        /* calculate_sunrise_sunset will fail if wrong sunrise/sunset strings are passed from options */
-        if (state.quit) {
-            return;
-        }
     }
 
     int ret = 0;
@@ -352,9 +348,6 @@ static int set_temp(int temp) {
         struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
 
         bus_call(&old_temp, "i", &args_get, "ss", state.display, state.xauthority);
-        if (state.quit) {
-            return -1;
-        }
     }
 
     if (old_temp != temp) {

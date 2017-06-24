@@ -42,12 +42,12 @@ static void main_poll(void);
  * pointers to init modules functions;
  */
 static void (*const set_selfs[])(void) = {
-    set_brightness_self, set_location_self, set_upower_self, 
-    set_gamma_self, set_signal_self, set_bus_self, set_dimmer_self, set_dpms_self
+    set_brightness_self, set_location_self, set_upower_self, set_gamma_self,
+    set_signal_self, set_bus_self, set_dimmer_self, set_dpms_self
 };
 
 int main(int argc, char *argv[]) {
-    setjmp(quit_buf);
+    state.quit = setjmp(quit_buf);
     if (!state.quit) {
         init(argc, argv);
         main_poll();
@@ -112,7 +112,7 @@ static void main_poll(void) {
             if (errno == EINTR) {
                 continue;
             }
-            state.quit = 1;
+            ERROR("%s\n", strerror(errno));
         }
 
         for (int i = 0; i < MODULES_NUM && r > 0; i++) {

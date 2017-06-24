@@ -37,15 +37,13 @@ void set_brightness_self(void) {
  */
 static void init(void) {
     get_max_brightness();
-    if (!state.quit) {
-        /* Compute polynomial best-fit parameters */
-        polynomialfit(ON_AC);
-        polynomialfit(ON_BATTERY);
-        int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
-        init_module(fd, self.idx, brightness_cb);
-        if (!state.quit && !modules[self.idx].disabled) {
-            add_upower_module_callback(upower_callback);
-        }
+    /* Compute polynomial best-fit parameters */
+    polynomialfit(ON_AC);
+    polynomialfit(ON_BATTERY);
+    int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
+    init_module(fd, self.idx, brightness_cb);
+    if (!modules[self.idx].disabled) {
+        add_upower_module_callback(upower_callback);
     }
 }
 
@@ -96,10 +94,10 @@ static void do_capture(void) {
      * I won't check setbrightness too because if captureframes did not return any error,
      * it is very very unlikely that setbrightness would return some.
      */
-    if (!state.quit && val >= 0.0) {
+    if (val >= 0.0) {
         set_brightness(val * 10);
         
-        if (!conf.single_capture_mode && !state.quit) {
+        if (!conf.single_capture_mode) {
             double drop = (double)(state.br.current - state.br.old) / state.br.max;
             // if there is too high difference, do a fast recapture to be sure
             // this is the correct level
@@ -132,7 +130,7 @@ static void set_brightness(const double perc) {
     int new_br =  (float)state.br.max * clamp(b, 1, 0);
    
     get_current_brightness();
-    if (!state.quit && new_br != state.br.old) {
+    if (new_br != state.br.old) {
         set_backlight_level(new_br);
     } else {
         state.br.current = new_br;
@@ -144,9 +142,7 @@ void set_backlight_level(int level) {
     DEBUG("Old brightness value: %d\n", state.br.old);
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
     bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level >= conf.lowest_backlight_level ? level : conf.lowest_backlight_level);
-    if (!state.quit) {
-        INFO("New brightness value: %d\n", state.br.current);
-    }
+    INFO("New brightness value: %d\n", state.br.current);
 }
 
 static double capture_frames_brightness(void) {

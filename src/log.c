@@ -63,7 +63,6 @@ void log_message(const char *filename, int lineno, const char type, const char *
     /* In case of error, set quit flag */
     FILE *out = stdout;
     if (type == 'E') {
-        state.quit = 1;
         out = stderr;
     }
     
