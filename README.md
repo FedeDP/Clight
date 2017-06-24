@@ -22,7 +22,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
-* Upower to honor timeouts between captures depending on ac state as setted in configuration (otherwise only ON_AC timeout will be used)
+* Upower to honor timeouts between captures, to use different ambient brightness -> screen backlight matching coefficients, to change dimmer timeout and to change dpms timeouts depending on ac state.
 
 ## How to run it
 Clight tries to be a 0-conf software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight.   User has to do nothing but reboot after installing clight.  
