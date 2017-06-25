@@ -8,7 +8,6 @@ static int check(void);
 static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
-static int is_interface_enabled(void);
 static void get_max_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
@@ -125,7 +124,7 @@ static void do_capture(void) {
  * check if backlight interface is enabled before trying to change brightness
  * as it would be useless to change brightness on a disabled itnerface (eg when using external monitor)
  */
-static int is_interface_enabled(void) {
+int is_interface_enabled(void) {
     int enabled;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "isbacklightinterfaceenabled"};
     bus_call(&enabled, "i", &args, "s", conf.screen_path);

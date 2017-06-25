@@ -105,7 +105,9 @@ static void dimmer_cb(void) {
             main_p[self.idx].fd = timer_fd;
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
             /* restore previous backlight level */
-            set_backlight_level(state.br.old);
+            if (is_interface_enabled()) {
+                set_backlight_level(state.br.old);
+            }
             /* restart listening BRIGHTNESS module fd */
             main_p[BRIGHTNESS].fd = bright_fd;
         }
@@ -118,7 +120,9 @@ static void dim_backlight(void) {
     get_current_brightness();
     
     if (lowered_br < state.br.old) {
-        set_backlight_level(lowered_br);
+        if (is_interface_enabled()) {
+            set_backlight_level(lowered_br);
+        }
     } else {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     }
