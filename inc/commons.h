@@ -109,7 +109,6 @@ struct self_t {
     int num_deps;                         // number of deps for a module
     int satisfied_deps;                   // number of satisfied deps
     struct dependency *deps;              // module on which there is a dep
-    int mandatory;                        // whether a module is mandatory for clight to run
 };
 
 /* Struct that holds data for each module */
@@ -121,7 +120,7 @@ struct module {
     struct self_t *self;                  // pointer to self module informations
     enum modules *dependent_m;            // pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
-    int inited;                           // whether a module has been initialized
+    int inited;                           // whether a module has been initialized (ie: setted up)
     int disabled;                         // whether this module has been disabled from config (for now useful only for gamma)
 };
 

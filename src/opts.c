@@ -228,27 +228,25 @@ static void check_conf(void) {
                SIZE_POINTS * sizeof(double));
     }
     
-    /* Check dpms timeout on AC values */
-    for (i = 0; i < SIZE_DPMS; i++) {
-        if (conf.dpms_timeouts[ON_AC][i] < 0) {
-            break;
+    /* Check dpms timeout values */
+    int dpms_timeout_ac_needed = 0, dpms_timeout_batt_needed = 0;
+    for (i = 0; i < SIZE_DPMS && !dpms_timeout_ac_needed && !dpms_timeout_batt_needed; i++) {
+        if (conf.dpms_timeouts[ON_AC][i] <= 0) {
+            dpms_timeout_ac_needed = 1;
         }
+        if (conf.dpms_timeouts[ON_BATTERY][i] <= 0) {
+            dpms_timeout_batt_needed = 1;
+        }
+        
     }
-    if (i != SIZE_DPMS) {
-        WARN("Wrong regression points. Resetting default values.\n");
+    if (dpms_timeout_ac_needed) {
+        WARN("Wrong on ac dpms timeouts. Resetting default values.\n");
         memcpy(conf.dpms_timeouts[ON_AC], 
                (int[]){ 900, 1200, 1800 }, 
                SIZE_DPMS * sizeof(int));
     }
-    
-    /* Check dpms timeout on BATT values */
-    for (i = 0; i < SIZE_DPMS; i++) {
-        if (conf.dpms_timeouts[ON_BATTERY][i] < 0) {
-            break;
-        }
-    }
-    if (i != SIZE_DPMS) {
-        WARN("Wrong regression points. Resetting default values.\n");
+    if (dpms_timeout_batt_needed) {
+        WARN("Wrong on batt dpms timeouts. Resetting default values.\n");
         memcpy(conf.dpms_timeouts[ON_BATTERY], 
                (int[]){ 600, 720, 900 }, 
                SIZE_DPMS * sizeof(int));

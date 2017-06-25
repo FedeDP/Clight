@@ -35,13 +35,7 @@ static void init(void) {
 
 /* Check module is not disabled, we're on X and proper configs are set. */
 static int check(void) {
-    int ret = conf.no_dpms || !state.display || !state.xauthority;
-    if (!ret) {
-        for (int i = 0; i < SIZE_DPMS && !ret; i++) {
-            ret = !conf.dpms_timeouts[ON_AC][i] || !conf.dpms_timeouts[ON_BATTERY][i];
-        }
-    }
-    return ret;
+    return conf.no_dpms || !state.display || !state.xauthority;
 }
 
 static void destroy(void) {

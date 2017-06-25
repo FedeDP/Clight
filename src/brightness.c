@@ -8,6 +8,7 @@ static int check(void);
 static void destroy(void);
 static void brightness_cb(void);
 static void do_capture(void);
+static int is_interface_enabled(void);
 static void get_max_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
@@ -20,8 +21,7 @@ static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies,
-    .mandatory = 1
+    .deps =  dependencies
 };
 
 void set_brightness_self(void) {
@@ -55,7 +55,6 @@ static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-
 static void brightness_cb(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
@@ -73,6 +72,7 @@ static void brightness_cb(void) {
 static void do_capture(void) {
     static const int fast_timeout = 15;
     static const double drop_limit = 0.6;
+    double drop = 0;
     
     /* reset fast recapture */
     state.fast_recapture = 0;
@@ -88,30 +88,48 @@ static void do_capture(void) {
         return set_timeout(2 * conf.timeout[state.ac_state][state.time] * dpms_state, 0, main_p[self.idx].fd, 0);
     }
 
-    double val = capture_frames_brightness();
-    /* 
-     * if captureframes clightd method did not return any non-critical error (eg: eperm).
-     * I won't check setbrightness too because if captureframes did not return any error,
-     * it is very very unlikely that setbrightness would return some.
-     */
-    if (val >= 0.0) {
-        set_brightness(val * 10);
+    if (is_interface_enabled()) {
+        double val = capture_frames_brightness();
+        /* 
+         * if captureframes clightd method did not return any non-critical error (eg: eperm).
+         * I won't check setbrightness too because if captureframes did not return any error,
+         * it is very very unlikely that setbrightness would return some.
+         */
+        if (val >= 0.0) {
+            set_brightness(val * 10);
+            
         
-        if (!conf.single_capture_mode) {
-            double drop = (double)(state.br.current - state.br.old) / state.br.max;
-            // if there is too high difference, do a fast recapture to be sure
-            // this is the correct level
-            if (fabs(drop) > drop_limit) {
-                INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
-                // single call after 15s
-                set_timeout(fast_timeout, 0, main_p[self.idx].fd, 0);
-                state.fast_recapture = 1;
-            } else {
-                // reset normal timer
-                set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
+            if (!conf.single_capture_mode) {
+                drop = (double)(state.br.current - state.br.old) / state.br.max;
             }
         }
+    } else {
+        WARN("Current backlight interface is not enabled. Avoid changing backlight level on a disabled interface.\n");
     }
+    /*
+     * if there is too high difference, do a fast recapture 
+     * to be sure this is the correct level
+     */
+    if (fabs(drop) > drop_limit) {
+        INFO("Weird brightness drop. Recapturing in 15 seconds.\n");
+        // single call after 15s
+        set_timeout(fast_timeout, 0, main_p[self.idx].fd, 0);
+        state.fast_recapture = 1;
+    } else if (!conf.single_capture_mode) {
+        // reset normal timer
+        set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
+    }
+}
+
+/* 
+ * check if backlight interface is enabled before trying to change brightness
+ * as it would be useless to change brightness on a disabled itnerface (eg when using external monitor)
+ */
+static int is_interface_enabled(void) {
+    int enabled;
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "isbacklightinterfaceenabled"};
+    bus_call(&enabled, "i", &args, "s", conf.screen_path);
+    return enabled;
 }
 
 static void get_max_brightness(void) {

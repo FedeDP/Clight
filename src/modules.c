@@ -1,6 +1,6 @@
 #include "../inc/modules.h"
 
-static void started_cb(enum modules module, int need_increase);
+static void started_cb(enum modules module);
 
 /* 
  * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been setted.
@@ -45,7 +45,7 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
          * consider this module as started right now.
          */
         if (fd == DONT_POLL) {
-            started_cb(module, 1);
+            started_cb(module);
         }
         
     } else {
@@ -75,29 +75,20 @@ void set_self_deps(struct self_t *self) {
  * gets started: it increment satisfied_deps for each dependent modules
  * and tries to start them.
  * If these modules have still other unsatisfied deps, they won't start.
- * 
- * need_increase: whether we need to increase self->satisfied_deps (ie: if this is not a recursive call)
  */
-static void started_cb(enum modules module, int need_increase) {
-    for (int i = 0; i < modules[module].num_dependent; i++) {
-        /* store current num_dependent. It can be changed by init_modules call */
-        int num_dependent = modules[module].num_dependent;
-        enum modules m = modules[module].dependent_m[i];
+static void started_cb(enum modules module) {
+    while (modules[module].num_dependent > 0) {
+        enum modules m = modules[module].dependent_m[0];
+        
+        if (modules[module].num_dependent > 1) {
+            memmove(&modules[module].dependent_m[0], &modules[module].dependent_m[1], (modules[module].num_dependent - 1) * sizeof(enum modules));
+        }
+        modules[module].dependent_m = realloc(modules[module].dependent_m, (--modules[module].num_dependent) * sizeof(enum modules));
+        
         if (!modules[m].disabled && !modules[m].inited) {
-            if (need_increase) {
-                modules[m].self->satisfied_deps++;
-                DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
-            }
+            modules[m].self->satisfied_deps++;
+            DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
             init_modules(m);
-            /* 
-             * If init_modules did disable some module, 
-             * modules[module].num_dependent can be different from num_dependent.
-             * If that's the case, we have no way to understand which modules got disabled.
-             * Return started_cb again, this time without the need to increase its satisfied_deps counter though.
-             */
-            if (num_dependent != modules[module].num_dependent) {
-                return started_cb(module, 0);
-            }
         }
     }
 }
@@ -112,7 +103,7 @@ void poll_cb(const enum modules module) {
         if (modules[module].poll_cb) {
             modules[module].poll_cb();
         }
-        started_cb(module, 1);
+        started_cb(module);
     }
 }
 
@@ -145,7 +136,7 @@ void disable_module(const enum modules module) {
                     if (modules[m].self->deps[j].dep == module) {
                         if (modules[m].self->deps[j].type == HARD) {
                             DEBUG("Disabling module %s as its hard dep %s was disabled...\n", modules[m].self->name, modules[module].self->name);
-                            disable_module(m); // recursive call
+                            disable_module(m);
                         } else {
                             DEBUG("Trying to start %s module as its %s soft dep was disabled...\n", modules[m].self->name, modules[module].self->name);
                             modules[m].self->satisfied_deps++;
@@ -175,7 +166,7 @@ void disable_module(const enum modules module) {
                      * if there are no more dependent_m on this module, 
                      * and it is not a mandatory module, disable it 
                      */
-                    if (modules[m].num_dependent == 0 && !modules[m].self->mandatory) {
+                    if (modules[m].num_dependent == 0) {
                         disable_module(m);
                     }
                     break;
@@ -185,10 +176,6 @@ void disable_module(const enum modules module) {
         
         /* Finally, destroy this module */
         destroy_modules(module);
-        /* if module is a mandatory for clight module, quit */
-        if (modules[module].self->mandatory) {
-            ERROR("A mandatory modules has been destroyed.\n");
-        }
     }
 }
 

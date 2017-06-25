@@ -10,7 +10,7 @@ static int check_err(int r, sd_bus_error *err);
 static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
-    .idx = BUS,
+    .idx = BUS
 };
 
 void set_bus_self(void) {
