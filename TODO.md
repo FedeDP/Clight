@@ -8,6 +8,7 @@
 - [x] Dimmer module too should not touch brightness if interface is not enabled
 - [x] FIX: gamma is started before brightness, but brightness does not wait for gamma_cb to be started??
 - [x] FIX: no-dpms makes Location module load loc from cache
+- [ ] FIX: (D) [modules.c:201]     Brightness module destroyed. (E) [bus.c:225] Refusing activation, D-Bus is shutting down.
 
 ## 0.16
 - [ ] add a CRITICAL_ON_BATT level to customize even more various timeouts/actions
