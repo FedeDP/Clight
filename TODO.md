@@ -13,6 +13,7 @@
 ## 0.16
 - [ ] add a CRITICAL_ON_BATT level to customize even more various timeouts/actions
 - [ ] dimmer module smooth transitions
+- [ ] FIX: while destroying modules, sorting is important too (ie: destroying bus before destroying location/upower)
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness
