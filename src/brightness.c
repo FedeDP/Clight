@@ -158,7 +158,7 @@ static void set_brightness(const double perc) {
 void set_backlight_level(int level) {
     DEBUG("Old brightness value: %d\n", state.br.old);
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
-    bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level >= conf.lowest_backlight_level ? level : conf.lowest_backlight_level);
+    bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level);
     INFO("New brightness value: %d\n", state.br.current);
 }
 

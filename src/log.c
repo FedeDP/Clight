@@ -36,7 +36,6 @@ void log_conf(void) {
         fprintf(log_file, "* User setted sunrise:\t\t%s\n", conf.events[SUNRISE]);
         fprintf(log_file, "* User setted sunset:\t\t%s\n", conf.events[SUNSET]);
         fprintf(log_file, "* Gamma correction:\t\t%s\n", conf.no_gamma ? "disabled" : "enabled");
-        fprintf(log_file, "* Min backlight level:\t\t%d\n", conf.lowest_backlight_level);
         fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
         fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", conf.no_dimmer ? "disabled" : "enabled");
         fprintf(log_file, "* Dimmer backlight:\t\t%d%%\n", conf.dimmer_pct);

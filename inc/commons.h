@@ -61,7 +61,6 @@ struct config {
     double lon;                             // longitude
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int no_gamma;                           // whether gamma tool is disabled
-    int lowest_backlight_level;             // lowest backlight level to be setted
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout

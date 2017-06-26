@@ -44,7 +44,6 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "no_gamma", &conf.no_gamma);
         config_lookup_float(&cfg, "latitude", &conf.lat);
         config_lookup_float(&cfg, "longitude", &conf.lon);
-        config_lookup_int(&cfg, "lowest_backlight_level", &conf.lowest_backlight_level);
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
         config_lookup_int(&cfg, "no_dimmer", &conf.no_dimmer);
         config_lookup_int(&cfg, "dimmer_pct", &conf.dimmer_pct);

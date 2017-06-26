@@ -99,7 +99,6 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 100, "Disable gamma correction tool", NULL},
-        {"lowest_backlight", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.lowest_backlight_level, 100, "Lowest backlight level that clight can set", NULL},
         {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
         {"dimmer_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
