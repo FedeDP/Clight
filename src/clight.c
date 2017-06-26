@@ -95,8 +95,13 @@ static void init_all_modules(void) {
  * Free every used resource
  */
 static void destroy(void) {
-    for (int i = 0; i < MODULES_NUM; i++) {
-        destroy_modules(i);
+    /*
+     * Avoid continuously cyclying here if any error happens inside destroy_modules() 
+     * (as ERROR macro would longjmp again here);
+     * Only try once, otherwise avoid destroying modules and go on closing log
+     */
+    if (state.quit == 1) {
+        destroy_modules();
     }
     close_log();
     destroy_lck();

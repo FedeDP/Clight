@@ -14,7 +14,7 @@
 #define ERROR(msg, ...) \
 do { \
     log_message(__FILE__, __LINE__, 'E', msg, ##__VA_ARGS__); \
-    longjmp(quit_buf, 1); \
+    longjmp(quit_buf, state.quit + 1); \
 } while (0)
 
 void open_log(void);

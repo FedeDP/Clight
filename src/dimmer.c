@@ -122,6 +122,8 @@ static void dim_backlight(void) {
     if (lowered_br < state.br.old) {
         if (is_interface_enabled()) {
             set_backlight_level(lowered_br);
+        } else {
+            INFO("Current backlight interface is not enabled. Avoid dimming backlight on a disabled interface.\n");
         }
     } else {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");

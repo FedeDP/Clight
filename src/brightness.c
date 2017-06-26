@@ -103,7 +103,7 @@ static void do_capture(void) {
             }
         }
     } else {
-        WARN("Current backlight interface is not enabled. Avoid changing backlight level on a disabled interface.\n");
+        INFO("Current backlight interface is not enabled. Avoid changing backlight level on a disabled interface.\n");
     }
     /*
      * if there is too high difference, do a fast recapture 

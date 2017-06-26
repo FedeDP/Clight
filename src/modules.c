@@ -1,6 +1,10 @@
 #include "../inc/modules.h"
 
 static void started_cb(enum modules module);
+static void destroy_module(const enum modules module);
+
+static enum modules *sorted_modules; // modules sorted by their starting place
+static int started_modules = 0; // number of started modules
 
 /* 
  * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been setted.
@@ -31,6 +35,16 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
     };
 
     modules[module].poll_cb = cb;
+    
+    /* Increment sorted_modules size and store this module in its correct position */
+    enum modules *tmp = realloc(sorted_modules, (++started_modules) * sizeof(enum modules));
+    if (tmp) {
+        sorted_modules = tmp;
+        sorted_modules[started_modules - 1] = module;
+    } else {
+        free(sorted_modules);
+        ERROR("%s\n", strerror(errno));
+    }
     
     /* 
      * if fd==DONT_POLL_W_ERR, it means a not-critical error happened
@@ -175,14 +189,20 @@ void disable_module(const enum modules module) {
         }
         
         /* Finally, destroy this module */
-        destroy_modules(module);
+        destroy_module(module);
+    }
+}
+
+void destroy_modules(void) {
+    for (int i = started_modules - 1; i >= 0; i--) {
+        destroy_module(sorted_modules[i]);
     }
 }
 
 /*
  * Calls correct destroy function for each module
  */
-void destroy_modules(const enum modules module) {
+static void destroy_module(const enum modules module) {
     if (modules[module].num_dependent) {
         free(modules[module].dependent_m);
         modules[module].dependent_m = NULL;
