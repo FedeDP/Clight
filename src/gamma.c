@@ -13,6 +13,8 @@ static double radToDeg(const double angleRad);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng,
                                     time_t *tt, enum events event, int tomorrow);
+static int calculate_sunrise(const float lat, const float lng, time_t *tt, int tomorrow);
+static int calculate_sunset(const float lat, const float lng, time_t *tt, int tomorrow);
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day);
 static void check_next_event(time_t *now);
 static void check_state(time_t *now);
@@ -80,10 +82,13 @@ static void check_gamma(void) {
     if (!transitioning) {
         t = time(NULL);
         /*
-         * first time clight is started, get_gamma_events will poll today events.
-         * Then, it will be called every day after end of last event (ie: sunset + 30mins)
+         * get_gamma_events will always poll today events. It should not be necessary,
+         * (as it will normally only be needed to get new events for tomorrow, once clight is started)
+         * but if, for example, laptop gets suspended at evening, before computing next day events,
+         * and it is waken next morning, it will proceed to compute "tomorrow" events, where tomorrow is
+         * the wrong day (it should compute "today" events). Thus, avoid this kind of issue.
          */
-        get_gamma_events(&t, conf.lat, conf.lon, state.events[SUNSET] != 0);
+        get_gamma_events(&t, conf.lat, conf.lon, 0);
     }
 
     int ret = 0;

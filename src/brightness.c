@@ -39,7 +39,7 @@ static void init(void) {
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
-    int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
+    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     init_module(fd, self.idx, brightness_cb);
     if (!modules[self.idx].disabled) {
         add_upower_module_callback(upower_callback);

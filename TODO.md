@@ -1,4 +1,5 @@
 ## 1.1
+- [x] understand issue with get_gamma_events
 - [ ] dimmer module smooth transitions
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)
 
