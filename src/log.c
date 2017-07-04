@@ -54,7 +54,12 @@ void log_message(const char *filename, int lineno, const char type, const char *
     va_start(file_args, log_msg);
     va_copy(args, file_args);
     if (log_file) {
-        fprintf(log_file, "(%c) [%s:%d]\t", type, filename, lineno);
+        time_t t;
+        
+        t = time(NULL);
+        struct tm tm = *localtime(&t);
+            
+        fprintf(log_file, "(%c)[%02d:%02d:%02d]{%s:%d}\t", type, tm.tm_hour, tm.tm_min, tm.tm_sec, filename, lineno);
         vfprintf(log_file, log_msg, file_args);
         fflush(log_file);
     }
