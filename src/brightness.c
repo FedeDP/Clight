@@ -76,18 +76,8 @@ static void do_capture(void) {
     /* reset fast recapture */
     state.fast_recapture = 0;
 
-    /*
-     * if screen is currently blanked thanks to dpms,
-     * do not do anything. Set a long timeout and return.
-     * Timeout will increase as screen power management goes deeper.
-     */
-    int dpms_state = get_screen_dpms();
-    if (dpms_state > 0) {
-        INFO("Screen is currently in power saving mode. Avoid changing brightness and setting a long timeout.\n");
-        return set_timeout(2 * conf.timeout[state.ac_state][state.time] * dpms_state, 0, main_p[self.idx].fd, 0);
-    }
-
-    if (is_interface_enabled()) {
+    int interface_enabled = is_interface_enabled();
+    if (interface_enabled && !state.is_dimmed) {
         double val = capture_frames_brightness();
         /* 
          * if captureframes clightd method did not return any non-critical error (eg: eperm).
@@ -102,8 +92,10 @@ static void do_capture(void) {
                 drop = (double)(state.br.current - state.br.old) / state.br.max;
             }
         }
-    } else {
+    } else if (!interface_enabled) {
         INFO("Current backlight interface is not enabled. Avoid changing backlight level on a disabled interface.\n");
+    } else {
+        INFO("Screen is currently dimmed. Avoid changing backlight level.\n");
     }
     /*
      * if there is too high difference, do a fast recapture 

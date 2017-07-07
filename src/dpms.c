@@ -51,23 +51,3 @@ static void set_dpms(void) {
 static void upower_callback(__attribute__((unused)) int old_state) {
     set_dpms();
 }
-
-/*
- * info->power_level is one of:
- * DPMS Extension Power Levels
- * 0     DPMSModeOn          In use
- * 1     DPMSModeStandby     Blanked, low power
- * 2     DPMSModeSuspend     Blanked, lower power
- * 3     DPMSModeOff         Shut off, awaiting activity
- * 
- * Clightd returns -1 if dpms is disabled and an error if we're not on X
- */
-int get_screen_dpms(void) {
-    int dpms_state = -1;
-    
-    if (modules[self.idx].inited) {
-        struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getdpms"};
-        bus_call(&dpms_state, "i", &args_get, "ss", state.display, state.xauthority);
-    }
-    return dpms_state;
-}

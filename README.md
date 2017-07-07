@@ -46,7 +46,6 @@ This means that these features are all enabled with default values:
 * fully valgrind and cppcheck clean
 * external signals catching (sigint/sigterm)
 * systemd user unit and autostart desktop file shipped
-* dpms support: it will check current screen powersave level and won't do anything if screen is currently off. Moreover, it will set dpms timeouts according to config options. -> **X only**
 * a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does) -> **X only**
 * dimmer support: it will dim your screen after specified timeout of user inactivity (ie: no mouse/keyboard) -> **X only**
@@ -61,11 +60,11 @@ Location received will be then cached when clight exit. This way, if no internet
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
 * only 1 clight instance can be running for same user. You can still invoke a fast capture when an instance is already running, obviously
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
-* UPower support, to set longer timeouts between captures while on battery, in order to save some energy.  
+* UPower support, to set longer timeouts between captures while on battery, in order to save some energy.
 Moreover, you can set a percentage of maximum settable brightness while on battery.
 * You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
-* Gracefully auto-disabling gamma support on non-X environments.
-* Gracefully auto-disabling dimmer support on non-X environments.
+* It will check if current backlight interface is enabled before changing backlight/dimming screen. It will avoid to do any frame capture at all if interface is disabled. It can happen when you use your laptop connected to an external monitor, with internal monitor switched off; thus changing backlight would be useless.
+* Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
 
 ### Valgrind is run with:
 

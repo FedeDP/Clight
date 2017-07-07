@@ -14,7 +14,7 @@ static void dim_backlight(void);
 static int get_idle_time(void);
 static void upower_callback(int old_state);
 
-static int inot_wd, inot_fd, timer_fd, bright_fd;
+static int inot_wd, inot_fd, timer_fd;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
 static struct self_t self = {
     .name = "Dimmer",
@@ -76,7 +76,14 @@ static void dimmer_cb(void) {
         uint64_t t;
         read(main_p[self.idx].fd, &t, sizeof(uint64_t));
         
-        int idle_t = get_idle_time();
+        int idle_t = 0;
+        
+        /* If interface is not enabled, avoid entering dimmed state */
+        if (is_interface_enabled()) {
+            idle_t = get_idle_time();
+        } else {
+            INFO("Current backlight interface is not enabled. Avoid dimming backlight on a disabled interface.\n");
+        }
         if (idle_t > 0) {
             /* -1 as it seems we receive events circa 1s before */
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
@@ -84,9 +91,6 @@ static void dimmer_cb(void) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
                     main_p[self.idx].fd = inot_fd;
-                    bright_fd = main_p[BRIGHTNESS].fd;
-                    /* stop listening BRIGHTNESS module fd */
-                    main_p[BRIGHTNESS].fd = 0;
                     dim_backlight();
                 } else {
                     // in case of error, reset is_dimmed state
@@ -96,7 +100,9 @@ static void dimmer_cb(void) {
                 /* Set a timeout of conf.dimmer_timeout - elapsed time since latest user activity */
                 set_timeout(conf.dimmer_timeout[state.ac_state] - idle_t, 0, main_p[self.idx].fd, 0);
             }
-        }
+        } else {
+            set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
+        } 
     } else {
         char buffer[BUF_LEN];
         int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
@@ -105,26 +111,18 @@ static void dimmer_cb(void) {
             main_p[self.idx].fd = timer_fd;
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
             /* restore previous backlight level */
-            if (is_interface_enabled()) {
-                set_backlight_level(state.br.old);
-            }
-            /* restart listening BRIGHTNESS module fd */
-            main_p[BRIGHTNESS].fd = bright_fd;
+            set_backlight_level(state.br.old);
         }
     }
 }
 
 static void dim_backlight(void) {
     int lowered_br = state.br.max * conf.dimmer_pct / 100;
-    // store old brightness
+    // update state.br.old
     get_current_brightness();
     
     if (lowered_br < state.br.old) {
-        if (is_interface_enabled()) {
-            set_backlight_level(lowered_br);
-        } else {
-            INFO("Current backlight interface is not enabled. Avoid dimming backlight on a disabled interface.\n");
-        }
+        set_backlight_level(lowered_br);
     } else {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     }
