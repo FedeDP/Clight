@@ -59,16 +59,13 @@ int main(int argc, char *argv[]) {
 /*
  * First of all loads options from both global and 
  * local config file, and from cmdline options.
- * If we're not in single_capture_mode, it gains lock and opens log, logging current configuration.
- * Then checks conf and init needed modules.
+ * Then init needed modules.
  */
 static void init(int argc, char *argv[]) {
     init_opts(argc, argv);
-    if (!conf.single_capture_mode) {
-        gain_lck();
-        open_log();
-        log_conf();
-    }
+    gain_lck();
+    open_log();
+    log_conf();
     set_modules_selfs();
     init_all_modules();
 }

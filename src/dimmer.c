@@ -82,7 +82,7 @@ static void dimmer_cb(void) {
         if (is_interface_enabled()) {
             idle_t = get_idle_time();
         } else {
-            INFO("Current backlight interface is not enabled. Avoid dimming backlight on a disabled interface.\n");
+            INFO("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
         }
         if (idle_t > 0) {
             /* -1 as it seems we receive events circa 1s before */

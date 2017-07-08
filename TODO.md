@@ -2,6 +2,7 @@
 - [x] understand issue with get_gamma_events
 - [x] fix issue with dimmer module
 - [x] is get_screen_dpms() still needed? Ie: if screen is in dpms mode, backlight interface won't be enabled for sure. (setting a longer timeout while on dpms is not a huge optimization and we can probably remove it)
+- [ ] log single capture mode output too (clight_capture.log)
 - [ ] dimmer module smooth transitions
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)
 
