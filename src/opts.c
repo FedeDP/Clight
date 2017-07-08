@@ -105,6 +105,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"ac_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
         {"batt_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
+        {"debug", 0, POPT_ARG_NONE, &conf.debug, 100, "Enable debug mode", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };

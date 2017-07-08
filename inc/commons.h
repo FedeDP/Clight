@@ -69,6 +69,7 @@ struct config {
     int no_dimmer;                          // disable dimmer
     int no_dpms;                            // disable dpms
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
+    int debug;                              // whether we're in debug mode
 };
 
 /*

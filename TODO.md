@@ -8,6 +8,7 @@
 - [x] improve code
 - [x] get_current_brightness in dim_backlight is wrong: we have to call it only first time, and then smoothing transition on it; otherwise when leavin dimmed state, we would restore wrong backlight
 - [x] better defaults for dimmer and dpms
+- [x] runtime switch for debug
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)
