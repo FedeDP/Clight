@@ -28,7 +28,7 @@ void init_opts(int argc, char *argv[]) {
     conf.temp[UNKNOWN] = conf.temp[DAY];
     conf.event_duration = 30 * 60;
     conf.dimmer_timeout[ON_AC] = 300;
-    conf.dimmer_timeout[ON_BATTERY] = 120;
+    conf.dimmer_timeout[ON_BATTERY] = 45;
     conf.dimmer_pct = 20;
     
     /*
@@ -62,7 +62,7 @@ void init_opts(int argc, char *argv[]) {
     
     /* Default dpms timeouts ON BATT */
     memcpy(conf.dpms_timeouts[ON_BATTERY], 
-           (int[]){ 600, 720, 900 }, 
+           (int[]){ 300, 420, 600 }, 
            SIZE_DPMS * sizeof(int));
     
     
@@ -199,7 +199,7 @@ static void check_conf(void) {
     }
     if (conf.dimmer_timeout[ON_BATTERY] <= 0) {
         WARN("Wrong dimmer timeout on BATT value. Resetting default value.\n");
-        conf.dimmer_timeout[ON_BATTERY] = 120;
+        conf.dimmer_timeout[ON_BATTERY] = 45;
     }
     
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
@@ -247,7 +247,7 @@ static void check_conf(void) {
     if (dpms_timeout_batt_needed) {
         WARN("Wrong on batt dpms timeouts. Resetting default values.\n");
         memcpy(conf.dpms_timeouts[ON_BATTERY], 
-               (int[]){ 600, 720, 900 }, 
+               (int[]){ 300, 420, 600 }, 
                SIZE_DPMS * sizeof(int));
     }
     

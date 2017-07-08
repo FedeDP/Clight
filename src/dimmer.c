@@ -85,7 +85,6 @@ static void dimmer_cb(void) {
             INFO("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
         }
         if (idle_t > 0) {
-            /* -1 as it seems we receive events circa 1s before */
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
             if (state.is_dimmed) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
@@ -117,7 +116,7 @@ static void dimmer_cb(void) {
 }
 
 static void dim_backlight(void) {
-    int lowered_br = state.br.max * conf.dimmer_pct / 100;
+    const int lowered_br = state.br.max * conf.dimmer_pct / 100;
     // update state.br.old
     get_current_brightness();
     
