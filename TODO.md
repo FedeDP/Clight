@@ -3,7 +3,10 @@
 - [x] fix issue with dimmer module
 - [x] is get_screen_dpms() still needed? Ie: if screen is in dpms mode, backlight interface won't be enabled for sure. (setting a longer timeout while on dpms is not a huge optimization and we can probably remove it)
 - [x] log single capture mode output too (clight_capture.log)
-- [ ] dimmer module smooth transitions
+- [ ] fix dimmer smooth transition: sd_bus does not support multithread -> let modules define more than a single fd to be polled (so we can poll both dimmer timerfd, dimmer inotify and dimmer smooth transition, and gamma too can make use of that, by splitting smooth transitioning)
+- [ ] add a conf.dim_smooth_transition and a conf.gamma_smooth_transition
+- [x] improve code
+- [x] get_current_brightness in dim_backlight is wrong: we have to call it only first time, and then smoothing transition on it; otherwise when leavin dimmed state, we would restore wrong backlight
 - [x] better defaults for dimmer and dpms
 
 ## 1.2

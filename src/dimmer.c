@@ -10,11 +10,14 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void dimmer_cb(void);
-static void dim_backlight(void);
+static void start_dim_timer(void);
+static void disarm_dim_timer(void);
+static void dim_backlight(__attribute__((unused)) union sigval sv);
 static int get_idle_time(void);
 static void upower_callback(int old_state);
 
-static int inot_wd, inot_fd, timer_fd;
+static int inot_wd, inot_fd, timer_fd, dimmed_br;
+static timer_t timerid;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
 static struct self_t self = {
     .name = "Dimmer",
@@ -37,7 +40,20 @@ static void init(void) {
         timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
         init_module(timer_fd, self.idx, dimmer_cb);
         if (!modules[self.idx].disabled) {
+            /* create timer for smooth transitions if needed */
+            if (!conf.no_smooth_transition) {
+                struct sigevent sevp = {0};
+            
+                sevp.sigev_notify = SIGEV_THREAD;
+                sevp.sigev_notify_function = dim_backlight;
+                if (timer_create(CLOCK_MONOTONIC, &sevp, &timerid)) {
+                    ERROR("%s\n", strerror(errno));
+                }
+            }
+            
             add_upower_module_callback(upower_callback);
+            /* brightness module is started before dimmer, so state.br.max is already ok there */
+            dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
         }
     }
 }
@@ -56,6 +72,9 @@ static void destroy(void) {
         }
     } else if (inot_fd > 0) {
         close(inot_fd);
+    }
+    if (timerid) {
+        timer_delete(timerid);
     }
 }
 
@@ -85,12 +104,23 @@ static void dimmer_cb(void) {
             INFO("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
         }
         if (idle_t > 0) {
-            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
+            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state] - 1;
             if (state.is_dimmed) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
                     main_p[self.idx].fd = inot_fd;
-                    dim_backlight();
+                    // update state.br.old
+                    get_current_brightness();
+                    /* Don't touch backlight if a lower level is already set */
+                    if (dimmed_br >= state.br.old) {
+                        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
+                    } else {
+                        if (conf.no_smooth_transition) {
+                            set_backlight_level(dimmed_br);
+                        } else {
+                            start_dim_timer();
+                        }
+                    }
                 } else {
                     // in case of error, reset is_dimmed state
                     state.is_dimmed = 0;
@@ -101,12 +131,15 @@ static void dimmer_cb(void) {
             }
         } else {
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
-        } 
+        }
     } else {
         char buffer[BUF_LEN];
         int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
         if (length > 0) {
             state.is_dimmed = 0;
+            if (!conf.no_smooth_transition && timerid) {
+                disarm_dim_timer();
+            }
             main_p[self.idx].fd = timer_fd;
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
             /* restore previous backlight level */
@@ -115,15 +148,30 @@ static void dimmer_cb(void) {
     }
 }
 
-static void dim_backlight(void) {
-    const int lowered_br = state.br.max * conf.dimmer_pct / 100;
-    // update state.br.old
-    get_current_brightness();
+static void start_dim_timer(void) {
+    struct itimerspec timerValue = {{0}};
     
-    if (lowered_br < state.br.old) {
-        set_backlight_level(lowered_br);
-    } else {
-        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
+    timerValue.it_value.tv_nsec = 1; // start immediately
+    timerValue.it_interval.tv_nsec = 30 * 1000 * 1000; // 30 ms interval
+    if (timer_settime(timerid, 0, &timerValue, NULL)) {
+        ERROR("%s\n", strerror(errno));
+    }
+    state.br.current = state.br.old;
+}
+
+static void disarm_dim_timer(void) {
+    struct itimerspec timerValue = {{0}};
+    
+    if (timer_settime(timerid, 0, &timerValue, NULL)) {
+        ERROR("%s\n", strerror(errno));
+    }
+}
+
+static void dim_backlight(__attribute__((unused)) union sigval sv) {
+    const int lower_br = (double)state.br.current - (double)state.br.max / 20; // 5% steps
+    set_backlight_level(lower_br > dimmed_br ? lower_br : dimmed_br);
+    if (state.br.current == dimmed_br) {
+        disarm_dim_timer();
     }
 }
 

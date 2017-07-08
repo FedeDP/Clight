@@ -148,7 +148,6 @@ static void set_brightness(const double perc) {
 }
 
 void set_backlight_level(int level) {
-    DEBUG("Old brightness value: %d\n", state.br.old);
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
     bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level);
     INFO("New brightness value: %d\n", state.br.current);
@@ -211,7 +210,7 @@ static double clamp(double value, double max, double min) {
     return value;
 }
 
-static void upower_callback(int old_state) {
+static void upower_callback(__attribute__((unused)) int old_state) {
     if (!state.fast_recapture) {
         /* 
          * do a capture right now as we have 2 different curves for 
