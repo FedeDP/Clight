@@ -41,6 +41,10 @@ This means that these features are all enabled with default values:
 
 **All these features but BRIGHTNESS can be turned off through cmdline and config file options.**
 
+## Will it eat my battery?
+No, it won't. Clight aims to be very power friendly. In fact, thanks to blocking I/O, it uses CPU only when needed.  
+Moreover, being very lightweight on resources helps too. Indeed, it will probably help you saving some battery, by setting correct screen backlight for current ambient brightness (thus avoiding wasting battery on max backlight level).
+
 ## Current features:
 * very lightweight
 * fully valgrind and cppcheck clean
