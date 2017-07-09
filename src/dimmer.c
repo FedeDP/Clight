@@ -41,7 +41,7 @@ static void init(void) {
         init_module(timer_fd, self.idx, dimmer_cb);
         if (!modules[self.idx].disabled) {
             /* create timer for smooth transitions if needed */
-            if (!conf.no_smooth_transition) {
+            if (!conf.no_dimmer_smooth_transition) {
                 struct sigevent sevp = {0};
             
                 sevp.sigev_notify = SIGEV_THREAD;
@@ -115,7 +115,7 @@ static void dimmer_cb(void) {
                     if (dimmed_br >= state.br.old) {
                         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
                     } else {
-                        if (conf.no_smooth_transition) {
+                        if (conf.no_dimmer_smooth_transition) {
                             set_backlight_level(dimmed_br);
                         } else {
                             start_dim_timer();
@@ -137,7 +137,7 @@ static void dimmer_cb(void) {
         int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
         if (length > 0) {
             state.is_dimmed = 0;
-            if (!conf.no_smooth_transition && timerid) {
+            if (!conf.no_dimmer_smooth_transition && timerid) {
                 disarm_dim_timer();
             }
             main_p[self.idx].fd = timer_fd;

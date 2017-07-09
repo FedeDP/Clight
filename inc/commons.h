@@ -57,7 +57,8 @@ struct config {
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
-    int no_smooth_transition;               // disable smooth transitions for gamma
+    int no_gamma_smooth_transition;         // disable smooth transitions for gamma
+    int no_dimmer_smooth_transition;        // disable smooth transitions for dimmer
     double lat;                             // latitude
     double lon;                             // longitude
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)

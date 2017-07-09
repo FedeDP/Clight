@@ -358,7 +358,7 @@ static int set_temp(int temp) {
     if (old_temp != temp) {
         struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setgamma"};
 
-        if (!conf.no_smooth_transition) {
+        if (!conf.no_gamma_smooth_transition) {
             if (old_temp > temp) {
                     old_temp = old_temp - step < temp ? temp : old_temp - step;
                 } else {

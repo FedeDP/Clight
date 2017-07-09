@@ -40,7 +40,8 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "batt_event_timeout", &conf.timeout[ON_BATTERY][EVENT]);
         config_lookup_int(&cfg, "day_temp", &conf.temp[DAY]);
         config_lookup_int(&cfg, "night_temp", &conf.temp[NIGHT]);
-        config_lookup_int(&cfg, "no_smooth_gamma_transition", &conf.no_smooth_transition);
+        config_lookup_int(&cfg, "no_smooth_gamma_transition", &conf.no_gamma_smooth_transition);
+        config_lookup_int(&cfg, "no_smooth_dimmer_transition", &conf.no_dimmer_smooth_transition);
         config_lookup_int(&cfg, "no_gamma", &conf.no_gamma);
         config_lookup_float(&cfg, "latitude", &conf.lat);
         config_lookup_float(&cfg, "longitude", &conf.lon);

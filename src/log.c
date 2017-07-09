@@ -30,7 +30,8 @@ void log_conf(void) {
             fprintf(log_file, "* Backlight path:\t\t%s\n", conf.screen_path);
             fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
             fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
-            fprintf(log_file, "* Smooth transitions:\t\t%s\n", conf.no_smooth_transition ? "disabled" : "enabled");
+            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", conf.no_gamma_smooth_transition ? "disabled" : "enabled");
+            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", conf.no_dimmer_smooth_transition ? "disabled" : "enabled");
             fprintf(log_file, "* User latitude:\t\t%.2lf\n", conf.lat);
             fprintf(log_file, "* User longitude:\t\t%.2lf\n", conf.lon);
             fprintf(log_file, "* User setted sunrise:\t\t%s\n", conf.events[SUNRISE]);
