@@ -1,7 +1,7 @@
 #include "../inc/gamma.h"
 
 #define ZENITH -0.83
-#define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
+#define GAMMA_SMOOTH_TIMEOUT 300 * 1000 * 1000  // 300 ms
 
 static void init(void);
 static int check(void);
@@ -110,7 +110,7 @@ static void check_gamma(void) {
         }
     } else if (ret == 1) {
         /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
-        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[self.idx].fd, 0);
+        set_timeout(0, GAMMA_SMOOTH_TIMEOUT, main_p[self.idx].fd, 0);
         transitioning = 1;
     }
 }

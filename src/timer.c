@@ -1,4 +1,7 @@
 #include "../inc/timer.h"
+#include <stddef.h>
+
+static long get_timeout(int fd, size_t member);
 
 /*
  * Create timer and returns its fd to
@@ -35,14 +38,24 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
-unsigned int get_timeout(int fd) {
+long get_timeout_sec(int fd) {
+    return get_timeout(fd, offsetof(struct timespec, tv_sec));
+}
+
+long get_timeout_nsec(int fd) {
+    return get_timeout(fd, offsetof(struct timespec, tv_nsec));
+}
+
+static long get_timeout(int fd, size_t member) {
     struct itimerspec curr_value;
     timerfd_gettime(fd, &curr_value);
-    return curr_value.it_value.tv_sec;
+    
+    char *s = (char *) &(curr_value.it_value);
+    return *(long *)(s + member);
 }
 
 void reset_timer(int fd, int old_timer, int new_timer) {
-    unsigned int elapsed_time = old_timer - get_timeout(fd);
+    unsigned int elapsed_time = old_timer - get_timeout_sec(fd);
     /* if we still need to wait some seconds */
     if (new_timer > elapsed_time) {
         set_timeout(new_timer - elapsed_time, 0, fd, 0);

@@ -1,7 +1,7 @@
 #include "../inc/dimmer.h"
 #include "../inc/upower.h"
 #include "../inc/brightness.h"
-#include "../inc/bus.h"
+#include "../inc/dimmer_smooth.h"
 #include <sys/inotify.h>
 
 #define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
@@ -10,14 +10,13 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void dimmer_cb(void);
-static void start_dim_timer(void);
-static void disarm_dim_timer(void);
-static void dim_backlight(__attribute__((unused)) union sigval sv);
+static void dim_backlight(void);
+static void start_dim_smooth(void);
+static void stop_dim_smooth(void);
 static int get_idle_time(void);
 static void upower_callback(int old_state);
 
 static int inot_wd, inot_fd, timer_fd, dimmed_br;
-static timer_t timerid;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
 static struct self_t self = {
     .name = "Dimmer",
@@ -40,17 +39,6 @@ static void init(void) {
         timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
         init_module(timer_fd, self.idx, dimmer_cb);
         if (!modules[self.idx].disabled) {
-            /* create timer for smooth transitions if needed */
-            if (!conf.no_dimmer_smooth_transition) {
-                struct sigevent sevp = {0};
-            
-                sevp.sigev_notify = SIGEV_THREAD;
-                sevp.sigev_notify_function = dim_backlight;
-                if (timer_create(CLOCK_MONOTONIC, &sevp, &timerid)) {
-                    ERROR("%s\n", strerror(errno));
-                }
-            }
-            
             add_upower_module_callback(upower_callback);
             /* brightness module is started before dimmer, so state.br.max is already ok there */
             dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
@@ -72,9 +60,6 @@ static void destroy(void) {
         }
     } else if (inot_fd > 0) {
         close(inot_fd);
-    }
-    if (timerid) {
-        timer_delete(timerid);
     }
 }
 
@@ -111,16 +96,7 @@ static void dimmer_cb(void) {
                     main_p[self.idx].fd = inot_fd;
                     // update state.br.old
                     get_current_brightness();
-                    /* Don't touch backlight if a lower level is already set */
-                    if (dimmed_br >= state.br.old) {
-                        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
-                    } else {
-                        if (conf.no_dimmer_smooth_transition) {
-                            set_backlight_level(dimmed_br);
-                        } else {
-                            start_dim_timer();
-                        }
-                    }
+                    dim_backlight();
                 } else {
                     // in case of error, reset is_dimmed state
                     state.is_dimmed = 0;
@@ -137,10 +113,8 @@ static void dimmer_cb(void) {
         int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
         if (length > 0) {
             state.is_dimmed = 0;
-            if (!conf.no_dimmer_smooth_transition && timerid) {
-                disarm_dim_timer();
-            }
             main_p[self.idx].fd = timer_fd;
+            stop_dim_smooth();
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
             /* restore previous backlight level */
             set_backlight_level(state.br.old);
@@ -148,30 +122,27 @@ static void dimmer_cb(void) {
     }
 }
 
-static void start_dim_timer(void) {
-    struct itimerspec timerValue = {{0}};
-    
-    timerValue.it_value.tv_nsec = 1; // start immediately
-    timerValue.it_interval.tv_nsec = 30 * 1000 * 1000; // 30 ms interval
-    if (timer_settime(timerid, 0, &timerValue, NULL)) {
-        ERROR("%s\n", strerror(errno));
+static void dim_backlight(void) {
+    /* Don't touch backlight if a lower level is already set */
+    if (dimmed_br >= state.br.old) {
+        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
+    } else {
+        if (conf.no_dimmer_smooth_transition) {
+            set_backlight_level(dimmed_br);
+        } else {
+            start_dim_smooth();
+        }
     }
+}
+
+static void start_dim_smooth(void) {
     state.br.current = state.br.old;
+    start_smooth_transition();
 }
 
-static void disarm_dim_timer(void) {
-    struct itimerspec timerValue = {{0}};
-    
-    if (timer_settime(timerid, 0, &timerValue, NULL)) {
-        ERROR("%s\n", strerror(errno));
-    }
-}
-
-static void dim_backlight(__attribute__((unused)) union sigval sv) {
-    const int lower_br = (double)state.br.current - (double)state.br.max / 20; // 5% steps
-    set_backlight_level(lower_br > dimmed_br ? lower_br : dimmed_br);
-    if (state.br.current == dimmed_br) {
-        disarm_dim_timer();
+static void stop_dim_smooth(void) {
+    if (!conf.no_dimmer_smooth_transition && get_timeout_nsec(main_p[DIMMER_SMOOTH].fd)) {
+        stop_smooth_transition();
     }
 }
 
