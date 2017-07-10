@@ -47,7 +47,7 @@ static void (*const set_selfs[])(void) = {
 };
 
 int main(int argc, char *argv[]) {
-    state.quit = setjmp(quit_buf);
+    state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         init(argc, argv);
         main_poll();

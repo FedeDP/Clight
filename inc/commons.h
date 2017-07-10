@@ -96,6 +96,7 @@ struct state {
     const char *display;                    // display env variable, to be used in gamma calls
     struct brightness br;                   // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
+    jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 
 /* Struct that holds info about an inter-modules dep */
@@ -130,4 +131,3 @@ struct state state;
 struct config conf;
 struct module modules[MODULES_NUM];
 struct pollfd main_p[MODULES_NUM];
-jmp_buf quit_buf;
