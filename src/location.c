@@ -122,6 +122,9 @@ static void destroy(void) {
     if (slot) {
         sd_bus_slot_unref(slot);
     }
+    if (callbacks) {
+        free(callbacks);
+    }
 }
 
 static int check(void) {
