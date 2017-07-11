@@ -55,7 +55,7 @@ static void destroy(void) {
 static void callback(void) {
     uint64_t t;
 
-    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+    read(main_p[self.idx].fd, &t, sizeof(uint64_t));    
     check_gamma();
 }
 
