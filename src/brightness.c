@@ -1,12 +1,11 @@
 #include "../inc/brightness.h"
-#include "../inc/dpms.h"
 #include "../inc/upower.h"
 #include <gsl/gsl_multifit.h>
 
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void brightness_cb(void);
+static void callback(void);
 static void do_capture(void);
 static void get_max_brightness(void);
 static void set_brightness(const double perc);
@@ -15,7 +14,7 @@ static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
 static void upower_callback(int old_state);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, DPMS} };
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
@@ -24,11 +23,7 @@ static struct self_t self = {
 };
 
 void set_brightness_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 /*
@@ -40,7 +35,7 @@ static void init(void) {
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    init_module(fd, self.idx, brightness_cb);
+    init_module(fd, self.idx);
     if (!modules[self.idx].disabled) {
         add_upower_module_callback(upower_callback);
     }
@@ -54,7 +49,7 @@ static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static void brightness_cb(void) {
+static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     do_capture();

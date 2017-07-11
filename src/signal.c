@@ -5,7 +5,7 @@
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void signal_cb(void);
+static void callback(void);
 
 static struct self_t self = {
     .name = "Signal",
@@ -13,11 +13,7 @@ static struct self_t self = {
 };
 
 void set_signal_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 /*
@@ -32,7 +28,7 @@ static void init(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
-    init_module(fd, self.idx, signal_cb);
+    init_module(fd, self.idx);
 }
 
 static int check(void) {
@@ -47,7 +43,7 @@ static void destroy(void) {
  * if received an external SIGINT or SIGTERM,
  * just switch the quit flag to 1 and print to stdout.
  */
-static void signal_cb(void) {
+static void callback(void) {
     struct signalfd_siginfo fdsi;
     ssize_t s;
 

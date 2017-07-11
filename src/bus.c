@@ -3,7 +3,7 @@
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void bus_cb(void);
+static void callback(void);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
@@ -14,11 +14,7 @@ static struct self_t self = {
 };
 
 void set_bus_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 /*
@@ -31,7 +27,7 @@ static void init(void) {
     }
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(bus);
-    init_module(bus_fd, self.idx, bus_cb);
+    init_module(bus_fd, self.idx);
 }
 
 static int check(void) {
@@ -50,10 +46,16 @@ static void destroy(void) {
 /*
  * Callback for bus events
  */
-static void bus_cb(void) {
+static void callback(void) {
+    /* reset bus_cb_idx to impossible state */
+    state.bus_cb_idx = MODULES_NUM;
     int r;
     do {
         r = sd_bus_process(bus, NULL);
+        /* check if any match changed bus_cb_idx, then call correct callback */
+        if (state.bus_cb_idx != MODULES_NUM) {
+            poll_cb(state.bus_cb_idx);
+        }
     } while (r > 0);
 }
 

@@ -26,7 +26,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -97,11 +97,12 @@ struct state {
     struct brightness br;                   // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
     jmp_buf quit_buf;                       // quit jump called by longjmp
+    enum modules bus_cb_idx;                // idx of current module's whose match on bus is processed
 };
 
 /* Struct that holds info about an inter-modules dep */
 struct dependency {
-    enum dep_type type;                    // soft or hard dependency 
+    enum dep_type type;                    // soft or hard dependency
     enum modules dep;                      // dependency module
 };
 

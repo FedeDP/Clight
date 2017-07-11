@@ -24,7 +24,7 @@ void init_modules(const enum modules module) {
     }
 }
 
-void init_module(int fd, enum modules module, void (*cb)(void)) {
+void init_module(int fd, enum modules module) {
     if (fd == -1) {
         ERROR("%s\n", strerror(errno));
     }
@@ -33,8 +33,6 @@ void init_module(int fd, enum modules module, void (*cb)(void)) {
         .fd = fd,
         .events = POLLIN,
     };
-
-    modules[module].poll_cb = cb;
     
     /* Increment sorted_modules size and store this module in its correct position */
     enum modules *tmp = realloc(sorted_modules, (++started_modules) * sizeof(enum modules));
@@ -92,7 +90,7 @@ void set_self_deps(struct self_t *self) {
  */
 static void started_cb(enum modules module) {
     while (modules[module].num_dependent > 0) {
-        enum modules m = modules[module].dependent_m[0];
+        enum modules m = *modules[module].dependent_m;
         
         if (modules[module].num_dependent > 1) {
             memmove(&modules[module].dependent_m[0], &modules[module].dependent_m[1], (modules[module].num_dependent - 1) * sizeof(enum modules));
@@ -114,9 +112,7 @@ static void started_cb(enum modules module) {
  */
 void poll_cb(const enum modules module) {
     if (modules[module].inited && !modules[module].disabled) {
-        if (modules[module].poll_cb) {
-            modules[module].poll_cb();
-        }
+        modules[module].poll_cb();
         started_cb(module);
     }
 }

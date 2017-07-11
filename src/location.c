@@ -3,7 +3,7 @@
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void location_cb(void);
+static void callback(void);
 static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
@@ -13,8 +13,11 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_err
 static int geoclue_client_start(void);
 static void geoclue_client_stop(void);
 static void cache_location(void);
+static void run_callbacks(void);
 
 static sd_bus_slot *slot;
+static int num_callbacks;
+static location_cb *callbacks;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
@@ -25,11 +28,7 @@ static struct self_t self = {
 };
 
 void set_location_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 /*
@@ -54,10 +53,10 @@ static void init(void) {
         fd = ret == 0 ? DONT_POLL : DONT_POLL_W_ERR;
     }
     /* In case of errors, geoclue_init returns -1 -> disable location. */
-    init_module(fd, self.idx, location_cb);
+    init_module(fd, self.idx);
 }
 
-static void location_cb(void) {
+static void callback(void) {
     uint64_t t;
     if (read(main_p[self.idx].fd, &t, sizeof(uint64_t)) != -1) {
         load_cache_location();
@@ -156,6 +155,8 @@ static int geoclue_hook_update(void) {
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
 static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+    state.bus_cb_idx = self.idx;
+    
     const char *new_location, *old_location;
 
     sd_bus_message_read(m, "oo", &old_location, &new_location);
@@ -166,15 +167,8 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
     get_property(&lat_args, "d", &conf.lat);
     get_property(&lon_args, "d", &conf.lon);
     
-    /* Updated GAMMA module sunrise/sunset for new location */
     INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-    if (modules[GAMMA].inited) {
-        state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-        set_timeout(0, 1, main_p[GAMMA].fd, 0);
-    } else {
-        /* if gamma was waiting for location, start it */
-        poll_cb(self.idx);
-    }
+    run_callbacks();
     return 0;
 }
 
@@ -211,3 +205,26 @@ static void cache_location(void) {
         }
     }
 }
+
+/* Hook a callback to location change event */
+void add_location_module_callback(location_cb cb) {
+    if (modules[self.idx].inited) {
+        location_cb *tmp = realloc(callbacks, sizeof(location_cb) * (++num_callbacks));
+        if (tmp) {
+            callbacks = tmp;
+            callbacks[num_callbacks - 1] = cb;
+        } else {
+            if (callbacks) {
+                free(callbacks);
+            }
+            ERROR("%s\n", strerror(errno));
+        }
+    }
+}
+
+static void run_callbacks(void) {
+    for (int i = 0; i < num_callbacks; i++) {
+        callbacks[i](); // pass previous state to callbacks
+    }
+}
+

@@ -4,6 +4,7 @@
 
 static void init(void);
 static int check(void);
+static void callback(void);
 static void destroy(void);
 static void set_dpms(void);
 static void upower_callback(int old_state);
@@ -17,17 +18,13 @@ static struct self_t self = {
 };
 
 void set_dpms_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 
 static void init(void) {
     set_dpms();
-    init_module(DONT_POLL, self.idx, NULL);
+    init_module(DONT_POLL, self.idx);
     if (!modules[self.idx].disabled) {
         add_upower_module_callback(upower_callback);
     }
@@ -35,7 +32,13 @@ static void init(void) {
 
 /* Check module is not disabled, we're on X and proper configs are set. */
 static int check(void) {
-    return conf.no_dpms || !state.display || !state.xauthority;
+    return conf.no_dpms ||
+           !state.display || 
+           !state.xauthority;
+}
+
+static void callback(void) {
+    // Skeleton interface
 }
 
 static void destroy(void) {

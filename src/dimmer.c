@@ -9,7 +9,7 @@
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void dimmer_cb(void);
+static void callback(void);
 static void dim_backlight(void);
 static void start_dim_smooth(void);
 static void stop_dim_smooth(void);
@@ -26,18 +26,14 @@ static struct self_t self = {
 };
 
 void set_dimmer_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 static void init(void) {
     inot_fd = inotify_init();
     if (inot_fd != -1) {
         timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
-        init_module(timer_fd, self.idx, dimmer_cb);
+        init_module(timer_fd, self.idx);
         if (!modules[self.idx].disabled) {
             add_upower_module_callback(upower_callback);
             /* brightness module is started before dimmer, so state.br.max is already ok there */
@@ -49,7 +45,9 @@ static void init(void) {
 /* Check we're on X */
 static int check(void) {
     return  conf.single_capture_mode ||
-    conf.no_dimmer || !state.display || !state.xauthority;
+            conf.no_dimmer || 
+            !state.display || 
+            !state.xauthority;
 }
 
 static void destroy(void) {
@@ -75,7 +73,7 @@ static void destroy(void) {
  * Else, read single event from inotify, leave dimmed state,
  * resume BACKLIGHT module and reset latest backlight level. 
  */
-static void dimmer_cb(void) {
+static void callback(void) {
     if (!state.is_dimmed) {
         uint64_t t;
         read(main_p[self.idx].fd, &t, sizeof(uint64_t));
@@ -137,7 +135,7 @@ static void dim_backlight(void) {
 
 static void start_dim_smooth(void) {
     state.br.current = state.br.old;
-    start_smooth_transition();
+    start_smooth_transition(1);
 }
 
 static void stop_dim_smooth(void) {
