@@ -64,6 +64,8 @@ static void callback(void) {
         /* Disarm timerfd as we received a location before it triggered */
         set_timeout(0, 0, main_p[self.idx].fd, 0);
     }
+    /* disable this poll_cb */
+    modules[self.idx].poll_cb = NULL;
 }
 
 static int load_cache_location(void) {
@@ -158,7 +160,6 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
     state.bus_cb_idx = self.idx;
     
     const char *new_location, *old_location;
-
     sd_bus_message_read(m, "oo", &old_location, &new_location);
 
     struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};

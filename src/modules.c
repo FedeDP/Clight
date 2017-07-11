@@ -112,7 +112,9 @@ static void started_cb(enum modules module) {
  */
 void poll_cb(const enum modules module) {
     if (modules[module].inited && !modules[module].disabled) {
-        modules[module].poll_cb();
+        if (modules[module].poll_cb) {
+            modules[module].poll_cb();
+        }
         started_cb(module);
     }
 }
