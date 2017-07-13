@@ -7,7 +7,7 @@ static int check(void);
 static void callback(void);
 static void destroy(void);
 static void set_dpms(void);
-static void upower_callback(int old_state);
+static void upower_callback(void);
 
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS} };
 static struct self_t self = {
@@ -26,13 +26,15 @@ static void init(void) {
     set_dpms();
     init_module(DONT_POLL, self.idx);
     if (!modules[self.idx].disabled) {
-        add_upower_module_callback(upower_callback);
+        struct bus_cb upower_cb = { UPOWER, upower_callback };
+        add_mod_callback(upower_cb);
     }
 }
 
 /* Check module is not disabled, we're on X and proper configs are set. */
 static int check(void) {
-    return conf.no_dpms ||
+    return conf.single_capture_mode ||
+            conf.no_dpms ||
            !state.display || 
            !state.xauthority;
 }
@@ -51,6 +53,6 @@ static void set_dpms(void) {
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
 }
 
-static void upower_callback(__attribute__((unused)) int old_state) {
+static void upower_callback(void) {
     set_dpms();
 }

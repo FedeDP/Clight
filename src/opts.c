@@ -106,7 +106,8 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"ac-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
         {"batt-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
-        {"debug", 0, POPT_ARG_NONE, &conf.debug, 100, "Enable debug mode", NULL},
+        {"verbose", 0, POPT_ARG_NONE, &conf.debug, 100, "Enable verbose mode", NULL},
+        {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -128,6 +129,9 @@ static void parse_cmd(int argc, char *const argv[]) {
             case 4:
                 strncpy(conf.events[SUNSET], str, sizeof(conf.events[SUNSET]) - 1);
                 break;
+            case 5:
+                printf("%s version: %s\n", argv[0], VERSION);
+                exit(EXIT_SUCCESS);
             default:
                 break;
         }

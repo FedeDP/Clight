@@ -4,9 +4,12 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void callback(void);
+static void run_callbacks(const enum modules module);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
+static int num_callbacks;
+static struct bus_cb *callbacks;
 static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
@@ -41,6 +44,9 @@ static void destroy(void) {
     if (bus) {
         bus = sd_bus_flush_close_unref(bus);
     }
+    if (callbacks) {
+        free(callbacks);
+    }
 }
 
 /*
@@ -55,6 +61,7 @@ static void callback(void) {
         /* check if any match changed bus_cb_idx, then call correct callback */
         if (state.bus_cb_idx != MODULES_NUM) {
             poll_cb(state.bus_cb_idx);
+            run_callbacks(state.bus_cb_idx);
         }
     } while (r > 0);
 }
@@ -187,6 +194,25 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
 finish:
     free_bus_structs(&error, m, NULL);
     return r;
+}
+
+void add_mod_callback(const struct bus_cb cb) {
+    struct bus_cb *tmp = realloc(callbacks, sizeof(struct bus_cb) * (++num_callbacks));
+    if (tmp) {
+        callbacks = tmp;
+        callbacks[num_callbacks - 1] = cb;
+    } else {
+        free(callbacks);
+        ERROR("%s\n", strerror(errno));
+    }
+}
+
+static void run_callbacks(const enum modules module) {
+    for (int i = 0; i < num_callbacks; i++) {
+        if (callbacks[i].module == module) {
+            callbacks[i].cb();
+        }
+    }
 }
 
 /*

@@ -12,7 +12,7 @@ static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
-static void upower_callback(int old_state);
+static void upower_callback(void);
 
 static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
 static struct self_t self = {
@@ -37,7 +37,8 @@ static void init(void) {
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     init_module(fd, self.idx);
     if (!modules[self.idx].disabled) {
-        add_upower_module_callback(upower_callback);
+        struct bus_cb upower_cb = { UPOWER, upower_callback };
+        add_mod_callback(upower_cb);
     }
 }
 
@@ -205,7 +206,7 @@ static double clamp(double value, double max, double min) {
     return value;
 }
 
-static void upower_callback(__attribute__((unused)) int old_state) {
+static void upower_callback(void) {
     if (!state.fast_recapture) {
         /* 
          * do a capture right now as we have 2 different curves for 

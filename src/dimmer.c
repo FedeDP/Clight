@@ -14,7 +14,7 @@ static void dim_backlight(void);
 static void start_dim_smooth(void);
 static void stop_dim_smooth(void);
 static int get_idle_time(void);
-static void upower_callback(int old_state);
+static void upower_callback(void);
 
 static int inot_wd, inot_fd, timer_fd, dimmed_br;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
@@ -35,7 +35,8 @@ static void init(void) {
         timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
         init_module(timer_fd, self.idx);
         if (!modules[self.idx].disabled) {
-            add_upower_module_callback(upower_callback);
+            struct bus_cb upower_cb = { UPOWER, upower_callback };
+            add_mod_callback(upower_cb);
             /* brightness module is started before dimmer, so state.br.max is already ok there */
             dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
         }
@@ -153,8 +154,8 @@ static int get_idle_time(void) {
 }
 
 /* Reset dimmer timeout */
-static void upower_callback(int old_state) {
-    if (!state.is_dimmed) {
-        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_state], conf.dimmer_timeout[state.ac_state]);
-    }
+static void upower_callback(void) {
+//     if (!state.is_dimmed && state.ac_state != * (int *)old_state) {
+//         reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_state], conf.dimmer_timeout[state.ac_state]);
+//     }
 }

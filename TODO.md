@@ -19,7 +19,8 @@ Just call poll_cb(self.idx) at the end of init() for GAMMA and DIMMER? -> set_so
 - [x] port onGeoclueNewEvent to same format as onUpowerNewEvent (with callbacks registered in init())
 - [ ] update module.skel
 - [x] check FIXME!
-- [ ] unify add_x_bus_callback and run_callbacks() under same interface in bus.c?
+- [x] unify add_x_bus_callback and run_callbacks() under same interface in bus.c?
+- [x] rename --debug to --verbose and add a --version / -v switch
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)

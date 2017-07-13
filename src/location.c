@@ -13,11 +13,8 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_err
 static int geoclue_client_start(void);
 static void geoclue_client_stop(void);
 static void cache_location(void);
-static void run_callbacks(void);
 
 static sd_bus_slot *slot;
-static int num_callbacks;
-static location_cb *callbacks;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
@@ -122,9 +119,6 @@ static void destroy(void) {
     if (slot) {
         sd_bus_slot_unref(slot);
     }
-    if (callbacks) {
-        free(callbacks);
-    }
 }
 
 static int check(void) {
@@ -172,7 +166,6 @@ static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) vo
     get_property(&lon_args, "d", &conf.lon);
     
     INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
-    run_callbacks();
     return 0;
 }
 
@@ -209,26 +202,3 @@ static void cache_location(void) {
         }
     }
 }
-
-/* Hook a callback to location change event */
-void add_location_module_callback(location_cb cb) {
-    if (modules[self.idx].inited) {
-        location_cb *tmp = realloc(callbacks, sizeof(location_cb) * (++num_callbacks));
-        if (tmp) {
-            callbacks = tmp;
-            callbacks[num_callbacks - 1] = cb;
-        } else {
-            if (callbacks) {
-                free(callbacks);
-            }
-            ERROR("%s\n", strerror(errno));
-        }
-    }
-}
-
-static void run_callbacks(void) {
-    for (int i = 0; i < num_callbacks; i++) {
-        callbacks[i](); // pass previous state to callbacks
-    }
-}
-

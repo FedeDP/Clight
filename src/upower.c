@@ -6,11 +6,8 @@ static void callback(void);
 static void destroy(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void run_callbacks(int old_state);
 
 static sd_bus_slot *slot;
-static int num_callbacks;
-static upower_cb *callbacks;
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .name = "Upower",
@@ -46,13 +43,11 @@ static void destroy(void) {
     if (slot) {
         sd_bus_slot_unref(slot);
     }
-    if (callbacks) {
-        free(callbacks);
-    }
 }
 
+// FIXME: we would get signal from battery discharging too i guess
 static int upower_init(void) {
-    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
+    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower/devices", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
     int r = add_match(&args, &slot, on_upower_change);
     if (r < 0) {
         return -1;   // disable this module
@@ -62,40 +57,14 @@ static int upower_init(void) {
 }
 
 /* 
- * Callback on upower changes: recheck on_battery boolean value 
+ * Callback on upower changes: recheck on_battery boolean value
  */
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     state.bus_cb_idx = self.idx;
     
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
-    int on_battery = state.ac_state;
     get_property(&power_args, "b", &state.ac_state);
-    if (state.ac_state != on_battery) {
-        INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
-        run_callbacks(on_battery);
-    }
+    INFO(state.ac_state ? "Ac cable is disconnected. Powersaving mode enabled.\n" : "Ac cable is connected. Powersaving mode disabled.\n");
     return 0;
-}
-
-/* Hook a callback to upower change event */
-void add_upower_module_callback(upower_cb cb) {
-    if (modules[self.idx].inited) {
-        upower_cb *tmp = realloc(callbacks, sizeof(upower_cb) * (++num_callbacks));
-        if (tmp) {
-            callbacks = tmp;
-            callbacks[num_callbacks - 1] = cb;
-        } else {
-            if (callbacks) {
-                free(callbacks);
-            }
-            ERROR("%s\n", strerror(errno));
-        }
-    }
-}
-
-static void run_callbacks(int old_state) {
-    for (int i = 0; i < num_callbacks; i++) {
-        callbacks[i](old_state); // pass previous state to callbacks
-    }
 }

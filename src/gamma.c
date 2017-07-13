@@ -37,7 +37,8 @@ static void init(void) {
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
     init_module(gamma_timerfd, self.idx);
     if (!modules[self.idx].disabled) {
-        add_location_module_callback(location_callback);
+        struct bus_cb loc_cb = { LOCATION, location_callback };
+        add_mod_callback(loc_cb);
     }
 }
 
