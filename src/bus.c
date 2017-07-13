@@ -53,10 +53,10 @@ static void destroy(void) {
  * Callback for bus events
  */
 static void callback(void) {
-    /* reset bus_cb_idx to impossible state */
-    state.bus_cb_idx = MODULES_NUM;
     int r;
     do {
+        /* reset bus_cb_idx to impossible state */
+        state.bus_cb_idx = MODULES_NUM;
         r = sd_bus_process(bus, NULL);
         /* check if any match changed bus_cb_idx, then call correct callback */
         if (state.bus_cb_idx != MODULES_NUM) {
