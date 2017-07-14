@@ -20,10 +20,6 @@ void set_upower_self(void) {
     SET_SELF();
 }
 
-/*
- * init location:
- * init geoclue and set a match on bus on new location signal
- */
 static void init(void) {
     int r = upower_init();
     /* In case of errors, upower_init returns -1 -> disable upower. */
@@ -45,9 +41,8 @@ static void destroy(void) {
     }
 }
 
-// FIXME: we would get signal from battery discharging too i guess
 static int upower_init(void) {
-    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower/devices", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
+    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
     int r = add_match(&args, &slot, on_upower_change);
     if (r < 0) {
         return -1;   // disable this module
@@ -64,7 +59,19 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribu
     
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
+    /* 
+     * Store last ac_state in old struct to be matched against new one
+     * as we cannot be sure that a OnBattery changed signal has been really sent:
+     * our match will receive these signals:
+     * .DaemonVersion                      property  s         "0.99.5"     emits-change
+     * .LidIsClosed                        property  b         true         emits-change
+     * .LidIsPresent                       property  b         true         emits-change
+     * .OnBattery                          property  b         false        emits-change
+     */
+    state.old_ac_state = state.ac_state;
     get_property(&power_args, "b", &state.ac_state);
-    INFO(state.ac_state ? "Ac cable is disconnected. Powersaving mode enabled.\n" : "Ac cable is connected. Powersaving mode disabled.\n");
+    if (m && state.old_ac_state != state.ac_state) {
+        INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
+    }
     return 0;
 }

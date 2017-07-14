@@ -155,7 +155,8 @@ static int get_idle_time(void) {
 
 /* Reset dimmer timeout */
 static void upower_callback(void) {
-//     if (!state.is_dimmed && state.ac_state != * (int *)old_state) {
-//         reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_state], conf.dimmer_timeout[state.ac_state]);
-//     }
+    /* Force check that we received an ac_state changed event for real */
+    if (!state.is_dimmed && state.old_ac_state != state.ac_state) {
+        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[state.old_ac_state], conf.dimmer_timeout[state.ac_state]);
+    }
 }

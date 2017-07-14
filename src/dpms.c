@@ -54,5 +54,8 @@ static void set_dpms(void) {
 }
 
 static void upower_callback(void) {
-    set_dpms();
+    /* Force check that we received an ac_state changed event for real */
+    if (state.old_ac_state != state.ac_state) {
+        set_dpms();
+    }
 }

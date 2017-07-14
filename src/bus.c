@@ -89,14 +89,14 @@ int bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, 
     int val;
     while (signature[i] != '\0') {
         switch (signature[i]) {
-            case 's':
+            case SD_BUS_TYPE_STRING:
                 s = va_arg(args, char *);
                 r = sd_bus_message_append_basic(m, 's', s);
                 if (check_err(r, &error)) {
                     goto finish;
                 }
                 break;
-            case 'i':
+            case SD_BUS_TYPE_INT32:
                 val = va_arg(args, int);
                 r = sd_bus_message_append_basic(m, 'i', &val);
                 if (check_err(r, &error)) {
@@ -154,10 +154,10 @@ int set_property(const struct bus_args *a, const char type, const char *value) {
     int r = 0;
 
     switch (type) {
-        case 'u':
+        case SD_BUS_TYPE_UINT32:
             r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "u", atoi(value));
             break;
-        case 's':
+        case SD_BUS_TYPE_STRING:
             r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "s", value);
             break;
         default:

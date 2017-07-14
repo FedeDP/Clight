@@ -207,7 +207,8 @@ static double clamp(double value, double max, double min) {
 }
 
 static void upower_callback(void) {
-    if (!state.fast_recapture) {
+    /* Force check that we received an ac_state changed event for real */
+    if (!state.fast_recapture && state.old_ac_state != state.ac_state) {
         /* 
          * do a capture right now as we have 2 different curves for 
          * different AC_STATES, so let's properly honor new curve
