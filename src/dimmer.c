@@ -128,7 +128,7 @@ static void dim_backlight(void) {
     } else {
         if (conf.no_dimmer_smooth_transition) {
             set_backlight_level(dimmed_br);
-        } else {
+        } else if (modules[DIMMER_SMOOTH].inited) {
             start_dim_smooth();
         }
     }

@@ -23,7 +23,7 @@ void set_dimmer_smooth_self(void) {
 }
 
 static void init(void) {
-    int fd = start_timer(CLOCK_MONOTONIC, 0, 0);
+    int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
     init_module(fd, self.idx);
     /* brightness module is started before dimmer, so state.br.max is already ok there */
     dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
@@ -46,7 +46,9 @@ static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     
-    dim_backlight();
+    if (state.is_dimmed) {
+        dim_backlight();
+    }
 }
 
 static void dim_backlight(void) {

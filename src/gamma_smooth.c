@@ -20,7 +20,7 @@ void set_gamma_smooth_self(void) {
 }
 
 static void init(void) {
-    int fd = start_timer(CLOCK_MONOTONIC, 0, 0);
+    int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
     init_module(fd, self.idx);
 }
 

@@ -8,8 +8,18 @@ static void run_callbacks(const enum modules module);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
-static int num_callbacks;
-static struct bus_cb *callbacks;
+/* 
+ * bus_mod_idx: setted in every module's match callback to their self.idx.
+ * It is the idx of the module on which bus should call callbacks
+ * stored in struct bus_cb *callbacks
+ */
+struct bus_callback {
+    int num_callbacks;
+    int bus_mod_idx; 
+    struct bus_cb *callbacks;
+};
+
+static struct bus_callback _cb;
 static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
@@ -44,8 +54,8 @@ static void destroy(void) {
     if (bus) {
         bus = sd_bus_flush_close_unref(bus);
     }
-    if (callbacks) {
-        free(callbacks);
+    if (_cb.callbacks) {
+        free(_cb.callbacks);
     }
 }
 
@@ -56,12 +66,12 @@ static void callback(void) {
     int r;
     do {
         /* reset bus_cb_idx to impossible state */
-        state.bus_cb_idx = MODULES_NUM;
+        _cb.bus_mod_idx = MODULES_NUM;
         r = sd_bus_process(bus, NULL);
         /* check if any match changed bus_cb_idx, then call correct callback */
-        if (state.bus_cb_idx != MODULES_NUM) {
-            poll_cb(state.bus_cb_idx);
-            run_callbacks(state.bus_cb_idx);
+        if (_cb.bus_mod_idx != MODULES_NUM) {
+            poll_cb(_cb.bus_mod_idx);
+            run_callbacks(_cb.bus_mod_idx);
         }
     } while (r > 0);
 }
@@ -141,7 +151,7 @@ finish:
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(bus, slot, match, cb, NULL);
+    int r = sd_bus_add_match(bus, slot, match, cb, &_cb.bus_mod_idx);
     check_err(r, NULL);
     return r;
 }
@@ -197,20 +207,20 @@ finish:
 }
 
 void add_mod_callback(const struct bus_cb cb) {
-    struct bus_cb *tmp = realloc(callbacks, sizeof(struct bus_cb) * (++num_callbacks));
+    struct bus_cb *tmp = realloc(_cb.callbacks, sizeof(struct bus_cb) * (++_cb.num_callbacks));
     if (tmp) {
-        callbacks = tmp;
-        callbacks[num_callbacks - 1] = cb;
+        _cb.callbacks = tmp;
+        _cb.callbacks[_cb.num_callbacks - 1] = cb;
     } else {
-        free(callbacks);
+        free(_cb.callbacks);
         ERROR("%s\n", strerror(errno));
     }
 }
 
 static void run_callbacks(const enum modules module) {
-    for (int i = 0; i < num_callbacks; i++) {
-        if (callbacks[i].module == module) {
-            callbacks[i].cb();
+    for (int i = 0; i < _cb.num_callbacks; i++) {
+        if (_cb.callbacks[i].module == module) {
+            _cb.callbacks[i].cb();
         }
     }
 }

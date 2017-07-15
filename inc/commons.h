@@ -98,7 +98,6 @@ struct state {
     struct brightness br;                   // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
     jmp_buf quit_buf;                       // quit jump called by longjmp
-    enum modules bus_cb_idx;                // idx of current module's whose match on bus is processed
 };
 
 /* Struct that holds info about an inter-modules dep */

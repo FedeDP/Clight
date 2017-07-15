@@ -12,17 +12,18 @@
 - [x] improved opts (use "--x-y" instead of "--x_y" for multiwords options)
 - [x] move quit_buf inside state struct
 - [x] get_timeout should let decide which field to return (tv_sec or tv_nsec)
-- [ ] FIX bug: dimmer_smooth module (and gamma_smooth_module too) is started after DIMMER receives first poll cb. This is wrong, it should be started as soon as dimmer(gamma) is started.
+- [x] FIX bug: dimmer_smooth module (and gamma_smooth_module too) is started after DIMMER receives first poll cb. This is wrong, it should be started as soon as dimmer(gamma) is started.
 Just call poll_cb(self.idx) at the end of init() for GAMMA and DIMMER? -> set_son(Parent) -> parent will start son as soon as it is inited
 - [x] port gamma smooth transition to same module as dimmer smooth transition?
 - [ ] add dimmer transitions even when leaving dimmed state
 - [x] port onGeoclueNewEvent to same format as onUpowerNewEvent (with callbacks registered in init())
-- [ ] update module.skel
+- [x] update module.skel
 - [x] check FIXME!
 - [x] unify add_x_bus_callback and run_callbacks() under same interface in bus.c?
 - [x] rename --debug to --verbose and add a --version / -v switch
-- [ ] use *userdata parameter in add_match instead of a global state variable (state.bus_cb_idx)
+- [x] use *userdata parameter in add_match instead of a global state variable (state.bus_cb_idx)
 - [x] switch to SD_BUS_TYPE_* in bus.c
+- [ ] test --no-dpms, --no-dimmer, --no-gamma
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)

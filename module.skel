@@ -1,6 +1,6 @@
 /* 
  * This document aims to explain how a new module is built.
- * Every module should mandatorily expose 3 functions: init, check, destroy.
+ * Every module should mandatorily expose 4 functions: init, check, callback, destroy.
  * 
  * check() is called to decide whether this module should be really started:
  * if it returns 0, the module has to be started.
@@ -9,21 +9,21 @@
  * setup all needed structures and variables, and call init_module if no 
  * errors happen during initialization. Else, it should disable this module.
  *
- * destroy() is called to free every resource used by a module.
+ * callback() function for poll must be provided for this module,
+ * leaving it blank if there is no need for a poll callback
  * 
- * Moreover, a callback function for poll can be provided for this module
- * (obviously only if a fd is passed inside init_module call).
+ * destroy() is called to free every resource used by a module.
  *
  * Finally, module.h should expose a set_module_self function that binds
  * module's internal own self_t struct to global <struct module modules> and sets 
- * mandatory functions.
+ * mandatory functions (using macro SET_SELF())
  */
 
 #include "module.h"
 
 static void init(void);
 static int check(void);
-static void poll_cb(void);
+static void callback(void);
 static void destroy(void);
 
 /* 
@@ -40,11 +40,7 @@ static struct self_t self = {
 };
 
 void set_module_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF(); 
 }
 
 /*
@@ -53,14 +49,15 @@ void set_module_self(void) {
 static void init(void) {
     int fd = f();
     if (fd > 0) {
-        init_module(fd, self.idx, poll_cb);
+        init_module(fd, self.idx);
     } else {
         disable_module(self.idx);
     }
 }
 
 /* 
- * Perform varius checks to decide whether this module should be inited 
+ * Perform varius checks to decide whether this module should be inited:
+ * 0 for DO INIT
  */
 static int check(void) {
     return 0;
@@ -69,7 +66,7 @@ static int check(void) {
 /*
  * Callback for POLL events on main_p[SKEL].fd
  */
-static void poll_cb(void) {
+static void callback(void) {
     printf("Called by poll!\n");
 }
 
