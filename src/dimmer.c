@@ -11,8 +11,7 @@ static int check(void);
 static void destroy(void);
 static void callback(void);
 static void dim_backlight(void);
-static void start_dim_smooth(void);
-static void stop_dim_smooth(void);
+static void restore_backlight(void);
 static int get_idle_time(void);
 static void upower_callback(void);
 
@@ -113,10 +112,8 @@ static void callback(void) {
         if (length > 0) {
             state.is_dimmed = 0;
             main_p[self.idx].fd = timer_fd;
-            stop_dim_smooth();
+            restore_backlight();
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
-            /* restore previous backlight level */
-            set_backlight_level(state.br.old);
         }
     }
 }
@@ -129,19 +126,18 @@ static void dim_backlight(void) {
         if (conf.no_dimmer_smooth_transition) {
             set_backlight_level(dimmed_br);
         } else if (modules[DIMMER_SMOOTH].inited) {
-            start_dim_smooth();
+            state.br.current = state.br.old;
+            start_smooth_transition(1);
         }
     }
 }
 
-static void start_dim_smooth(void) {
-    state.br.current = state.br.old;
-    start_smooth_transition(1);
-}
-
-static void stop_dim_smooth(void) {
-    if (!conf.no_dimmer_smooth_transition && get_timeout_nsec(main_p[DIMMER_SMOOTH].fd)) {
-        stop_smooth_transition();
+/* restore previous backlight level */
+static void restore_backlight(void) {
+    if (conf.no_dimmer_smooth_transition) {
+        set_backlight_level(state.br.old);
+    } else if (modules[DIMMER_SMOOTH].inited) {
+        start_smooth_transition(1);
     }
 }
 

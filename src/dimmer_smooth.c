@@ -8,6 +8,7 @@ static int check(void);
 static void destroy(void);
 static void callback(void);
 static void dim_backlight(void);
+static void restore_backlight(void);
 
 static int dimmed_br;
 static struct dependency dependencies[] = { {HARD, DIMMER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
@@ -48,6 +49,8 @@ static void callback(void) {
     
     if (state.is_dimmed) {
         dim_backlight();
+    } else {
+        restore_backlight();
     }
 }
 
@@ -59,10 +62,14 @@ static void dim_backlight(void) {
     }
 }
 
-void start_smooth_transition(long delay) {
-    set_timeout(0, delay, main_p[self.idx].fd, 0);
+static void restore_backlight(void) {
+    const int new_br = (double)state.br.current + (double)state.br.max / 20; // 5% steps
+    set_backlight_level(new_br > state.br.old ? state.br.old : new_br);
+    if (state.br.current != state.br.old) {
+        start_smooth_transition(DIMMER_SMOOTH_TIMEOUT);
+    }
 }
 
-void stop_smooth_transition(void) {
-    set_timeout(0, 0, main_p[self.idx].fd, 0);
+void start_smooth_transition(long delay) {
+    set_timeout(0, delay, main_p[self.idx].fd, 0);
 }

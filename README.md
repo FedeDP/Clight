@@ -12,13 +12,13 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 ## Build deps
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
-* gsl (gsl/gsl_multifit.h)
+* gsl (gsl/gsl_multifit.h, gsl/gsl_statistics_double.h)
 * libconfig (libconfig.h)
 * gcc or clang
 
 ## Runtime deps:
 * shared objects from build libraries
-* [clightd](https://github.com/FedeDP/Clightd) >= 1.3
+* [clightd](https://github.com/FedeDP/Clightd) >= 1.3-dev
 
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
