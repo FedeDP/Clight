@@ -176,9 +176,9 @@ void disable_module(const enum modules module) {
                     
                     /* 
                      * if there are no more dependent_m on this module, 
-                     * and it is not a mandatory module, disable it 
+                     * and it is not a standalone module, disable it 
                      */
-                    if (modules[m].num_dependent == 0) {
+                    if (modules[m].num_dependent == 0 && !modules[m].self->standalone) {
                         disable_module(m);
                     }
                     break;

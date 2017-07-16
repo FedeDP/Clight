@@ -113,6 +113,7 @@ struct self_t {
     int num_deps;                         // number of deps for a module
     int satisfied_deps;                   // number of satisfied deps
     struct dependency *deps;              // module on which there is a dep
+    int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
 };
 
 /* Struct that holds data for each module */

@@ -1,6 +1,7 @@
 #include "../inc/brightness.h"
 #include "../inc/upower.h"
 #include <gsl/gsl_multifit.h>
+#include <gsl/gsl_statistics_double.h>
 
 static void init(void);
 static int check(void);
@@ -10,6 +11,7 @@ static void do_capture(void);
 static void get_max_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
+static double compute_average(double *intensity);
 static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
 static void upower_callback(void);
@@ -19,7 +21,8 @@ static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps =  dependencies,
+    .standalone = 1
 };
 
 void set_brightness_self(void) {
@@ -150,11 +153,20 @@ void set_backlight_level(int level) {
 }
 
 static double capture_frames_brightness(void) {
-    double brightness = -1;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
-    bus_call(&brightness, "d", &args, "si", conf.dev_name, conf.num_captures);
-    DEBUG("Average frames brightness: %lf.\n", brightness);
-    return brightness;
+    double intensity[conf.num_captures];
+    bus_call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
+    
+    return compute_average(intensity);
+}
+
+/* 
+ * Compute mean and normalize between 0-1
+ */
+static double compute_average(double *intensity) {
+    double mean = gsl_stats_mean(intensity, 1, conf.num_captures) / 255;
+    DEBUG("Average frames brightness: %lf.\n", mean);
+    return mean;
 }
 
 /*

@@ -10,6 +10,7 @@ static void callback(void);
 static struct self_t self = {
     .name = "Signal",
     .idx = SIGNAL,
+    .standalone = 1
 };
 
 void set_signal_self(void) {

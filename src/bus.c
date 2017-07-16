@@ -23,7 +23,8 @@ static struct bus_callback _cb;
 static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
-    .idx = BUS
+    .idx = BUS,
+    .standalone = 1
 };
 
 void set_bus_self(void) {
@@ -133,6 +134,14 @@ int bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, 
             r = sd_bus_message_read(reply, userptr_type, &obj);
             if (r >= 0) {
                 strncpy(userptr, obj, PATH_MAX);
+            }
+        } else if (userptr_type[0] == 'a') {
+            r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, userptr_type + 1);
+            if (r >= 0) {
+                int i = 0;
+                while (sd_bus_message_read(reply, userptr_type + 1, &(((double *)userptr)[i])) > 0) {
+                    i++;
+                }
             }
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
