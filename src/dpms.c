@@ -33,8 +33,7 @@ static void init(void) {
 
 /* Check module is not disabled, we're on X and proper configs are set. */
 static int check(void) {
-    return conf.single_capture_mode ||
-            conf.no_dpms ||
+    return conf.no_dpms ||
            !state.display || 
            !state.xauthority;
 }

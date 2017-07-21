@@ -32,9 +32,7 @@ static void init(void) {
 
 /* Check we're on X, dimmer is enabled and smooth transitioning are enabled */
 static int check(void) {
-    return  conf.single_capture_mode || 
-            conf.no_dimmer || 
-            !state.display || 
+    return  !state.display || 
             !state.xauthority || 
             conf.no_dimmer_smooth_transition;
 }

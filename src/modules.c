@@ -2,6 +2,7 @@
 
 static void started_cb(enum modules module);
 static void destroy_module(const enum modules module);
+static void disable_module(const enum modules module);
 
 static enum modules *sorted_modules; // modules sorted by their starting place
 static int started_modules = 0; // number of started modules
@@ -15,7 +16,7 @@ void init_modules(const enum modules module) {
     /* Avoid calling init in case module is disabled, is already inited, or init func ptr is NULL */
     if (!modules[module].disabled && modules[module].init && !modules[module].inited) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
-            if (modules[module].check()) {
+            if ((conf.single_capture_mode && !modules[module].self->standalone) || modules[module].check()) {
                 disable_module(module);
             } else {
                 modules[module].init();

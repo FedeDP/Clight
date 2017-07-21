@@ -27,7 +27,7 @@ static void init(void) {
 }
 
 static int check(void) {
-    return conf.single_capture_mode;
+    return 0; /* Skeleton function needed for modules interface */
 }
 
 static void callback(void) {

@@ -44,8 +44,7 @@ static void init(void) {
 
 /* Check we're on X */
 static int check(void) {
-    return  conf.single_capture_mode ||
-            conf.no_dimmer || 
+    return  conf.no_dimmer || 
             !state.display || 
             !state.xauthority;
 }

@@ -43,8 +43,7 @@ static void init(void) {
 }
 
 static int check(void) {
-    return  conf.single_capture_mode || 
-            conf.no_gamma || 
+    return  conf.no_gamma || 
             !state.display || 
             !state.xauthority;
 }

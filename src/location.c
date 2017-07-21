@@ -130,7 +130,7 @@ static int check(void) {
         change_dep_type(GAMMA, self.idx, SOFT);
         return 1;
     }
-    return conf.single_capture_mode || conf.no_gamma;
+    return conf.no_gamma;
 }
 
 /*
