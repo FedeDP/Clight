@@ -21,7 +21,7 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static void location_callback(void);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION} };
+static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION}, {HARD, XORG} };
 static struct self_t self = {
     .name = "Gamma",
     .idx = GAMMA,
@@ -34,18 +34,14 @@ void set_gamma_self(void) {
 }
 
 static void init(void) {
+    struct bus_cb loc_cb = { LOCATION, location_callback };
+    
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
-    init_module(gamma_timerfd, self.idx);
-    if (!modules[self.idx].disabled) {
-        struct bus_cb loc_cb = { LOCATION, location_callback };
-        add_mod_callback(loc_cb);
-    }
+    init_module(gamma_timerfd, self.idx, &loc_cb, NULL);
 }
 
 static int check(void) {
-    return  conf.no_gamma || 
-            !state.display || 
-            !state.xauthority;
+    return 0;
 }
 
 static void destroy(void) {
@@ -83,9 +79,9 @@ static void check_gamma(void) {
     get_gamma_events(&t, conf.lat, conf.lon, 0);
 
     if (state.event_time_range == conf.event_duration) {
-        if (conf.no_gamma_smooth_transition) {
+        if (is_disabled(GAMMA_SMOOTH)) {
             set_temp(conf.temp[state.time]);
-        } else if (modules[GAMMA_SMOOTH].inited) {
+        } else if (is_inited(GAMMA_SMOOTH)) {
             start_gamma_transition(1);
         }
     }
@@ -96,7 +92,7 @@ static void check_gamma(void) {
     set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
 
     /* if we entered/left an event, set correct timeout to BRIGHTNESS */
-    if (old_state != state.time && modules[BRIGHTNESS].inited && !state.fast_recapture) {
+    if (old_state != state.time && is_inited(BRIGHTNESS) && !state.fast_recapture) {
         reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
     }
 }

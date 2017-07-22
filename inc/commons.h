@@ -26,13 +26,13 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
  * day between sunrise and sunset
  * night between sunset and sunrise
- * EVENT from 30mins before until 30mins after an event
+ * EVENT from conf.event_time_range before until conf.event_time_range after an event
  * unknown if no sunrise/sunset could be found for today (can it happen?)
  */
 enum states { UNKNOWN, DAY, NIGHT, EVENT, SIZE_STATES };
@@ -49,6 +49,9 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 /* Dpms states */
 enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
+/* Module states */
+enum module_states { UNKN, DISABLED, INITED };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
@@ -57,20 +60,15 @@ struct config {
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
-    int no_gamma_smooth_transition;         // disable smooth transitions for gamma
-    int no_dimmer_smooth_transition;        // disable smooth transitions for dimmer
     double lat;                             // latitude
     double lon;                             // longitude
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
-    int no_gamma;                           // whether gamma tool is disabled
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
     int dimmer_pct;                         // pct of max brightness to be used while dimming
-    int no_dimmer;                          // disable dimmer
-    int no_dpms;                            // disable dpms
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
-    int debug;                              // whether we're in debug mode
+    int verbose;                            // whether we're in verbose mode
 };
 
 /*
@@ -125,8 +123,7 @@ struct module {
     struct self_t *self;                  // pointer to self module informations
     enum modules *dependent_m;            // pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
-    int inited;                           // whether a module has been initialized (ie: setted up)
-    int disabled;                         // whether this module has been disabled from config (for now useful only for gamma)
+    enum module_states state;             // state of a module
 };
 
 struct state state;

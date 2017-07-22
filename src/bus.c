@@ -41,7 +41,7 @@ static void init(void) {
     }
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(bus);
-    init_module(bus_fd, self.idx);
+    init_module(bus_fd, self.idx, NULL);
 }
 
 static int check(void) {

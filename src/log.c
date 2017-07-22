@@ -1,4 +1,5 @@
 #include "../inc/log.h"
+#include "../inc/modules.h"
 
 static FILE *log_file;
 
@@ -30,18 +31,18 @@ void log_conf(void) {
             fprintf(log_file, "* Backlight path:\t\t%s\n", conf.screen_path);
             fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
             fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
-            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", conf.no_gamma_smooth_transition ? "disabled" : "enabled");
-            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", conf.no_dimmer_smooth_transition ? "disabled" : "enabled");
+            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", is_disabled(GAMMA_SMOOTH) ? "disabled" : "enabled");
+            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", is_disabled(DIMMER_SMOOTH) ? "disabled" : "enabled");
             fprintf(log_file, "* User latitude:\t\t%.2lf\n", conf.lat);
             fprintf(log_file, "* User longitude:\t\t%.2lf\n", conf.lon);
             fprintf(log_file, "* User setted sunrise:\t\t%s\n", conf.events[SUNRISE]);
             fprintf(log_file, "* User setted sunset:\t\t%s\n", conf.events[SUNSET]);
-            fprintf(log_file, "* Gamma correction:\t\t%s\n", conf.no_gamma ? "disabled" : "enabled");
+            fprintf(log_file, "* Gamma correction:\t\t%s\n", is_disabled(GAMMA) ? "disabled" : "enabled");
             fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
-            fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", conf.no_dimmer ? "disabled" : "enabled");
+            fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", is_disabled(DIMMER) ? "disabled" : "enabled");
             fprintf(log_file, "* Dimmer backlight:\t\t%d%%\n", conf.dimmer_pct);
             fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
-            fprintf(log_file, "* Screen dpms tool:\t\t%s\n", conf.no_dpms ? "disabled" : "enabled");
+            fprintf(log_file, "* Screen dpms tool:\t\t%s\n", is_disabled(DPMS) ? "disabled" : "enabled");
             fprintf(log_file, "* Dpms timeouts:\t\tAC %d:%d:%d\tBATT %d:%d:%d\n\n",
                 conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],
                 conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]

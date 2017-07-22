@@ -13,7 +13,9 @@ do { \
 } while (0)
 
 void init_modules(const enum modules module);
-void init_module(int fd, enum modules module);
+void init_module(int fd, enum modules module, ...);
+int is_disabled(enum modules module);
+int is_inited(enum modules module);
 void set_self_deps(struct self_t *self);
 void poll_cb(const enum modules module);
 void change_dep_type(const enum modules mod, const enum modules mod_dep, const enum dep_type type);

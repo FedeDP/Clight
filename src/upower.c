@@ -23,7 +23,7 @@ void set_upower_self(void) {
 static void init(void) {
     int r = upower_init();
     /* In case of errors, upower_init returns -1 -> disable upower. */
-    init_module(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, self.idx);
+    init_module(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, self.idx, NULL);
 }
 
 static int check(void) {

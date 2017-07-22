@@ -50,7 +50,7 @@ static void init(void) {
         fd = ret == 0 ? DONT_POLL : DONT_POLL_W_ERR;
     }
     /* In case of errors, geoclue_init returns -1 -> disable location. */
-    init_module(fd, self.idx);
+    init_module(fd, self.idx, NULL);
 }
 
 static void callback(void) {
@@ -130,7 +130,7 @@ static int check(void) {
         change_dep_type(GAMMA, self.idx, SOFT);
         return 1;
     }
-    return conf.no_gamma;
+    return is_disabled(GAMMA);
 }
 
 /*

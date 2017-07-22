@@ -1,4 +1,5 @@
 #include "../inc/modules.h"
+#include "../inc/bus.h"
 
 static void started_cb(enum modules module);
 static void destroy_module(const enum modules module);
@@ -13,8 +14,8 @@ static int started_modules = 0; // number of started modules
  * If module has not a poll_cb (it is not waiting on poll), call poll_cb right now as it is fully started already.
  */
 void init_modules(const enum modules module) {
-    /* Avoid calling init in case module is disabled, is already inited, or init func ptr is NULL */
-    if (!modules[module].disabled && modules[module].init && !modules[module].inited) {
+    /* if module is not disabled, try to start it */
+    if (modules[module].state == UNKN) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
             if ((conf.single_capture_mode && !modules[module].self->standalone) || modules[module].check()) {
                 disable_module(module);
@@ -22,10 +23,18 @@ void init_modules(const enum modules module) {
                 modules[module].init();
             }
         }
+    } else if (is_disabled(module)) {
+        /* 
+         * if module is already disabled it means it was disabled with
+         * a --no-X cmdline option/conf file option.
+         * Force-disable it
+         */
+        modules[module].state = UNKN;
+        disable_module(module);
     }
 }
 
-void init_module(int fd, enum modules module) {
+void init_module(int fd, enum modules module, ...) {
     if (fd == -1) {
         ERROR("%s\n", strerror(errno));
     }
@@ -51,10 +60,21 @@ void init_module(int fd, enum modules module) {
      * eg: geoclue2 support is enabled but geoclue2 could not be found.
      */
     if (fd != DONT_POLL_W_ERR) {
-        modules[module].inited = 1;
+        modules[module].state = INITED;
         DEBUG("%s module started.\n", modules[module].self->name);
+        
+        /* foreach bus_cb passed in, call add_mod_callback on bus */
+        va_list args;
+        va_start(args, module);
+        struct bus_cb *cb = va_arg(args, struct bus_cb *);
+        while (cb) {
+            add_mod_callback(*cb);
+            cb = va_arg(args, struct bus_cb *);
+        }
+        va_end(args);
+        
         /* 
-         * If NULL poll cb is passed, 
+         * If module has not an fd (so, it is a oneshot module), 
          * consider this module as started right now.
          */
         if (fd == DONT_POLL) {
@@ -66,6 +86,14 @@ void init_module(int fd, enum modules module) {
         WARN("Error while loading %s module.\n", modules[module].self->name);
         disable_module(module); // disable this module and all of dependent module
     }
+}
+
+int is_disabled(enum modules module) {
+    return modules[module].state == DISABLED;
+}
+
+int is_inited(enum modules module) {
+    return modules[module].state == INITED;
 }
 
 /*
@@ -98,7 +126,7 @@ static void started_cb(enum modules module) {
         }
         modules[module].dependent_m = realloc(modules[module].dependent_m, (--modules[module].num_dependent) * sizeof(enum modules));
         
-        if (!modules[m].disabled && !modules[m].inited) {
+        if (modules[m].state == UNKN) {
             modules[m].self->satisfied_deps++;
             DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
             init_modules(m);
@@ -112,7 +140,7 @@ static void started_cb(enum modules module) {
  * try to start them calling started_cb.
  */
 void poll_cb(const enum modules module) {
-    if (modules[module].inited && !modules[module].disabled) {
+    if (is_inited(module)) {
         if (modules[module].poll_cb) {
             modules[module].poll_cb();
         }
@@ -137,14 +165,14 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
  * and X is not mandatory for clight, disable X too.
  */
 void disable_module(const enum modules module) {
-    if (!modules[module].disabled) {
-        modules[module].disabled = 1;
+    if (!is_disabled(module)) {
+        modules[module].state = DISABLED;
         DEBUG("%s module disabled.\n", modules[module].self->name);
 
         /* Cycle to disable all modules dependent on "module", if dep is HARD */
         for (int i = 0; i < modules[module].num_dependent; i++) {
             enum modules m = modules[module].dependent_m[i];
-            if (!modules[m].disabled) {
+            if (!is_disabled(m)) {
                 for (int j = 0; j < modules[m].self->num_deps; j++) {
                     if (modules[m].self->deps[j].dep == module) {
                         if (modules[m].self->deps[j].type == HARD) {
@@ -177,7 +205,7 @@ void disable_module(const enum modules module) {
                     
                     /* 
                      * if there are no more dependent_m on this module, 
-                     * and it is not a standalone module, disable it 
+                     * and it is not a standalone module, disable it
                      */
                     if (modules[m].num_dependent == 0 && !modules[m].self->standalone) {
                         disable_module(m);
@@ -208,7 +236,7 @@ static void destroy_module(const enum modules module) {
         modules[module].num_dependent = 0;
     }
     
-    if (modules[module].inited) {
+    if (is_inited(module)) {
         /* call module destroy func */
         modules[module].destroy();
         /* If fd is being polled, close it. */
@@ -218,7 +246,6 @@ static void destroy_module(const enum modules module) {
             main_p[modules[module].self->idx].fd = -1;
         }
         DEBUG("%s module destroyed.\n", modules[module].self->name);
-        modules[module].inited = 0;
     }
 }
 

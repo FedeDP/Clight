@@ -9,7 +9,7 @@ static void destroy(void);
 static void set_dpms(void);
 static void upower_callback(void);
 
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "Dpms",
     .idx = DPMS,
@@ -23,19 +23,15 @@ void set_dpms_self(void) {
 
 
 static void init(void) {
+    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    
     set_dpms();
-    init_module(DONT_POLL, self.idx);
-    if (!modules[self.idx].disabled) {
-        struct bus_cb upower_cb = { UPOWER, upower_callback };
-        add_mod_callback(upower_cb);
-    }
+    init_module(DONT_POLL, self.idx, &upower_cb, NULL);
 }
 
 /* Check module is not disabled, we're on X and proper configs are set. */
 static int check(void) {
-    return conf.no_dpms ||
-           !state.display || 
-           !state.xauthority;
+    return 0;
 }
 
 static void callback(void) {

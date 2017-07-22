@@ -7,7 +7,7 @@ static int check(void);
 static void destroy(void);
 static void callback(void);
 
-static struct dependency dependencies[] = { {HARD, GAMMA}, {HARD, BUS} };
+static struct dependency dependencies[] = { {HARD, GAMMA}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "GammaSmooth",
     .idx = GAMMA_SMOOTH,
@@ -20,15 +20,18 @@ void set_gamma_smooth_self(void) {
 }
 
 static void init(void) {
+    /* 
+     * gamma smooth must smooth transitionins
+     * as soon as it is started
+     * to set correct gamma for current time. 1ns timeout
+     */
     int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
-    init_module(fd, self.idx);
+    init_module(fd, self.idx, NULL);
 }
 
 /* Check we're on X, dimmer is enabled and smooth transitioning are enabled */
 static int check(void) {
-    return  !state.display || 
-            !state.xauthority || 
-            conf.no_gamma_smooth_transition;
+    return 0;
 }
 
 static void destroy(void) {
@@ -69,7 +72,7 @@ int set_temp(int temp) {
     if (old_temp != temp) {
         struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setgamma"};
         
-        if (!conf.no_gamma_smooth_transition) {
+        if (is_inited(self.idx)) {
             if (old_temp > temp) {
                 old_temp = old_temp - step < temp ? temp : old_temp - step;
             } else {

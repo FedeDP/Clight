@@ -24,8 +24,12 @@
 - [x] switch to SD_BUS_TYPE_* in bus.c
 - [x] test --no-dpms, --no-dimmer, --no-gamma -> --no-dimmer disables brightness module
 - [x] update to new clightd captureframes interface
-- [ ] Use modules[X].disabled = 1 instead of conf.no_gamma, no_dimmer, no-dpms etc etc
+- [x] Use modules[X].disabled = 1 instead of conf.no_gamma, no_dimmer, no-dpms etc etc
 - [x] smarter init_modules() -> avoid in various check() functions call to conf.single_capture_mode. 
+- [ ] FIXME: dimmer module gets disabled as soon as dimmer-smooth module is disabled as it is only module dependent
+- [x] add a modules[m].state in module struct and an enum module_states { UNKNOWN, DISABLED, INTIED }
+- [x] if module gets inited, if needed call its various callbacks setter for UPOWER, GEOCLUE(add_mod_callback) (eventually both, use a variadic parameter)
+- [x] add a fake X module required by modules who needs X server running (to avoid check() to call !state.display || !state.xauthority)
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)

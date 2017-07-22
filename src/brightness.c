@@ -38,11 +38,9 @@ static void init(void) {
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    init_module(fd, self.idx);
-    if (!modules[self.idx].disabled) {
-        struct bus_cb upower_cb = { UPOWER, upower_callback };
-        add_mod_callback(upower_cb);
-    }
+    
+    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    init_module(fd, self.idx, &upower_cb, NULL);
 }
 
 static int check(void) {
@@ -85,8 +83,6 @@ static void do_capture(void) {
          */
         if (val >= 0.0) {
             set_brightness(val * 10);
-            
-        
             if (!conf.single_capture_mode) {
                 drop = (double)(state.br.current - state.br.old) / state.br.max;
             }

@@ -29,7 +29,7 @@ static void init(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
-    init_module(fd, self.idx);
+    init_module(fd, self.idx, NULL);
 }
 
 static int check(void) {

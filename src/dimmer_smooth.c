@@ -11,7 +11,7 @@ static void dim_backlight(void);
 static void restore_backlight(void);
 
 static int dimmed_br;
-static struct dependency dependencies[] = { {HARD, DIMMER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
+static struct dependency dependencies[] = { {HARD, DIMMER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "DimmerSmooth",
     .idx = DIMMER_SMOOTH,
@@ -24,17 +24,16 @@ void set_dimmer_smooth_self(void) {
 }
 
 static void init(void) {
-    int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
-    init_module(fd, self.idx);
+    /* Dimmer smooth should not start immediately */
+    int fd = start_timer(CLOCK_MONOTONIC, 0, 0);
+    init_module(fd, self.idx, NULL);
     /* brightness module is started before dimmer, so state.br.max is already ok there */
     dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
 }
 
 /* Check we're on X, dimmer is enabled and smooth transitioning are enabled */
 static int check(void) {
-    return  !state.display || 
-            !state.xauthority || 
-            conf.no_dimmer_smooth_transition;
+    return 0;
 }
 
 static void destroy(void) {

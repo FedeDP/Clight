@@ -16,7 +16,7 @@ static int get_idle_time(void);
 static void upower_callback(void);
 
 static int inot_wd, inot_fd, timer_fd, dimmed_br;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
@@ -31,22 +31,18 @@ void set_dimmer_self(void) {
 static void init(void) {
     inot_fd = inotify_init();
     if (inot_fd != -1) {
-        timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
-        init_module(timer_fd, self.idx);
-        if (!modules[self.idx].disabled) {
-            struct bus_cb upower_cb = { UPOWER, upower_callback };
-            add_mod_callback(upower_cb);
-            /* brightness module is started before dimmer, so state.br.max is already ok there */
-            dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
-        }
+        struct bus_cb upower_cb = { UPOWER, upower_callback };
+        
+        timer_fd = start_timer(CLOCK_MONOTONIC, 0, 1);
+        init_module(timer_fd, self.idx, &upower_cb, NULL);
+        /* brightness module is started before dimmer, so state.br.max is already ok there */
+        dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
     }
 }
 
 /* Check we're on X */
 static int check(void) {
-    return  conf.no_dimmer || 
-            !state.display || 
-            !state.xauthority;
+    return 0;
 }
 
 static void destroy(void) {
@@ -122,9 +118,9 @@ static void dim_backlight(void) {
     if (dimmed_br >= state.br.old) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
-        if (conf.no_dimmer_smooth_transition) {
+        if (is_disabled(DIMMER_SMOOTH)) {
             set_backlight_level(dimmed_br);
-        } else if (modules[DIMMER_SMOOTH].inited) {
+        } else if (is_inited(DIMMER_SMOOTH)) {
             state.br.current = state.br.old;
             start_smooth_transition(1);
         }
@@ -133,9 +129,9 @@ static void dim_backlight(void) {
 
 /* restore previous backlight level */
 static void restore_backlight(void) {
-    if (conf.no_dimmer_smooth_transition) {
+    if (is_disabled(DIMMER_SMOOTH)) {
         set_backlight_level(state.br.old);
-    } else if (modules[DIMMER_SMOOTH].inited) {
+    } else if (is_inited(DIMMER_SMOOTH)) {
         start_smooth_transition(1);
     }
 }
