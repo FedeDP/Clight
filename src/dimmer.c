@@ -15,13 +15,14 @@ static void restore_backlight(void);
 static int get_idle_time(void);
 static void upower_callback(void);
 
-static int inot_wd, inot_fd, timer_fd, dimmed_br;
+static int inot_wd, inot_fd, timer_fd;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps =  dependencies,
+    .standalone = 1
 };
 
 void set_dimmer_self(void) {
@@ -34,9 +35,9 @@ static void init(void) {
         struct bus_cb upower_cb = { UPOWER, upower_callback };
         
         timer_fd = start_timer(CLOCK_MONOTONIC, 0, 1);
-        init_module(timer_fd, self.idx, &upower_cb, NULL);
+        INIT_MOD(timer_fd, self.idx, &upower_cb);
         /* brightness module is started before dimmer, so state.br.max is already ok there */
-        dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
+        state.dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
     }
 }
 
@@ -115,11 +116,11 @@ static void callback(void) {
 
 static void dim_backlight(void) {
     /* Don't touch backlight if a lower level is already set */
-    if (dimmed_br >= state.br.old) {
+    if (state.dimmed_br >= state.br.old) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
         if (is_disabled(DIMMER_SMOOTH)) {
-            set_backlight_level(dimmed_br);
+            set_backlight_level(state.dimmed_br);
         } else if (is_inited(DIMMER_SMOOTH)) {
             state.br.current = state.br.old;
             start_smooth_transition(1);

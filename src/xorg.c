@@ -18,7 +18,7 @@ void set_xorg_self(void) {
 static void init(void) {
     state.display = getenv("DISPLAY");
     state.xauthority = getenv("XAUTHORITY");
-    init_module(DONT_POLL, self.idx, NULL);
+    INIT_MOD(DONT_POLL, self.idx);
 }
 
 /* Check we're on X */

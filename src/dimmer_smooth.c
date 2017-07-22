@@ -10,7 +10,6 @@ static void callback(void);
 static void dim_backlight(void);
 static void restore_backlight(void);
 
-static int dimmed_br;
 static struct dependency dependencies[] = { {HARD, DIMMER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "DimmerSmooth",
@@ -26,9 +25,7 @@ void set_dimmer_smooth_self(void) {
 static void init(void) {
     /* Dimmer smooth should not start immediately */
     int fd = start_timer(CLOCK_MONOTONIC, 0, 0);
-    init_module(fd, self.idx, NULL);
-    /* brightness module is started before dimmer, so state.br.max is already ok there */
-    dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
+    INIT_MOD(fd, self.idx);
 }
 
 /* Check we're on X, dimmer is enabled and smooth transitioning are enabled */
@@ -53,8 +50,8 @@ static void callback(void) {
 
 static void dim_backlight(void) {
     const int lower_br = (double)state.br.current - (double)state.br.max / 20; // 5% steps
-    set_backlight_level(lower_br > dimmed_br ? lower_br : dimmed_br);
-    if (state.br.current != dimmed_br) {
+    set_backlight_level(lower_br > state.dimmed_br ? lower_br : state.dimmed_br);
+    if (state.br.current != state.dimmed_br) {
         start_smooth_transition(DIMMER_SMOOTH_TIMEOUT);
     }
 }

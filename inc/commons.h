@@ -95,6 +95,7 @@ struct state {
     const char *display;                    // display env variable, to be used in gamma calls
     struct brightness br;                   // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
+    int dimmed_br;                          // backlight level when dimmed
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 
@@ -112,6 +113,7 @@ struct self_t {
     int satisfied_deps;                   // number of satisfied deps
     struct dependency *deps;              // module on which there is a dep
     int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
+    int enabled_single_capture;           // whether this module is enabled during single capture mode
 };
 
 /* Struct that holds data for each module */

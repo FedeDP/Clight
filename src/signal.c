@@ -10,7 +10,8 @@ static void callback(void);
 static struct self_t self = {
     .name = "Signal",
     .idx = SIGNAL,
-    .standalone = 1
+    .standalone = 1,
+    .enabled_single_capture = 1
 };
 
 void set_signal_self(void) {
@@ -29,7 +30,7 @@ static void init(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
-    init_module(fd, self.idx, NULL);
+    INIT_MOD(fd, self.idx);
 }
 
 static int check(void) {

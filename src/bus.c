@@ -24,7 +24,8 @@ static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
     .idx = BUS,
-    .standalone = 1
+    .standalone = 1,
+    .enabled_single_capture = 1
 };
 
 void set_bus_self(void) {
@@ -41,7 +42,7 @@ static void init(void) {
     }
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(bus);
-    init_module(bus_fd, self.idx, NULL);
+    INIT_MOD(bus_fd, self.idx);
 }
 
 static int check(void) {

@@ -17,7 +17,7 @@ void init_modules(const enum modules module) {
     /* if module is not disabled, try to start it */
     if (modules[module].state == UNKN) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
-            if ((conf.single_capture_mode && !modules[module].self->standalone) || modules[module].check()) {
+            if ((conf.single_capture_mode && !modules[module].self->enabled_single_capture) || modules[module].check()) {
                 disable_module(module);
             } else {
                 modules[module].init();
@@ -69,6 +69,7 @@ void init_module(int fd, enum modules module, ...) {
         struct bus_cb *cb = va_arg(args, struct bus_cb *);
         while (cb) {
             add_mod_callback(*cb);
+            DEBUG("Callback added for module %d on module %d\n", module, cb->module);
             cb = va_arg(args, struct bus_cb *);
         }
         va_end(args);

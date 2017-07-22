@@ -22,7 +22,8 @@ static struct self_t self = {
     .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
-    .standalone = 1
+    .standalone = 1,
+    .enabled_single_capture = 1
 };
 
 void set_brightness_self(void) {
@@ -40,7 +41,7 @@ static void init(void) {
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     
     struct bus_cb upower_cb = { UPOWER, upower_callback };
-    init_module(fd, self.idx, &upower_cb, NULL);
+    INIT_MOD(fd, self.idx, &upower_cb);
 }
 
 static int check(void) {

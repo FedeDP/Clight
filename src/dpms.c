@@ -26,7 +26,7 @@ static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     
     set_dpms();
-    init_module(DONT_POLL, self.idx, &upower_cb, NULL);
+    INIT_MOD(DONT_POLL, self.idx, &upower_cb);
 }
 
 /* Check module is not disabled, we're on X and proper configs are set. */

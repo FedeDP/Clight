@@ -50,7 +50,7 @@ static void init(void) {
         fd = ret == 0 ? DONT_POLL : DONT_POLL_W_ERR;
     }
     /* In case of errors, geoclue_init returns -1 -> disable location. */
-    init_module(fd, self.idx, NULL);
+    INIT_MOD(fd, self.idx);
 }
 
 static void callback(void) {
