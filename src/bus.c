@@ -3,22 +3,33 @@
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void bus_cb(void);
+static void callback(void);
+static void run_callbacks(const enum modules module);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
+/* 
+ * bus_mod_idx: setted in every module's match callback to their self.idx.
+ * It is the idx of the module on which bus should call callbacks
+ * stored in struct bus_cb *callbacks
+ */
+struct bus_callback {
+    int num_callbacks;
+    int bus_mod_idx; 
+    struct bus_cb *callbacks;
+};
+
+static struct bus_callback _cb;
 static sd_bus *bus;
 static struct self_t self = {
     .name = "Bus",
-    .idx = BUS
+    .idx = BUS,
+    .standalone = 1,
+    .enabled_single_capture = 1
 };
 
 void set_bus_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 /*
@@ -31,7 +42,7 @@ static void init(void) {
     }
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(bus);
-    init_module(bus_fd, self.idx, bus_cb);
+    INIT_MOD(bus_fd);
 }
 
 static int check(void) {
@@ -45,15 +56,25 @@ static void destroy(void) {
     if (bus) {
         bus = sd_bus_flush_close_unref(bus);
     }
+    if (_cb.callbacks) {
+        free(_cb.callbacks);
+    }
 }
 
 /*
  * Callback for bus events
  */
-static void bus_cb(void) {
+static void callback(void) {
     int r;
     do {
+        /* reset bus_cb_idx to impossible state */
+        _cb.bus_mod_idx = MODULES_NUM;
         r = sd_bus_process(bus, NULL);
+        /* check if any match changed bus_cb_idx, then call correct callback */
+        if (_cb.bus_mod_idx != MODULES_NUM) {
+            poll_cb(_cb.bus_mod_idx);
+            run_callbacks(_cb.bus_mod_idx);
+        }
     } while (r > 0);
 }
 
@@ -80,14 +101,14 @@ int bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, 
     int val;
     while (signature[i] != '\0') {
         switch (signature[i]) {
-            case 's':
+            case SD_BUS_TYPE_STRING:
                 s = va_arg(args, char *);
                 r = sd_bus_message_append_basic(m, 's', s);
                 if (check_err(r, &error)) {
                     goto finish;
                 }
                 break;
-            case 'i':
+            case SD_BUS_TYPE_INT32:
                 val = va_arg(args, int);
                 r = sd_bus_message_append_basic(m, 'i', &val);
                 if (check_err(r, &error)) {
@@ -115,6 +136,14 @@ int bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, 
             if (r >= 0) {
                 strncpy(userptr, obj, PATH_MAX);
             }
+        } else if (userptr_type[0] == 'a') {
+            r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, userptr_type + 1);
+            if (r >= 0) {
+                int i = 0;
+                while (sd_bus_message_read(reply, userptr_type + 1, &(((double *)userptr)[i])) > 0) {
+                    i++;
+                }
+            }
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
@@ -132,7 +161,7 @@ finish:
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(bus, slot, match, cb, NULL);
+    int r = sd_bus_add_match(bus, slot, match, cb, &_cb.bus_mod_idx);
     check_err(r, NULL);
     return r;
 }
@@ -145,10 +174,10 @@ int set_property(const struct bus_args *a, const char type, const char *value) {
     int r = 0;
 
     switch (type) {
-        case 'u':
+        case SD_BUS_TYPE_UINT32:
             r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "u", atoi(value));
             break;
-        case 's':
+        case SD_BUS_TYPE_STRING:
             r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "s", value);
             break;
         default:
@@ -185,6 +214,25 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
 finish:
     free_bus_structs(&error, m, NULL);
     return r;
+}
+
+void add_mod_callback(const struct bus_cb cb) {
+    struct bus_cb *tmp = realloc(_cb.callbacks, sizeof(struct bus_cb) * (++_cb.num_callbacks));
+    if (tmp) {
+        _cb.callbacks = tmp;
+        _cb.callbacks[_cb.num_callbacks - 1] = cb;
+    } else {
+        free(_cb.callbacks);
+        ERROR("%s\n", strerror(errno));
+    }
+}
+
+static void run_callbacks(const enum modules module) {
+    for (int i = 0; i < _cb.num_callbacks; i++) {
+        if (_cb.callbacks[i].module == module) {
+            _cb.callbacks[i].cb();
+        }
+    }
 }
 
 /*

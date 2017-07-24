@@ -1,7 +1,7 @@
 #include "../inc/dimmer.h"
 #include "../inc/upower.h"
 #include "../inc/brightness.h"
-#include "../inc/bus.h"
+#include "../inc/dimmer_smooth.h"
 #include <sys/inotify.h>
 
 #define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
@@ -9,43 +9,41 @@
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void dimmer_cb(void);
+static void callback(void);
 static void dim_backlight(void);
+static void restore_backlight(void);
 static int get_idle_time(void);
-static void upower_callback(int old_state);
+static void upower_callback(void);
 
 static int inot_wd, inot_fd, timer_fd;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps =  dependencies,
+    .standalone = 1
 };
 
 void set_dimmer_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 static void init(void) {
     inot_fd = inotify_init();
     if (inot_fd != -1) {
-        timer_fd = start_timer(CLOCK_MONOTONIC, conf.dimmer_timeout[state.ac_state], 0);
-        init_module(timer_fd, self.idx, dimmer_cb);
-        if (!modules[self.idx].disabled) {
-            add_upower_module_callback(upower_callback);
-        }
+        struct bus_cb upower_cb = { UPOWER, upower_callback };
+        
+        timer_fd = start_timer(CLOCK_MONOTONIC, 0, 1);
+        INIT_MOD(timer_fd, &upower_cb);
+        /* brightness module is started before dimmer, so state.br.max is already ok there */
+        state.dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
     }
 }
 
 /* Check we're on X */
 static int check(void) {
-    return  conf.single_capture_mode ||
-    conf.no_dimmer || !state.display || !state.xauthority;
+    return 0;
 }
 
 static void destroy(void) {
@@ -71,7 +69,7 @@ static void destroy(void) {
  * Else, read single event from inotify, leave dimmed state,
  * resume BACKLIGHT module and reset latest backlight level. 
  */
-static void dimmer_cb(void) {
+static void callback(void) {
     if (!state.is_dimmed) {
         uint64_t t;
         read(main_p[self.idx].fd, &t, sizeof(uint64_t));
@@ -85,11 +83,13 @@ static void dimmer_cb(void) {
             INFO("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
         }
         if (idle_t > 0) {
-            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
+            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state] - 1;
             if (state.is_dimmed) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
                     main_p[self.idx].fd = inot_fd;
+                    // update state.br.old
+                    get_current_brightness();
                     dim_backlight();
                 } else {
                     // in case of error, reset is_dimmed state
@@ -101,29 +101,39 @@ static void dimmer_cb(void) {
             }
         } else {
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
-        } 
+        }
     } else {
         char buffer[BUF_LEN];
         int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
         if (length > 0) {
             state.is_dimmed = 0;
             main_p[self.idx].fd = timer_fd;
+            restore_backlight();
             set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
-            /* restore previous backlight level */
-            set_backlight_level(state.br.old);
         }
     }
 }
 
 static void dim_backlight(void) {
-    const int lowered_br = state.br.max * conf.dimmer_pct / 100;
-    // update state.br.old
-    get_current_brightness();
-    
-    if (lowered_br < state.br.old) {
-        set_backlight_level(lowered_br);
-    } else {
+    /* Don't touch backlight if a lower level is already set */
+    if (state.dimmed_br >= state.br.old) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
+    } else {
+        if (is_disabled(DIMMER_SMOOTH)) {
+            set_backlight_level(state.dimmed_br);
+        } else if (is_inited(DIMMER_SMOOTH)) {
+            state.br.current = state.br.old;
+            start_smooth_transition(1);
+        }
+    }
+}
+
+/* restore previous backlight level */
+static void restore_backlight(void) {
+    if (is_disabled(DIMMER_SMOOTH)) {
+        set_backlight_level(state.br.old);
+    } else if (is_inited(DIMMER_SMOOTH)) {
+        start_smooth_transition(1);
     }
 }
 
@@ -136,8 +146,9 @@ static int get_idle_time(void) {
 }
 
 /* Reset dimmer timeout */
-static void upower_callback(int old_state) {
-    if (!state.is_dimmed) {
-        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_state], conf.dimmer_timeout[state.ac_state]);
+static void upower_callback(void) {
+    /* Force check that we received an ac_state changed event for real */
+    if (!state.is_dimmed && state.old_ac_state != state.ac_state) {
+        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[state.old_ac_state], conf.dimmer_timeout[state.ac_state]);
     }
 }

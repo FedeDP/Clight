@@ -64,10 +64,6 @@ void init_opts(int argc, char *argv[]) {
     memcpy(conf.dpms_timeouts[ON_BATTERY], 
            (int[]){ 300, 420, 600 }, 
            SIZE_DPMS * sizeof(int));
-    
-    
-    state.display = getenv("DISPLAY");
-    state.xauthority = getenv("XAUTHORITY");
 
     read_config(GLOBAL);
     read_config(LOCAL);
@@ -83,28 +79,31 @@ static void parse_cmd(int argc, char *const argv[]) {
     const struct poptOption po[] = {
         {"capture", 'c', POPT_ARG_NONE, &conf.single_capture_mode, 100, "Take a fast capture/screen brightness calibration and quit", NULL},
         {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 100, "Frames taken for each capture, Between 1 and 20", NULL},
-        {"ac_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][DAY], 100, "Seconds between each capture during the day on AC", NULL},
-        {"ac_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][NIGHT], 100, "Seconds between each capture during the night on AC", NULL},
-        {"ac_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on AC", NULL},
-        {"batt_day_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][DAY], 100, "Seconds between each capture during the day on battery", NULL},
-        {"batt_night_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][NIGHT], 100, "Seconds between each capture during the night on battery", NULL},
-        {"batt_event_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on battery", NULL},
+        {"ac-day-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][DAY], 100, "Seconds between each capture during the day on AC", NULL},
+        {"ac-night-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][NIGHT], 100, "Seconds between each capture during the night on AC", NULL},
+        {"ac-event-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on AC", NULL},
+        {"batt-day-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][DAY], 100, "Seconds between each capture during the day on battery", NULL},
+        {"batt-night-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][NIGHT], 100, "Seconds between each capture during the night on battery", NULL},
+        {"batt-event-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on battery", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used", "video0"},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used", "intel_backlight"},
-        {"no-smooth_transition", 0, POPT_ARG_NONE, &conf.no_smooth_transition, 100, "Disable smooth gamma transition", NULL},
-        {"day_temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
-        {"night_temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
+        {"no-gamma-smooth", 0, POPT_ARG_NONE, &modules[GAMMA_SMOOTH].state, 100, "Disable smooth gamma transition", NULL},
+        {"no-dimmer-smooth", 0, POPT_ARG_NONE, &modules[DIMMER_SMOOTH].state, 100, "Disable smooth dimmer transition", NULL},
+        {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
+        {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
         {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 100, "Your desired latitude", NULL},
         {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 100, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
-        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 100, "Disable gamma correction tool", NULL},
-        {"event_duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
-        {"dimmer_pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
-        {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
-        {"ac_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
-        {"batt_dimmer_timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
-        {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
+        {"no-gamma", 0, POPT_ARG_NONE, &modules[GAMMA].state, 100, "Disable gamma correction tool", NULL},
+        {"event-duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
+        {"dimmer-pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
+        {"no-dimmer", 0, POPT_ARG_NONE, &modules[DIMMER].state, 100, "Disable dimmer tool", NULL},
+        {"ac-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
+        {"batt-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
+        {"no-dpms", 0, POPT_ARG_NONE, &modules[DPMS].state, 100, "Disable dpms tool", NULL},
+        {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
+        {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -126,6 +125,9 @@ static void parse_cmd(int argc, char *const argv[]) {
             case 4:
                 strncpy(conf.events[SUNSET], str, sizeof(conf.events[SUNSET]) - 1);
                 break;
+            case 5:
+                printf("%s version: %s\n", argv[0], VERSION);
+                exit(EXIT_SUCCESS);
             default:
                 break;
         }

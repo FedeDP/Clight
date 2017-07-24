@@ -12,13 +12,13 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 ## Build deps
 * libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
-* gsl (gsl/gsl_multifit.h)
+* gsl (gsl/gsl_multifit.h, gsl/gsl_statistics_double.h)
 * libconfig (libconfig.h)
 * gcc or clang
 
 ## Runtime deps:
 * shared objects from build libraries
-* [clightd](https://github.com/FedeDP/Clightd) >= 1.3
+* [clightd](https://github.com/FedeDP/Clightd) >= 1.3-dev
 
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
@@ -40,6 +40,10 @@ This means that these features are all enabled with default values:
 * DPMS: to switch off screen after a certain idle time
 
 **All these features but BRIGHTNESS can be turned off through cmdline and config file options.**
+
+## Will it eat my battery?
+No, it won't. Clight aims to be very power friendly. In fact, thanks to blocking I/O, it uses CPU only when needed.  
+Moreover, being very lightweight on resources helps too. Indeed, it will probably help you saving some battery, by setting correct screen backlight for current ambient brightness (thus avoiding wasting battery on max backlight level).
 
 ## Current features:
 * very lightweight

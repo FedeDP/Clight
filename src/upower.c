@@ -2,13 +2,12 @@
 
 static void init(void);
 static int check(void);
+static void callback(void);
 static void destroy(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
-static int num_callbacks;
-static upower_cb *callbacks;
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .name = "Upower",
@@ -18,34 +17,27 @@ static struct self_t self = {
 };
 
 void set_upower_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
-/*
- * init location:
- * init geoclue and set a match on bus on new location signal
- */
 static void init(void) {
     int r = upower_init();
     /* In case of errors, upower_init returns -1 -> disable upower. */
-    init_module(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, self.idx, NULL);
+    INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR);
 }
 
 static int check(void) {
-    return conf.single_capture_mode;
+    return 0; /* Skeleton function needed for modules interface */
+}
+
+static void callback(void) {
+    // Skeleton interface
 }
 
 static void destroy(void) {
     /* Destroy this match slot */
     if (slot) {
         sd_bus_slot_unref(slot);
-    }
-    if (callbacks) {
-        free(callbacks);
     }
 }
 
@@ -60,35 +52,28 @@ static int upower_init(void) {
 }
 
 /* 
- * Callback on upower changes: recheck on_battery boolean value 
+ * Callback on upower changes: recheck on_battery boolean value
  */
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+    if (userdata) {
+        *(int *)userdata = self.idx;
+    }
+    
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
-    int on_battery = state.ac_state;
+    /* 
+     * Store last ac_state in old struct to be matched against new one
+     * as we cannot be sure that a OnBattery changed signal has been really sent:
+     * our match will receive these signals:
+     * .DaemonVersion                      property  s         "0.99.5"     emits-change
+     * .LidIsClosed                        property  b         true         emits-change
+     * .LidIsPresent                       property  b         true         emits-change
+     * .OnBattery                          property  b         false        emits-change
+     */
+    state.old_ac_state = state.ac_state;
     get_property(&power_args, "b", &state.ac_state);
-    if (state.ac_state != on_battery) {
-        INFO(state.ac_state ? "Ac cable disconnected. Enabling powersaving mode.\n" : "Ac cable connected. Disabling powersaving mode.\n");
-        
-        for (int i = 0; i < num_callbacks; i++) {
-            callbacks[i](on_battery);
-        }
+    if (m && state.old_ac_state != state.ac_state) {
+        INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
     }
     return 0;
-}
-
-/* Hook a callback to upower change event */
-void add_upower_module_callback(upower_cb callback) {
-    if (modules[self.idx].inited) {
-        upower_cb *tmp = realloc(callbacks, sizeof(upower_cb) * (++num_callbacks));
-        if (tmp) {
-            callbacks = tmp;
-            callbacks[num_callbacks - 1] = callback;
-        } else {
-            if (callbacks) {
-                free(callbacks);
-            }
-            ERROR("%s\n", strerror(errno));
-        }
-    }
 }

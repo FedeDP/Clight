@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <time.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -25,13 +26,13 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
  * day between sunrise and sunset
  * night between sunset and sunrise
- * EVENT from 30mins before until 30mins after an event
+ * EVENT from conf.event_time_range before until conf.event_time_range after an event
  * unknown if no sunrise/sunset could be found for today (can it happen?)
  */
 enum states { UNKNOWN, DAY, NIGHT, EVENT, SIZE_STATES };
@@ -48,6 +49,9 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 /* Dpms states */
 enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
+/* Module states */
+enum module_states { UNKN, DISABLED, INITED };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
@@ -56,18 +60,15 @@ struct config {
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
-    int no_smooth_transition;               // disable smooth transitions for gamma
     double lat;                             // latitude
     double lon;                             // longitude
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
-    int no_gamma;                           // whether gamma tool is disabled
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
     int dimmer_pct;                         // pct of max brightness to be used while dimming
-    int no_dimmer;                          // disable dimmer
-    int no_dpms;                            // disable dpms
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
+    int verbose;                            // whether we're in verbose mode
 };
 
 /*
@@ -87,17 +88,20 @@ struct state {
     enum events next_event;                 // next event index (sunrise/sunset)
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
+    enum ac_states old_ac_state;            // was laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
     struct brightness br;                   // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
+    int dimmed_br;                          // backlight level when dimmed
+    jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 
 /* Struct that holds info about an inter-modules dep */
 struct dependency {
-    enum dep_type type;                    // soft or hard dependency 
+    enum dep_type type;                    // soft or hard dependency
     enum modules dep;                      // dependency module
 };
 
@@ -108,6 +112,8 @@ struct self_t {
     int num_deps;                         // number of deps for a module
     int satisfied_deps;                   // number of satisfied deps
     struct dependency *deps;              // module on which there is a dep
+    int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
+    int enabled_single_capture;           // whether this module is enabled during single capture mode
 };
 
 /* Struct that holds data for each module */
@@ -119,12 +125,10 @@ struct module {
     struct self_t *self;                  // pointer to self module informations
     enum modules *dependent_m;            // pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
-    int inited;                           // whether a module has been initialized (ie: setted up)
-    int disabled;                         // whether this module has been disabled from config (for now useful only for gamma)
+    enum module_states state;             // state of a module
 };
 
 struct state state;
 struct config conf;
 struct module modules[MODULES_NUM];
 struct pollfd main_p[MODULES_NUM];
-jmp_buf quit_buf;

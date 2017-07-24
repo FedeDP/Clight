@@ -40,16 +40,18 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "batt_event_timeout", &conf.timeout[ON_BATTERY][EVENT]);
         config_lookup_int(&cfg, "day_temp", &conf.temp[DAY]);
         config_lookup_int(&cfg, "night_temp", &conf.temp[NIGHT]);
-        config_lookup_int(&cfg, "no_smooth_gamma_transition", &conf.no_smooth_transition);
-        config_lookup_int(&cfg, "no_gamma", &conf.no_gamma);
+        config_lookup_int(&cfg, "no_smooth_gamma_transition", (int *)&modules[GAMMA_SMOOTH].state);
+        config_lookup_int(&cfg, "no_smooth_dimmer_transition", (int *)&modules[DIMMER_SMOOTH].state);
+        config_lookup_int(&cfg, "no_gamma", (int *)&modules[GAMMA].state);
         config_lookup_float(&cfg, "latitude", &conf.lat);
         config_lookup_float(&cfg, "longitude", &conf.lon);
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
-        config_lookup_int(&cfg, "no_dimmer", &conf.no_dimmer);
+        config_lookup_int(&cfg, "no_dimmer", (int *)&modules[DIMMER].state);
         config_lookup_int(&cfg, "dimmer_pct", &conf.dimmer_pct);
         config_lookup_int(&cfg, "ac_dimmer_timeout", &conf.dimmer_timeout[ON_AC]);
         config_lookup_int(&cfg, "batt_dimmer_timeout", &conf.dimmer_timeout[ON_BATTERY]);
-        config_lookup_int(&cfg, "no_dpms", &conf.no_dpms);
+        config_lookup_int(&cfg, "no_dpms", (int *)&modules[DPMS].state);
+        config_lookup_int(&cfg, "verbose", &conf.verbose);
         
         if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, videodev, sizeof(conf.dev_name) - 1);

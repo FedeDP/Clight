@@ -4,11 +4,12 @@
 
 static void init(void);
 static int check(void);
+static void callback(void);
 static void destroy(void);
 static void set_dpms(void);
-static void upower_callback(int old_state);
+static void upower_callback(void);
 
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "Dpms",
     .idx = DPMS,
@@ -17,25 +18,24 @@ static struct self_t self = {
 };
 
 void set_dpms_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 
 static void init(void) {
+    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    
     set_dpms();
-    init_module(DONT_POLL, self.idx, NULL);
-    if (!modules[self.idx].disabled) {
-        add_upower_module_callback(upower_callback);
-    }
+    INIT_MOD(DONT_POLL, &upower_cb);
 }
 
 /* Check module is not disabled, we're on X and proper configs are set. */
 static int check(void) {
-    return conf.no_dpms || !state.display || !state.xauthority;
+    return 0;
+}
+
+static void callback(void) {
+    // Skeleton interface
 }
 
 static void destroy(void) {
@@ -48,6 +48,9 @@ static void set_dpms(void) {
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
 }
 
-static void upower_callback(__attribute__((unused)) int old_state) {
-    set_dpms();
+static void upower_callback(void) {
+    /* Force check that we received an ac_state changed event for real */
+    if (state.old_ac_state != state.ac_state) {
+        set_dpms();
+    }
 }

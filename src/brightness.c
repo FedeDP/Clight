@@ -1,34 +1,33 @@
 #include "../inc/brightness.h"
-#include "../inc/dpms.h"
 #include "../inc/upower.h"
 #include <gsl/gsl_multifit.h>
+#include <gsl/gsl_statistics_double.h>
 
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void brightness_cb(void);
+static void callback(void);
 static void do_capture(void);
 static void get_max_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
+static double compute_average(double *intensity);
 static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
-static void upower_callback(int old_state);
+static void upower_callback(void);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, DPMS} };
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps =  dependencies,
+    .standalone = 1,
+    .enabled_single_capture = 1
 };
 
 void set_brightness_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 /*
@@ -40,10 +39,9 @@ static void init(void) {
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    init_module(fd, self.idx, brightness_cb);
-    if (!modules[self.idx].disabled) {
-        add_upower_module_callback(upower_callback);
-    }
+    
+    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    INIT_MOD(fd, &upower_cb);
 }
 
 static int check(void) {
@@ -54,7 +52,7 @@ static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static void brightness_cb(void) {
+static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     do_capture();
@@ -86,8 +84,6 @@ static void do_capture(void) {
          */
         if (val >= 0.0) {
             set_brightness(val * 10);
-            
-        
             if (!conf.single_capture_mode) {
                 drop = (double)(state.br.current - state.br.old) / state.br.max;
             }
@@ -148,18 +144,26 @@ static void set_brightness(const double perc) {
 }
 
 void set_backlight_level(int level) {
-    DEBUG("Old brightness value: %d\n", state.br.old);
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
     bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level);
     INFO("New brightness value: %d\n", state.br.current);
 }
 
 static double capture_frames_brightness(void) {
-    double brightness = -1;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
-    bus_call(&brightness, "d", &args, "si", conf.dev_name, conf.num_captures);
-    DEBUG("Average frames brightness: %lf.\n", brightness);
-    return brightness;
+    double intensity[conf.num_captures];
+    bus_call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
+    
+    return compute_average(intensity);
+}
+
+/* 
+ * Compute mean and normalize between 0-1
+ */
+static double compute_average(double *intensity) {
+    double mean = gsl_stats_mean(intensity, 1, conf.num_captures) / 255;
+    DEBUG("Average frames brightness: %lf.\n", mean);
+    return mean;
 }
 
 /*
@@ -211,8 +215,9 @@ static double clamp(double value, double max, double min) {
     return value;
 }
 
-static void upower_callback(int old_state) {
-    if (!state.fast_recapture) {
+static void upower_callback(void) {
+    /* Force check that we received an ac_state changed event for real */
+    if (!state.fast_recapture && state.old_ac_state != state.ac_state) {
         /* 
          * do a capture right now as we have 2 different curves for 
          * different AC_STATES, so let's properly honor new curve

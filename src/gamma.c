@@ -1,12 +1,13 @@
 #include "../inc/gamma.h"
+#include "../inc/gamma_smooth.h"
+#include "../inc/location.h"
 
 #define ZENITH -0.83
-#define SMOOTH_TRANSITION_TIMEOUT 300 * 1000 * 1000
 
 static void init(void);
 static int check(void);
 static void destroy(void);
-static void gamma_cb(void);
+static void callback(void);
 static void check_gamma(void);
 static double  degToRad(const double angleDeg);
 static double radToDeg(const double angleRad);
@@ -18,9 +19,9 @@ static int calculate_sunset(const float lat, const float lng, time_t *tt, int to
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day);
 static void check_next_event(time_t *now);
 static void check_state(time_t *now);
-static int set_temp(int temp);
+static void location_callback(void);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION} };
+static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION}, {HARD, XORG} };
 static struct self_t self = {
     .name = "Gamma",
     .idx = GAMMA,
@@ -29,33 +30,28 @@ static struct self_t self = {
 };
 
 void set_gamma_self(void) {
-    modules[self.idx].self = &self;
-    modules[self.idx].init = init;
-    modules[self.idx].check = check;
-    modules[self.idx].destroy = destroy;
-    set_self_deps(&self);
+    SET_SELF();
 }
 
 static void init(void) {
+    struct bus_cb loc_cb = { LOCATION, location_callback };
+    
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
-    init_module(gamma_timerfd, self.idx, gamma_cb);
+    INIT_MOD(gamma_timerfd, &loc_cb);
 }
 
 static int check(void) {
-    return  conf.single_capture_mode || 
-            conf.no_gamma || 
-            !state.display || 
-            !state.xauthority;
+    return 0;
 }
 
 static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static void gamma_cb(void) {
+static void callback(void) {
     uint64_t t;
 
-    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+    read(main_p[self.idx].fd, &t, sizeof(uint64_t));    
     check_gamma();
 }
 
@@ -71,47 +67,33 @@ static void gamma_cb(void) {
  * set new BRIGHTNESS correct timeout according to new state.
  */
 static void check_gamma(void) {
-    static int transitioning = 0;
-    time_t t;
-    enum states old_state = state.time;
-    int first_time = state.events[SUNSET] == 0;
-    
+    time_t t = time(NULL);
     /*
-     * Only if we're not doing a smooth transition
+     * get_gamma_events will always poll today events. It should not be necessary,
+     * (as it will normally only be needed to get new events for tomorrow, once clight is started)
+     * but if, for example, laptop gets suspended at evening, before computing next day events,
+     * and it is waken next morning, it will proceed to compute "tomorrow" events, where tomorrow is
+     * the wrong day (it should compute "today" events). Thus, avoid this kind of issue.
      */
-    if (!transitioning) {
-        t = time(NULL);
-        /*
-         * get_gamma_events will always poll today events. It should not be necessary,
-         * (as it will normally only be needed to get new events for tomorrow, once clight is started)
-         * but if, for example, laptop gets suspended at evening, before computing next day events,
-         * and it is waken next morning, it will proceed to compute "tomorrow" events, where tomorrow is
-         * the wrong day (it should compute "today" events). Thus, avoid this kind of issue.
-         */
-        get_gamma_events(&t, conf.lat, conf.lon, 0);
-    }
+    enum states old_state = state.time;
+    get_gamma_events(&t, conf.lat, conf.lon, 0);
 
-    int ret = 0;
-    if (transitioning || state.event_time_range == conf.event_duration || first_time) {
-        first_time = 0;
-        ret = set_temp(conf.temp[state.time]); // ret = -1 if an error happens
+    if (state.event_time_range == conf.event_duration) {
+        if (is_disabled(GAMMA_SMOOTH)) {
+            set_temp(conf.temp[state.time]);
+        } else if (is_inited(GAMMA_SMOOTH)) {
+            start_gamma_transition(1);
+        }
     }
 
     /* desired gamma temp has been setted. Set new GAMMA timer and reset transitioning state. */
-    if (ret == 0) {
-        t = state.events[state.next_event] + state.event_time_range;
-        INFO("Next gamma alarm due to: %s", ctime(&t));
-        set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
-        transitioning = 0;
+    t = state.events[state.next_event] + state.event_time_range;
+    INFO("Next gamma alarm due to: %s", ctime(&t));
+    set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
 
-        /* if we entered/left an event, set correct timeout to BRIGHTNESS */
-        if (old_state != state.time && modules[BRIGHTNESS].inited && !state.fast_recapture) {
-            reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
-        }
-    } else if (ret == 1) {
-        /* We are still in a gamma transition. Set a timeout of 300ms for smooth transition */
-        set_timeout(0, SMOOTH_TRANSITION_TIMEOUT, main_p[self.idx].fd, 0);
-        transitioning = 1;
+    /* if we entered/left an event, set correct timeout to BRIGHTNESS */
+    if (old_state != state.time && is_inited(BRIGHTNESS) && !state.fast_recapture) {
+        reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
     }
 }
 
@@ -333,54 +315,8 @@ static void check_state(time_t *now) {
     }
 }
 
-/*
- * First, it gets current gamma value.
- * Then, if current value is != from temp, it will adjust screen temperature accordingly.
- * If smooth_transition is enabled, the function will return 1 until they are the same.
- * old_temp is static so we don't have to call getgamma everytime the function is called (if smooth_transition is enabled.)
- * and gets resetted when old_temp reaches correct temp.
- */
-static int set_temp(int temp) {
-    const int step = 50;
-    int new_temp = -1;
-    static int old_temp = 0;
-
-    if (temp == -1) {
-        return 0;
-    }
-
-    if (old_temp == 0) {
-        struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
-
-        bus_call(&old_temp, "i", &args_get, "ss", state.display, state.xauthority);
-    }
-
-    if (old_temp != temp) {
-        struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setgamma"};
-
-        if (!conf.no_smooth_transition) {
-            if (old_temp > temp) {
-                    old_temp = old_temp - step < temp ? temp : old_temp - step;
-                } else {
-                    old_temp = old_temp + step > temp ? temp : old_temp + step;
-                }
-                bus_call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, old_temp);
-        } else {
-            bus_call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, temp);
-        }
-        if (new_temp == temp) {
-            // reset old_temp for next call
-            old_temp = 0;
-            INFO("%d gamma temp setted.\n", temp);
-        } else if (new_temp == -1) {
-            /* error in setgamma call (critical/non-critical it doens't matter) */
-            return -1;
-        }
-    } else {
-        // reset old_temp
-        old_temp = 0;
-        new_temp = temp;
-        INFO("Gamma temp was already %d\n", temp);
-    }
-    return new_temp != temp;
+static void location_callback(void) {
+    /* Updated GAMMA module sunrise/sunset for new location */
+    state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+    set_timeout(0, 1, main_p[self.idx].fd, 0);
 }
