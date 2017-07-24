@@ -69,7 +69,7 @@ void init_module(int fd, enum modules module, ...) {
         struct bus_cb *cb = va_arg(args, struct bus_cb *);
         while (cb) {
             add_mod_callback(*cb);
-            DEBUG("Callback added for module %d on module %d\n", module, cb->module);
+            DEBUG("Callback added for module %d on module %d bus match.\n", module, cb->module);
             cb = va_arg(args, struct bus_cb *);
         }
         va_end(args);
