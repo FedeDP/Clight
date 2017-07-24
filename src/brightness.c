@@ -41,7 +41,7 @@ static void init(void) {
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     
     struct bus_cb upower_cb = { UPOWER, upower_callback };
-    INIT_MOD(fd, self.idx, &upower_cb);
+    INIT_MOD(fd, &upower_cb);
 }
 
 static int check(void) {

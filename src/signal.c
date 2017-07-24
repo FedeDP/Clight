@@ -30,7 +30,7 @@ static void init(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
-    INIT_MOD(fd, self.idx);
+    INIT_MOD(fd);
 }
 
 static int check(void) {

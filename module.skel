@@ -49,7 +49,7 @@ void set_module_self(void) {
 static void init(void) {
     int fd = f();
     if (fd > 0) {
-        init_module(fd, self.idx);
+        INIT_MOD(fd);
     } else {
         disable_module(self.idx);
     }

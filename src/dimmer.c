@@ -35,7 +35,7 @@ static void init(void) {
         struct bus_cb upower_cb = { UPOWER, upower_callback };
         
         timer_fd = start_timer(CLOCK_MONOTONIC, 0, 1);
-        INIT_MOD(timer_fd, self.idx, &upower_cb);
+        INIT_MOD(timer_fd, &upower_cb);
         /* brightness module is started before dimmer, so state.br.max is already ok there */
         state.dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
     }

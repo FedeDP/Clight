@@ -25,7 +25,7 @@ void set_dimmer_smooth_self(void) {
 static void init(void) {
     /* Dimmer smooth should not start immediately */
     int fd = start_timer(CLOCK_MONOTONIC, 0, 0);
-    INIT_MOD(fd, self.idx);
+    INIT_MOD(fd);
 }
 
 /* Check we're on X, dimmer is enabled and smooth transitioning are enabled */

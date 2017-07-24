@@ -12,7 +12,7 @@ do { \
     set_self_deps(&self); \
 } while (0)
 
-#define INIT_MOD(fd, module, ...) init_module(fd, module, ##__VA_ARGS__, (void *)0)
+#define INIT_MOD(fd, ...) init_module(fd, self.idx, ##__VA_ARGS__, (void *)0)
 
 void init_modules(const enum modules module);
 void init_module(int fd, enum modules module, ...);

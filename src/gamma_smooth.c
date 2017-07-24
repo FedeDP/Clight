@@ -26,7 +26,7 @@ static void init(void) {
      * to set correct gamma for current time. 1ns timeout
      */
     int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
-    INIT_MOD(fd, self.idx);
+    INIT_MOD(fd);
 }
 
 /* Check we're on X, dimmer is enabled and smooth transitioning are enabled */
