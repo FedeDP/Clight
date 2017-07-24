@@ -39,25 +39,35 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
+/* 
+ * Macro to bind module's self_t struct 
+ * to global modules[] var, 
+ * and setting correct dep tree
+ */
 void set_module_self(void) {
-    SET_SELF(); 
+    SET_SELF();
 }
 
 /*
- * Init this module
+ * Init this module through INIT_MOD macro.
+ * INIT_MOD receives an fd (if fd == -1, module will be disabled)
+ * and can receive a list of struct bus_cb: callbacks that are called
+ * when Bus module processes certain module's matches,
+ * eg: if this module would hook on new geoclue positions,
+ * it should call:
+ * struct bus_cb loc_cb = { LOCATION, location_callback };
+ * INIT_MOD(fd, &loc_cb);
+ * where location_callback is a cb executed by Bus module whenever
+ * a new geoclue position is received.
  */
 static void init(void) {
-    int fd = f();
-    if (fd > 0) {
-        INIT_MOD(fd);
-    } else {
-        disable_module(self.idx);
-    }
+    int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
+    INIT_MOD(fd);
 }
 
 /* 
  * Perform varius checks to decide whether this module should be inited:
- * 0 for DO INIT
+ * 0 for DO INIT, !0 for DO NOT INIT
  */
 static int check(void) {
     return 0;
