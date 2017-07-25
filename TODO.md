@@ -30,6 +30,7 @@
 - [x] add a modules[m].state in module struct and an enum module_states { UNKNOWN, DISABLED, INTIED }
 - [x] if module gets inited, if needed call its various callbacks setter for UPOWER, GEOCLUE(add_mod_callback) (eventually both, use a variadic parameter)
 - [x] add a fake X module required by modules who needs X server running (to avoid check() to call !state.display || !state.xauthority)
+- [ ] avoid dimming screen if a power management inhibitor is set through logind (eg: while watching a movie).
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)

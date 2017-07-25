@@ -20,12 +20,9 @@ void init_opts(int argc, char *argv[]) {
     conf.timeout[ON_BATTERY][DAY] = 2 * conf.timeout[ON_AC][DAY];
     conf.timeout[ON_BATTERY][NIGHT] = 2 * conf.timeout[ON_AC][NIGHT];
     conf.timeout[ON_BATTERY][EVENT] = 2 * conf.timeout[ON_AC][EVENT];
-    conf.timeout[ON_AC][UNKNOWN] = conf.timeout[ON_AC][DAY]; // if unknown, fallback to 10mins
-    conf.timeout[ON_BATTERY][UNKNOWN] = conf.timeout[ON_BATTERY][DAY]; // if unknown, fallback to 10mins
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
     conf.temp[EVENT] = -1;
-    conf.temp[UNKNOWN] = conf.temp[DAY];
     conf.event_duration = 30 * 60;
     conf.dimmer_timeout[ON_AC] = 300;
     conf.dimmer_timeout[ON_BATTERY] = 45;

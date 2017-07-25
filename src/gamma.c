@@ -261,13 +261,12 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
         }
 
         if (state.events[SUNRISE] == -1 && state.events[SUNSET] == -1) {
-            // no sunrise/sunset could be found.
-            state.time = UNKNOWN;
-            // set an alarm to recheck gamma event after 12h...
-            state.events[SUNRISE] = *now + 12 * 60 * 60;
-            state.next_event = SUNRISE;
+            /*
+             * no sunrise/sunset could be found. 
+             * Assume day and set sunset 12hrs from now
+             */
+            state.events[SUNSET] = *now + 12 * 60 * 60;
             WARN("Failed to retrieve sunrise/sunset informations.\n");
-            return;
         }
     }
     check_next_event(now);

@@ -35,7 +35,7 @@ enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, D
  * EVENT from conf.event_time_range before until conf.event_time_range after an event
  * unknown if no sunrise/sunset could be found for today (can it happen?)
  */
-enum states { UNKNOWN, DAY, NIGHT, EVENT, SIZE_STATES };
+enum states { DAY, NIGHT, EVENT, SIZE_STATES };
 
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
@@ -50,7 +50,7 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
 /* Module states */
-enum module_states { UNKN, DISABLED, INITED };
+enum module_states { IDLE, DISABLED, INITED };
 
 /* Struct that holds global config as passed through cmdline args */
 struct config {

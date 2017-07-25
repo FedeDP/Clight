@@ -15,7 +15,7 @@ static int started_modules = 0; // number of started modules
  */
 void init_modules(const enum modules module) {
     /* if module is not disabled, try to start it */
-    if (modules[module].state == UNKN) {
+    if (modules[module].state == IDLE) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
             if ((conf.single_capture_mode && !modules[module].self->enabled_single_capture) || modules[module].check()) {
                 disable_module(module);
@@ -29,7 +29,7 @@ void init_modules(const enum modules module) {
          * a --no-X cmdline option/conf file option.
          * Force-disable it
          */
-        modules[module].state = UNKN;
+        modules[module].state = IDLE;
         disable_module(module);
     }
 }
@@ -127,7 +127,7 @@ static void started_cb(enum modules module) {
         }
         modules[module].dependent_m = realloc(modules[module].dependent_m, (--modules[module].num_dependent) * sizeof(enum modules));
         
-        if (modules[m].state == UNKN) {
+        if (modules[m].state == IDLE) {
             modules[m].self->satisfied_deps++;
             DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
             init_modules(m);
