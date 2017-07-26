@@ -5,7 +5,7 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void callback(void);
-static void run_callbacks(const enum modules mod, const void *userptr);
+static void run_callbacks(const enum modules mod, const void *payload);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
@@ -250,10 +250,10 @@ void add_mod_callback(const struct bus_cb cb) {
     }
 }
 
-static void run_callbacks(const enum modules mod, const void *userptr) {
+static void run_callbacks(const enum modules mod, const void *payload) {
     for (int i = 0; i < _cb.num_callbacks; i++) {
         if (_cb.callbacks[i].module == mod) {
-            _cb.callbacks[i].cb(userptr);
+            _cb.callbacks[i].cb(payload);
         }
     }
 }
