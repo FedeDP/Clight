@@ -1,6 +1,6 @@
 #pragma once
 
-#include "log.h"
+#include "timer.h"
 
 #define SET_SELF() \
 do { \

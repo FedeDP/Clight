@@ -13,6 +13,7 @@
 #include <math.h>
 #include <pwd.h>
 #include <setjmp.h>
+#include <systemd/sd-bus.h>
 
 /*
  * Useful macro to check size of global array.

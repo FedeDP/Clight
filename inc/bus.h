@@ -1,8 +1,6 @@
 #pragma once
 
-#include <systemd/sd-bus.h>
-#include "timer.h"
-#include "userbus.h"
+#include "modules.h"
 
 struct bus_cb {
     enum modules module;

@@ -1,6 +1,7 @@
 #include <sys/signalfd.h>
 #include <signal.h>
 #include "../inc/signal.h"
+#include "../inc/modules.h"
 
 static void init(void);
 static int check(void);

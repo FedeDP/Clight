@@ -1,4 +1,5 @@
 #include "../inc/xorg.h"
+#include "../inc/modules.h"
 
 static void init(void);
 static int check(void);

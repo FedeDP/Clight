@@ -1,6 +1,7 @@
 #include "../inc/dimmer.h"
 #include "../inc/brightness.h"
 #include "../inc/dimmer_smooth.h"
+#include "../inc/bus.h"
 #include <sys/inotify.h>
 
 #define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)

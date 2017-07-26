@@ -1,5 +1,6 @@
 #include "../inc/dimmer_smooth.h"
 #include "../inc/brightness.h"
+#include "../inc/bus.h"
 
 #define DIMMER_SMOOTH_TIMEOUT 30 * 1000 * 1000 // 30ms
 

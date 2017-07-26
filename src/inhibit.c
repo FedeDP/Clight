@@ -1,4 +1,5 @@
 #include "../inc/inhibit.h"
+#include "../inc/bus.h"
 
 static void init(void);
 static int check(void);

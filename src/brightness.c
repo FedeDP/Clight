@@ -1,4 +1,5 @@
 #include "../inc/brightness.h"
+#include "../inc/bus.h"
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 
