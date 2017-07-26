@@ -5,7 +5,7 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void callback(void);
-static void run_callbacks(const enum modules module);
+static void run_callbacks(const enum modules mod, const void *userptr);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
@@ -16,7 +16,7 @@ static int check_err(int r, sd_bus_error *err);
  */
 struct bus_callback {
     int num_callbacks;
-    int bus_mod_idx; 
+    struct bus_match_data userdata;
     struct bus_cb *callbacks;
 };
 
@@ -69,12 +69,16 @@ static void callback(void) {
     int r;
     do {
         /* reset bus_cb_idx to impossible state */
-        _cb.bus_mod_idx = MODULES_NUM;
+        _cb.userdata.bus_mod_idx = MODULES_NUM;
         r = sd_bus_process(bus, NULL);
         /* check if any match changed bus_cb_idx, then call correct callback */
-        if (_cb.bus_mod_idx != MODULES_NUM) {
-            poll_cb(_cb.bus_mod_idx);
-            run_callbacks(_cb.bus_mod_idx);
+        if (_cb.userdata.bus_mod_idx != MODULES_NUM) {
+            poll_cb(_cb.userdata.bus_mod_idx);
+            run_callbacks(_cb.userdata.bus_mod_idx, _cb.userdata.ptr);
+            if (_cb.userdata.ptr) {
+                free(_cb.userdata.ptr);
+                _cb.userdata.ptr = NULL;
+            }
         }
     } while (r > 0);
 }
@@ -178,7 +182,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
     
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(tmp, slot, match, cb, &_cb.bus_mod_idx);
+    int r = sd_bus_add_match(tmp, slot, match, cb, &_cb.userdata);
     check_err(r, NULL);
     return r;
 }
@@ -246,10 +250,10 @@ void add_mod_callback(const struct bus_cb cb) {
     }
 }
 
-static void run_callbacks(const enum modules module) {
+static void run_callbacks(const enum modules mod, const void *userptr) {
     for (int i = 0; i < _cb.num_callbacks; i++) {
-        if (_cb.callbacks[i].module == module) {
-            _cb.callbacks[i].cb();
+        if (_cb.callbacks[i].module == mod) {
+            _cb.callbacks[i].cb(userptr);
         }
     }
 }

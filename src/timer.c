@@ -38,11 +38,6 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
-/* Disarm timerfd */
-void disarm_timer(const enum modules mod) {
-    set_timeout(0, 0, main_p[mod].fd, 0);
-}
-
 long get_timeout_sec(int fd) {
     return get_timeout(fd, offsetof(struct timespec, tv_sec));
 }

@@ -14,7 +14,7 @@ static double capture_frames_brightness(void);
 static double compute_average(double *intensity);
 static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
-static void upower_callback(void);
+static void upower_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
 static struct self_t self = {
@@ -215,9 +215,10 @@ static double clamp(double value, double max, double min) {
     return value;
 }
 
-static void upower_callback(void) {
+static void upower_callback(const void *ptr) {
+    int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (!state.fast_recapture && state.old_ac_state != state.ac_state) {
+    if (!state.fast_recapture && old_ac_state != state.ac_state) {
         /* 
          * do a capture right now as we have 2 different curves for 
          * different AC_STATES, so let's properly honor new curve

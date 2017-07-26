@@ -2,9 +2,14 @@
 
 #include "modules.h"
 
+struct bus_match_data {
+    int bus_mod_idx;
+    void *ptr;
+};
+
 struct bus_cb {
     enum modules module;
-    void (*cb)(void);
+    void (*cb)(const void *ptr);
 };
 
 /*

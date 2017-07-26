@@ -13,8 +13,8 @@ static void callback(void);
 static void dim_backlight(void);
 static void restore_backlight(void);
 static int get_idle_time(void);
-static void upower_callback(void);
-static void inhibit_callback(void);
+static void upower_callback(const void *ptr);
+static void inhibit_callback(const void * ptr);
 
 static int inot_wd, inot_fd, timer_fd;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT} };
@@ -79,13 +79,10 @@ static void callback(void) {
         int idle_t = 0;
         
         /* If interface is not enabled, avoid entering dimmed state */
-        int interface_enabled = is_interface_enabled();
-        if (interface_enabled && !state.pm_inhibited) {
+        if (is_interface_enabled()) {
             idle_t = get_idle_time();
-        } else if (!interface_enabled) {
+        } else {
             INFO("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
-        } else if (state.pm_inhibited) {
-            INFO("PowerManagement is currently being inhibited. Avoid dimming screen.\n");
         }
         if (idle_t > 0) {
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state] - 1;
@@ -151,10 +148,11 @@ static int get_idle_time(void) {
 }
 
 /* Reset dimmer timeout */
-static void upower_callback(void) {
+static void upower_callback(const void *ptr) {
+    int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (!state.is_dimmed && state.old_ac_state != state.ac_state) {
-        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[state.old_ac_state], conf.dimmer_timeout[state.ac_state]);
+    if (!state.is_dimmed && !state.pm_inhibited && old_ac_state != state.ac_state) {
+        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_ac_state], conf.dimmer_timeout[state.ac_state]);
     }
 }
 
@@ -162,10 +160,7 @@ static void upower_callback(void) {
  * If we're inhibited, disarm timer (pausing this module)
  * else restart module with its default timeout
  */
-static void inhibit_callback(void) {
-    if (state.pm_inhibited) {
-        disarm_timer(self.idx);
-    } else {
-        set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
-    }
+static void inhibit_callback(__attribute__((unused)) const void *ptr) {
+    DEBUG("Dimmer module being %s.\n", state.pm_inhibited ? "paused" : "restarted");
+    set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
 }

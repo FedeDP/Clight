@@ -92,7 +92,6 @@ struct state {
     enum events next_event;                 // next event index (sunrise/sunset)
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
-    enum ac_states old_ac_state;            // was laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls

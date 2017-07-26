@@ -60,7 +60,7 @@ static void callback(void) {
         load_cache_location();
     } else {
         /* Disarm timerfd as we received a location before it triggered */
-        disarm_timer(self.idx);
+        set_timeout(0, 0, main_p[self.idx].fd, 0);
     }
     /* disable this poll_cb */
     modules[self.idx].poll_cb = NULL;
@@ -156,7 +156,8 @@ static int geoclue_hook_update(void) {
  */
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     if (userdata) {
-        *(int *)userdata = self.idx;
+        struct bus_match_data *data = (struct bus_match_data *) userdata;
+        data->bus_mod_idx = self.idx;
     }
     
     const char *new_location, *old_location;

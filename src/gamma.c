@@ -19,7 +19,7 @@ static int calculate_sunset(const float lat, const float lng, time_t *tt, int to
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day);
 static void check_next_event(time_t *now);
 static void check_state(time_t *now);
-static void location_callback(void);
+static void location_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION}, {HARD, XORG} };
 static struct self_t self = {
@@ -314,7 +314,7 @@ static void check_state(time_t *now) {
     }
 }
 
-static void location_callback(void) {
+static void location_callback(__attribute__((unused)) const void *ptr) {
     /* Updated GAMMA module sunrise/sunset for new location */
     state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
     set_timeout(0, 1, main_p[self.idx].fd, 0);

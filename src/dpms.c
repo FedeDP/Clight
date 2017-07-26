@@ -7,7 +7,7 @@ static int check(void);
 static void callback(void);
 static void destroy(void);
 static void set_dpms(void);
-static void upower_callback(void);
+static void upower_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
@@ -48,9 +48,10 @@ static void set_dpms(void) {
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
 }
 
-static void upower_callback(void) {
+static void upower_callback(const void *ptr) {
+    int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (state.old_ac_state != state.ac_state) {
+    if (old_ac_state != state.ac_state) {
         set_dpms();
     }
 }
