@@ -44,7 +44,7 @@ static void destroy(void) {
 
 static void set_dpms(void) {
     struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setdpms_timeouts"};
-    bus_call(NULL, NULL, &args_get, "ssiii", state.display, state.xauthority, 
+    call(NULL, NULL, &args_get, "ssiii", state.display, state.xauthority, 
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
 }
 

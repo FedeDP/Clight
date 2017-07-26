@@ -26,7 +26,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -51,6 +51,9 @@ enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
 /* Module states */
 enum module_states { IDLE, DISABLED, INITED };
+
+/* Bus types */
+enum bus_type { SYSTEM, USER };
 
 /* Struct that holds global config as passed through cmdline args */
 struct config {
@@ -96,6 +99,7 @@ struct state {
     struct brightness br;                   // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
     int dimmed_br;                          // backlight level when dimmed
+    int pm_inhibited;                       // whether powermanagement is inhibited
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 

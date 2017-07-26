@@ -1,5 +1,4 @@
 #include "../inc/brightness.h"
-#include "../inc/upower.h"
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 
@@ -115,18 +114,18 @@ static void do_capture(void) {
 int is_interface_enabled(void) {
     int enabled;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "isbacklightinterfaceenabled"};
-    bus_call(&enabled, "i", &args, "s", conf.screen_path);
+    call(&enabled, "i", &args, "s", conf.screen_path);
     return enabled;
 }
 
 static void get_max_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getmaxbrightness"};
-    bus_call(&state.br.max, "i", &args, "s", conf.screen_path);
+    call(&state.br.max, "i", &args, "s", conf.screen_path);
 }
 
 void get_current_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getbrightness"};
-    bus_call(&state.br.old, "i", &args, "s", conf.screen_path);
+    call(&state.br.old, "i", &args, "s", conf.screen_path);
 }
 
 static void set_brightness(const double perc) {
@@ -145,14 +144,14 @@ static void set_brightness(const double perc) {
 
 void set_backlight_level(int level) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
-    bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level);
+    call(&state.br.current, "i", &args, "si", conf.screen_path, level);
     INFO("New brightness value: %d\n", state.br.current);
 }
 
 static double capture_frames_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
     double intensity[conf.num_captures];
-    bus_call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
+    call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
     
     return compute_average(intensity);
 }

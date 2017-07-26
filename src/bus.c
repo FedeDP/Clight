@@ -36,7 +36,7 @@ void set_bus_self(void) {
  * Open our bus and start lisetining on its fd
  */
 static void init(void) {
-    int r = sd_bus_open_system(&bus);
+    int r = sd_bus_default_system(&bus);
     if (r < 0) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
@@ -78,14 +78,28 @@ static void callback(void) {
     } while (r > 0);
 }
 
+/* 
+ * Store systembus ptr in tmp var;
+ * set userbus as new bus;
+ * call callback() on the new bus;
+ * restore systembus;
+ */
+void bus_callback(void) {
+    sd_bus *tmp = bus;
+    bus = get_user_bus();
+    callback();
+    bus = tmp;
+}
+
 /*
  * Call a method on bus and store its result of type userptr_type in userptr.
  */
-int bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
+int call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
-
-    int r = sd_bus_message_new_method_call(bus, &m, a->service, a->path, a->interface, a->member);
+    sd_bus *tmp = a->type == USER ? get_user_bus() : bus;
+    
+    int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
     if (check_err(r, &error)) {
         goto finish;
     }
@@ -123,7 +137,7 @@ int bus_call(void *userptr, const char *userptr_type, const struct bus_args *a, 
     }
 #endif
     va_end(args);
-    r = sd_bus_call(bus, m, 0, &error, &reply);
+    r = sd_bus_call(tmp, m, 0, &error, &reply);
     if (check_err(r, &error)) {
         goto finish;
     }
@@ -159,9 +173,11 @@ finish:
  * Add a match on bus on certain signal for cb callback
  */
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
+    sd_bus *tmp = a->type == USER ? get_user_bus() : bus;
+    
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(bus, slot, match, cb, &_cb.bus_mod_idx);
+    int r = sd_bus_add_match(tmp, slot, match, cb, &_cb.bus_mod_idx);
     check_err(r, NULL);
     return r;
 }
@@ -170,15 +186,16 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
  * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
  */
 int set_property(const struct bus_args *a, const char type, const char *value) {
+    sd_bus *tmp = a->type == USER ? get_user_bus() : bus;
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
 
     switch (type) {
         case SD_BUS_TYPE_UINT32:
-            r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "u", atoi(value));
+            r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "u", atoi(value));
             break;
         case SD_BUS_TYPE_STRING:
-            r = sd_bus_set_property(bus, a->service, a->path, a->interface, a->member, &error, "s", value);
+            r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "s", value);
             break;
         default:
             WARN("Wrong signature in bus call: %c.\n", type);
@@ -195,8 +212,9 @@ int set_property(const struct bus_args *a, const char type, const char *value) {
 int get_property(const struct bus_args *a, const char *type, void *userptr) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
+    sd_bus *tmp = a->type == USER ? get_user_bus() : bus;
 
-    int r = sd_bus_get_property(bus, a->service, a->path, a->interface, a->member, &error, &m, type);
+    int r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
     if (check_err(r, &error)) {
         goto finish;
     }

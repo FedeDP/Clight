@@ -66,7 +66,7 @@ int set_temp(int temp) {
     if (old_temp == 0) {
         struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
         
-        bus_call(&old_temp, "i", &args_get, "ss", state.display, state.xauthority);
+        call(&old_temp, "i", &args_get, "ss", state.display, state.xauthority);
     }
     
     if (old_temp != temp) {
@@ -78,9 +78,9 @@ int set_temp(int temp) {
             } else {
                 old_temp = old_temp + step > temp ? temp : old_temp + step;
             }
-            bus_call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, old_temp);
+            call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, old_temp);
         } else {
-            bus_call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, temp);
+            call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, temp);
         }
         if (new_temp == temp) {
             // reset old_temp for next call

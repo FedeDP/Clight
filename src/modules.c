@@ -225,6 +225,7 @@ void destroy_modules(void) {
     for (int i = started_modules - 1; i >= 0; i--) {
         destroy_module(sorted_modules[i]);
     }
+    free(sorted_modules);
 }
 
 /*

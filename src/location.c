@@ -138,7 +138,7 @@ static int check(void) {
  */
 static int geoclue_get_client(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient"};
-    return bus_call(client, "o", &args, "");
+    return call(client, "o", &args, "");
 }
 
 /*
@@ -153,7 +153,7 @@ static int geoclue_hook_update(void) {
  * On new location callback: retrieve new_location object,
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
-static int on_geoclue_new_location(sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     if (userdata) {
         *(int *)userdata = self.idx;
     }
@@ -181,7 +181,7 @@ static int geoclue_client_start(void) {
 
     set_property(&id_args, 's', "clight");
     set_property(&thres_args, 'u', "50000"); // 50kms
-    return bus_call(NULL, "", &call_args, "");
+    return call(NULL, "", &call_args, "");
 }
 
 /*
@@ -189,7 +189,7 @@ static int geoclue_client_start(void) {
  */
 static void geoclue_client_stop(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop"};
-    bus_call(NULL, "", &args, "");
+    call(NULL, "", &args, "");
 }
 
 static void cache_location(void) {

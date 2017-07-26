@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include "bus.h"
 
 void set_gamma_smooth_self(void);
 void start_gamma_transition(long delay);

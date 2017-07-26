@@ -1,5 +1,4 @@
 #include "../inc/dimmer.h"
-#include "../inc/upower.h"
 #include "../inc/brightness.h"
 #include "../inc/dimmer_smooth.h"
 #include <sys/inotify.h>
@@ -16,7 +15,7 @@ static int get_idle_time(void);
 static void upower_callback(void);
 
 static int inot_wd, inot_fd, timer_fd;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
@@ -77,10 +76,13 @@ static void callback(void) {
         int idle_t = 0;
         
         /* If interface is not enabled, avoid entering dimmed state */
-        if (is_interface_enabled()) {
+        int interface_enabled = is_interface_enabled();
+        if (interface_enabled && !state.pm_inhibited) {
             idle_t = get_idle_time();
-        } else {
+        } else if (!interface_enabled) {
             INFO("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
+        } else if (state.pm_inhibited) {
+            INFO("PowerManagement is currently being inhibited. Avoid dimming screen.\n");
         }
         if (idle_t > 0) {
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state] - 1;
@@ -140,7 +142,7 @@ static void restore_backlight(void) {
 static int get_idle_time(void) {
     int idle_time = -1;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getidletime"};
-    bus_call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
+    call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
     /* clightd returns ms of inactivity. We need seconds */
     return round(idle_time / 1000);
 }

@@ -1,3 +1,3 @@
-#include "../inc/bus.h"
+#include "bus.h"
 
 void set_dimmer_self(void);
