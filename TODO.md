@@ -31,10 +31,10 @@
 - [x] if module gets inited, if needed call its various callbacks setter for UPOWER, GEOCLUE(add_mod_callback) (eventually both, use a variadic parameter)
 - [x] add a fake X module required by modules who needs X server running (to avoid check() to call !state.display || !state.xauthority)
 - [x] avoid dimming screen if a power management inhibitor is set through logind (eg: while watching a movie). busctl --user call org.freedesktop.PowerManagement.Inhibit /org/freedesktop/PowerManagement org.freedesktop.PowerManagement.Inhibit HasInhibit (HasInhibitChanged signal) -> works on kde and xfce. (gnome seems to be using its own interface...)
+- [x] pause dimmer while inhibition is enabled. Restart dimmer as soon as inhibition is disabled
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)
-- [ ] "pause" modules when they're not needed (eg: dimmer while inhibition is enabled) -> set_timeout(fd, 0, 0) and restart them when needed. Check which module needs this.
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness

@@ -60,7 +60,7 @@ static void callback(void) {
         load_cache_location();
     } else {
         /* Disarm timerfd as we received a location before it triggered */
-        set_timeout(0, 0, main_p[self.idx].fd, 0);
+        disarm_timer(self.idx);
     }
     /* disable this poll_cb */
     modules[self.idx].poll_cb = NULL;

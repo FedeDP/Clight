@@ -14,6 +14,7 @@ static void dim_backlight(void);
 static void restore_backlight(void);
 static int get_idle_time(void);
 static void upower_callback(void);
+static void inhibit_callback(void);
 
 static int inot_wd, inot_fd, timer_fd;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT} };
@@ -33,9 +34,10 @@ static void init(void) {
     inot_fd = inotify_init();
     if (inot_fd != -1) {
         struct bus_cb upower_cb = { UPOWER, upower_callback };
+        struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
         
-        timer_fd = start_timer(CLOCK_MONOTONIC, 0, 1);
-        INIT_MOD(timer_fd, &upower_cb);
+        timer_fd = start_timer(CLOCK_MONOTONIC, 0, !state.pm_inhibited); // 1ns if !inhibited, disarmed if inhibited
+        INIT_MOD(timer_fd, &upower_cb, &inhibit_cb);
         /* brightness module is started before dimmer, so state.br.max is already ok there */
         state.dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
     }
@@ -153,5 +155,17 @@ static void upower_callback(void) {
     /* Force check that we received an ac_state changed event for real */
     if (!state.is_dimmed && state.old_ac_state != state.ac_state) {
         reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[state.old_ac_state], conf.dimmer_timeout[state.ac_state]);
+    }
+}
+
+/* 
+ * If we're inhibited, disarm timer (pausing this module)
+ * else restart module with its default timeout
+ */
+static void inhibit_callback(void) {
+    if (state.pm_inhibited) {
+        disarm_timer(self.idx);
+    } else {
+        set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
     }
 }
