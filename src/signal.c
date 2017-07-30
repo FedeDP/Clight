@@ -1,6 +1,7 @@
 #include <sys/signalfd.h>
 #include <signal.h>
 #include "../inc/signal.h"
+#include "../inc/modules.h"
 
 static void init(void);
 static int check(void);
@@ -14,6 +15,7 @@ static struct self_t self = {
     .enabled_single_capture = 1
 };
 
+// cppcheck-suppress unusedFunction
 void set_signal_self(void) {
     SET_SELF();
 }

@@ -1,5 +1,5 @@
 #include "../inc/brightness.h"
-#include "../inc/upower.h"
+#include "../inc/bus.h"
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 
@@ -14,7 +14,7 @@ static double capture_frames_brightness(void);
 static double compute_average(double *intensity);
 static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
-static void upower_callback(void);
+static void upower_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
 static struct self_t self = {
@@ -26,6 +26,7 @@ static struct self_t self = {
     .enabled_single_capture = 1
 };
 
+// cppcheck-suppress unusedFunction
 void set_brightness_self(void) {
     SET_SELF();
 }
@@ -115,18 +116,18 @@ static void do_capture(void) {
 int is_interface_enabled(void) {
     int enabled;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "isbacklightinterfaceenabled"};
-    bus_call(&enabled, "i", &args, "s", conf.screen_path);
+    call(&enabled, "b", &args, "s", conf.screen_path);
     return enabled;
 }
 
 static void get_max_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getmaxbrightness"};
-    bus_call(&state.br.max, "i", &args, "s", conf.screen_path);
+    call(&state.br.max, "i", &args, "s", conf.screen_path);
 }
 
 void get_current_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getbrightness"};
-    bus_call(&state.br.old, "i", &args, "s", conf.screen_path);
+    call(&state.br.old, "i", &args, "s", conf.screen_path);
 }
 
 static void set_brightness(const double perc) {
@@ -145,14 +146,14 @@ static void set_brightness(const double perc) {
 
 void set_backlight_level(int level) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
-    bus_call(&state.br.current, "i", &args, "si", conf.screen_path, level);
+    call(&state.br.current, "i", &args, "si", conf.screen_path, level);
     INFO("New brightness value: %d\n", state.br.current);
 }
 
 static double capture_frames_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
     double intensity[conf.num_captures];
-    bus_call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
+    call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
     
     return compute_average(intensity);
 }
@@ -215,9 +216,10 @@ static double clamp(double value, double max, double min) {
     return value;
 }
 
-static void upower_callback(void) {
+static void upower_callback(const void *ptr) {
+    int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (!state.fast_recapture && state.old_ac_state != state.ac_state) {
+    if (!state.fast_recapture && old_ac_state != state.ac_state) {
         /* 
          * do a capture right now as we have 2 different curves for 
          * different AC_STATES, so let's properly honor new curve

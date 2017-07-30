@@ -1,4 +1,5 @@
 #include "../inc/upower.h"
+#include "../inc/bus.h"
 
 static void init(void);
 static int check(void);
@@ -16,6 +17,7 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
+// cppcheck-suppress unusedFunction
 void set_upower_self(void) {
     SET_SELF();
 }
@@ -54,9 +56,12 @@ static int upower_init(void) {
 /* 
  * Callback on upower changes: recheck on_battery boolean value
  */
-static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     if (userdata) {
-        *(int *)userdata = self.idx;
+        struct bus_match_data *data = (struct bus_match_data *) userdata;
+        data->bus_mod_idx = self.idx;
+        data->ptr = malloc(sizeof(int));
+        *(int *)(data->ptr) = state.ac_state;
     }
     
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
@@ -70,9 +75,9 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, __attribu
      * .LidIsPresent                       property  b         true         emits-change
      * .OnBattery                          property  b         false        emits-change
      */
-    state.old_ac_state = state.ac_state;
+    int old_ac_state = state.ac_state;
     get_property(&power_args, "b", &state.ac_state);
-    if (m && state.old_ac_state != state.ac_state) {
+    if (m && old_ac_state != state.ac_state) {
         INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
     }
     return 0;

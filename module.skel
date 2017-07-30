@@ -19,7 +19,7 @@
  * mandatory functions (using macro SET_SELF())
  */
 
-#include "module.h"
+#include "modules.h"
 
 static void init(void);
 static int check(void);
@@ -43,6 +43,11 @@ static struct self_t self = {
  * Macro to bind module's self_t struct 
  * to global modules[] var, 
  * and setting correct dep tree
+ * This function should be named "set_$module_self",
+ * and module's filename should be $module.c,
+ * eg: set_brightness_self placed in brightness.c.
+ * As all set_$module_self functions are called through dlsym,
+ * by SET_MODULES_SELFS() macro in modules.h.
  */
 void set_module_self(void) {
     SET_SELF();

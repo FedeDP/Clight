@@ -68,6 +68,9 @@ Location received will be then cached when clight exit. This way, if no internet
 Moreover, you can set a percentage of maximum settable brightness while on battery.
 * You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
 * It will check if current backlight interface is enabled before changing backlight/dimming screen. It will avoid to do any frame capture at all if interface is disabled. It can happen when you use your laptop connected to an external monitor, with internal monitor switched off; thus changing backlight would be useless.
+* DPMS support: it will set desired dpms timeouts for AC/batt states.
+* Dpms and dimmer can be disabled while on AC, just set dimmer timeout/any dpms timeout for given AC state <= 0.
+* Clight supports org.freedesktop.PowerManagement.Inhibit interface. Thus, when for example watching a youtube video from chromium, dimmer module won't dim your screen.
 * Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
 
 ### Valgrind is run with:

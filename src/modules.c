@@ -1,6 +1,7 @@
 #include "../inc/modules.h"
 #include "../inc/bus.h"
 
+static void init_submodules(const enum modules module);
 static void started_cb(enum modules module);
 static void destroy_module(const enum modules module);
 static void disable_module(const enum modules module);
@@ -82,10 +83,21 @@ void init_module(int fd, enum modules module, ...) {
             started_cb(module);
         }
         
+        init_submodules(module);
+        
     } else {
         /* module should be disabled */
         WARN("Error while loading %s module.\n", modules[module].self->name);
         disable_module(module); // disable this module and all of dependent module
+    }
+}
+
+static void init_submodules(const enum modules module) {
+    for (int i = 0; i < modules[module].num_submodules; i++) {
+        const enum modules m = modules[module].submodules[i];
+        DEBUG("%s module being started as submodule of %s...\n", modules[m].self->name, modules[module].self->name);
+        modules[m].self->satisfied_deps++;
+        init_modules(m);
     }
 }
 
@@ -109,6 +121,19 @@ void set_self_deps(struct self_t *self) {
             break;
         }
         modules[m].dependent_m[modules[m].num_dependent - 1] = self->idx;
+        
+        /* 
+         * If dep type is SUBMODULE, store self->idx inside modules[m].submodules.
+         * Submodules will be started as soon as their parent module is started
+         */
+        if (self->deps[i].type == SUBMODULE) {
+            modules[m].submodules = realloc(modules[m].submodules, (++modules[m].num_submodules) * sizeof(enum modules));
+            if (!modules[m].submodules) {
+                ERROR("%s\n", strerror(errno));
+                break;
+            }
+            modules[m].submodules[modules[m].num_submodules - 1] = self->idx;
+        }
     }
 }
 
@@ -225,6 +250,7 @@ void destroy_modules(void) {
     for (int i = started_modules - 1; i >= 0; i--) {
         destroy_module(sorted_modules[i]);
     }
+    free(sorted_modules);
 }
 
 /*
@@ -235,6 +261,12 @@ static void destroy_module(const enum modules module) {
         free(modules[module].dependent_m);
         modules[module].dependent_m = NULL;
         modules[module].num_dependent = 0;
+    }
+
+    if (modules[module].num_submodules) {
+        free(modules[module].submodules);
+        modules[module].submodules = NULL;
+        modules[module].num_submodules = 0;
     }
     
     if (is_inited(module)) {

@@ -1,4 +1,4 @@
-#include "modules.h"
+#include "../inc/log.h"
 
 enum CONFIG { GLOBAL, LOCAL };
 

@@ -13,6 +13,7 @@
 #include <math.h>
 #include <pwd.h>
 #include <setjmp.h>
+#include <systemd/sd-bus.h>
 
 /*
  * Useful macro to check size of global array.
@@ -26,7 +27,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -40,8 +41,8 @@ enum states { DAY, NIGHT, EVENT, SIZE_STATES };
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
-/* Whether a inter-module dep is hard (mandatory) or soft dep */
-enum dep_type { HARD, SOFT };
+/* Whether a module A on B dep is hard (mandatory), soft dep or it is its submodule */
+enum dep_type { HARD, SOFT, SUBMODULE };
 
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
@@ -51,6 +52,9 @@ enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
 /* Module states */
 enum module_states { IDLE, DISABLED, INITED };
+
+/* Bus types */
+enum bus_type { SYSTEM, USER };
 
 /* Struct that holds global config as passed through cmdline args */
 struct config {
@@ -88,7 +92,6 @@ struct state {
     enum events next_event;                 // next event index (sunrise/sunset)
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
-    enum ac_states old_ac_state;            // was laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
@@ -96,6 +99,7 @@ struct state {
     struct brightness br;                   // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
     int dimmed_br;                          // backlight level when dimmed
+    int pm_inhibited;                       // whether powermanagement is inhibited
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 
@@ -126,6 +130,8 @@ struct module {
     enum modules *dependent_m;            // pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
     enum module_states state;             // state of a module
+    enum modules *submodules;             // List of module submodules
+    int num_submodules;                   // number of submodules
 };
 
 struct state state;

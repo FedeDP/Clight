@@ -192,14 +192,6 @@ static void check_conf(void) {
         WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
         conf.dimmer_pct = 20;
     }
-    if (conf.dimmer_timeout[ON_AC] <= 0) {
-        WARN("Wrong dimmer timeout on AC value. Resetting default value.\n");
-        conf.dimmer_timeout[ON_AC] = 300;
-    }
-    if (conf.dimmer_timeout[ON_BATTERY] <= 0) {
-        WARN("Wrong dimmer timeout on BATT value. Resetting default value.\n");
-        conf.dimmer_timeout[ON_BATTERY] = 45;
-    }
     
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */
@@ -225,29 +217,4 @@ static void check_conf(void) {
                (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
                SIZE_POINTS * sizeof(double));
     }
-    
-    /* Check dpms timeout values */
-    int dpms_timeout_ac_needed = 0, dpms_timeout_batt_needed = 0;
-    for (i = 0; i < SIZE_DPMS && !dpms_timeout_ac_needed && !dpms_timeout_batt_needed; i++) {
-        if (conf.dpms_timeouts[ON_AC][i] <= 0) {
-            dpms_timeout_ac_needed = 1;
-        }
-        if (conf.dpms_timeouts[ON_BATTERY][i] <= 0) {
-            dpms_timeout_batt_needed = 1;
-        }
-        
-    }
-    if (dpms_timeout_ac_needed) {
-        WARN("Wrong on ac dpms timeouts. Resetting default values.\n");
-        memcpy(conf.dpms_timeouts[ON_AC], 
-               (int[]){ 900, 1200, 1800 }, 
-               SIZE_DPMS * sizeof(int));
-    }
-    if (dpms_timeout_batt_needed) {
-        WARN("Wrong on batt dpms timeouts. Resetting default values.\n");
-        memcpy(conf.dpms_timeouts[ON_BATTERY], 
-               (int[]){ 300, 420, 600 }, 
-               SIZE_DPMS * sizeof(int));
-    }
-    
 }
