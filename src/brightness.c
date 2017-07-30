@@ -26,6 +26,7 @@ static struct self_t self = {
     .enabled_single_capture = 1
 };
 
+// cppcheck-suppress unusedFunction
 void set_brightness_self(void) {
     SET_SELF();
 }
@@ -115,7 +116,7 @@ static void do_capture(void) {
 int is_interface_enabled(void) {
     int enabled;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "isbacklightinterfaceenabled"};
-    call(&enabled, "i", &args, "s", conf.screen_path);
+    call(&enabled, "b", &args, "s", conf.screen_path);
     return enabled;
 }
 

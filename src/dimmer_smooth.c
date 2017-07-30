@@ -11,7 +11,7 @@ static void callback(void);
 static void dim_backlight(void);
 static void restore_backlight(void);
 
-static struct dependency dependencies[] = { {HARD, DIMMER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
+static struct dependency dependencies[] = { {SUBMODULE, DIMMER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "DimmerSmooth",
     .idx = DIMMER_SMOOTH,
@@ -19,6 +19,7 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
+// cppcheck-suppress unusedFunction
 void set_dimmer_smooth_self(void) {
     SET_SELF();
 }
@@ -29,7 +30,6 @@ static void init(void) {
     INIT_MOD(fd);
 }
 
-/* Check we're on X, dimmer is enabled and smooth transitioning are enabled */
 static int check(void) {
     return 0;
 }

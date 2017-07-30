@@ -7,7 +7,7 @@ static int check(void);
 static void destroy(void);
 static void callback(void);
 
-static struct dependency dependencies[] = { {HARD, GAMMA}, {HARD, BUS}, {HARD, XORG} };
+static struct dependency dependencies[] = { {SUBMODULE, GAMMA}, {HARD, BUS}, {HARD, XORG} };
 static struct self_t self = {
     .name = "GammaSmooth",
     .idx = GAMMA_SMOOTH,
@@ -15,21 +15,17 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
+// cppcheck-suppress unusedFunction
 void set_gamma_smooth_self(void) {
     SET_SELF();
 }
 
 static void init(void) {
-    /* 
-     * gamma smooth must smooth transitionins
-     * as soon as it is started
-     * to set correct gamma for current time. 1ns timeout
-     */
-    int fd = start_timer(CLOCK_MONOTONIC, 0, 1);
+    /* Gamma smooth should start disarmed */
+    int fd = start_timer(CLOCK_MONOTONIC, 0, 0);
     INIT_MOD(fd);
 }
 
-/* Check we're on X, dimmer is enabled and smooth transitioning are enabled */
 static int check(void) {
     return 0;
 }

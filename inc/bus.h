@@ -1,6 +1,7 @@
 #pragma once
 
 #include "modules.h"
+#include <systemd/sd-bus.h>
 
 struct bus_match_data {
     int bus_mod_idx;
@@ -30,3 +31,4 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
 int set_property(const struct bus_args *a, const char type, const char *value);
 int get_property(const struct bus_args *a, const char *type, void *userptr);
 void add_mod_callback(const struct bus_cb cb);
+sd_bus **get_user_bus(void);

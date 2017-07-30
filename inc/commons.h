@@ -41,8 +41,8 @@ enum states { DAY, NIGHT, EVENT, SIZE_STATES };
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
-/* Whether a inter-module dep is hard (mandatory) or soft dep */
-enum dep_type { HARD, SOFT };
+/* Whether a module A on B dep is hard (mandatory), soft dep or it is its submodule */
+enum dep_type { HARD, SOFT, SUBMODULE };
 
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
@@ -130,6 +130,8 @@ struct module {
     enum modules *dependent_m;            // pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
     enum module_states state;             // state of a module
+    enum modules *submodules;             // List of module submodules
+    int num_submodules;                   // number of submodules
 };
 
 struct state state;

@@ -26,6 +26,7 @@ static struct self_t self = {
     .standalone = 1
 };
 
+// cppcheck-suppress unusedFunction
 void set_dimmer_self(void) {
     SET_SELF();
 }
@@ -36,7 +37,7 @@ static void init(void) {
         struct bus_cb upower_cb = { UPOWER, upower_callback };
         struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
         
-        timer_fd = start_timer(CLOCK_MONOTONIC, 0, !state.pm_inhibited); // 1ns if !inhibited, disarmed if inhibited
+        timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited ? 0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited, disarmed if inhibited
         INIT_MOD(timer_fd, &upower_cb, &inhibit_cb);
         /* brightness module is started before dimmer, so state.br.max is already ok there */
         state.dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
@@ -152,7 +153,11 @@ static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
     if (!state.is_dimmed && !state.pm_inhibited && old_ac_state != state.ac_state) {
-        reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_ac_state], conf.dimmer_timeout[state.ac_state]);
+        if (conf.dimmer_timeout[state.ac_state] <= 0) {
+            set_timeout(0, 0, main_p[self.idx].fd, 0); // if timeout is <= 0, pause this module
+        } else {
+            reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_ac_state], conf.dimmer_timeout[state.ac_state]);
+        }
     }
 }
 

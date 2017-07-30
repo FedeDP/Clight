@@ -29,6 +29,7 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
+// cppcheck-suppress unusedFunction
 void set_gamma_self(void) {
     SET_SELF();
 }

@@ -19,7 +19,7 @@
  * mandatory functions (using macro SET_SELF())
  */
 
-#include "module.h"
+#include "modules.h"
 
 static void init(void);
 static int check(void);
