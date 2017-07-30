@@ -18,13 +18,11 @@ do { \
 #define SET_MODULES_SELFS() \
 do { \
     void (*func)(void); \
-    char funcname[40] = {0}; \
+    char funcname[NAME_MAX] = {0}; \
     glob_t results; \
     glob("src/*.c", 0, NULL, &results); \
     for (int i = 0; i < results.gl_pathc; i++) { \
-        char *name = strndup(results.gl_pathv[i] + 4, strlen(results.gl_pathv[i]) - 6); \
-        sprintf(funcname, "set_%s_self", name); \
-        free(name); \
+        snprintf(funcname, NAME_MAX, "set_%.*s_self", (int) strlen(results.gl_pathv[i]) - 6, results.gl_pathv[i] + 4); \
         *(void **)(&func) = dlsym(NULL, funcname); \
         if (func) { \
             DEBUG("Function %s found!\n", funcname); \
