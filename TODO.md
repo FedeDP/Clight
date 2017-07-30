@@ -33,7 +33,7 @@
 - [x] avoid dimming screen if a power management inhibitor is set through logind (eg: while watching a movie). busctl --user call org.freedesktop.PowerManagement.Inhibit /org/freedesktop/PowerManagement org.freedesktop.PowerManagement.Inhibit HasInhibit (HasInhibitChanged signal) -> works on kde and xfce. (gnome seems to be using its own interface...)
 - [x] pause dimmer while inhibition is enabled. Restart dimmer as soon as inhibition is disabled
 - [x] disable dpms while PowerManagement is inhibited too
-- [ ] fix bug with setdpms call on bus ?? -> The name org.clightd.backlight was not provided by any .service files (but it seems working!)
+- [x] fix bug with setdpms call on bus ?? -> The name org.clightd.backlight was not provided by any .service files (but it seems working!)
 - [x] gamma_smooth and dimmer_smooth should be marked as submodules of gamma/dimmer. When a module is started, all of its submodule gets started right away.
 - [x] gamma_smooth and dimmer_smooth should get started disarmed
 - [x] dimmer should get started disarmed if we're in inhibit mode
@@ -47,6 +47,7 @@
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)
+- [ ] rework conf settings: timeouts should be: AC_capture_timeouts = { 600, 2700, 300 } BATT_capture_timeouts = {  } 
 
 ## Later
 - [ ] add weather support -> New struct for timeouts wuld be something like conf.timeout[enum state][enum weather] where enum weather = { UNWKNOWN, SUNNY, RAINY, CLOUDY } and defaults to 0 obviously -> state.weather = 0; ...or just use something like conf.temp[state.time] that cuts up to 50% at 100% cloudiness
