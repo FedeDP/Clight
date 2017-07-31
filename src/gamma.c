@@ -80,10 +80,10 @@ static void check_gamma(void) {
     get_gamma_events(&t, conf.lat, conf.lon, 0);
 
     if (state.event_time_range == conf.event_duration) {
-        if (is_disabled(GAMMA_SMOOTH)) {
-            set_temp(conf.temp[state.time]);
-        } else if (is_inited(GAMMA_SMOOTH)) {
+        if (is_inited(GAMMA_SMOOTH)) {
             start_gamma_transition(1);
+        } else {
+            set_temp(conf.temp[state.time]);
         }
     }
 

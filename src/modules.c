@@ -193,7 +193,7 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
  * and X is not mandatory for clight, disable X too.
  */
 void disable_module(const enum modules module) {
-    if (!is_disabled(module)) {
+    if (!is_disabled(module) && !is_destroyed(module)) {
         modules[module].state = DISABLED;
         DEBUG("%s module disabled.\n", modules[module].self->name);
 
@@ -201,7 +201,7 @@ void disable_module(const enum modules module) {
         for (int i = 0; i < modules[module].num_dependent; i++) {
             enum modules m = modules[module].dependent_m[i].dep;
             const enum dep_type type = modules[module].dependent_m[i].type;
-            if (!is_disabled(m)) {
+            if (!is_disabled(m) && !is_destroyed(m)) {
                 if (type != SOFT) {
                     DEBUG("Disabling module %s as its hard dep %s was disabled...\n", modules[m].self->name, modules[module].self->name);
                     disable_module(m);
@@ -271,6 +271,7 @@ static void destroy_module(const enum modules module) {
             main_p[modules[module].self->idx].fd = -1;
         }
         DEBUG("%s module destroyed.\n", modules[module].self->name);
+        modules[module].state = DESTROYED;
     }
 }
 

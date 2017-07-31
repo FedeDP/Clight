@@ -132,7 +132,7 @@ static int check(void) {
         change_dep_type(GAMMA, self.idx, SOFT);
         return 1;
     }
-    return is_disabled(GAMMA);
+    return !is_idle(GAMMA) && !is_inited(GAMMA);
 }
 
 /*

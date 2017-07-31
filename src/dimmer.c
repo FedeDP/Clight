@@ -122,21 +122,21 @@ static void dim_backlight(void) {
     if (state.dimmed_br >= state.br.old) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
-        if (is_disabled(DIMMER_SMOOTH)) {
-            set_backlight_level(state.dimmed_br);
-        } else if (is_inited(DIMMER_SMOOTH)) {
+        if (is_inited(DIMMER_SMOOTH)) {
             state.br.current = state.br.old;
             start_smooth_transition(1);
+        } else {
+            set_backlight_level(state.dimmed_br);
         }
     }
 }
 
 /* restore previous backlight level */
 static void restore_backlight(void) {
-    if (is_disabled(DIMMER_SMOOTH)) {
-        set_backlight_level(state.br.old);
-    } else if (is_inited(DIMMER_SMOOTH)) {
+    if (is_inited(DIMMER_SMOOTH)) {
         start_smooth_transition(1);
+    } else {
+        set_backlight_level(state.br.old);
     }
 }
 
