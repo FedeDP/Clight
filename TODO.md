@@ -44,6 +44,9 @@
 - [x] userbus submodule of bus
 - [x] move sd_bus *userbus in bus.c and get_user_bus() in bus.c to remove #include "userbus.h" in bus.h
 - [x] it seems like dpms gets autodisabled while watching a video on chromium, so dpms module should not depend on INHIBIT
+- [x] test with --no-dimmer, --no-gamma, --no-dpms, --no-dimmer-smooth, --no-gamma-smooth -> ok it is working
+- [x] understand why dimmer-smooth gets disabled twice when --no-dimmer is passed
+- [x] fix: high cpu usage with --no-dimmer conf option
 
 ## 1.2
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)

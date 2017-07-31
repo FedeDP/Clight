@@ -51,7 +51,7 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
 /* Module states */
-enum module_states { IDLE, DISABLED, INITED };
+enum module_states { IDLE, STARTED_DISABLED, DISABLED, INITED, DESTROYED };
 
 /* Bus types */
 enum bus_type { SYSTEM, USER };
@@ -127,11 +127,9 @@ struct module {
     void (*destroy)(void);                // module destroy function
     void (*poll_cb)(void);                // module poll callback
     struct self_t *self;                  // pointer to self module informations
-    enum modules *dependent_m;            // pointer to every dependent module self
+    struct dependency *dependent_m;       // pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
     enum module_states state;             // state of a module
-    enum modules *submodules;             // List of module submodules
-    int num_submodules;                   // number of submodules
 };
 
 struct state state;

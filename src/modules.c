@@ -16,7 +16,7 @@ static int started_modules = 0; // number of started modules
  */
 void init_modules(const enum modules module) {
     /* if module is not disabled, try to start it */
-    if (modules[module].state == IDLE) {
+    if (is_idle(module)) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
             if ((conf.single_capture_mode && !modules[module].self->enabled_single_capture) || modules[module].check()) {
                 disable_module(module);
@@ -24,13 +24,7 @@ void init_modules(const enum modules module) {
                 modules[module].init();
             }
         }
-    } else if (is_disabled(module)) {
-        /* 
-         * if module is already disabled it means it was disabled with
-         * a --no-X cmdline option/conf file option.
-         * Force-disable it
-         */
-        modules[module].state = IDLE;
+    } else if (is_started_disabled(module)) {
         disable_module(module);
     }
 }
@@ -69,8 +63,10 @@ void init_module(int fd, enum modules module, ...) {
         va_start(args, module);
         struct bus_cb *cb = va_arg(args, struct bus_cb *);
         while (cb) {
-            add_mod_callback(*cb);
-            DEBUG("Callback added for module %d on module %d bus match.\n", module, cb->module);
+            if (is_inited(cb->module)) {
+                add_mod_callback(*cb);
+                DEBUG("Callback added for module %d on module %d bus match.\n", module, cb->module);
+            }
             cb = va_arg(args, struct bus_cb *);
         }
         va_end(args);
@@ -93,20 +89,37 @@ void init_module(int fd, enum modules module, ...) {
 }
 
 static void init_submodules(const enum modules module) {
-    for (int i = 0; i < modules[module].num_submodules; i++) {
-        const enum modules m = modules[module].submodules[i];
-        DEBUG("%s module being started as submodule of %s...\n", modules[m].self->name, modules[module].self->name);
-        modules[m].self->satisfied_deps++;
-        init_modules(m);
+    for (int i = 0; i < modules[module].num_dependent; i++) {
+        const enum dep_type type = modules[module].dependent_m[i].type;
+        if (type == SUBMODULE) {
+            const enum modules m = modules[module].dependent_m[i].dep;
+            if (is_idle(m)) {
+                DEBUG("%s module being started as submodule of %s...\n", modules[m].self->name, modules[module].self->name);
+                modules[m].self->satisfied_deps++;
+                init_modules(m);
+            }
+        }
     }
 }
 
-int is_disabled(enum modules module) {
+int is_disabled(const enum modules module) {
     return modules[module].state == DISABLED;
 }
 
-int is_inited(enum modules module) {
+int is_inited(const enum modules module) {
     return modules[module].state == INITED;
+}
+
+int is_started_disabled(const enum modules module) {
+    return modules[module].state == STARTED_DISABLED;
+}
+
+int is_idle(const enum modules module) {
+    return modules[module].state == IDLE;
+}
+
+int is_destroyed(const enum modules module) {
+    return modules[module].state == DESTROYED;
 }
 
 /*
@@ -115,25 +128,14 @@ int is_inited(enum modules module) {
 void set_self_deps(struct self_t *self) {
     for (int i = 0; i < self->num_deps; i++) {
         enum modules m = self->deps[i].dep;
-        modules[m].dependent_m = realloc(modules[m].dependent_m, (++modules[m].num_dependent) * sizeof(enum modules));
+        const enum dep_type type = self->deps[i].type;
+        modules[m].dependent_m = realloc(modules[m].dependent_m, (++modules[m].num_dependent) * sizeof(struct dependency));
         if (!modules[m].dependent_m) {
             ERROR("%s\n", strerror(errno));
             break;
         }
-        modules[m].dependent_m[modules[m].num_dependent - 1] = self->idx;
-        
-        /* 
-         * If dep type is SUBMODULE, store self->idx inside modules[m].submodules.
-         * Submodules will be started as soon as their parent module is started
-         */
-        if (self->deps[i].type == SUBMODULE) {
-            modules[m].submodules = realloc(modules[m].submodules, (++modules[m].num_submodules) * sizeof(enum modules));
-            if (!modules[m].submodules) {
-                ERROR("%s\n", strerror(errno));
-                break;
-            }
-            modules[m].submodules[modules[m].num_submodules - 1] = self->idx;
-        }
+        modules[m].dependent_m[modules[m].num_dependent - 1].dep = self->idx;
+        modules[m].dependent_m[modules[m].num_dependent - 1].type = type;
     }
 }
 
@@ -145,14 +147,14 @@ void set_self_deps(struct self_t *self) {
  */
 static void started_cb(enum modules module) {
     while (modules[module].num_dependent > 0) {
-        enum modules m = *modules[module].dependent_m;
+        enum modules m = modules[module].dependent_m[0].dep;
         
         if (modules[module].num_dependent > 1) {
-            memmove(&modules[module].dependent_m[0], &modules[module].dependent_m[1], (modules[module].num_dependent - 1) * sizeof(enum modules));
+            memmove(&modules[module].dependent_m[0], &modules[module].dependent_m[1], (modules[module].num_dependent - 1) * sizeof(struct dependency));
         }
-        modules[module].dependent_m = realloc(modules[module].dependent_m, (--modules[module].num_dependent) * sizeof(enum modules));
+        modules[module].dependent_m = realloc(modules[module].dependent_m, (--modules[module].num_dependent) * sizeof(struct dependency));
         
-        if (modules[m].state == IDLE) {
+        if (is_idle(m)) {
             modules[m].self->satisfied_deps++;
             DEBUG("Trying to start %s module as its %s dependency was loaded...\n", modules[m].self->name, modules[module].self->name);
             init_modules(m);
@@ -197,20 +199,16 @@ void disable_module(const enum modules module) {
 
         /* Cycle to disable all modules dependent on "module", if dep is HARD */
         for (int i = 0; i < modules[module].num_dependent; i++) {
-            enum modules m = modules[module].dependent_m[i];
+            enum modules m = modules[module].dependent_m[i].dep;
+            const enum dep_type type = modules[module].dependent_m[i].type;
             if (!is_disabled(m)) {
-                for (int j = 0; j < modules[m].self->num_deps; j++) {
-                    if (modules[m].self->deps[j].dep == module) {
-                        if (modules[m].self->deps[j].type == HARD) {
-                            DEBUG("Disabling module %s as its hard dep %s was disabled...\n", modules[m].self->name, modules[module].self->name);
-                            disable_module(m);
-                        } else {
-                            DEBUG("Trying to start %s module as its %s soft dep was disabled...\n", modules[m].self->name, modules[module].self->name);
-                            modules[m].self->satisfied_deps++;
-                            init_modules(m);
-                        }
-                        break;
-                    }
+                if (type != SOFT) {
+                    DEBUG("Disabling module %s as its hard dep %s was disabled...\n", modules[m].self->name, modules[module].self->name);
+                    disable_module(m);
+                } else {
+                    DEBUG("Trying to start %s module as its %s soft dep was disabled...\n", modules[m].self->name, modules[module].self->name);
+                    modules[m].self->satisfied_deps++;
+                    init_modules(m);
                 }
             }
         }
@@ -222,12 +220,12 @@ void disable_module(const enum modules module) {
         for (int i = 0; i < modules[module].self->num_deps; i++) {
             const enum modules m = modules[module].self->deps[i].dep;
             for (int j = 0; j < modules[m].num_dependent; j++) {
-                if (modules[m].dependent_m[j] == module) {
+                if (modules[m].dependent_m[j].dep == module) {
                     /* properly decrement num_dependent and realloc array of dependent_m */
                     if (j + 1 < modules[m].num_dependent) {
-                        memmove(&modules[m].dependent_m[j], &modules[m].dependent_m[j + 1], (modules[m].num_dependent - j - 1) * sizeof(enum modules));
+                        memmove(&modules[m].dependent_m[j], &modules[m].dependent_m[j + 1], (modules[m].num_dependent - j - 1) * sizeof(struct dependency));
                     }
-                    modules[m].dependent_m = realloc(modules[m].dependent_m, (--modules[m].num_dependent) * sizeof(enum modules));
+                    modules[m].dependent_m = realloc(modules[m].dependent_m, (--modules[m].num_dependent) * sizeof(struct dependency));
                     
                     /* 
                      * if there are no more dependent_m on this module, 
@@ -262,14 +260,8 @@ static void destroy_module(const enum modules module) {
         modules[module].dependent_m = NULL;
         modules[module].num_dependent = 0;
     }
-
-    if (modules[module].num_submodules) {
-        free(modules[module].submodules);
-        modules[module].submodules = NULL;
-        modules[module].num_submodules = 0;
-    }
     
-    if (is_inited(module)) {
+    if (!is_destroyed(module)) {
         /* call module destroy func */
         modules[module].destroy();
         /* If fd is being polled, close it. */
