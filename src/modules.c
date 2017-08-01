@@ -129,13 +129,15 @@ void set_self_deps(struct self_t *self) {
     for (int i = 0; i < self->num_deps; i++) {
         enum modules m = self->deps[i].dep;
         const enum dep_type type = self->deps[i].type;
-        modules[m].dependent_m = realloc(modules[m].dependent_m, (++modules[m].num_dependent) * sizeof(struct dependency));
-        if (!modules[m].dependent_m) {
+        struct dependency *tmp = realloc(modules[m].dependent_m, (++modules[m].num_dependent) * sizeof(struct dependency));
+        if (!tmp) {
+            free(modules[m].dependent_m);
             ERROR("%s\n", strerror(errno));
-            break;
+        } else {
+            modules[m].dependent_m = tmp;
+            modules[m].dependent_m[modules[m].num_dependent - 1].dep = self->idx;
+            modules[m].dependent_m[modules[m].num_dependent - 1].type = type;
         }
-        modules[m].dependent_m[modules[m].num_dependent - 1].dep = self->idx;
-        modules[m].dependent_m[modules[m].num_dependent - 1].type = type;
     }
 }
 
