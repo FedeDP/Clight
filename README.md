@@ -27,7 +27,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 ## How to run it
 Clight tries to be a 0-conf software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight.   User has to do nothing but reboot after installing clight.  
 **This is needed to ensure that X is running when clight gets started**, as on systemd there is no proper way of knowing whether X has been started or not.  
-Note that desktop file will execute "systemctl --user start clight"; user service will then kick in clightd dependency and will restart itself in case of crash.  
+Note that desktop file will execute "systemctl --user start clight.timer"; timer is needed to assure that desktop and any needed bus interface is completely started; it will delay clight startup of 5s. User service will then kick in clightd dependency.  
 
 Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
 
