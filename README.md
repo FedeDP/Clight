@@ -18,7 +18,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## Runtime deps:
 * shared objects from build libraries
-* [clightd](https://github.com/FedeDP/Clightd) >= 1.3-dev
+* [clightd](https://github.com/FedeDP/Clightd) >= 1.4
 
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)

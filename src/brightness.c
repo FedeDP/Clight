@@ -26,7 +26,6 @@ static struct self_t self = {
     .enabled_single_capture = 1
 };
 
-// cppcheck-suppress unusedFunction
 void set_brightness_self(void) {
     SET_SELF();
 }

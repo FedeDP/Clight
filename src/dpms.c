@@ -20,7 +20,6 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
-// cppcheck-suppress unusedFunction
 void set_dpms_self(void) {
     SET_SELF();
 }

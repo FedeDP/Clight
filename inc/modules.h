@@ -1,8 +1,6 @@
 #pragma once
 
 #include "timer.h"
-#include <dlfcn.h>
-#include <glob.h>
 
 #define SET_SELF() \
 do { \
@@ -13,24 +11,6 @@ do { \
     modules[self.idx].destroy = destroy; \
     set_self_deps(&self); \
 } while (0)
-
-/* Useful macro to call each module's "set_$module_self" functions */
-#define SET_MODULES_SELFS() \
-do { \
-    void (*func)(void); \
-    char funcname[NAME_MAX] = {0}; \
-    glob_t results; \
-    glob("src/*.c", 0, NULL, &results); \
-    for (int i = 0; i < results.gl_pathc; i++) { \
-        snprintf(funcname, NAME_MAX, "set_%.*s_self", (int) strlen(results.gl_pathv[i]) - 6, results.gl_pathv[i] + 4); \
-        *(void **)(&func) = dlsym(NULL, funcname); \
-        if (func) { \
-            DEBUG("Function %s found!\n", funcname); \
-            func(); \
-        } \
-    } \
-    globfree(& results); \
-} while(0)
 
 #define INIT_MOD(fd, ...) init_module(fd, self.idx, ##__VA_ARGS__, (void *)0)
 

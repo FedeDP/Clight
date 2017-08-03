@@ -26,7 +26,6 @@ static struct self_t self = {
     .standalone = 1
 };
 
-// cppcheck-suppress unusedFunction
 void set_dimmer_self(void) {
     SET_SELF();
 }

@@ -38,9 +38,19 @@
 #include "../inc/userbus.h"
 
 static void init(int argc, char *argv[]);
+static void set_modules_selfs(void);
 static void init_all_modules(void);
 static void destroy(void);
 static void main_poll(void);
+
+/*
+ * pointers to init modules functions;
+ */
+static void (*const set_selfs[])(void) = {
+    set_brightness_self, set_location_self, set_upower_self, set_gamma_self,
+    set_gamma_smooth_self, set_signal_self, set_bus_self, set_dimmer_self,
+    set_dimmer_smooth_self, set_dpms_self, set_xorg_self, set_inhibit_self, set_userbus_self
+};
 
 int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
@@ -62,8 +72,17 @@ static void init(int argc, char *argv[]) {
     gain_lck();
     open_log();
     log_conf();
-    SET_MODULES_SELFS();
+    set_modules_selfs();
     init_all_modules();
+}
+
+/*
+ * Set each module self struct
+ */
+static void set_modules_selfs(void) {
+    for (int i = 0; i < MODULES_NUM; i++) {
+        set_selfs[i]();
+    }
 }
 
 /* 

@@ -12,7 +12,6 @@ static struct self_t self = {
     .standalone = 1
 };
 
-// cppcheck-suppress unusedFunction
 void set_xorg_self(void) {
     SET_SELF();
 }
@@ -34,7 +33,7 @@ static void destroy(void) {
 }
 
 static void callback(void) {
-    
+    /* Skeleton function needed for modules interface */
 }
 
 

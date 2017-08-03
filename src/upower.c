@@ -17,7 +17,6 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
-// cppcheck-suppress unusedFunction
 void set_upower_self(void) {
     SET_SELF();
 }
