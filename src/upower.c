@@ -43,25 +43,27 @@ static void destroy(void) {
 }
 
 static int upower_init(void) {
-    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
-    int r = add_match(&args, &slot, on_upower_change);
+    /* check initial AC state */
+    struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
+    int r = get_property(&power_args, "b", &state.ac_state);
     if (r < 0) {
+        WARN("Upower appears to be unsupported.\n");
         return -1;   // disable this module
     }
-    /* check initial AC state */
-    return on_upower_change(NULL, NULL, NULL);
+    
+    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
+    r = add_match(&args, &slot, on_upower_change);
+    return -(r < 0);
 }
 
 /* 
  * Callback on upower changes: recheck on_battery boolean value
  */
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    if (userdata) {
-        struct bus_match_data *data = (struct bus_match_data *) userdata;
-        data->bus_mod_idx = self.idx;
-        data->ptr = malloc(sizeof(int));
-        *(int *)(data->ptr) = state.ac_state;
-    }
+    struct bus_match_data *data = (struct bus_match_data *) userdata;
+    data->bus_mod_idx = self.idx;
+    data->ptr = malloc(sizeof(int));
+    *(int *)(data->ptr) = state.ac_state;
     
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
@@ -76,7 +78,7 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
      */
     int old_ac_state = state.ac_state;
     get_property(&power_args, "b", &state.ac_state);
-    if (m && old_ac_state != state.ac_state) {
+    if (old_ac_state != state.ac_state) {
         INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
     }
     return 0;

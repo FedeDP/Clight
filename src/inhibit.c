@@ -42,33 +42,31 @@ static void destroy(void) {
     }
 }
 
-/* It needs userbus */
 static int inhibit_init(void) {
-    struct bus_args args = {"org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibitChanged", USER};
-    int r = add_match(&args, &slot, on_inhibit_change);
+    /* check initial inhibit state */
+    struct bus_args inhibit_args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
+    int r = call(&state.pm_inhibited, "b", &inhibit_args, "");
     if (r < 0) {
         WARN("PowerManagement inhibition appears to be unsupported.\n");
         return -1;   // disable this module
     }
-    /* check initial inhibit state */
-    return on_inhibit_change(NULL, NULL, NULL);
+    
+    struct bus_args args = {"org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibitChanged", USER};
+    r = add_match(&args, &slot, on_inhibit_change);
+    return -(r < 0);
 }
 
 /* 
  * Callback on inhibit state changed: recheck new HasInhibit value
  */
 static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    if (userdata) {
-        struct bus_match_data *data = (struct bus_match_data *) userdata;
-        data->bus_mod_idx = self.idx;
-    }
-    
+    struct bus_match_data *data = (struct bus_match_data *) userdata;
+    data->bus_mod_idx = self.idx;
+
     struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
     call(&state.pm_inhibited, "b", &args, "");
     
-    if (userdata) {
-        INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
-    }
+    INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
     return 0;
 }
 

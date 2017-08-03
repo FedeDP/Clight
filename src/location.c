@@ -104,6 +104,9 @@ static int geoclue_init(void) {
     r = geoclue_client_start();
 
 end:
+    if (r < 0) {
+        WARN("Geoclue2 appears to be unsupported.\n");
+    }
     /* In case of geoclue2 error, do not leave. Just disable this module */
     return -(r < 0);  // - 1 on error
 }
