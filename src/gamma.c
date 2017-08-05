@@ -67,6 +67,8 @@ static void callback(void) {
  * set new BRIGHTNESS correct timeout according to new state.
  */
 static void check_gamma(void) {
+    static int first_time = 1;
+    
     time_t t = time(NULL);
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
@@ -78,7 +80,8 @@ static void check_gamma(void) {
     enum states old_state = state.time;
     get_gamma_events(&t, conf.lat, conf.lon, 0);
 
-    if (state.event_time_range == conf.event_duration) {
+    if (state.event_time_range == conf.event_duration || first_time) {
+        first_time = 0;
         if (is_inited(GAMMA_SMOOTH)) {
             start_gamma_transition(1);
         } else {
