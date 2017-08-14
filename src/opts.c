@@ -133,8 +133,10 @@ static void parse_cmd(int argc, char *const argv[]) {
             free(str);
         }
     }
-    // poptGetNextOpt returns -1 when the final argument has been parsed
-    // otherwise an error occured
+    /* 
+     * poptGetNextOpt returns -1 when the final argument has been parsed
+     * otherwise an error occured
+     */
     if (rc != -1) {
         ERROR("%s\n", poptStrerror(rc));
     }
