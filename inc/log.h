@@ -9,8 +9,7 @@
 #define ERROR(msg, ...) \
 do { \
     log_message(__FILE__, __LINE__, 'E', msg, ##__VA_ARGS__); \
-    int quitval = !state.quit ? ERR_QUIT : state.quit + 1; \
-    longjmp(state.quit_buf, quitval); \
+    longjmp(state.quit_buf, ERR_QUIT); \
 } while (0)
 
 void open_log(void);
