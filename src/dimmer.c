@@ -36,7 +36,8 @@ static void init(void) {
         struct bus_cb upower_cb = { UPOWER, upower_callback };
         struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
         
-        timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited ? 0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited, disarmed if inhibited
+        timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
+                                0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited AND dimmer timeout > 0, else disarmed
         INIT_MOD(timer_fd, &upower_cb, &inhibit_cb);
         /* brightness module is started before dimmer, so state.br.max is already ok there */
         state.dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
@@ -165,6 +166,8 @@ static void upower_callback(const void *ptr) {
  * else restart module with its default timeout
  */
 static void inhibit_callback(__attribute__((unused)) const void *ptr) {
-    DEBUG("Dimmer module being %s.\n", state.pm_inhibited ? "paused" : "restarted");
-    set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
+    if (conf.dimmer_timeout[state.ac_state] > 0) {
+        DEBUG("Dimmer module being %s.\n", state.pm_inhibited ? "paused" : "restarted");
+        set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
+    }
 }

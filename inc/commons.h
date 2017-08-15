@@ -56,6 +56,9 @@ enum module_states { IDLE, STARTED_DISABLED, DISABLED, INITED, DESTROYED };
 /* Bus types */
 enum bus_type { SYSTEM, USER };
 
+/* Quit values */
+enum quit_values { NORM_QUIT = 1, ERR_QUIT };
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute

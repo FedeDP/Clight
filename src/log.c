@@ -20,9 +20,10 @@ void log_conf(void) {
 
         fprintf(log_file, "Clight\n");
         fprintf(log_file, "Version: %s\n", VERSION);
-        fprintf(log_file, "Time: %s%s", ctime(&t), conf.single_capture_mode ? "\n" : "");
+        fprintf(log_file, "Starting time: %s\n", ctime(&t));
         if (!conf.single_capture_mode) {
-            fprintf(log_file, "\nStarting options:\n");
+            fprintf(log_file, "Starting options:\n");
+            fprintf(log_file, "* Verbose (debugging):\t\t%s\n", conf.verbose ? "enabled" : "disabled");
             fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
             fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
             fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
@@ -48,6 +49,7 @@ void log_conf(void) {
                 conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]
             );
         }
+        fflush(log_file);
     }
 }
 

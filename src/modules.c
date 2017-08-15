@@ -267,10 +267,10 @@ static void destroy_module(const enum modules module) {
         /* call module destroy func */
         modules[module].destroy();
         /* If fd is being polled, close it. */
-        if (main_p[modules[module].self->idx].fd > 0) {
-            close(main_p[modules[module].self->idx].fd);
+        if (main_p[module].fd > 0) {
+            close(main_p[module].fd);
             /* stop polling on this module! */
-            main_p[modules[module].self->idx].fd = -1;
+            main_p[module].fd = -1;
         }
         DEBUG("%s module destroyed.\n", modules[module].self->name);
         modules[module].state = DESTROYED;

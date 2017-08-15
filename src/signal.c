@@ -55,6 +55,6 @@ static void callback(void) {
         ERROR("an error occurred while getting signalfd data.\n");
     }
     INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
-    state.quit = 1;
+    state.quit = NORM_QUIT;
 }
 

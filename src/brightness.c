@@ -57,7 +57,7 @@ static void callback(void) {
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     do_capture();
     if (conf.single_capture_mode) {
-        state.quit = 1;
+        state.quit = NORM_QUIT;
     }
 }
 

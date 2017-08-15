@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
         main_poll();
     }
     destroy();
-    return 0;
+    return state.quit >= ERR_QUIT ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 /*
@@ -103,7 +103,7 @@ static void destroy(void) {
      * (as ERROR macro would longjmp again here);
      * Only try once, otherwise avoid destroying modules and go on closing log
      */
-    if (state.quit == 1) {
+    if (state.quit <= ERR_QUIT) {
         destroy_modules();
     }
     close_log();

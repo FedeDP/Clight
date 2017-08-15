@@ -1,4 +1,5 @@
 ## 1.3
+- [x] Fix check for <= 0 dimmer_timeout[state.ac_state] in dimmer module (to pause it)
 - [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)
 
 ## Later

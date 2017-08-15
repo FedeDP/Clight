@@ -38,7 +38,7 @@ static int check(void) {
 }
 
 static void callback(void) {
-    // Skeleton interface
+    /* Skeleton interface */
 }
 
 static void destroy(void) {
@@ -62,7 +62,7 @@ static void set_dpms_timeouts(void) {
         call(NULL, NULL, &args_get, "ssiii", state.display, state.xauthority, 
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
     } else {
-        DEBUG("Disabling DPMS as a timeout <= 0 has been found.\n");
+        INFO("Disabling DPMS as a timeout <= 0 has been found.\n");
         set_dpms(DPMS_DISABLED);
     }
 }
