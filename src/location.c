@@ -92,7 +92,7 @@ static void init_cache_file(void) {
 /*
  * Init geoclue, then checks if a location is already available.
  */
-static int geoclue_init(void) {    
+static int geoclue_init(void) {
     int r = geoclue_get_client();
     if (r < 0) {
         goto end;
