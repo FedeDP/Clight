@@ -51,7 +51,7 @@ static void destroy(void) {
 static void callback(void) {
     uint64_t t;
 
-    read(main_p[self.idx].fd, &t, sizeof(uint64_t));    
+    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     check_gamma();
 }
 
@@ -67,8 +67,6 @@ static void callback(void) {
  * set new BRIGHTNESS correct timeout according to new state.
  */
 static void check_gamma(void) {
-    static int first_time = 1;
-    
     time_t t = time(NULL);
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
@@ -80,13 +78,17 @@ static void check_gamma(void) {
     enum states old_state = state.time;
     get_gamma_events(&t, conf.lat, conf.lon, 0);
 
-    if (state.event_time_range == conf.event_duration || first_time) {
-        first_time = 0;
-        if (is_inited(GAMMA_SMOOTH)) {
-            start_gamma_transition(1);
-        } else {
-            set_temp(conf.temp[state.time]);
-        }
+    /* 
+     * Force set every time correct gamma 
+     * to avoid any possible sync issue
+     * between time of day and gamma (eg after long suspend).
+     * Note that in case correct gamma temp is already set,
+     * it won't do anything.
+     */
+    if (is_inited(GAMMA_SMOOTH)) {
+        start_gamma_transition(1);
+    } else {
+        set_temp(conf.temp[state.time]);
     }
 
     /* desired gamma temp has been setted. Set new GAMMA timer and reset transitioning state. */
