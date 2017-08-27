@@ -179,9 +179,18 @@ void poll_cb(const enum modules module) {
 }
 
 void change_dep_type(const enum modules mod, const enum modules mod_dep, const enum dep_type type) {
+    /* update type of dependency in mod deps */
     for (int i = 0; i < modules[mod].self->num_deps; i++) {
         if (modules[mod].self->deps[i].dep == mod_dep) {
             modules[mod].self->deps[i].type = type;
+            break;
+        }
+    }
+    
+    /* Update dep type in dependent_m too */
+    for (int i = 0; i < modules[mod_dep].num_dependent; i++) {
+        if (modules[mod_dep].dependent_m[i].dep == mod) {
+            modules[mod_dep].dependent_m[i].type = type;
             break;
         }
     }

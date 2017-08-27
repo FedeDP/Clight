@@ -89,9 +89,9 @@ static void do_capture(void) {
             }
         }
     } else if (!interface_enabled) {
-        INFO("Current backlight interface is not enabled. Avoid changing backlight level on a disabled interface.\n");
+        DEBUG("Current backlight interface is not enabled. Avoid changing backlight level on a disabled interface.\n");
     } else {
-        INFO("Screen is currently dimmed. Avoid changing backlight level.\n");
+        DEBUG("Screen is currently dimmed. Avoid changing backlight level.\n");
     }
     /*
      * if there is too high difference, do a fast recapture 

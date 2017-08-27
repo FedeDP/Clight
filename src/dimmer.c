@@ -83,7 +83,7 @@ static void callback(void) {
         if (is_interface_enabled()) {
             idle_t = get_idle_time();
         } else {
-            INFO("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
+            DEBUG("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
         }
         if (idle_t > 0) {
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state] - 1;
