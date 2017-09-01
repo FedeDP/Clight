@@ -44,6 +44,7 @@ This means that these features are all enabled with default values:
 ## Will it eat my battery?
 No, it won't. Clight aims to be very power friendly. In fact, thanks to blocking I/O, it uses CPU only when needed.  
 Moreover, being very lightweight on resources helps too. Indeed, it will probably help you saving some battery, by setting correct screen backlight for current ambient brightness (thus avoiding wasting battery on max backlight level).
+Finally, remember that webcam is not always on; it is used only when needed with timeouts between clusters of captures thoroughly thought and configurable (with longer timeouts while on battery).
 
 ## Current features:
 * very lightweight
