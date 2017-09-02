@@ -27,7 +27,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, WEATHER, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -76,6 +76,8 @@ struct config {
     int dimmer_pct;                         // pct of max brightness to be used while dimming
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
+    char weather_apikey[32 + 1];            // apikey for openweathermap
+    int weather_timeout[SIZE_AC];          // timeouts for weather update
 };
 
 /*
@@ -103,6 +105,7 @@ struct state {
     int is_dimmed;                          // whether we are currently in dimmed state
     int dimmed_br;                          // backlight level when dimmed
     int pm_inhibited;                       // whether powermanagement is inhibited
+    int cloudiness;                         // weather cloudiness for user location
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 

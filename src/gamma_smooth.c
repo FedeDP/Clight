@@ -1,4 +1,5 @@
 #include "../inc/gamma_smooth.h"
+#include "../inc/bus.h"
 
 #define GAMMA_SMOOTH_TIMEOUT 300 * 1000 * 1000  // 300 ms
 

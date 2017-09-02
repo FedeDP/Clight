@@ -132,6 +132,13 @@ static int check(void) {
      */
     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
         change_dep_type(GAMMA, self.idx, SOFT);
+        /* 
+         * weather requires lat or lon, so do not disable it if they're provided.
+         * But disable it if sunrise or sunset times are set fixed by user.
+         */
+        if (conf.lat != 0.0 && conf.lon != 0.0) {
+            change_dep_type(WEATHER, self.idx, SOFT);
+        }
         return 1;
     }
     return !is_idle(GAMMA) && !is_inited(GAMMA);

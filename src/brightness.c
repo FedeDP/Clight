@@ -1,5 +1,6 @@
 #include "../inc/brightness.h"
 #include "../inc/bus.h"
+#include "../inc/weather.h"
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 
@@ -16,7 +17,7 @@ static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
 static void upower_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, WEATHER} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
@@ -104,7 +105,7 @@ static void do_capture(void) {
         state.fast_recapture = 1;
     } else if (!conf.single_capture_mode) {
         // reset normal timer
-        set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
+        set_timeout(get_weather_aware_timeout(conf.timeout[state.ac_state][state.time]), 0, main_p[self.idx].fd, 0);
     }
 }
 

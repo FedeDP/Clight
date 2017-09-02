@@ -22,7 +22,7 @@ static void init_config_file(enum CONFIG file) {
 
 void read_config(enum CONFIG file) {
     config_t cfg;
-    const char *videodev, *screendev, *sunrise, *sunset;
+    const char *videodev, *screendev, *sunrise, *sunset, *apikey;
     
     init_config_file(file);
     if (access(config_file, F_OK) == -1) {
@@ -55,6 +55,9 @@ void read_config(enum CONFIG file) {
         }
         if (config_lookup_string(&cfg, "sunset", &sunset) == CONFIG_TRUE) {
             strncpy(conf.events[SUNSET], sunset, sizeof(conf.events[SUNSET]) - 1);
+        }
+        if (config_lookup_string(&cfg, "weather_apikey", &apikey) == CONFIG_TRUE) {
+            strncpy(conf.weather_apikey, apikey, sizeof(conf.weather_apikey) - 1);
         }
         
         config_setting_t *points, *root, *timeouts, *gamma;
@@ -134,6 +137,17 @@ void read_config(enum CONFIG file) {
                 }
             } else {
                 WARN("Wrong number of dimmer_timeouts array elements.\n");
+            }
+        }
+        
+        /* Load weather timeouts */
+        if ((timeouts = config_setting_get_member(root, "weather_timeouts"))) {
+            if (config_setting_length(timeouts) == SIZE_AC) {
+                for (int i = 0; i < SIZE_AC; i++) {
+                    conf.weather_timeout[i] = config_setting_get_int_elem(timeouts, i);
+                }
+            } else {
+                WARN("Wrong number of weather_timeouts array elements.\n");
             }
         }
         

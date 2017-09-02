@@ -1,6 +1,7 @@
 #include "../inc/gamma.h"
 #include "../inc/gamma_smooth.h"
 #include "../inc/location.h"
+#include "../inc/bus.h"
 
 #define ZENITH -0.83
 
