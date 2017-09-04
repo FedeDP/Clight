@@ -42,6 +42,7 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "dimmer_pct", &conf.dimmer_pct);
         config_lookup_int(&cfg, "no_dpms", (int *)&modules[DPMS].state);
         config_lookup_int(&cfg, "no_inhibit", (int *)&modules[INHIBIT].state);
+        config_lookup_int(&cfg, "no_weather", (int *)&modules[WEATHER].state);
         config_lookup_int(&cfg, "verbose", &conf.verbose);
         
         if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {
