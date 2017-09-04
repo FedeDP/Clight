@@ -18,6 +18,8 @@ arch:
         - popt
         - libconfig
         - gsl
+        - curl
+        - jansson
     script:
         - "echo $CC"
         - make debug
