@@ -19,8 +19,8 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl libconfig libcurl jansson)
-CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig libcurl jansson) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
+LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl libconfig)
+CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 

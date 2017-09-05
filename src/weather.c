@@ -1,26 +1,18 @@
 #include "../inc/weather.h"
 #include "../inc/bus.h"
-#include <curl/curl.h>
-#include <jansson.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #define BUFFER_SIZE 2048
-
-struct json_write_result {
-    char data[BUFFER_SIZE];
-    unsigned long position;
-};
 
 static void init(void);
 static int check(void);
 static void callback(void);
 static void destroy(void);
-static void get_weather(void);
-static size_t write_data_buffer(void *ptr, size_t size, size_t nmemb, void *stream);
-static int owm_fetch_remote(struct json_write_result *json);
-static void parse_json(const char *json);
+static int get_weather(void);
 static void upower_callback(const void *ptr);
 
-static CURL *handle;
 static struct dependency dependencies[] = { {HARD, LOCATION}, {SOFT, BUS}, {SOFT, UPOWER} };
 static struct self_t self = {
     .name = "Weather",
@@ -34,15 +26,9 @@ void set_weather_self(void) {
 }
 
 static void init(void) {
-    handle = curl_easy_init();
-    if (handle) {
-        struct bus_cb upower_cb = { UPOWER, upower_callback };
-        int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-        INIT_MOD(fd, &upower_cb);
-    } else {
-        WARN("Could not instantiate curl handle.\n");
-        INIT_MOD(DONT_POLL_W_ERR);
-    }
+    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    INIT_MOD(fd, &upower_cb);
 }
 
 static int check(void) {
@@ -50,73 +36,79 @@ static int check(void) {
 }
 
 static void callback(void) {
-    get_weather();
+    if (!get_weather() && is_inited(BRIGHTNESS)) {
+//         reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+    }
     set_timeout(conf.weather_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
 }
 
 static void destroy(void) {
-    if (handle) {
-        curl_easy_cleanup(handle);
-    }
-}
-
-static void get_weather(void) {
-    struct json_write_result json = {{0}};
     
-    if (!owm_fetch_remote(&json)) {
-        parse_json(json.data);
-    }
 }
 
-/* Callback function for curl */
-static size_t write_data_buffer(void *ptr, size_t size, size_t nmemb, void *stream) {
-    struct json_write_result *result = (struct json_write_result * )stream;
-    if (result->position + size * nmemb >= BUFFER_SIZE - 1) {
-        fprintf(stderr, "Write Buffer is too small\n");
-        return 0;
-    }
-    memcpy(result->data + result->position, ptr, size * nmemb);
-    result->position += size * nmemb;
-    return size * nmemb;
-}
-
-/* Fetch json from openweathermap */
-static int owm_fetch_remote(struct json_write_result *json) {
-    int ret = -1;
-    CURLcode result;
+static int get_weather(void) {
+    char header[500] = {0};
+    const char *provider = "api.openweathermap.org";
+    const char *endpoint = "/data/2.5/weather";
+    snprintf(header, sizeof(header),"GET %s?lat=%lf&lon=%lf&units=metric&APPID=%s HTTP/1.0\r\n"
+                                    "Host: %s\r\n\r\n", 
+                                    endpoint, conf.lat, conf.lon, conf.weather_apikey, provider);
     
-    char url [512] = {0};
-    const char *provider = "http://api.openweathermap.org/data/2.5/weather";
-        
-    snprintf(url, sizeof(url), "%s?lat=%lf&lon=%lf&units=metric&APPID=%s", provider, conf.lat, conf.lon, conf.weather_apikey);
-        
-    curl_easy_setopt(handle, CURLOPT_URL, url);
-    curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data_buffer);
-    curl_easy_setopt(handle, CURLOPT_WRITEDATA, json);
-        
-    result = curl_easy_perform(handle);
-    if (result != CURLE_OK) {
-        WARN("Failed to retrieve data (%s)\n", curl_easy_strerror(result));
-    } else {
-        ret = 0;
+    /* get host info */
+    struct addrinfo hints = {0}, *res;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    int err = getaddrinfo(provider, "80", &hints, &res);
+    if (err) {
+        WARN("Error getting address info: %s\n", gai_strerror(err));
+        return -1;
     }
-    return ret;
-}
-
-/* Parse json with json_unpack (jansson library) */
-static void parse_json(const char *json) {
-    json_error_t error;
-    json_t *root = json_loads(json, 0, &error);
-    if (!root) {
-        WARN("Error on line %d (%s)\n", error.line, error.text);
-    } else {
-        if (json_unpack(root, "{s:{s:i}}", "clouds", "all", &state.cloudiness)) {
-            WARN("Failed to find cloudiness in json.\n");
-        } else {
-            DEBUG("Cloudiness: %d\n", state.cloudiness);
+    
+    /* Create socket and connect */
+    int sockfd;
+    for (struct addrinfo *rp = res; rp; rp = rp->ai_next) {
+        sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        
+        if (sockfd == -1) {
+            continue;
         }
+        
+        if (connect(sockfd, rp->ai_addr, rp->ai_addrlen) != -1) {
+            break;
+        }
+        WARN("Error connecting to socket: %s\n", strerror(errno));
+        close(sockfd);
+        sockfd = -1;
     }
-    json_decref(root);
+    freeaddrinfo(res);
+    
+    if (sockfd == -1) {
+        WARN("Error creating socket: %s\n", strerror(errno));
+        return -1;
+    }
+    
+    /* Send request */
+    if (send(sockfd, header, sizeof(header), 0) == -1) {
+        WARN("Error sending GET: %s\n", strerror(errno));
+        return -1;
+    }
+    
+    /* Receive data */
+    char buf[BUFFER_SIZE] = {0};
+    if (recv(sockfd, buf, sizeof(buf) - 1, 0) == -1) {
+        WARN("Error receiving data: %s\n", strerror(errno));
+        return -1;
+    }
+    
+    if (!strstr(buf, "\"clouds\"")) {
+        WARN("Json does not contain clouds information.\n");
+        return -1;
+    }
+    
+    sscanf(strstr(buf, "\"clouds\""), "\"clouds\":{\"all\":%d}", &state.cloudiness);
+    DEBUG("Cloudiness: %d\n", state.cloudiness);
+    close(sockfd);
+    return 0;
 }
 
 static void upower_callback(const void *ptr) {

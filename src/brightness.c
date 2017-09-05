@@ -196,7 +196,7 @@ static void polynomialfit(enum ac_states s) {
     for(i = 0; i < DEGREE; i++) {
         state.fit_parameters[s][i] = gsl_vector_get(c, i);
     }
-    DEBUG("%d: y = %lf + %lfx + %lfx^2\n", s, state.fit_parameters[s][0], 
+    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == 0 ? "AC" : "BATT", state.fit_parameters[s][0], 
           state.fit_parameters[s][1], state.fit_parameters[s][2]);
     
     gsl_multifit_linear_free(ws);
