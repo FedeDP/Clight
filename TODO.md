@@ -10,7 +10,7 @@
 - [ ] fix: gamma/gamma smooth start twice only with weather module enabled.
 
 ### Log file rework
-- [ ] Do not print Latitude = 0.0 Longitude = 0.0 in log file if no user position is setted
+- [x] Do not print Latitude = 0.0 Longitude = 0.0 in log file if no user position is setted
 - [ ] Rework conf log (like conf file -> ## Module, ## Generic, ## Timeouts ecc ecc)
 - [x] Fix log: is_started_disabled instead of is_disabled?
 
