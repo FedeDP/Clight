@@ -62,6 +62,7 @@ static int upower_init(void) {
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     struct bus_match_data *data = (struct bus_match_data *) userdata;
     data->bus_mod_idx = self.idx;
+    /* Fill data->ptr with old ac state */
     data->ptr = malloc(sizeof(int));
     *(int *)(data->ptr) = state.ac_state;
     

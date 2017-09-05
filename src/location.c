@@ -167,6 +167,9 @@ static int geoclue_hook_update(void) {
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     struct bus_match_data *data = (struct bus_match_data *) userdata;
     data->bus_mod_idx = self.idx;
+    /* Fill data->ptr with old latitude/longitude */
+    data->ptr = malloc(2 * sizeof(double));
+    memcpy(data->ptr, (double[]){ conf.lat, conf.lon }, 2 * sizeof(double));
     
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);
