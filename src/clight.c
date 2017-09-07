@@ -55,8 +55,7 @@ static void (*const set_selfs[])(void) = {
     set_userbus_self, set_weather_self, set_network_self
 };
 
-#define RATIO sizeof(set_selfs) / sizeof(void (*const)(void))
-_Static_assert(MODULES_NUM == RATIO, "Wrong number of set_selfs() function pointers in clight.c");
+_Static_assert(MODULES_NUM == SIZE(set_selfs), "Wrong number of set_selfs() function pointers in clight.c");
 
 int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);

@@ -42,7 +42,7 @@ enum states { DAY, NIGHT, EVENT, SIZE_STATES };
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
 /* Whether a module A on B dep is hard (mandatory), soft dep or it is its submodule */
-enum dep_type { HARD, SOFT, SUBMODULE };
+enum dep_type { NO_DEP, HARD, SOFT, SUBMODULE };
 
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
@@ -138,7 +138,7 @@ struct module {
     void (*destroy)(void);                // module destroy function
     void (*poll_cb)(void);                // module poll callback
     struct self_t *self;                  // pointer to self module informations
-    struct dependency *dependent_m;       // pointer to every dependent module self
+    enum dep_type dependent_m[MODULES_NUM];// pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
     enum module_states state;             // state of a module
 };
