@@ -12,7 +12,9 @@ static void callback(void);
 static void destroy(void);
 static int get_weather(void);
 static void upower_callback(const void *ptr);
+static unsigned int get_weather_aware_timeout(int timeout);
 
+static int brightness_timeouts[SIZE_AC][SIZE_STATES];
 static struct dependency dependencies[] = { {HARD, LOCATION}, {SOFT, BUS}, {SOFT, UPOWER} };
 static struct self_t self = {
     .name = "Weather",
@@ -26,6 +28,8 @@ void set_weather_self(void) {
 }
 
 static void init(void) {
+    /* Store correct brightness timeouts */
+    memcpy(brightness_timeouts, conf.timeout, sizeof(int) * SIZE_AC * SIZE_STATES);
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     INIT_MOD(fd, &upower_cb);
@@ -39,16 +43,37 @@ static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     
-    if (!get_weather() && is_inited(BRIGHTNESS)) {
-//         reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+    /* 
+     * get_weather returns 0 only if new cloudiness 
+     * is different from old cloudiness, thus we can be sure
+     * we must update all brightness timeouts and reset BRIGHTNESS timer
+     */
+    if (!get_weather()) {
+        /* Store old timeout */
+        unsigned int old_timeout = conf.timeout[state.ac_state][state.time];
+        /* Modify all brightness timeouts accounting for new cloudiness */
+        for (int i = 0; i < SIZE_AC; i++) {
+            for (int j = 0; j < SIZE_STATES; j++) {
+                conf.timeout[i][j] = get_weather_aware_timeout(brightness_timeouts[i][j]);
+            }
+        }
+        /* If brightness is inited */
+        if (is_inited(BRIGHTNESS)) {
+            reset_timer(main_p[BRIGHTNESS].fd, old_timeout, conf.timeout[state.ac_state][state.time]);
+        }
     }
     set_timeout(conf.weather_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
 }
 
 static void destroy(void) {
-    
+    /* Skeleton function needed for modules interface */ 
 }
 
+/*
+ * Calls through C socket openweathermap api to retrieve Cloudiness
+ * for user position.
+ * Returns -1 on error, 1 if new cloudiness is same as old cloudiness, 0 otherwise.
+ */
 static int get_weather(void) {
     int ret = -1;
     char header[500] = {0};
@@ -121,9 +146,10 @@ static int get_weather(void) {
         goto end;
     }
     
-    ret = 0;
+    int old_cloudiness = state.cloudiness;
     sscanf(strstr(buf, "\"clouds\""), "\"clouds\":{\"all\":%d}", &state.cloudiness);
-    DEBUG("Cloudiness: %d\n", state.cloudiness);
+    DEBUG("Weather cloudiness: %d\n", state.cloudiness);
+    ret = old_cloudiness != state.cloudiness ? 0 : 1;
     
 end:
     if (sockfd > 0) { 
@@ -140,9 +166,12 @@ static void upower_callback(const void *ptr) {
     }
 }
 
-unsigned int get_weather_aware_timeout(const int timeout) {
+/* 
+ * Weather aware timeout goes from 0.99 timeout to 0.5 timeout
+ */
+static unsigned int get_weather_aware_timeout(int timeout) {
     if (state.cloudiness > 50) {
-        return timeout * (1 - (double)(state.cloudiness - 50) / 100);
+        timeout = timeout * (1 - (double)(state.cloudiness - 50) / 100);
     }
     return timeout;
 }

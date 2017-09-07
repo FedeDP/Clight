@@ -6,7 +6,7 @@
 - [ ] weather should depend on network module
 - [x] brightness should depend on weather (soft)
 - [x] conf.weather_timeout[ON_AC/ON_BATT] -> timeout between weather refresh
-- [ ] weather should call reset_timer on BRIGHTNESS when updating cloudiness informations (but reset_timer on BRIGHTNESS should call get_weather_aware_timeout() even when called by GAMMA/other modules)
+- [x] weather should call reset_timer on BRIGHTNESS when updating cloudiness informations (but reset_timer on BRIGHTNESS should call get_weather_aware_timeout() even when called by GAMMA/other modules)
 - [x] fix: gamma/gamma smooth start twice only with weather module enabled.
 
 ### Log file rework

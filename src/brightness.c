@@ -106,7 +106,7 @@ static void do_capture(void) {
         state.fast_recapture = 1;
     } else if (!conf.single_capture_mode) {
         // reset normal timer
-        set_timeout(get_weather_aware_timeout(conf.timeout[state.ac_state][state.time]), 0, main_p[self.idx].fd, 0);
+        set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
     }
 }
 
