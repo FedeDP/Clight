@@ -18,40 +18,48 @@ void log_conf(void) {
     if (log_file) {
         time_t t = time(NULL);
 
-        fprintf(log_file, "Clight\n");
-        fprintf(log_file, "Version: %s\n", VERSION);
-        fprintf(log_file, "Starting time: %s\n", ctime(&t));
+        fprintf(log_file, "Clight\n\n");
+        fprintf(log_file, "* Software version:\t\t%s\n", VERSION);
+        fprintf(log_file, "* Starting time:\t\t%s\n", ctime(&t));
+        fprintf(log_file, "Starting options:\n");
+        fprintf(log_file, "\n### Generic ###\n");
+        fprintf(log_file, "* Verbose (debugging):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
+        fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Not setted");
+        fprintf(log_file, "* Backlight path:\t\t%s%s", strlen(conf.screen_path) ? conf.screen_path : "Not setted", conf.single_capture_mode ? "\n\n" : "\n");
+        
         if (!conf.single_capture_mode) {
-            fprintf(log_file, "Starting options:\n");
-            fprintf(log_file, "* Verbose (debugging):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
-            fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
-            fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
-            fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
-            fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
-            fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Not setted");
-            fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Not setted");
-            fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
-            fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
-            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", is_started_disabled(GAMMA_SMOOTH) ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", is_started_disabled(DIMMER_SMOOTH) ? "Disabled" : "Enabled");
             if (conf.lat != 0.0f || conf.lon != 0.0f) {
                 fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.lat, conf.lon);
             } else {
                 fprintf(log_file, "* User position:\t\tNot setted\n");
             }
+            fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
+            fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
             fprintf(log_file, "* User setted sunrise:\t\t%s\n", strlen(conf.events[SUNRISE]) ? conf.events[SUNRISE] : "Not setted");
             fprintf(log_file, "* User setted sunset:\t\t%s\n", strlen(conf.events[SUNSET]) ? conf.events[SUNSET] : "Not setted");
-            fprintf(log_file, "* Gamma correction:\t\t%s\n", is_started_disabled(GAMMA) ? "Disabled" : "Enabled");
+            
             fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
-            fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Dimmer backlight:\t\t%d%%\n", conf.dimmer_pct);
+            
+            fprintf(log_file, "\n### Timeouts ###\n");
+            fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
+            fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
+            fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
             fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
+            fprintf(log_file, "* Weather timeouts:\t\tAC %d\tBATT %d\n", conf.weather_timeout[ON_AC], conf.weather_timeout[ON_BATTERY]);
+            fprintf(log_file, "* Dpms timeouts:\t\tAC %d:%d:%d\tBATT %d:%d:%d\n",
+                    conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],
+                    conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]
+            );
+            
+            fprintf(log_file, "\n### Modules ###\n");
+            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", is_started_disabled(GAMMA_SMOOTH) ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", is_started_disabled(DIMMER_SMOOTH) ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Gamma correction:\t\t%s\n", is_started_disabled(GAMMA) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dpms tool:\t\t%s\n", is_started_disabled(DPMS) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Weather support:\t\t%s\n", is_started_disabled(WEATHER) ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Dpms timeouts:\t\tAC %d:%d:%d\tBATT %d:%d:%d\n\n",
-                conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],
-                conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]
-            );
+            fprintf(log_file, "* Screen dimmer tool:\t\t%s\n\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");
         }
         fflush(log_file);
     }

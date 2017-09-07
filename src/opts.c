@@ -27,8 +27,8 @@ void init_opts(int argc, char *argv[]) {
     conf.dimmer_timeout[ON_AC] = 300;
     conf.dimmer_timeout[ON_BATTERY] = 45;
     conf.dimmer_pct = 20;
-    conf.weather_timeout[ON_AC] = 6 * 60 * 60;
-    conf.weather_timeout[ON_BATTERY] = 6 * 60 * 60;
+    conf.weather_timeout[ON_AC] = 60 * 60;
+    conf.weather_timeout[ON_BATTERY] = 3 * 60 * 60;
     
     /*
      * Default polynomial regression points:
@@ -204,11 +204,11 @@ static void check_conf(void) {
     }
     if (conf.weather_timeout[ON_AC] <= 0) {
         WARN("Wrong AC weather timeout. Resetting default value.\n");
-        conf.weather_timeout[ON_AC] = 6 * 60 * 60;
+        conf.weather_timeout[ON_AC] = 60 * 60;
     }
     if (conf.weather_timeout[ON_BATTERY] <= 0) {
         WARN("Wrong BATT weather timeout. Resetting default value.\n");
-        conf.weather_timeout[ON_BATTERY] = 6 * 60 * 60;
+        conf.weather_timeout[ON_BATTERY] = 3 * 60 * 60;
     }
     
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;

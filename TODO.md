@@ -7,11 +7,11 @@
 - [x] brightness should depend on weather (soft)
 - [x] conf.weather_timeout[ON_AC/ON_BATT] -> timeout between weather refresh
 - [ ] weather should call reset_timer on BRIGHTNESS when updating cloudiness informations (but reset_timer on BRIGHTNESS should call get_weather_aware_timeout() even when called by GAMMA/other modules)
-- [ ] fix: gamma/gamma smooth start twice only with weather module enabled.
+- [x] fix: gamma/gamma smooth start twice only with weather module enabled.
 
 ### Log file rework
 - [x] Do not print Latitude = 0.0 Longitude = 0.0 in log file if no user position is setted
-- [ ] Rework conf log (like conf file -> ## Module, ## Generic, ## Timeouts ecc ecc)
+- [x] Rework conf log (like conf file -> ## Module, ## Generic, ## Timeouts ecc ecc)
 - [x] Fix log: is_started_disabled instead of is_disabled?
 
 ## Later/Ideas
