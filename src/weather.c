@@ -1,5 +1,6 @@
 #include "../inc/weather.h"
 #include "../inc/bus.h"
+#include "../inc/network.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -11,11 +12,19 @@ static int check(void);
 static void callback(void);
 static void destroy(void);
 static int get_weather(void);
-static void upower_callback(const void *ptr);
 static unsigned int get_weather_aware_timeout(int timeout);
+static void upower_callback(const void *ptr);
+static void network_callback(const void *ptr);
 
+/* 
+ * network with continuous disconnections can lead to 
+ * lots of owm weather api calls (and battery/network usage too).
+ * So, we store last time an api call was made and avoid doing the same call
+ * until conf.weather_timeout[state.ac_state] has really elapsed.
+ */
+static time_t last_call;
 static int brightness_timeouts[SIZE_AC][SIZE_STATES];
-static struct dependency dependencies[] = { {HARD, LOCATION}, {SOFT, UPOWER} };
+static struct dependency dependencies[] = { {HARD, LOCATION}, {SOFT, UPOWER}, {SOFT, NETWORK} };
 static struct self_t self = {
     .name = "Weather",
     .idx = WEATHER,
@@ -30,9 +39,12 @@ void set_weather_self(void) {
 static void init(void) {
     /* Store correct brightness timeouts */
     memcpy(brightness_timeouts, conf.timeout, sizeof(int) * SIZE_AC * SIZE_STATES);
+    
     struct bus_cb upower_cb = { UPOWER, upower_callback };
-    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    INIT_MOD(fd, &upower_cb);
+    struct bus_cb network_cb = { NETWORK, network_callback };
+    
+    int fd = start_timer(CLOCK_BOOTTIME, 0, network_enabled(state.nmstate));
+    INIT_MOD(fd, &upower_cb, &network_cb);
 }
 
 static int check(void) {
@@ -42,6 +54,9 @@ static int check(void) {
 static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+    
+    /* Store latest call time */
+    time(&last_call);
     
     /* 
      * get_weather returns 0 only if new cloudiness 
@@ -97,11 +112,9 @@ static int get_weather(void) {
     int sockfd;
     for (struct addrinfo *rp = res; rp; rp = rp->ai_next) {
         sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        
         if (sockfd == -1) {
             continue;
         }
-        
         if (connect(sockfd, rp->ai_addr, rp->ai_addrlen) != -1) {
             break;
         }
@@ -158,14 +171,6 @@ end:
     return ret;
 }
 
-static void upower_callback(const void *ptr) {
-    int old_ac_state = *(int *)ptr;
-    /* Force check that we received an ac_state changed event for real */
-    if (old_ac_state != state.ac_state) {
-        reset_timer(main_p[self.idx].fd, conf.weather_timeout[old_ac_state], conf.weather_timeout[state.ac_state]);
-    }
-}
-
 /* 
  * Weather aware timeout goes from 0.99 timeout to 0.5 timeout
  */
@@ -174,4 +179,39 @@ static unsigned int get_weather_aware_timeout(int timeout) {
         timeout = timeout * (1 - (double)(state.cloudiness - 50) / 100);
     }
     return timeout;
+}
+
+static void upower_callback(const void *ptr) {
+    int old_ac_state = *(int *)ptr;
+    /* Force check that we received an ac_state changed event for real */
+    if (old_ac_state != state.ac_state) {
+        reset_timer(main_p[self.idx].fd, conf.weather_timeout[old_ac_state], conf.weather_timeout[state.ac_state]);
+    }
+}
+
+static void network_callback(const void *ptr) {
+    int old_network_state = *(int *)ptr;
+    int enabled = network_enabled(state.nmstate);
+    
+    if (network_enabled(old_network_state) != enabled) {
+        if (enabled) {
+            /* 
+             * it means we had no network previously;
+             * Restart now this module, paying attenction to latest time
+             * a get_weather was called.
+             */
+            time_t now;
+            time(&now);
+            if (now - last_call > conf.weather_timeout[state.ac_state]) {
+                set_timeout(0, 1, main_p[self.idx].fd, 0);
+            } else {
+                set_timeout(conf.weather_timeout[state.ac_state] - (now - last_call), 1, main_p[self.idx].fd, 0);
+            }
+            DEBUG("Weather module being restarted.\n");
+        } else {
+            /* We have not network now. Pause this module */
+            set_timeout(0, 0, main_p[self.idx].fd, 0);
+            DEBUG("Weather module being paused.\n");
+        }
+    }
 }

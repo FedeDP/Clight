@@ -27,7 +27,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, WEATHER, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, WEATHER, NETWORK, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -58,6 +58,10 @@ enum bus_type { SYSTEM, USER };
 
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
+
+enum NMState {  NM_STATE_UNKNOWN = 0, NM_STATE_ASLEEP = 10, NM_STATE_DISCONNECTED = 20, 
+                NM_STATE_DISCONNECTING = 30, NM_STATE_CONNECTING = 40, NM_STATE_CONNECTED_LOCAL = 50, 
+                NM_STATE_CONNECTED_SITE = 60, NM_STATE_CONNECTED_GLOBAL = 70 };
 
 /* Struct that holds global config as passed through cmdline args */
 struct config {
@@ -106,6 +110,7 @@ struct state {
     int dimmed_br;                          // backlight level when dimmed
     int pm_inhibited;                       // whether powermanagement is inhibited
     int cloudiness;                         // weather cloudiness for user location
+    enum NMState nmstate;                           // NetworkManager own states
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 
