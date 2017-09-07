@@ -11,6 +11,7 @@
 - [ ] Update readme
 - [x] FIXME: network with continuous disconnections can lead to lots of owm weather api calls (and battery/network usage too). Find a proper way to deal with this.
 - [x] rework num_dependent -> use array of MODULES_NUM with value enum dep_type
+- [ ] Double check any bug with new dependent_m
 
 ### Log file rework
 - [x] Do not print Latitude = 0.0 Longitude = 0.0 in log file if no user position is setted
