@@ -15,7 +15,7 @@ static void upower_callback(const void *ptr);
 static unsigned int get_weather_aware_timeout(int timeout);
 
 static int brightness_timeouts[SIZE_AC][SIZE_STATES];
-static struct dependency dependencies[] = { {HARD, LOCATION}, {SOFT, BUS}, {SOFT, UPOWER} };
+static struct dependency dependencies[] = { {HARD, LOCATION}, {SOFT, UPOWER} };
 static struct self_t self = {
     .name = "Weather",
     .idx = WEATHER,
