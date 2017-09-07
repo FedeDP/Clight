@@ -149,8 +149,8 @@ static int get_weather(void) {
     int old_cloudiness = state.cloudiness;
     sscanf(strstr(buf, "\"clouds\""), "\"clouds\":{\"all\":%d}", &state.cloudiness);
     DEBUG("Weather cloudiness: %d\n", state.cloudiness);
-    ret = old_cloudiness != state.cloudiness ? 0 : 1;
-    
+    ret = old_cloudiness == state.cloudiness;
+
 end:
     if (sockfd > 0) { 
         close(sockfd);
