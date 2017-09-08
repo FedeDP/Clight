@@ -62,6 +62,9 @@ static int inhibit_init(void) {
 static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     struct bus_match_data *data = (struct bus_match_data *) userdata;
     data->bus_mod_idx = self.idx;
+    /* Fill data->ptr with old inhibit state */
+    data->ptr = malloc(sizeof(int));
+    *(int *)(data->ptr) = state.pm_inhibited;
 
     struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
     call(&state.pm_inhibited, "b", &args, "");

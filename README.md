@@ -68,10 +68,12 @@ Location received will be then cached when clight exit. This way, if no internet
 * UPower support, to set longer timeouts between captures while on battery, in order to save some energy.
 Moreover, you can set a percentage of maximum settable brightness while on battery.
 * You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
-* It will check if current backlight interface is enabled before changing backlight/dimming screen. It will avoid to do any frame capture at all if interface is disabled. It can happen when you use your laptop connected to an external monitor, with internal monitor switched off; thus changing backlight would be useless.
+* It will check if current backlight interface is enabled before changing backlight/dimming screen. It will avoid doing any frame capture at all if interface is disabled. It can happen when you use your laptop connected to an external monitor, with internal monitor switched off; thus changing backlight would be useless.
 * DPMS support: it will set desired dpms timeouts for AC/batt states.
 * Dpms and dimmer can be disabled while on AC, just set dimmer timeout/any dpms timeout for given AC state <= 0.
 * Clight supports org.freedesktop.PowerManagement.Inhibit interface. Thus, when for example watching a youtube video from chromium, dimmer module won't dim your screen.
+* Weather support: if an OpenWeatherMap apikey is provided through conf file or cmdline option, clight will adjust timeouts between captures given current cloudiness. Function that adjusts timeouts is quite simple: if cloudiness > 50 -> current timeout is shorten of (cloudiness - 50) / 100. This way, at 51 timeout will be 99% of original timeout. At 100 it will be 50%.
+* NetworkManager StateChanged signal is supported, thus modules can react to connection state changes (only used by weather for now).
 * Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
 
 ### Valgrind is run with:

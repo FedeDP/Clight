@@ -20,7 +20,7 @@ INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
 LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl libconfig)
-CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
+CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c11
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
@@ -39,7 +39,7 @@ all: clight clean
 debug: clight-debug clean
 
 objects:
-	@cd $(SRCDIR); $(CC) -c *.c $(CFLAGS)
+	@cd $(SRCDIR); $(CC) -c *.c $(CFLAGS) -O3
 
 objects-debug:
 	@cd $(SRCDIR); $(CC) -c *.c -Wall $(CFLAGS) -Wshadow -Wstrict-overflow -Wtype-limits -fno-strict-aliasing -Wformat -Wformat-security -g

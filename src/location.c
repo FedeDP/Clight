@@ -132,6 +132,13 @@ static int check(void) {
      */
     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
         change_dep_type(GAMMA, self.idx, SOFT);
+        /* 
+         * weather requires lat or lon, so do not disable it if they're provided.
+         * But disable it if sunrise or sunset times are set fixed by user.
+         */
+        if (conf.lat != 0.0 && conf.lon != 0.0) {
+            change_dep_type(WEATHER, self.idx, SOFT);
+        }
         return 1;
     }
     return !is_idle(GAMMA) && !is_inited(GAMMA);
@@ -160,6 +167,9 @@ static int geoclue_hook_update(void) {
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     struct bus_match_data *data = (struct bus_match_data *) userdata;
     data->bus_mod_idx = self.idx;
+    /* Fill data->ptr with old latitude/longitude */
+    data->ptr = malloc(2 * sizeof(double));
+    memcpy(data->ptr, (double[]){ conf.lat, conf.lon }, 2 * sizeof(double));
     
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);

@@ -27,6 +27,8 @@ void init_opts(int argc, char *argv[]) {
     conf.dimmer_timeout[ON_AC] = 300;
     conf.dimmer_timeout[ON_BATTERY] = 45;
     conf.dimmer_pct = 20;
+    conf.weather_timeout[ON_AC] = 60 * 60;
+    conf.weather_timeout[ON_BATTERY] = 3 * 60 * 60;
     
     /*
      * Default polynomial regression points:
@@ -100,6 +102,8 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"batt-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &modules[DPMS].state, 100, "Disable dpms tool", NULL},
         {"no-inhibit", 0, POPT_ARG_NONE, &modules[INHIBIT].state, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
+        {"no-weather", 0, POPT_ARG_NONE, &modules[WEATHER].state, 100, "Disable weather support", NULL},
+        {"apikey", 0, POPT_ARG_STRING, NULL, 6, "OpenWeatherMap apikey for weather support", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         POPT_AUTOHELP
@@ -126,6 +130,9 @@ static void parse_cmd(int argc, char *const argv[]) {
             case 5:
                 printf("%s version: %s\n", argv[0], VERSION);
                 exit(EXIT_SUCCESS);
+            case 6:
+                strncpy(conf.weather_apikey, str, sizeof(conf.weather_apikey) - 1);
+                break;
             default:
                 break;
         }
@@ -194,6 +201,14 @@ static void check_conf(void) {
     if (conf.dimmer_pct > 100 || conf.dimmer_pct < 0) {
         WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
         conf.dimmer_pct = 20;
+    }
+    if (conf.weather_timeout[ON_AC] <= 0) {
+        WARN("Wrong AC weather timeout. Resetting default value.\n");
+        conf.weather_timeout[ON_AC] = 60 * 60;
+    }
+    if (conf.weather_timeout[ON_BATTERY] <= 0) {
+        WARN("Wrong BATT weather timeout. Resetting default value.\n");
+        conf.weather_timeout[ON_BATTERY] = 3 * 60 * 60;
     }
     
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;

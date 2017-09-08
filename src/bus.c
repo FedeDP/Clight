@@ -72,12 +72,18 @@ static void callback(void) {
         r = sd_bus_process(bus, NULL);
         /* check if any match changed bus_cb_idx, then call correct callback */
         if (_cb.userdata.bus_mod_idx != MODULES_NUM) {
-            poll_cb(_cb.userdata.bus_mod_idx);
+            /* 
+             * Run callbacks before poll_cb, as poll_cb will call
+             * started_cb, thus starting all of dependent modules;
+             * some of these modules may hook a callback on this module
+             * and that callback would be ran if poll_cb was before run_callbacks()
+             */
             run_callbacks(_cb.userdata.bus_mod_idx, _cb.userdata.ptr);
             if (_cb.userdata.ptr) {
                 free(_cb.userdata.ptr);
                 _cb.userdata.ptr = NULL;
             }
+            poll_cb(_cb.userdata.bus_mod_idx);
         }
     } while (r > 0);
 }

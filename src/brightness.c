@@ -1,5 +1,6 @@
 #include "../inc/brightness.h"
 #include "../inc/bus.h"
+#include "../inc/weather.h"
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 
@@ -16,7 +17,7 @@ static void polynomialfit(enum ac_states state);
 static double clamp(double value, double max, double min);
 static void upower_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {SOFT, WEATHER} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
@@ -55,6 +56,7 @@ static void destroy(void) {
 static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+    
     do_capture();
     if (conf.single_capture_mode) {
         state.quit = NORM_QUIT;
@@ -195,7 +197,7 @@ static void polynomialfit(enum ac_states s) {
     for(i = 0; i < DEGREE; i++) {
         state.fit_parameters[s][i] = gsl_vector_get(c, i);
     }
-    DEBUG("%d: y = %lf + %lfx + %lfx^2\n", s, state.fit_parameters[s][0], 
+    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == 0 ? "AC" : "BATT", state.fit_parameters[s][0], 
           state.fit_parameters[s][1], state.fit_parameters[s][2]);
     
     gsl_multifit_linear_free(ws);

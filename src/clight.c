@@ -36,6 +36,8 @@
 #include "../inc/xorg.h"
 #include "../inc/inhibit.h"
 #include "../inc/userbus.h"
+#include "../inc/weather.h"
+#include "../inc/network.h"
 
 static void init(int argc, char *argv[]);
 static void set_modules_selfs(void);
@@ -46,11 +48,14 @@ static void main_poll(void);
 /*
  * pointers to init modules functions;
  */
-static void (*const set_selfs[MODULES_NUM])(void) = {
+static void (*const set_selfs[])(void) = {
     set_brightness_self, set_location_self, set_upower_self, set_gamma_self,
     set_gamma_smooth_self, set_signal_self, set_bus_self, set_dimmer_self,
-    set_dimmer_smooth_self, set_dpms_self, set_xorg_self, set_inhibit_self, set_userbus_self
+    set_dimmer_smooth_self, set_dpms_self, set_xorg_self, set_inhibit_self, 
+    set_userbus_self, set_weather_self, set_network_self
 };
+
+_Static_assert(MODULES_NUM == SIZE(set_selfs), "Wrong number of set_selfs() function pointers in clight.c");
 
 int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
@@ -126,13 +131,10 @@ static void main_poll(void) {
             ERROR("%s\n", strerror(errno));
         }
 
-        while (r > 0 && !state.quit) {
-            for (int i = 0; i < MODULES_NUM; i++) {
-                if (main_p[i].revents & POLLIN) {
-                    poll_cb(i);
-                    r--;
-                    break;
-                }
+        for (int i = 0; i < MODULES_NUM && !state.quit && r > 0; i++) {
+            if (main_p[i].revents & POLLIN) {
+                poll_cb(i);
+                r--;
             }
         }
     }

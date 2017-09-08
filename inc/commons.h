@@ -27,7 +27,7 @@
 #define DEGREE 3                            // number of parameters for polynomial regression
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, WEATHER, NETWORK, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -42,7 +42,7 @@ enum states { DAY, NIGHT, EVENT, SIZE_STATES };
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
 /* Whether a module A on B dep is hard (mandatory), soft dep or it is its submodule */
-enum dep_type { HARD, SOFT, SUBMODULE };
+enum dep_type { NO_DEP, HARD, SOFT, SUBMODULE };
 
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
@@ -58,6 +58,10 @@ enum bus_type { SYSTEM, USER };
 
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
+
+enum NMState {  NM_STATE_UNKNOWN = 0, NM_STATE_ASLEEP = 10, NM_STATE_DISCONNECTED = 20, 
+                NM_STATE_DISCONNECTING = 30, NM_STATE_CONNECTING = 40, NM_STATE_CONNECTED_LOCAL = 50, 
+                NM_STATE_CONNECTED_SITE = 60, NM_STATE_CONNECTED_GLOBAL = 70 };
 
 /* Struct that holds global config as passed through cmdline args */
 struct config {
@@ -76,6 +80,8 @@ struct config {
     int dimmer_pct;                         // pct of max brightness to be used while dimming
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
+    char weather_apikey[32 + 1];            // apikey for openweathermap
+    int weather_timeout[SIZE_AC];          // timeouts for weather update
 };
 
 /*
@@ -103,6 +109,8 @@ struct state {
     int is_dimmed;                          // whether we are currently in dimmed state
     int dimmed_br;                          // backlight level when dimmed
     int pm_inhibited;                       // whether powermanagement is inhibited
+    int cloudiness;                         // weather cloudiness for user location
+    enum NMState nmstate;                           // NetworkManager own states
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 
@@ -130,7 +138,7 @@ struct module {
     void (*destroy)(void);                // module destroy function
     void (*poll_cb)(void);                // module poll callback
     struct self_t *self;                  // pointer to self module informations
-    struct dependency *dependent_m;       // pointer to every dependent module self
+    enum dep_type dependent_m[MODULES_NUM];// pointer to every dependent module self
     int num_dependent;                    // number of dependent-on-this-module modules
     enum module_states state;             // state of a module
 };
