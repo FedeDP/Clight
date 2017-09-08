@@ -67,7 +67,7 @@ static int on_network_change(__attribute__((unused)) sd_bus_message *m, void *us
     struct bus_args network_args = {"org.freedesktop.NetworkManager",  "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager", "State"};
     get_property(&network_args, "u", &state.nmstate);
     if (*(int *)(data->ptr) != state.nmstate) {
-        INFO("New network state: %u.\n", state.nmstate);
+        DEBUG("New network state: %u.\n", state.nmstate);
     }
     return 0;
 }
