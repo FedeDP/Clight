@@ -39,7 +39,7 @@ all: clight clean
 debug: clight-debug clean
 
 objects:
-	@cd $(SRCDIR); $(CC) -c *.c $(CFLAGS)
+	@cd $(SRCDIR); $(CC) -c *.c $(CFLAGS) -O3
 
 objects-debug:
 	@cd $(SRCDIR); $(CC) -c *.c -Wall $(CFLAGS) -Wshadow -Wstrict-overflow -Wtype-limits -fno-strict-aliasing -Wformat -Wformat-security -g

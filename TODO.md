@@ -8,7 +8,7 @@
 - [x] conf.weather_timeout[ON_AC/ON_BATT] -> timeout between weather refresh
 - [x] weather should call reset_timer on BRIGHTNESS when updating cloudiness informations (but reset_timer on BRIGHTNESS should call get_weather_aware_timeout() even when called by GAMMA/other modules)
 - [x] fix: gamma/gamma smooth start twice only with weather module enabled.
-- [ ] Update readme
+- [x] Update readme
 - [x] FIXME: network with continuous disconnections can lead to lots of owm weather api calls (and battery/network usage too). Find a proper way to deal with this.
 - [x] rework num_dependent -> use array of MODULES_NUM with value enum dep_type
 - [ ] Double check any bug with new dependent_m

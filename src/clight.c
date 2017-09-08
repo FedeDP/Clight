@@ -131,9 +131,10 @@ static void main_poll(void) {
             ERROR("%s\n", strerror(errno));
         }
 
-        for (int i = 0; i < MODULES_NUM && !state.quit; i++) {
+        for (int i = 0; i < MODULES_NUM && !state.quit && r > 0; i++) {
             if (main_p[i].revents & POLLIN) {
                 poll_cb(i);
+                r--;
             }
         }
     }
