@@ -161,7 +161,7 @@ static int get_weather(void) {
     
     int old_cloudiness = state.cloudiness;
     sscanf(strstr(buf, "\"clouds\""), "\"clouds\":{\"all\":%d}", &state.cloudiness);
-    DEBUG("Weather cloudiness: %d\n", state.cloudiness);
+    INFO("Weather cloudiness: %d.\n", state.cloudiness);
     ret = old_cloudiness == state.cloudiness;
 
 end:
