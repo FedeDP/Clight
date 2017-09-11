@@ -90,7 +90,7 @@ static void destroy(void) {
  * Returns -1 on error, 1 if new cloudiness is same as old cloudiness, 0 otherwise.
  */
 static int get_weather(void) {
-    int ret = -1;
+    int ret = -1, sockfd = -1;
     char header[500] = {0};
     const char *provider = "api.openweathermap.org";
     const char *endpoint = "/data/2.5/weather";
@@ -109,7 +109,6 @@ static int get_weather(void) {
     }
     
     /* Create socket and connect */
-    int sockfd;
     for (struct addrinfo *rp = res; rp; rp = rp->ai_next) {
         sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
         if (sockfd == -1) {
