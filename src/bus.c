@@ -54,7 +54,7 @@ static int check(void) {
  */
 static void destroy(void) {
     if (bus) {
-        bus = sd_bus_flush_close_unref(bus);
+        sd_bus_flush_close_unref(bus);
     }
     if (_cb.callbacks) {
         free(_cb.callbacks);
@@ -167,6 +167,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
                 while (sd_bus_message_read(reply, userptr_type + 1, &(((double *)userptr)[i])) > 0) {
                     i++;
                 }
+                sd_bus_message_exit_container(reply);
             }
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
