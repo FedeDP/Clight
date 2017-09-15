@@ -10,8 +10,6 @@ static int check(void);
 static void destroy(void);
 static void callback(void);
 static void check_gamma(void);
-static double  degToRad(const double angleDeg);
-static double radToDeg(const double angleRad);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng,
                                     time_t *tt, enum events event, int tomorrow);
@@ -77,7 +75,7 @@ static void check_gamma(void) {
      * the wrong day (it should compute "today" events). Thus, avoid this kind of issue.
      */
     enum states old_state = state.time;
-    get_gamma_events(&t, conf.lat, conf.lon, 0);
+    get_gamma_events(&t, conf.loc.lat, conf.loc.lon, 0);
 
     /* 
      * Force set every time correct gamma 
@@ -101,20 +99,6 @@ static void check_gamma(void) {
     if (old_state != state.time && is_inited(BRIGHTNESS) && !state.fast_recapture) {
         reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
     }
-}
-
-/* 
- * Convert degrees to radians 
- */
-static double  degToRad(double angleDeg) {
-    return (M_PI * angleDeg / 180.0);
-}
-
-/* 
- * Convert radians to degrees 
- */
-static double radToDeg(double angleRad) {
-    return (180.0 * angleRad / M_PI);
 }
 
 static float to_hours(const float rad) {
@@ -320,8 +304,12 @@ static void check_state(time_t *now) {
     }
 }
 
-static void location_callback(__attribute__((unused)) const void *ptr) {
-    /* Updated GAMMA module sunrise/sunset for new location */
-    state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-    set_timeout(0, 1, main_p[self.idx].fd, 0);
+static void location_callback(const void *ptr) {
+    struct location old_loc = *(struct location *)ptr;
+    
+    if (get_distance(old_loc, conf.loc) > LOC_DISTANCE_THRS) {
+        /* Updated GAMMA module sunrise/sunset for new location */
+        state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+        set_timeout(0, 1, main_p[self.idx].fd, 0);
+    }
 }

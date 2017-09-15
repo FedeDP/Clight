@@ -1,6 +1,7 @@
 #include "../inc/weather.h"
 #include "../inc/bus.h"
 #include "../inc/network.h"
+#include "../inc/location.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -15,6 +16,7 @@ static int get_weather(void);
 static unsigned int get_weather_aware_timeout(int timeout);
 static void upower_callback(const void *ptr);
 static void network_callback(const void *ptr);
+static void location_callback(const void *ptr);
 
 /* 
  * network with continuous disconnections can lead to 
@@ -42,9 +44,10 @@ static void init(void) {
     
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb network_cb = { NETWORK, network_callback };
+    struct bus_cb location_cb = { LOCATION, location_callback };
     
     int fd = start_timer(CLOCK_BOOTTIME, 0, network_enabled(state.nmstate));
-    INIT_MOD(fd, &upower_cb, &network_cb);
+    INIT_MOD(fd, &upower_cb, &network_cb, &location_cb);
 }
 
 static int check(void) {
@@ -96,7 +99,7 @@ static int get_weather(void) {
     const char *endpoint = "/data/2.5/weather";
     snprintf(header, sizeof(header),"GET %s?lat=%lf&lon=%lf&units=metric&APPID=%s HTTP/1.0\r\n"
                                     "Host: %s\r\n\r\n", 
-                                    endpoint, conf.lat, conf.lon, conf.weather_apikey, provider);
+                                    endpoint, conf.loc.lat, conf.loc.lon, conf.weather_apikey, provider);
     
     /* get host info */
     struct addrinfo hints = {0}, *res = NULL;
@@ -212,5 +215,17 @@ static void network_callback(const void *ptr) {
             set_timeout(0, 0, main_p[self.idx].fd, 0);
             DEBUG("Weather module being paused.\n");
         }
+    }
+}
+
+/* 
+ * On location change, 
+ * reload weather for new location 
+ */
+static void location_callback(const void *ptr) {
+    struct location old_loc = *(struct location *)ptr;
+    
+    if (get_distance(old_loc, conf.loc) > LOC_DISTANCE_THRS) {
+        set_timeout(0, 1, main_p[self.idx].fd, 0);
     }
 }

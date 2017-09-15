@@ -196,14 +196,14 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
 /*
  * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
  */
-int set_property(const struct bus_args *a, const char type, const char *value) {
+int set_property(const struct bus_args *a, const char type, const void *value) {
     sd_bus *tmp = a->type == USER ? userbus : bus;
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
 
     switch (type) {
         case SD_BUS_TYPE_UINT32:
-            r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "u", atoi(value));
+            r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "u", *(unsigned int *)value);
             break;
         case SD_BUS_TYPE_STRING:
             r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "s", value);

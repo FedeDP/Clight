@@ -35,8 +35,8 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "no_smooth_gamma_transition", (int *)&modules[GAMMA_SMOOTH].state);
         config_lookup_int(&cfg, "no_smooth_dimmer_transition", (int *)&modules[DIMMER_SMOOTH].state);
         config_lookup_int(&cfg, "no_gamma", (int *)&modules[GAMMA].state);
-        config_lookup_float(&cfg, "latitude", &conf.lat);
-        config_lookup_float(&cfg, "longitude", &conf.lon);
+        config_lookup_float(&cfg, "latitude", &conf.loc.lat);
+        config_lookup_float(&cfg, "longitude", &conf.loc.lon);
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
         config_lookup_int(&cfg, "no_dimmer", (int *)&modules[DIMMER].state);
         config_lookup_int(&cfg, "dimmer_pct", &conf.dimmer_pct);

@@ -25,6 +25,7 @@
 #define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used eg when no geoclue2 is found)
 #define SIZE_POINTS 11                      // number of points (from 0 to 10 included)
 #define DEGREE 3                            // number of parameters for polynomial regression
+#define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 
 /* List of modules indexes */
 enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, WEATHER, NETWORK, MODULES_NUM };
@@ -63,6 +64,12 @@ enum NMState {  NM_STATE_UNKNOWN = 0, NM_STATE_ASLEEP = 10, NM_STATE_DISCONNECTE
                 NM_STATE_DISCONNECTING = 30, NM_STATE_CONNECTING = 40, NM_STATE_CONNECTED_LOCAL = 50, 
                 NM_STATE_CONNECTED_SITE = 60, NM_STATE_CONNECTED_GLOBAL = 70 };
 
+/* Struct that holds data about a geographic location */
+struct location {
+    double lat;
+    double lon;
+};
+
 /* Struct that holds global config as passed through cmdline args */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
@@ -71,8 +78,7 @@ struct config {
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
-    double lat;                             // latitude
-    double lon;                             // longitude
+    struct location loc;                    // user location
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl

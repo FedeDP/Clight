@@ -1,5 +1,4 @@
 #include "../inc/location.h"
-#include "../inc/bus.h"
 
 static void init(void);
 static int check(void);
@@ -70,8 +69,8 @@ static int load_cache_location(void) {
     int ret;
     FILE *f = fopen(cache_file, "r");
     if (f) {
-        fscanf(f, "%lf %lf", &conf.lat, &conf.lon);
-        INFO("Location %.2lf %.2lf loaded from cache file!\n", conf.lat, conf.lon);
+        fscanf(f, "%lf %lf", &conf.loc.lat, &conf.loc.lon);
+        INFO("Location %.2lf %.2lf loaded from cache file!\n", conf.loc.lat, conf.loc.lon);
         fclose(f);
         ret = 0;
     } else {
@@ -130,13 +129,13 @@ static int check(void) {
      * If sunrise and sunset times, or lat and lon, are both passed, 
      * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) 
      */
-    if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.lat != 0.0 && conf.lon != 0.0)) {
+    if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != 0.0 && conf.loc.lon != 0.0)) {
         change_dep_type(GAMMA, self.idx, SOFT);
         /* 
          * weather requires lat or lon, so do not disable it if they're provided.
          * But disable it if sunrise or sunset times are set fixed by user.
          */
-        if (conf.lat != 0.0 && conf.lon != 0.0) {
+        if (conf.loc.lat != 0.0 && conf.loc.lon != 0.0) {
             change_dep_type(WEATHER, self.idx, SOFT);
         }
         return 1;
@@ -168,8 +167,8 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     struct bus_match_data *data = (struct bus_match_data *) userdata;
     data->bus_mod_idx = self.idx;
     /* Fill data->ptr with old latitude/longitude */
-    data->ptr = malloc(2 * sizeof(double));
-    memcpy(data->ptr, (double[]){ conf.lat, conf.lon }, 2 * sizeof(double));
+    data->ptr = malloc(sizeof(struct location));
+    memcpy(data->ptr, &conf.loc, sizeof(struct location));
     
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);
@@ -177,10 +176,10 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
     struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
 
-    get_property(&lat_args, "d", &conf.lat);
-    get_property(&lon_args, "d", &conf.lon);
+    get_property(&lat_args, "d", &conf.loc.lat);
+    get_property(&lon_args, "d", &conf.loc.lon);
     
-    INFO("New location received: %.2lf, %.2lf\n", conf.lat, conf.lon);
+    INFO("New location received: %.2lf, %.2lf\n", conf.loc.lat, conf.loc.lon);
     return 0;
 }
 
@@ -193,7 +192,8 @@ static int geoclue_client_start(void) {
     struct bus_args thres_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold"};
 
     set_property(&id_args, 's', "clight");
-    set_property(&thres_args, 'u', "50000"); // 50kms
+    unsigned int loc_thrs = LOC_DISTANCE_THRS;
+    set_property(&thres_args, 'u', &loc_thrs); // 50kms
     return call(NULL, "", &call_args, "");
 }
 
@@ -206,14 +206,41 @@ static void geoclue_client_stop(void) {
 }
 
 static void cache_location(void) {
-    if (strlen(cache_file) && conf.lat != 0.0 && conf.lon != 0.0) {
+    if (strlen(cache_file) && conf.loc.lat != 0.0 && conf.loc.lon != 0.0) {
         FILE *f = fopen(cache_file, "w");
         if (f) {
-            fprintf(f, "%lf %lf\n", conf.lat, conf.lon);
+            fprintf(f, "%lf %lf\n", conf.loc.lat, conf.loc.lon);
             DEBUG("Latest location stored in cache file!\n");
             fclose(f);
         } else {
             DEBUG("Storing loc to cache file: %s\n", strerror(errno));
         }
     }
+}
+
+/* 
+ * Get distance between 2 locations
+ */
+double get_distance(struct location loc1, struct location loc2) {
+    double theta, dist;
+    theta = loc1.lon - loc2.lon;
+    dist = sin(degToRad(loc1.lat)) * sin(degToRad(loc2.lat)) + cos(degToRad(loc1.lat)) * cos(degToRad(loc2.lat)) * cos(degToRad(theta));
+    dist = acos(dist);
+    dist = radToDeg(dist);
+    dist = dist * 60 * 1.1515;
+    return (dist);
+}
+
+/* 
+ * Convert degrees to radians 
+ */
+double  degToRad(double angleDeg) {
+    return (M_PI * angleDeg / 180.0);
+}
+
+/* 
+ * Convert radians to degrees 
+ */
+double radToDeg(double angleRad) {
+    return (180.0 * angleRad / M_PI);
 }

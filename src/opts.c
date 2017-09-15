@@ -90,8 +90,8 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"no-dimmer-smooth", 0, POPT_ARG_NONE, &modules[DIMMER_SMOOTH].state, 100, "Disable smooth dimmer transition", NULL},
         {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
         {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
-        {"lat", 0, POPT_ARG_DOUBLE, &conf.lat, 100, "Your desired latitude", NULL},
-        {"lon", 0, POPT_ARG_DOUBLE, &conf.lon, 100, "Your desired longitude", NULL},
+        {"lat", 0, POPT_ARG_DOUBLE, &conf.loc.lat, 100, "Your desired latitude", NULL},
+        {"lon", 0, POPT_ARG_DOUBLE, &conf.loc.lon, 100, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &modules[GAMMA].state, 100, "Disable gamma correction tool", NULL},
@@ -155,9 +155,6 @@ static void parse_cmd(int argc, char *const argv[]) {
  * in case of wrong options setted.
  */
 static void check_conf(void) {
-    /*
-     * Reset default values in case of wrong values
-     */
     if (conf.timeout[ON_AC][DAY] <= 0) {
         WARN("Wrong day timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][DAY] = 10 * 60;
@@ -209,6 +206,14 @@ static void check_conf(void) {
     if (conf.weather_timeout[ON_BATTERY] <= 0) {
         WARN("Wrong BATT weather timeout. Resetting default value.\n");
         conf.weather_timeout[ON_BATTERY] = 3 * 60 * 60;
+    }
+    if (fabs(conf.loc.lat) > 90.0f) {
+        WARN("Wrong latitude value. Resetting default value.\n");
+        conf.loc.lat = 0.0f;
+    }
+    if (fabs(conf.loc.lon) > 180.0f) {
+        WARN("Wrong longitude value. Resetting default value.\n");
+        conf.loc.lat = 0.0f;
     }
     
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
