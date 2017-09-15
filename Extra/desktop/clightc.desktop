@@ -2,6 +2,6 @@
 Type=Application
 Name=Clight
 Exec=clight -c
-Comment=Takes a fast screen backlight recalibration through clight
+Comment=Recalibrate your screen backlight!
 Icon=clight.svg
 Categories=System
