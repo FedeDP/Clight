@@ -223,9 +223,5 @@ static void network_callback(const void *ptr) {
  * reload weather for new location 
  */
 static void location_callback(const void *ptr) {
-    struct location old_loc = *(struct location *)ptr;
-    
-    if (get_distance(old_loc, conf.loc) > LOC_DISTANCE_THRS) {
-        set_timeout(0, 1, main_p[self.idx].fd, 0);
-    }
+    set_timeout(0, 1, main_p[self.idx].fd, 0);
 }
