@@ -222,6 +222,6 @@ static void network_callback(const void *ptr) {
  * On location change, 
  * reload weather for new location 
  */
-static void location_callback(const void *ptr) {
+static void location_callback(__attribute__((unused)) const void *ptr) {
     set_timeout(0, 1, main_p[self.idx].fd, 0);
 }

@@ -320,7 +320,7 @@ static void check_state(time_t *now) {
     }
 }
 
-static void location_callback(const void *ptr) {    
+static void location_callback(__attribute__((unused)) const void *ptr) {    
     /* Updated GAMMA module sunrise/sunset for new location */
     state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
     set_timeout(0, 1, main_p[self.idx].fd, 0);

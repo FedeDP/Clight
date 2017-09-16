@@ -1,6 +1,7 @@
 # Clight
 
 [![Build Status](https://travis-ci.org/FedeDP/Clight.svg?branch=master)](https://travis-ci.org/FedeDP/Clight)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/3dabfb28d8db4f25955ecb82c30447dc)](https://www.codacy.com/app/FedeDP/Clight?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=FedeDP/Clight&amp;utm_campaign=Badge_Grade)
 
 Clight is a C user daemon utility that aims to fully manage your display.  
 It will automagically change screen backlight level to match ambient brightness, as computed by capturing frames from webcam.  
