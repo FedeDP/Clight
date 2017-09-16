@@ -162,12 +162,12 @@ static void upower_callback(const void *ptr) {
 }
 
 /* 
- * If we're inhibited, disarm timer (pausing this module)
+ * If we're getting inhibited, disarm timer (pausing this module)
  * else restart module with its default timeout
  */
 static void inhibit_callback(const void *ptr) {
     int old_pm_state = *(int *)ptr;
-    if (old_pm_state != state.pm_inhibited && conf.dimmer_timeout[state.ac_state] > 0) {
+    if (!state.is_dimmed && old_pm_state != state.pm_inhibited && conf.dimmer_timeout[state.ac_state] > 0) {
         DEBUG("Dimmer module being %s.\n", state.pm_inhibited ? "paused" : "restarted");
         set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
     }
