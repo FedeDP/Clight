@@ -112,7 +112,7 @@ static void callback(void) {
             state.is_dimmed = 0;
             main_p[self.idx].fd = timer_fd;
             restore_backlight();
-            set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
+            set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
         }
     }
 }

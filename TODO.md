@@ -1,6 +1,4 @@
-## TODO
-- [ ] poll socket fd for data by poll instead of waiting on recv (https://stackoverflow.com/questions/2876024/linux-is-there-a-read-or-recv-from-socket-with-timeout)
-- [ ] use sd-event library instead of main poll? http://0pointer.net/blog/introducing-sd-event.html
+## 1.5
 - [x] location_callback for weather module
 - [x] each location_callback should check if distance is > N meters/kilometers to avoid useless calls.
 - [x] Location module should expose a get_distance(old pos, new pos) function
