@@ -4,6 +4,11 @@
 - [x] Location module should expose a get_distance(old pos, new pos) function
 - [x] add a data struct location { double lat, double lon } and use that everywhere
 - [x] Check latitude/longitude values after loading them from opts/config
-
-## Later/Ideas
-- [ ] subscribe to "interfaceEnabledChanged" signal from clightd (as soon as it is implemented in clightd) and do a capture as soon as interface became enabled (May be disable both dimmer and brightness while interface is disabled)
+- [x] update to new 1.6 clightd interface
+- [x] drop isinterface_enabled calls
+- [x] fix dimmer with set_backlight_level with percentage
+- [x] EXIT_FAILURE even when state.quit > ERR_QUIT (should never happen)
+- [x] location callback should check if new position is at least LOC_DISTANCE_THRS distant from last pos
+- [ ] check for needed clightd version in bus.c
+- [ ] make clight work on desktop pc with webcam too (obviously through ddcutil)?
+- [ ] TEST && NEW RELEASE!

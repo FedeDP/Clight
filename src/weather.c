@@ -18,8 +18,8 @@ static void upower_callback(const void *ptr);
 static void network_callback(const void *ptr);
 static void location_callback(const void *ptr);
 
-/* 
- * network with continuous disconnections can lead to 
+/*
+ * network with continuous disconnections can lead to
  * lots of owm weather api calls (and battery/network usage too).
  * So, we store last time an api call was made and avoid doing the same call
  * until conf.weather_timeout[state.ac_state] has really elapsed.
@@ -41,11 +41,11 @@ void set_weather_self(void) {
 static void init(void) {
     /* Store correct brightness timeouts */
     memcpy(brightness_timeouts, conf.timeout, sizeof(int) * SIZE_AC * SIZE_STATES);
-    
+
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb network_cb = { NETWORK, network_callback };
     struct bus_cb location_cb = { LOCATION, location_callback };
-    
+
     int fd = start_timer(CLOCK_BOOTTIME, 0, network_enabled(state.nmstate));
     INIT_MOD(fd, &upower_cb, &network_cb, &location_cb);
 }
@@ -57,12 +57,12 @@ static int check(void) {
 static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-    
+
     /* Store latest call time */
     time(&last_call);
-    
-    /* 
-     * get_weather returns 0 only if new cloudiness 
+
+    /*
+     * get_weather returns 0 only if new cloudiness
      * is different from old cloudiness, thus we can be sure
      * we must update all brightness timeouts and reset BRIGHTNESS timer
      */
@@ -84,7 +84,7 @@ static void callback(void) {
 }
 
 static void destroy(void) {
-    /* Skeleton function needed for modules interface */ 
+    /* Skeleton function needed for modules interface */
 }
 
 /*
@@ -98,9 +98,9 @@ static int get_weather(void) {
     const char *provider = "api.openweathermap.org";
     const char *endpoint = "/data/2.5/weather";
     snprintf(header, sizeof(header),"GET %s?lat=%lf&lon=%lf&units=metric&APPID=%s HTTP/1.0\r\n"
-                                    "Host: %s\r\n\r\n", 
-                                    endpoint, conf.loc.lat, conf.loc.lon, conf.weather_apikey, provider);
-    
+             "Host: %s\r\n\r\n",
+             endpoint, conf.loc.lat, conf.loc.lon, conf.weather_apikey, provider);
+
     /* get host info */
     struct addrinfo hints = {0}, *res = NULL;
     hints.ai_family = AF_UNSPEC;
@@ -110,7 +110,7 @@ static int get_weather(void) {
         WARN("Error getting address info: %s\n", gai_strerror(err));
         goto end;
     }
-    
+
     /* Create socket and connect */
     for (struct addrinfo *rp = res; rp; rp = rp->ai_next) {
         sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
@@ -125,25 +125,25 @@ static int get_weather(void) {
         sockfd = -1;
     }
     freeaddrinfo(res);
-    
+
     if (sockfd == -1) {
         WARN("Error creating socket: %s\n", strerror(errno));
         goto end;
     }
-    
+
     /* Send request */
     if (send(sockfd, header, sizeof(header), 0) == -1) {
         WARN("Error sending GET: %s\n", strerror(errno));
         goto end;
     }
-    
+
     /* Receive data */
     char buf[BUFFER_SIZE] = {0};
     if (recv(sockfd, buf, sizeof(buf) - 1, 0) == -1) {
         WARN("Error receiving data: %s\n", strerror(errno));
         goto end;
     }
-    
+
     if (!strstr(buf, "\"clouds\"")) {
         if (strstr(buf, "\"message\"")) {
             char *message = strstr(buf, "\"message\"") + strlen("\"message\"") + 3; // remove " \"" (space + opening ")
@@ -160,20 +160,20 @@ static int get_weather(void) {
         }
         goto end;
     }
-    
+
     int old_cloudiness = state.cloudiness;
     sscanf(strstr(buf, "\"clouds\""), "\"clouds\":{\"all\":%d}", &state.cloudiness);
     INFO("Weather cloudiness: %d.\n", state.cloudiness);
     ret = old_cloudiness == state.cloudiness;
 
 end:
-    if (sockfd > 0) { 
+    if (sockfd > 0) {
         close(sockfd);
     }
     return ret;
 }
 
-/* 
+/*
  * Weather aware timeout goes from 0.99 timeout to 0.5 timeout
  */
 static unsigned int get_weather_aware_timeout(int timeout) {
@@ -194,10 +194,10 @@ static void upower_callback(const void *ptr) {
 static void network_callback(const void *ptr) {
     int old_network_state = *(int *)ptr;
     int enabled = network_enabled(state.nmstate);
-    
+
     if (network_enabled(old_network_state) != enabled) {
         if (enabled) {
-            /* 
+            /*
              * it means we had no network previously;
              * Restart now this module, paying attenction to latest time
              * a get_weather was called.
@@ -218,10 +218,15 @@ static void network_callback(const void *ptr) {
     }
 }
 
-/* 
- * On location change, 
- * reload weather for new location 
+/*
+ * On location change,
+ * reload weather for new location
  */
 static void location_callback(__attribute__((unused)) const void *ptr) {
-    set_timeout(0, 1, main_p[self.idx].fd, 0);
+    struct location old_loc = *(struct location *)ptr;
+
+    if (get_distance(old_loc, conf.loc) > LOC_DISTANCE_THRS) {
+        set_timeout(0, 1, main_p[self.idx].fd, 0);
+    }
 }
+

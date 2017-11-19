@@ -55,6 +55,7 @@ static void (*const set_selfs[])(void) = {
     set_userbus_self, set_weather_self, set_network_self
 };
 
+/* Debug check as i always forget to add functions there... */
 _Static_assert(MODULES_NUM == SIZE(set_selfs), "Wrong number of set_selfs() function pointers in clight.c");
 
 int main(int argc, char *argv[]) {
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
         main_poll();
     }
     destroy();
-    return state.quit == ERR_QUIT ? EXIT_FAILURE : EXIT_SUCCESS;
+    return state.quit == NORM_QUIT ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /*

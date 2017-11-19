@@ -11,8 +11,6 @@ static void destroy(void);
 static void callback(void);
 static void check_gamma(void);
 static float to_hours(const float rad);
-static double degToRad(double angleDeg);
-static double radToDeg(double angleRad);
 static int calculate_sunrise_sunset(const float lat, const float lng,
                                     time_t *tt, enum events event, int tomorrow);
 static int calculate_sunrise(const float lat, const float lng, time_t *tt, int tomorrow);
@@ -36,7 +34,7 @@ void set_gamma_self(void) {
 
 static void init(void) {
     struct bus_cb loc_cb = { LOCATION, location_callback };
-    
+
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
     INIT_MOD(gamma_timerfd, &loc_cb);
 }
@@ -79,8 +77,8 @@ static void check_gamma(void) {
     enum states old_state = state.time;
     get_gamma_events(&t, conf.loc.lat, conf.loc.lon, 0);
 
-    /* 
-     * Force set every time correct gamma 
+    /*
+     * Force set every time correct gamma
      * to avoid any possible sync issue
      * between time of day and gamma (eg after long suspend).
      * Note that in case correct gamma temp is already set,
@@ -96,7 +94,7 @@ static void check_gamma(void) {
     t = state.events[state.next_event] + state.event_time_range;
     INFO("Next gamma alarm due to: %s", ctime(&t));
     set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
-    
+
     /* if we entered/left an event, set correct timeout to BRIGHTNESS */
     if (old_state != state.time && is_inited(BRIGHTNESS) && !state.fast_recapture) {
         reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
@@ -209,20 +207,6 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     return 0;
 }
 
-/* 
- * Convert degrees to radians 
- */
-static double degToRad(double angleDeg) {
-    return (M_PI * angleDeg / 180.0);
-}
-
-/* 
- * Convert radians to degrees 
- */
-static double radToDeg(double angleRad) {
-    return (180.0 * angleRad / M_PI);
-}
-
 static int calculate_sunrise(const float lat, const float lng, time_t *tt, int tomorrow) {
     return calculate_sunrise_sunset(lat, lng, tt, SUNRISE, tomorrow);
 }
@@ -268,7 +252,7 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
 
         if (state.events[SUNRISE] == -1 && state.events[SUNSET] == -1) {
             /*
-             * no sunrise/sunset could be found. 
+             * no sunrise/sunset could be found.
              * Assume day and set sunset 12hrs from now
              */
             state.events[SUNSET] = *now + 12 * 60 * 60;
@@ -320,8 +304,12 @@ static void check_state(time_t *now) {
     }
 }
 
-static void location_callback(__attribute__((unused)) const void *ptr) {    
-    /* Updated GAMMA module sunrise/sunset for new location */
-    state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-    set_timeout(0, 1, main_p[self.idx].fd, 0);
+static void location_callback(const void *ptr) {
+    struct location old_loc = *(struct location *)ptr;
+    /* Check if new position is at least 20kms distant */
+    if (get_distance(old_loc, conf.loc) > LOC_DISTANCE_THRS) {
+        /* Updated GAMMA module sunrise/sunset for new location */
+        state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+        set_timeout(0, 1, main_p[self.idx].fd, 0);
+    }
 }

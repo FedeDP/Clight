@@ -102,7 +102,7 @@ By customizing these values, you can adapt screen backlight curve to meet your n
 Clight supports different curves on different ac states. In fact, by default on BATT points are different from above. See config file for more info.  
 
 ## Gamma support info
-*Gamma support is only available on X. Sadly on wayland there is still no standard way to achieve gamma correction. Let's way with fingers crossed.*  
+*Gamma support is only available on X. Sadly on wayland there is still no standard way to achieve gamma correction. Let's wait with fingers crossed.*  
 Consequently, on not X environments, gamma correction tool gets autodisabled.  
 
 As [clightd](https://github.com/FedeDP/Clightd#devel-info) getgamma function properly supports only 50-steps temperature values (ie if you use "setgamma 6000" and then getgamma, it will return 6000. If you use setgamma 4578, getgamma won't return exactly it; it will return 4566 or something similar.), do not set in your conf not-50-multiple temperatures.  

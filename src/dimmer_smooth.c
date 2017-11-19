@@ -49,17 +49,17 @@ static void callback(void) {
 }
 
 static void dim_backlight(void) {
-    const int lower_br = (double)state.br.current - (double)state.br.max / 20; // 5% steps
-    set_backlight_level(lower_br > state.dimmed_br ? lower_br : state.dimmed_br);
-    if (state.br.current != state.dimmed_br) {
+    const int lower_br_pct = state.br_pct.current - 0.05; // 5% steps
+    set_backlight_level(lower_br_pct > conf.dimmer_pct ? lower_br_pct : conf.dimmer_pct);
+    if (state.br_pct.current != conf.dimmer_pct) {
         start_smooth_transition(DIMMER_SMOOTH_TIMEOUT);
     }
 }
 
 static void restore_backlight(void) {
-    const int new_br = (double)state.br.current + (double)state.br.max / 20; // 5% steps
-    set_backlight_level(new_br > state.br.old ? state.br.old : new_br);
-    if (state.br.current != state.br.old) {
+    const int new_br_pct = state.br_pct.current + 0.05; // 5% steps
+    set_backlight_level(new_br_pct > state.br_pct.old ? state.br_pct.old : new_br_pct);
+    if (state.br_pct.current != state.br_pct.old) {
         start_smooth_transition(DIMMER_SMOOTH_TIMEOUT);
     }
 }

@@ -15,6 +15,9 @@
 #include <setjmp.h>
 #include <systemd/sd-bus.h>
 
+#define MINIMUM_CLIGHTD_VERSION_MAJ 1
+#define MINIMUM_CLIGHTD_VERSION_MIN 5
+
 /*
  * Useful macro to check size of global array.
  * Used in every module to automatically set self.num_deps
@@ -93,10 +96,9 @@ struct config {
 /*
  * Storage struct for our needed variables.
  */
-struct brightness {
-    int current;
-    int max;
-    int old;
+struct brightness_pct {
+    double current;
+    double old;
 };
 
 /* Global state of program */
@@ -111,12 +113,11 @@ struct state {
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
-    struct brightness br;                   // struct that hold screen backlight info
+    struct brightness_pct br_pct;           // struct that hold screen backlight info
     int is_dimmed;                          // whether we are currently in dimmed state
-    int dimmed_br;                          // backlight level when dimmed
     int pm_inhibited;                       // whether powermanagement is inhibited
     int cloudiness;                         // weather cloudiness for user location
-    enum NMState nmstate;                           // NetworkManager own states
+    enum NMState nmstate;                   // NetworkManager own states
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 

@@ -9,7 +9,6 @@ static int check(void);
 static void destroy(void);
 static void callback(void);
 static void do_capture(void);
-static void get_max_brightness(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static double compute_average(double *intensity);
@@ -35,7 +34,6 @@ void set_brightness_self(void) {
  * Init brightness values (max and current)
  */
 static void init(void) {
-    get_max_brightness();
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
@@ -76,8 +74,7 @@ static void do_capture(void) {
     /* reset fast recapture */
     state.fast_recapture = 0;
 
-    int interface_enabled = is_interface_enabled();
-    if (interface_enabled && !state.is_dimmed) {
+    if (!state.is_dimmed) {
         double val = capture_frames_brightness();
         /* 
          * if captureframes clightd method did not return any non-critical error (eg: eperm).
@@ -87,11 +84,9 @@ static void do_capture(void) {
         if (val >= 0.0) {
             set_brightness(val * 10);
             if (!conf.single_capture_mode) {
-                drop = (double)(state.br.current - state.br.old) / state.br.max;
+                drop = state.br_pct.current - state.br_pct.old;
             }
         }
-    } else if (!interface_enabled) {
-        DEBUG("Current backlight interface is not enabled. Avoid changing backlight level on a disabled interface.\n");
     } else {
         DEBUG("Screen is currently dimmed. Avoid changing backlight level.\n");
     }
@@ -110,45 +105,34 @@ static void do_capture(void) {
     }
 }
 
-/* 
- * check if backlight interface is enabled before trying to change brightness
- * as it would be useless to change brightness on a disabled itnerface (eg when using external monitor)
- */
-int is_interface_enabled(void) {
-    int enabled;
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "isbacklightinterfaceenabled"};
-    call(&enabled, "b", &args, "s", conf.screen_path);
-    return enabled;
-}
-
-static void get_max_brightness(void) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getmaxbrightness"};
-    call(&state.br.max, "i", &args, "s", conf.screen_path);
-}
-
 void get_current_brightness(void) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getbrightness"};
-    call(&state.br.old, "i", &args, "s", conf.screen_path);
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getbrightnesspct"};
+    call(&state.br_pct.old, "d", &args, "s", conf.screen_path);
 }
 
 static void set_brightness(const double perc) {
     /* y = a0 + a1x + a2x^2 */
     const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
-    int new_br =  (float)state.br.max * clamp(b, 1, 0);
-   
+    const double new_br_pct =  clamp(b, 1, 0);
+
     get_current_brightness();
-    if (new_br != state.br.old) {
-        set_backlight_level(new_br);
+    if (new_br_pct != state.br_pct.old) {
+        set_backlight_level(new_br_pct);
     } else {
-        state.br.current = new_br;
-        INFO("Brightness level was already %d.\n", new_br);
+        state.br_pct.current = new_br_pct;
+        INFO("Brightness pct was already %lf.\n", new_br_pct);
     }
 }
 
-void set_backlight_level(int level) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
-    call(&state.br.current, "i", &args, "si", conf.screen_path, level);
-    INFO("New brightness value: %d\n", state.br.current);
+void set_backlight_level(const double pct) {
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightnesspct"};
+    struct bus_args ext_args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightnesspct_external"};
+    
+    /* Set internal laptop brightness */
+    call(&state.br_pct.current, "d", &args, "sd", conf.screen_path, pct);
+    /* Set external monitors brightness */
+    call(NULL, NULL, &ext_args, "d", pct);
+    INFO("New brightness pct value: %f\n", state.br_pct.current);
 }
 
 static double capture_frames_brightness(void) {

@@ -39,8 +39,6 @@ static void init(void) {
         timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
                                 0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited AND dimmer timeout > 0, else disarmed
         INIT_MOD(timer_fd, &upower_cb, &inhibit_cb);
-        /* brightness module is started before dimmer, so state.br.max is already ok there */
-        state.dimmed_br = (double)state.br.max * conf.dimmer_pct / 100;
     }
 }
 
@@ -77,14 +75,8 @@ static void callback(void) {
         uint64_t t;
         read(main_p[self.idx].fd, &t, sizeof(uint64_t));
         
-        int idle_t = 0;
-        
         /* If interface is not enabled, avoid entering dimmed state */
-        if (is_interface_enabled()) {
-            idle_t = get_idle_time();
-        } else {
-            DEBUG("Current backlight interface is not enabled. Avoid checking if screen must be dimmed.\n");
-        }
+        int idle_t = get_idle_time();
         if (idle_t > 0) {
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state] - 1;
             if (state.is_dimmed) {
@@ -119,14 +111,14 @@ static void callback(void) {
 
 static void dim_backlight(void) {
     /* Don't touch backlight if a lower level is already set */
-    if (state.dimmed_br >= state.br.old) {
+    if (conf.dimmer_pct >= state.br_pct.old) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
         if (is_inited(DIMMER_SMOOTH)) {
-            state.br.current = state.br.old;
+            state.br_pct.current = state.br_pct.old;
             start_smooth_transition(1);
         } else {
-            set_backlight_level(state.dimmed_br);
+            set_backlight_level(conf.dimmer_pct);
         }
     }
 }
@@ -136,7 +128,7 @@ static void restore_backlight(void) {
     if (is_inited(DIMMER_SMOOTH)) {
         start_smooth_transition(1);
     } else {
-        set_backlight_level(state.br.old);
+        set_backlight_level(state.br_pct.old);
     }
 }
 

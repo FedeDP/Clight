@@ -37,8 +37,8 @@ void set_location_self(void) {
  */
 static void init(void) {
     int r = geoclue_init();
-    /* 
-     * timeout after 3s to check if geoclue2 gave us 
+    /*
+     * timeout after 3s to check if geoclue2 gave us
      * any location. Otherwise, attempt to load it from cache
      */
     int fd;
@@ -125,13 +125,13 @@ static void destroy(void) {
 }
 
 static int check(void) {
-    /* 
-     * If sunrise and sunset times, or lat and lon, are both passed, 
-     * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD) 
+    /*
+     * If sunrise and sunset times, or lat and lon, are both passed,
+     * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD)
      */
     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != 0.0 && conf.loc.lon != 0.0)) {
         change_dep_type(GAMMA, self.idx, SOFT);
-        /* 
+        /*
          * weather requires lat or lon, so do not disable it if they're provided.
          * But disable it if sunrise or sunset times are set fixed by user.
          */
@@ -169,7 +169,7 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     /* Fill data->ptr with old latitude/longitude */
     data->ptr = malloc(sizeof(struct location));
     memcpy(data->ptr, &conf.loc, sizeof(struct location));
-    
+
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);
 
@@ -178,7 +178,7 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
 
     get_property(&lat_args, "d", &conf.loc.lat);
     get_property(&lon_args, "d", &conf.loc.lon);
-    
+
     INFO("New location received: %.2lf, %.2lf\n", conf.loc.lat, conf.loc.lon);
     return 0;
 }
@@ -216,4 +216,32 @@ static void cache_location(void) {
             DEBUG("Storing loc to cache file: %s\n", strerror(errno));
         }
     }
+}
+
+
+/*
+ * Get distance between 2 locations
+ */
+double get_distance(struct location loc1, struct location loc2) {
+    double theta, dist;
+    theta = loc1.lon - loc2.lon;
+    dist = sin(degToRad(loc1.lat)) * sin(degToRad(loc2.lat)) + cos(degToRad(loc1.lat)) * cos(degToRad(loc2.lat)) * cos(degToRad(theta));
+    dist = acos(dist);
+    dist = radToDeg(dist);
+    dist = dist * 60 * 1.1515;
+    return (dist);
+}
+
+/*
+ * Convert degrees to radians
+ */
+double  degToRad(double angleDeg) {
+    return (M_PI * angleDeg / 180.0);
+}
+
+/*
+ * Convert radians to degrees
+ */
+double radToDeg(double angleRad) {
+    return (180.0 * angleRad / M_PI);
 }
