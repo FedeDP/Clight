@@ -3,6 +3,7 @@
 #include "../inc/weather.h"
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
+#include <time.h>
 
 static void init(void);
 static int check(void);
@@ -135,10 +136,25 @@ static void set_brightness(const double perc) {
     /* y = a0 + a1x + a2x^2 */
     const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     int new_br =  (float)state.br.max * clamp(b, 1, 0);
-   
     get_current_brightness();
     if (new_br != state.br.old) {
-        set_backlight_level(new_br);
+        struct timespec tw = {0,100000000};
+        struct timespec tr;
+        if(new_br > state.br.old){
+            for(int i = state.br.old + 1; i <= new_br; i++){
+                set_backlight_level(i);
+                if(i != new_br) {
+                    nanosleep(&tw, &tr);
+                }
+            }
+        } else {
+            for(int i = state.br.old - 1; i >= new_br; i--){
+                set_backlight_level(i);
+                if(i != new_br) {
+                    nanosleep(&tw, &tr);
+                }
+            }
+        }
     } else {
         state.br.current = new_br;
         INFO("Brightness level was already %d.\n", new_br);
