@@ -24,7 +24,6 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
 * Upower to honor timeouts between captures, to use different ambient brightness -> screen backlight matching coefficients, to change dimmer timeout and to change dpms timeouts depending on ac state.
-* NetworkManager to let modules react to connection state changes. Only used by weather module for now.
 
 ## How to run it
 Clight tries to be a 0-conf software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight.   User has to do nothing but reboot after installing clight.  
@@ -74,8 +73,6 @@ Moreover, you can set a percentage of maximum settable brightness while on batte
 * DPMS support: it will set desired dpms timeouts for AC/batt states.
 * Dpms and dimmer can be disabled while on AC, just set dimmer timeout/any dpms timeout for given AC state <= 0.
 * Clight supports org.freedesktop.PowerManagement.Inhibit interface. Thus, when for example watching a youtube video from chromium, dimmer module won't dim your screen.
-* Weather support: if an OpenWeatherMap apikey is provided through conf file or cmdline option, clight will adjust timeouts between captures given current cloudiness. Function that adjusts timeouts is quite simple: if cloudiness > 50 -> current timeout is shorten of (cloudiness - 50) / 100. This way, at 51 timeout will be 99% of original timeout. At 100 it will be 50%.
-* NetworkManager StateChanged signal is supported, thus modules can react to connection state changes (only used by weather for now).
 * Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
 
 ### Valgrind is run with:

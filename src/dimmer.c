@@ -17,6 +17,7 @@ static void upower_callback(const void *ptr);
 static void inhibit_callback(const void * ptr);
 
 static int inot_wd, inot_fd, timer_fd;
+static double old_pct;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT} };
 static struct self_t self = {
     .name = "Dimmer",
@@ -83,8 +84,8 @@ static void callback(void) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
                     main_p[self.idx].fd = inot_fd;
-                    // update state.br.old
-                    get_current_brightness();
+                    old_pct = state.current_br_pct;
+                    INFO("%lf\n", old_pct);
                     dim_backlight();
                 } else {
                     // in case of error, reset is_dimmed state
@@ -111,12 +112,11 @@ static void callback(void) {
 
 static void dim_backlight(void) {
     /* Don't touch backlight if a lower level is already set */
-    if (conf.dimmer_pct >= state.br_pct.old) {
+    if (conf.dimmer_pct >= state.current_br_pct) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
         if (is_inited(DIMMER_SMOOTH)) {
-            state.br_pct.current = state.br_pct.old;
-            start_smooth_transition(1);
+            start_smooth_transition(1, conf.dimmer_pct);
         } else {
             set_backlight_level(conf.dimmer_pct);
         }
@@ -126,9 +126,9 @@ static void dim_backlight(void) {
 /* restore previous backlight level */
 static void restore_backlight(void) {
     if (is_inited(DIMMER_SMOOTH)) {
-        start_smooth_transition(1);
+        start_smooth_transition(1, old_pct);
     } else {
-        set_backlight_level(state.br_pct.old);
+        set_backlight_level(old_pct);
     }
 }
 

@@ -12,8 +12,7 @@ backup=(etc/default/clight.conf)
 depends=('systemd' 'popt' 'libconfig' 'gsl' 'clightd-git')
 makedepends=('git')
 optdepends=('geoclue2: to retrieve user location through geoclue2.'
-            'upower: to save energy by increasing timeouts between captures while on battery.'
-            'networkmanager: to manage connection state changes.')
+            'upower: to save energy by increasing timeouts between captures while on battery.')
 source=("git://github.com/FedeDP/${_gitname}.git")
 install=clight.install
 sha256sums=("SKIP")

@@ -16,7 +16,7 @@
 #include <systemd/sd-bus.h>
 
 #define MINIMUM_CLIGHTD_VERSION_MAJ 1
-#define MINIMUM_CLIGHTD_VERSION_MIN 5
+#define MINIMUM_CLIGHTD_VERSION_MIN 4
 
 /*
  * Useful macro to check size of global array.
@@ -31,7 +31,7 @@
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, WEATHER, NETWORK, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, BRIGHTNESS_SMOOTH, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -86,19 +86,9 @@ struct config {
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
-    int dimmer_pct;                         // pct of max brightness to be used while dimming
+    double dimmer_pct;                      // pct of max brightness to be used while dimming
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
-    char weather_apikey[32 + 1];            // apikey for openweathermap
-    int weather_timeout[SIZE_AC];          // timeouts for weather update
-};
-
-/*
- * Storage struct for our needed variables.
- */
-struct brightness_pct {
-    double current;
-    double old;
 };
 
 /* Global state of program */
@@ -113,10 +103,9 @@ struct state {
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     const char *xauthority;                 // xauthority env variable, to be used in gamma calls
     const char *display;                    // display env variable, to be used in gamma calls
-    struct brightness_pct br_pct;           // struct that hold screen backlight info
+    double current_br_pct;                  // current backlight pct
     int is_dimmed;                          // whether we are currently in dimmed state
     int pm_inhibited;                       // whether powermanagement is inhibited
-    int cloudiness;                         // weather cloudiness for user location
     enum NMState nmstate;                   // NetworkManager own states
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };

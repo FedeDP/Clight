@@ -26,9 +26,7 @@ void init_opts(int argc, char *argv[]) {
     conf.event_duration = 30 * 60;
     conf.dimmer_timeout[ON_AC] = 300;
     conf.dimmer_timeout[ON_BATTERY] = 45;
-    conf.dimmer_pct = 20;
-    conf.weather_timeout[ON_AC] = 60 * 60;
-    conf.weather_timeout[ON_BATTERY] = 3 * 60 * 60;
+    conf.dimmer_pct = 0.2;
     
     /*
      * Default polynomial regression points:
@@ -86,8 +84,9 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"batt-event-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on battery", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used", "video0"},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used", "intel_backlight"},
-        {"no-gamma-smooth", 0, POPT_ARG_NONE, &modules[GAMMA_SMOOTH].state, 100, "Disable smooth gamma transition", NULL},
-        {"no-dimmer-smooth", 0, POPT_ARG_NONE, &modules[DIMMER_SMOOTH].state, 100, "Disable smooth dimmer transition", NULL},
+        {"no-backlight-smooth", 0, POPT_ARG_NONE, &modules[BRIGHTNESS_SMOOTH].state, 100, "Disable smooth backlight transitions", NULL},
+        {"no-gamma-smooth", 0, POPT_ARG_NONE, &modules[GAMMA_SMOOTH].state, 100, "Disable smooth gamma transitions", NULL},
+        {"no-dimmer-smooth", 0, POPT_ARG_NONE, &modules[DIMMER_SMOOTH].state, 100, "Disable smooth dimmer transitions", NULL},
         {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
         {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
         {"lat", 0, POPT_ARG_DOUBLE, &conf.loc.lat, 100, "Your desired latitude", NULL},
@@ -96,14 +95,12 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &modules[GAMMA].state, 100, "Disable gamma correction tool", NULL},
         {"event-duration", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.event_duration, 100, "Duration of an event in seconds: an event starts event_duration seconds before real sunrise/sunset time and ends event_duration seconds after", NULL},
-        {"dimmer-pct", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
+        {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage (0,1)", NULL},
         {"no-dimmer", 0, POPT_ARG_NONE, &modules[DIMMER].state, 100, "Disable dimmer tool", NULL},
         {"ac-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_AC], 100, "Seconds of inactivity before dimmin screen on AC", NULL},
         {"batt-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &modules[DPMS].state, 100, "Disable dpms tool", NULL},
         {"no-inhibit", 0, POPT_ARG_NONE, &modules[INHIBIT].state, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
-        {"no-weather", 0, POPT_ARG_NONE, &modules[WEATHER].state, 100, "Disable weather support", NULL},
-        {"apikey", 0, POPT_ARG_STRING, NULL, 6, "OpenWeatherMap apikey for weather support", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         POPT_AUTOHELP
@@ -130,9 +127,6 @@ static void parse_cmd(int argc, char *const argv[]) {
             case 5:
                 printf("%s version: %s\n", argv[0], VERSION);
                 exit(EXIT_SUCCESS);
-            case 6:
-                strncpy(conf.weather_apikey, str, sizeof(conf.weather_apikey) - 1);
-                break;
             default:
                 break;
         }
@@ -195,17 +189,9 @@ static void check_conf(void) {
         WARN("Wrong event duration value. Resetting default value.\n");
         conf.event_duration = 30 * 60;
     }
-    if (conf.dimmer_pct > 100 || conf.dimmer_pct < 0) {
+    if (conf.dimmer_pct > 1 || conf.dimmer_pct < 0) {
         WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
-        conf.dimmer_pct = 20;
-    }
-    if (conf.weather_timeout[ON_AC] <= 0) {
-        WARN("Wrong AC weather timeout. Resetting default value.\n");
-        conf.weather_timeout[ON_AC] = 60 * 60;
-    }
-    if (conf.weather_timeout[ON_BATTERY] <= 0) {
-        WARN("Wrong BATT weather timeout. Resetting default value.\n");
-        conf.weather_timeout[ON_BATTERY] = 3 * 60 * 60;
+        conf.dimmer_pct = 0.2;
     }
     if (fabs(conf.loc.lat) > 90.0f) {
         WARN("Wrong latitude value. Resetting default value.\n");

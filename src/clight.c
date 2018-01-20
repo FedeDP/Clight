@@ -36,8 +36,7 @@
 #include "../inc/xorg.h"
 #include "../inc/inhibit.h"
 #include "../inc/userbus.h"
-#include "../inc/weather.h"
-#include "../inc/network.h"
+#include "../inc/brightness_smooth.h"
 
 static void init(int argc, char *argv[]);
 static void set_modules_selfs(void);
@@ -52,7 +51,7 @@ static void (*const set_selfs[])(void) = {
     set_brightness_self, set_location_self, set_upower_self, set_gamma_self,
     set_gamma_smooth_self, set_signal_self, set_bus_self, set_dimmer_self,
     set_dimmer_smooth_self, set_dpms_self, set_xorg_self, set_inhibit_self, 
-    set_userbus_self, set_weather_self, set_network_self
+    set_userbus_self, set_brightness_smooth_self
 };
 
 /* Debug check as i always forget to add functions there... */

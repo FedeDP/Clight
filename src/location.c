@@ -1,4 +1,5 @@
 #include "../inc/location.h"
+#include "../inc/math_utils.h"
 
 static void init(void);
 static int check(void);
@@ -131,13 +132,6 @@ static int check(void) {
      */
     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != 0.0 && conf.loc.lon != 0.0)) {
         change_dep_type(GAMMA, self.idx, SOFT);
-        /*
-         * weather requires lat or lon, so do not disable it if they're provided.
-         * But disable it if sunrise or sunset times are set fixed by user.
-         */
-        if (conf.loc.lat != 0.0 && conf.loc.lon != 0.0) {
-            change_dep_type(WEATHER, self.idx, SOFT);
-        }
         return 1;
     }
     return !is_idle(GAMMA) && !is_inited(GAMMA);
@@ -216,32 +210,4 @@ static void cache_location(void) {
             DEBUG("Storing loc to cache file: %s\n", strerror(errno));
         }
     }
-}
-
-
-/*
- * Get distance between 2 locations
- */
-double get_distance(struct location loc1, struct location loc2) {
-    double theta, dist;
-    theta = loc1.lon - loc2.lon;
-    dist = sin(degToRad(loc1.lat)) * sin(degToRad(loc2.lat)) + cos(degToRad(loc1.lat)) * cos(degToRad(loc2.lat)) * cos(degToRad(theta));
-    dist = acos(dist);
-    dist = radToDeg(dist);
-    dist = dist * 60 * 1.1515;
-    return (dist);
-}
-
-/*
- * Convert degrees to radians
- */
-double  degToRad(double angleDeg) {
-    return (M_PI * angleDeg / 180.0);
-}
-
-/*
- * Convert radians to degrees
- */
-double radToDeg(double angleRad) {
-    return (180.0 * angleRad / M_PI);
 }

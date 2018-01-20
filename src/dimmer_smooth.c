@@ -18,6 +18,7 @@ static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
+static double target_pct;
 
 void set_dimmer_smooth_self(void) {
     SET_SELF();
@@ -49,21 +50,22 @@ static void callback(void) {
 }
 
 static void dim_backlight(void) {
-    const int lower_br_pct = state.br_pct.current - 0.05; // 5% steps
-    set_backlight_level(lower_br_pct > conf.dimmer_pct ? lower_br_pct : conf.dimmer_pct);
-    if (state.br_pct.current != conf.dimmer_pct) {
-        start_smooth_transition(DIMMER_SMOOTH_TIMEOUT);
+    const double lower_br_pct = state.current_br_pct - 0.05; // 5% steps
+    set_backlight_level(lower_br_pct > target_pct ? lower_br_pct : target_pct);
+    if (state.current_br_pct != target_pct) {
+        start_smooth_transition(DIMMER_SMOOTH_TIMEOUT, target_pct);
     }
 }
 
 static void restore_backlight(void) {
-    const int new_br_pct = state.br_pct.current + 0.05; // 5% steps
-    set_backlight_level(new_br_pct > state.br_pct.old ? state.br_pct.old : new_br_pct);
-    if (state.br_pct.current != state.br_pct.old) {
-        start_smooth_transition(DIMMER_SMOOTH_TIMEOUT);
+    const double new_br_pct = state.current_br_pct + 0.05; // 5% steps
+    set_backlight_level(new_br_pct > target_pct ? target_pct : new_br_pct);
+    if (state.current_br_pct != target_pct) {
+        start_smooth_transition(DIMMER_SMOOTH_TIMEOUT, target_pct);
     }
 }
 
-void start_smooth_transition(long delay) {
+void start_smooth_transition(long delay, double pct) {
     set_timeout(0, delay, main_p[self.idx].fd, 0);
+    target_pct = pct;
 }

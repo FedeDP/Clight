@@ -4,7 +4,6 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void callback(void);
-static void check_clightd_version(void);
 static void run_callbacks(const enum modules mod, const void *payload);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
@@ -41,7 +40,6 @@ static void init(void) {
     if (r < 0) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
-    check_clightd_version();
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(bus);
     INIT_MOD(bus_fd);
@@ -88,27 +86,6 @@ static void callback(void) {
             poll_cb(_cb.userdata.bus_mod_idx);
         }
     } while (r > 0);
-}
-
-/*
- * Check Clightd version before fully starting clight
- */
-static void check_clightd_version(void) {
-    const char *clightd_version = NULL;
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "version"};
-    get_property(&args, "s", &clightd_version);
-    
-    if (!clightd_version) {
-        ERROR("No clightd found. Clightd is a mandatory dep.\n");
-    }
-    
-    int maj_val = atoi(clightd_version);
-    int min_val = atoi(strchr(clightd_version, '.') + 1);
-    
-    if (maj_val < MINIMUM_CLIGHTD_VERSION_MAJ || (maj_val == MINIMUM_CLIGHTD_VERSION_MAJ && min_val < MINIMUM_CLIGHTD_VERSION_MIN)) {
-        ERROR("Clightd must be updated. Required version: %d.%d.\n", MINIMUM_CLIGHTD_VERSION_MAJ, MINIMUM_CLIGHTD_VERSION_MIN);
-    }
-    INFO("Clightd found, version: %s.\n", clightd_version);
 }
 
 /* 
