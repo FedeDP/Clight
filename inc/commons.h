@@ -15,9 +15,6 @@
 #include <setjmp.h>
 #include <systemd/sd-bus.h>
 
-#define MINIMUM_CLIGHTD_VERSION_MAJ 1
-#define MINIMUM_CLIGHTD_VERSION_MIN 4
-
 /*
  * Useful macro to check size of global array.
  * Used in every module to automatically set self.num_deps
@@ -63,10 +60,6 @@ enum bus_type { SYSTEM, USER };
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
 
-enum NMState {  NM_STATE_UNKNOWN = 0, NM_STATE_ASLEEP = 10, NM_STATE_DISCONNECTED = 20, 
-                NM_STATE_DISCONNECTING = 30, NM_STATE_CONNECTING = 40, NM_STATE_CONNECTED_LOCAL = 50, 
-                NM_STATE_CONNECTED_SITE = 60, NM_STATE_CONNECTED_GLOBAL = 70 };
-
 /* Struct that holds data about a geographic location */
 struct location {
     double lat;
@@ -106,7 +99,6 @@ struct state {
     double current_br_pct;                  // current backlight pct
     int is_dimmed;                          // whether we are currently in dimmed state
     int pm_inhibited;                       // whether powermanagement is inhibited
-    enum NMState nmstate;                   // NetworkManager own states
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 
