@@ -14,8 +14,9 @@
 - [x] make backlight level change smoothly (#20)
 - [x] drop weather support
 - [ ] update readme
-- [ ] TEST 
+- [ ] TEST
 - [ ] NEW RELEASE!
 
 ## 2.1
 - [ ] add a kde/gnome module to set a dark theme on sunrise/sunset (gnome: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html)
+- [ ] properly add a onBusCallFail callback to bus_args, with a default one like the current

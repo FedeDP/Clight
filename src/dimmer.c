@@ -116,7 +116,7 @@ static void dim_backlight(void) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
         if (is_inited(DIMMER_SMOOTH)) {
-            start_smooth_transition(1, conf.dimmer_pct);
+            start_dimmer_smooth(1, conf.dimmer_pct);
         } else {
             set_backlight_level(conf.dimmer_pct);
         }
@@ -126,7 +126,7 @@ static void dim_backlight(void) {
 /* restore previous backlight level */
 static void restore_backlight(void) {
     if (is_inited(DIMMER_SMOOTH)) {
-        start_smooth_transition(1, old_pct);
+        start_dimmer_smooth(1, old_pct);
     } else {
         set_backlight_level(old_pct);
     }

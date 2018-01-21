@@ -1,7 +1,8 @@
 #include "../inc/gamma_smooth.h"
 #include "../inc/bus.h"
 
-#define GAMMA_SMOOTH_TIMEOUT 300 * 1000 * 1000  // 300 ms
+#define GAMMA_SMOOTH_TIMEOUT    300 * 1000 * 1000  // 300 ms
+#define GAMMA_SMOOTH_STEP       50
 
 static void init(void);
 static int check(void);
@@ -39,11 +40,11 @@ static void callback(void) {
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     
     if (set_temp(conf.temp[state.time])) {
-        start_gamma_transition(GAMMA_SMOOTH_TIMEOUT);
+        start_gamma_smooth(GAMMA_SMOOTH_TIMEOUT);
     }
 }
 
-void start_gamma_transition(long delay) {
+void start_gamma_smooth(long delay) {
     set_timeout(0, delay, main_p[self.idx].fd, 0);
 }
 
@@ -55,7 +56,6 @@ void start_gamma_transition(long delay) {
  * and gets resetted when old_temp reaches correct temp.
  */
 int set_temp(int temp) {
-    const int step = 50;
     int new_temp = -1;
     static int old_temp = 0;
     
@@ -70,9 +70,9 @@ int set_temp(int temp) {
         
         if (is_inited(self.idx)) {
             if (old_temp > temp) {
-                old_temp = old_temp - step < temp ? temp : old_temp - step;
+                old_temp = old_temp - GAMMA_SMOOTH_STEP < temp ? temp : old_temp - GAMMA_SMOOTH_STEP;
             } else {
-                old_temp = old_temp + step > temp ? temp : old_temp + step;
+                old_temp = old_temp + GAMMA_SMOOTH_STEP > temp ? temp : old_temp + GAMMA_SMOOTH_STEP;
             }
             call(&new_temp, "i", &args_set, "ssi", state.display, state.xauthority, old_temp);
         } else {

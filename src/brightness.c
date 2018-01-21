@@ -96,7 +96,7 @@ static void set_brightness(const double perc) {
     INFO("New brightness pct value: %f\n", new_br_pct);
     
     if (is_inited(BRIGHTNESS_SMOOTH)) {
-        start_smooth_brightness(1, new_br_pct);
+        start_brightness_smooth(1, new_br_pct);
     } else {
         set_backlight_level(new_br_pct);
     }

@@ -86,7 +86,7 @@ static void check_gamma(void) {
      * it won't do anything.
      */
     if (is_inited(GAMMA_SMOOTH)) {
-        start_gamma_transition(1);
+        start_gamma_smooth(1);
     } else {
         set_temp(conf.temp[state.time]);
     }

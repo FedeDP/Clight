@@ -1,2 +1,2 @@
 void set_dimmer_smooth_self(void);
-void start_smooth_transition(long delay, double pct);
+void start_dimmer_smooth(long delay, double pct);

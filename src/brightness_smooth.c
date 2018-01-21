@@ -2,7 +2,8 @@
 #include "../inc/brightness.h"
 #include "../inc/bus.h"
 
-#define BRIGHTNESS_SMOOTH_TIMEOUT 30 * 1000 * 1000 // 30ms
+#define BRIGHTNESS_SMOOTH_TIMEOUT   10 * 1000 * 1000 // 10ms
+#define BRIGHTNESS_SMOOTH_STEP      0.01
 
 static void init(void);
 static int check(void);
@@ -46,18 +47,18 @@ static void callback(void) {
 static void dim_backlight(void) {
     double new_pct;
     if (target_pct > state.current_br_pct) {
-        new_pct = state.current_br_pct + 0.05; // 5% steps
+        new_pct = state.current_br_pct + BRIGHTNESS_SMOOTH_STEP;
         set_backlight_level(new_pct > target_pct ? target_pct : new_pct);
     } else {
-        new_pct = state.current_br_pct - 0.05;
+        new_pct = state.current_br_pct - BRIGHTNESS_SMOOTH_STEP;
         set_backlight_level(new_pct < target_pct ? target_pct : new_pct);
     }
     if (state.current_br_pct != target_pct) {
-        start_smooth_brightness(BRIGHTNESS_SMOOTH_TIMEOUT, target_pct);
+        start_brightness_smooth(BRIGHTNESS_SMOOTH_TIMEOUT, target_pct);
     }
 }
 
-void start_smooth_brightness(long delay, double pct) {
+void start_brightness_smooth(long delay, double pct) {
     set_timeout(0, delay, main_p[self.idx].fd, 0);
     target_pct = pct;
 }
