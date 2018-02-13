@@ -28,7 +28,7 @@
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, BRIGHTNESS_SMOOTH, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -66,7 +66,7 @@ struct location {
     double lon;
 };
 
-/* Struct that holds global config as passed through cmdline args */
+/* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
     int single_capture_mode;                // do a capture and leave
@@ -82,6 +82,15 @@ struct config {
     double dimmer_pct;                      // pct of max brightness to be used while dimming
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
+    int no_smooth_backlight;
+    int no_smooth_dimmer;
+    int no_smooth_gamma;
+    double backlight_trans_step;
+    int gamma_trans_step;
+    double dimmer_trans_step;
+    int backlight_trans_timeout;
+    int gamma_trans_timeout;
+    int dimmer_trans_timeout;
 };
 
 /* Global state of program */
@@ -94,8 +103,8 @@ struct state {
     enum ac_states ac_state;                // is laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
-    const char *xauthority;                 // xauthority env variable, to be used in gamma calls
-    const char *display;                    // display env variable, to be used in gamma calls
+    char *xauthority;                       // xauthority env variable, to be used in gamma calls
+    char *display;                          // display env variable, to be used in gamma calls
     double current_br_pct;                  // current backlight pct
     int is_dimmed;                          // whether we are currently in dimmed state
     int pm_inhibited;                       // whether powermanagement is inhibited

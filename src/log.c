@@ -52,9 +52,9 @@ void log_conf(void) {
             );
             
             fprintf(log_file, "\n### Modules ###\n");
-            fprintf(log_file, "* Bright smooth trans:\t\t%s\n", is_started_disabled(BRIGHTNESS_SMOOTH) ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", is_started_disabled(GAMMA_SMOOTH) ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", is_started_disabled(DIMMER_SMOOTH) ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", conf.no_smooth_gamma ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", conf.no_smooth_dimmer ? "Disabled" : "Enabled");
             fprintf(log_file, "* Gamma correction:\t\t%s\n", is_started_disabled(GAMMA) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dpms tool:\t\t%s\n", is_started_disabled(DPMS) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dimmer tool:\t\t%s\n\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");

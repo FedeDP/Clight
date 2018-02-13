@@ -2,6 +2,11 @@
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 
+#define ZENITH -0.83
+
+static float to_hours(const float rad);
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow);
+
 /*
  * Get distance between 2 locations
  */
@@ -85,4 +90,118 @@ double clamp(double value, double max, double min) {
         return min;
     }
     return value;
+}
+
+static float to_hours(const float rad) {
+    return rad / 15.0;// 360 degree / 24 hours = 15 degrees/h
+}
+
+/*
+ * Just a small function to compute sunset/sunrise for today (or tomorrow).
+ * See: http://stackoverflow.com/questions/7064531/sunrise-sunset-times-in-c
+ * IF conf.events are both set, it means sunrise/sunset times are user-setted.
+ * So, only store in *tt their corresponding time_t values.
+ */
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow) {
+    // 1. compute the day of the year (timeinfo->tm_yday below)
+    time(tt);
+    struct tm *timeinfo;
+    
+    if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
+        timeinfo = localtime(tt);
+    } else {
+        timeinfo = gmtime(tt);
+    }
+    if (!timeinfo) {
+        return -1;
+    }
+    // if needed, set tomorrow
+    timeinfo->tm_yday += tomorrow;
+    timeinfo->tm_mday += tomorrow;
+    
+    /* If user provided a sunrise/sunset time, use them */
+    if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
+        char *s = strptime(conf.events[event], "%R", timeinfo);
+        if (!s) {
+            ERROR("Wrong sunrise/sunset time setted by a cmdline arg. Leaving.\n");
+            return -1;
+        }
+        timeinfo->tm_sec = 0;
+        *tt = mktime(timeinfo);
+        return 0;
+    }
+    
+    // 2. convert the longitude to hour value and calculate an approximate time
+    float lngHour = to_hours(lng);
+    float t;
+    if (event == SUNRISE) {
+        t = timeinfo->tm_yday + (6 - lngHour) / 24;
+    } else {
+        t = timeinfo->tm_yday + (18 - lngHour) / 24;
+    }
+    
+    // 3. calculate the Sun's mean anomaly
+    float M = (0.9856 * t) - 3.289;
+    
+    // 4. calculate the Sun's true longitude
+    float L = fmod(M + 1.916 * sin(degToRad(M)) + 0.020 * sin(2 * degToRad(M)) + 282.634, 360.0);
+    
+    // 5a. calculate the Sun's right ascension
+    float RA = fmod(radToDeg(atan(0.91764 * tan(degToRad(L)))), 360.0);
+    
+    // 5b. right ascension value needs to be in the same quadrant as L
+    float Lquadrant  = floor(L/90) * 90;
+    float RAquadrant = floor(RA/90) * 90;
+    RA += (Lquadrant - RAquadrant);
+    
+    // 5c. right ascension value needs to be converted into hours
+    RA = to_hours(RA);
+    
+    // 6. calculate the Sun's declination
+    float sinDec = 0.39782 * sin(degToRad(L));
+    float cosDec = cos(asin(sinDec));
+    
+    // 7a. calculate the Sun's local hour angle
+    float cosH = sin(degToRad(ZENITH)) - (sinDec * sin(degToRad(lat))) / (cosDec * cos(degToRad(lat)));
+    if ((cosH > 1 && event == SUNRISE) || (cosH < -1 && event == SUNSET)) {
+        return -2; // no sunrise/sunset today!
+    }
+    
+    // 7b. finish calculating H and convert into hours
+    float H;
+    if (event == SUNRISE) {
+        H = 360 - radToDeg(acos(cosH));
+    } else {
+        H = radToDeg(acos(cosH));
+    }
+    H = to_hours(H);
+    
+    // 8. calculate local mean time of rising/setting
+    float T = H + RA - (0.06571 * t) - 6.622;
+    
+    // 9. adjust back to UTC
+    float UT = fmod(24 + fmod(T - lngHour,24.0), 24.0);
+    
+    double hours;
+    double minutes = modf(UT, &hours) * 60;
+    
+    // set correct values
+    timeinfo->tm_hour = hours;
+    timeinfo->tm_min = minutes;
+    timeinfo->tm_sec = 0;
+    
+    // store in user provided ptr correct data
+    *tt = timegm(timeinfo);
+    if (*tt == (time_t) -1) {
+        return -1;
+    }
+    return 0;
+}
+
+int calculate_sunrise(const float lat, const float lng, time_t *tt, int tomorrow) {
+    return calculate_sunrise_sunset(lat, lng, tt, SUNRISE, tomorrow);
+}
+
+int calculate_sunset(const float lat, const float lng, time_t *tt, int tomorrow) {
+    return calculate_sunrise_sunset(lat, lng, tt, SUNSET, tomorrow);
 }

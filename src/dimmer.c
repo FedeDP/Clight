@@ -1,6 +1,5 @@
 #include "../inc/dimmer.h"
 #include "../inc/brightness.h"
-#include "../inc/dimmer_smooth.h"
 #include "../inc/bus.h"
 #include <sys/inotify.h>
 
@@ -10,15 +9,14 @@ static void init(void);
 static int check(void);
 static void destroy(void);
 static void callback(void);
-static void dim_backlight(void);
-static void restore_backlight(void);
+static void dim_backlight(const double pct);
+static void restore_backlight(const double pct);
 static int get_idle_time(void);
 static void upower_callback(const void *ptr);
 static void inhibit_callback(const void * ptr);
 
 static int inot_wd, inot_fd, timer_fd;
-static double old_pct;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
@@ -72,6 +70,8 @@ static void destroy(void) {
  * resume BACKLIGHT module and reset latest backlight level. 
  */
 static void callback(void) {
+    static int old_pct;
+    
     if (!state.is_dimmed) {
         uint64_t t;
         read(main_p[self.idx].fd, &t, sizeof(uint64_t));
@@ -85,8 +85,7 @@ static void callback(void) {
                 if (inot_wd != -1) {
                     main_p[self.idx].fd = inot_fd;
                     old_pct = state.current_br_pct;
-                    INFO("%lf\n", old_pct);
-                    dim_backlight();
+                    dim_backlight(conf.dimmer_pct);
                 } else {
                     // in case of error, reset is_dimmed state
                     state.is_dimmed = 0;
@@ -104,32 +103,24 @@ static void callback(void) {
         if (length > 0) {
             state.is_dimmed = 0;
             main_p[self.idx].fd = timer_fd;
-            restore_backlight();
+            restore_backlight(old_pct);
             set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
         }
     }
 }
 
-static void dim_backlight(void) {
+static void dim_backlight(const double pct) {
     /* Don't touch backlight if a lower level is already set */
-    if (conf.dimmer_pct >= state.current_br_pct) {
+    if (pct >= state.current_br_pct) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
-        if (is_inited(DIMMER_SMOOTH)) {
-            start_dimmer_smooth(1, conf.dimmer_pct);
-        } else {
-            set_backlight_level(conf.dimmer_pct);
-        }
+        set_backlight_level(pct, !conf.no_smooth_dimmer, conf.dimmer_trans_step, conf.dimmer_trans_timeout);
     }
 }
 
 /* restore previous backlight level */
-static void restore_backlight(void) {
-    if (is_inited(DIMMER_SMOOTH)) {
-        start_dimmer_smooth(1, old_pct);
-    } else {
-        set_backlight_level(old_pct);
-    }
+static void restore_backlight(const double pct) {
+    set_backlight_level(pct, !conf.no_smooth_backlight, conf.dimmer_trans_step, conf.dimmer_trans_timeout);
 }
 
 static int get_idle_time(void) {

@@ -27,6 +27,12 @@ void init_opts(int argc, char *argv[]) {
     conf.dimmer_timeout[ON_AC] = 300;
     conf.dimmer_timeout[ON_BATTERY] = 45;
     conf.dimmer_pct = 0.2;
+    conf.backlight_trans_step = 0.05;
+    conf.dimmer_trans_step = 0.05;
+    conf.gamma_trans_step = 50;
+    conf.backlight_trans_timeout = 30;
+    conf.dimmer_trans_timeout = 30;
+    conf.gamma_trans_timeout = 300;
     
     /*
      * Default polynomial regression points:
@@ -84,9 +90,9 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"batt-event-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_BATTERY][EVENT], 100, "Seconds between each capture during an event(sunrise, sunset) on battery", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used", "video0"},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used", "intel_backlight"},
-        {"no-backlight-smooth", 0, POPT_ARG_NONE, &modules[BRIGHTNESS_SMOOTH].state, 100, "Disable smooth backlight transitions", NULL},
-        {"no-gamma-smooth", 0, POPT_ARG_NONE, &modules[GAMMA_SMOOTH].state, 100, "Disable smooth gamma transitions", NULL},
-        {"no-dimmer-smooth", 0, POPT_ARG_NONE, &modules[DIMMER_SMOOTH].state, 100, "Disable smooth dimmer transitions", NULL},
+        {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.no_smooth_backlight, 100, "Disable smooth backlight transitions", NULL},
+        {"no-gamma-smooth", 0, POPT_ARG_NONE, &conf.no_smooth_gamma, 100, "Disable smooth gamma transitions", NULL},
+        {"no-dimmer-smooth", 0, POPT_ARG_NONE, &conf.no_smooth_dimmer, 100, "Disable smooth dimmer transitions", NULL},
         {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
         {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
         {"lat", 0, POPT_ARG_DOUBLE, &conf.loc.lat, 100, "Your desired latitude", NULL},
@@ -200,6 +206,30 @@ static void check_conf(void) {
     if (fabs(conf.loc.lon) > 180.0f) {
         WARN("Wrong longitude value. Resetting default value.\n");
         conf.loc.lat = 0.0f;
+    }
+    if (conf.backlight_trans_step <= 0.0f || conf.backlight_trans_step >= 1.0f) {
+        WARN("Wrong backlight_trans_step value. Resetting default value.\n");
+        conf.backlight_trans_step = 0.05;
+    }
+    if (conf.dimmer_trans_step <= 0.0f || conf.dimmer_trans_step >= 1.0f) {
+        WARN("Wrong dimmer_trans_step value. Resetting default value.\n");
+        conf.dimmer_trans_step = 0.05;
+    }
+    if (conf.gamma_trans_step <= 0) {
+        WARN("Wrong gamma_trans_step value. Resetting default value.\n");
+        conf.gamma_trans_step = 50;
+    }
+    if (conf.backlight_trans_timeout <= 0) {
+        WARN("Wrong backlight_trans_timeout value. Resetting default value.\n");
+        conf.backlight_trans_timeout = 30;
+    }
+    if (conf.dimmer_trans_timeout <= 0) {
+        WARN("Wrong dimmer_trans_timeout value. Resetting default value.\n");
+        conf.dimmer_trans_timeout = 30;
+    }
+    if (conf.gamma_trans_timeout <= 0) {
+        WARN("Wrong gamma_trans_timeout value. Resetting default value.\n");
+        conf.gamma_trans_timeout = 300;
     }
     
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;

@@ -1,7 +1,6 @@
 #include "../inc/brightness.h"
 #include "../inc/bus.h"
 #include "../inc/math_utils.h"
-#include "../inc/brightness_smooth.h"
 
 static void init(void);
 static int check(void);
@@ -12,7 +11,7 @@ static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER} };
+static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD} };
 static struct self_t self = {
     .name = "Brightness",
     .idx = BRIGHTNESS,
@@ -94,19 +93,18 @@ static void set_brightness(const double perc) {
     const double new_br_pct =  clamp(b, 1, 0);
     
     INFO("New brightness pct value: %f\n", new_br_pct);
-    
-    if (is_inited(BRIGHTNESS_SMOOTH)) {
-        start_brightness_smooth(1, new_br_pct);
-    } else {
-        set_backlight_level(new_br_pct);
-    }
+    set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
 }
 
-void set_backlight_level(const double pct) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightnesspct_all"};
+void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
     
     /* Set brightness on both internal monitor (in case of laptop) and external ones */
-    call(&state.current_br_pct, "d", &args, "sd", conf.screen_path, pct);
+    int ok;
+    call(&ok, "b", &args, "ds(bdu)", pct, conf.screen_path, is_smooth, step, timeout);
+    if (ok) {
+        state.current_br_pct = pct;
+    }
 }
 
 static double capture_frames_brightness(void) {

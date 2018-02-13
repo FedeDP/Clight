@@ -12,11 +12,16 @@
 - [x] make clight work on desktop pc with webcam too (obviously through ddcutil)? -> add a setbrightnesspct_all() method to clightd that will set a pct for internal + external monitors
 - [x] add a math_utils.c source file with all math functions (eg get_distance, clamp...)?
 - [x] make backlight level change smoothly (#20)
-- [x] drop weather support
+- [x] drop weather and networkmanager support
+- [x] update to new clightd interface -> brightness, brighntess smooth, dimmer, dimmer smooth
+- [x] better check for xauthority / xsession
+- [ ] fix wayland? (check!)
+- [x] add a Clightd module that only depends on Bus module and will check if clightd is available (and properly checks its version) (FIX!!)
+- [x] intercept SIGSEGV and remove lock file
+- [x] make smooth_steps and smooth_timeouts for backlight/dimmer and gamma configurable!
 - [ ] update readme
-- [ ] TEST
 - [ ] NEW RELEASE!
 
 ## 2.1
 - [ ] add a kde/gnome module to set a dark theme on sunrise/sunset (gnome: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html)
-- [ ] properly add a onBusCallFail callback to bus_args, with a default one like the current
+- [ ] properly add a onBusCallFail callback to bus_args, with a default one like the current check_err function

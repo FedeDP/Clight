@@ -12,7 +12,7 @@ static void set_dpms_timeouts(void);
 static void set_dpms(int dpms_state);
 static void upower_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS}, {HARD, XORG} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS}, {HARD, XORG}, {HARD, CLIGHTD} };
 static struct self_t self = {
     .name = "Dpms",
     .idx = DPMS,

@@ -11,7 +11,7 @@ Finally, it can dim your screen after a timeout.
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
 ## Build deps
-* libsystemd >= 221 (systemd/sd-bus.h)
+* libsystemd >= 221 (systemd/sd-bus.h, systemd/sd-login.h)
 * libpopt (popt.h)
 * gsl (gsl/gsl_multifit.h, gsl/gsl_statistics_double.h)
 * libconfig (libconfig.h)
@@ -19,7 +19,7 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## Runtime deps:
 * shared objects from build libraries
-* [clightd](https://github.com/FedeDP/Clightd) >= 1.4
+* [clightd](https://github.com/FedeDP/Clightd) >= 2.0
 
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)

@@ -32,9 +32,15 @@ void read_config(enum CONFIG file) {
     config_init(&cfg);
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
         config_lookup_int(&cfg, "frames", &conf.num_captures);
-        config_lookup_int(&cfg, "no_smooth_backlight_transition", (int *)&modules[BRIGHTNESS_SMOOTH].state);
-        config_lookup_int(&cfg, "no_smooth_gamma_transition", (int *)&modules[GAMMA_SMOOTH].state);
-        config_lookup_int(&cfg, "no_smooth_dimmer_transition", (int *)&modules[DIMMER_SMOOTH].state);
+        config_lookup_int(&cfg, "no_smooth_backlight_transition", &conf.no_smooth_backlight);
+        config_lookup_int(&cfg, "no_smooth_gamma_transition", &conf.no_smooth_gamma);
+        config_lookup_int(&cfg, "no_smooth_dimmer_transition", &conf.no_smooth_dimmer);
+        config_lookup_float(&cfg, "backlight_trans_step", &conf.backlight_trans_step);
+        config_lookup_int(&cfg, "gamma_trans_step", &conf.gamma_trans_step);
+        config_lookup_float(&cfg, "dimmer_trans_step", &conf.dimmer_trans_step);
+        config_lookup_int(&cfg, "backlight_trans_timeout", &conf.backlight_trans_timeout);
+        config_lookup_int(&cfg, "gamma_trans_timeout", &conf.gamma_trans_timeout);
+        config_lookup_int(&cfg, "dimmer_trans_timeout", &conf.dimmer_trans_timeout);
         config_lookup_int(&cfg, "no_gamma", (int *)&modules[GAMMA].state);
         config_lookup_float(&cfg, "latitude", &conf.loc.lat);
         config_lookup_float(&cfg, "longitude", &conf.loc.lon);
