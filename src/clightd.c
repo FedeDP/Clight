@@ -57,6 +57,3 @@ static int check_clightd_version(void) {
     }
     return ret;
 }
-
-
-

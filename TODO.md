@@ -15,7 +15,7 @@
 - [x] drop weather and networkmanager support
 - [x] update to new clightd interface -> brightness, brighntess smooth, dimmer, dimmer smooth
 - [x] better check for xauthority / xsession
-- [ ] fix wayland? (check!)
+- [x] fix wayland? (check!)
 - [x] add a Clightd module that only depends on Bus module and will check if clightd is available (and properly checks its version) (FIX!!)
 - [x] intercept SIGSEGV and remove lock file
 - [x] make smooth_steps and smooth_timeouts for backlight/dimmer and gamma configurable!
