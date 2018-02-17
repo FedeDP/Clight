@@ -1,4 +1,5 @@
 ## 2.0
+
 - [x] location_callback for weather module
 - [x] each location_callback should check if distance is > N meters/kilometers to avoid useless calls.
 - [x] Location module should expose a get_distance(old pos, new pos) function
@@ -19,7 +20,7 @@
 - [x] add a Clightd module that only depends on Bus module and will check if clightd is available (and properly checks its version) (FIX!!)
 - [x] intercept SIGSEGV and remove lock file
 - [x] make smooth_steps and smooth_timeouts for backlight/dimmer and gamma configurable!
-- [ ] update readme
+- [x] update readme
 - [ ] NEW RELEASE!
 
 ## 2.1

@@ -97,11 +97,11 @@ static void set_brightness(const double perc) {
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setbrightness"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setallbrightness"};
     
     /* Set brightness on both internal monitor (in case of laptop) and external ones */
     int ok;
-    call(&ok, "b", &args, "ds(bdu)", pct, conf.screen_path, is_smooth, step, timeout);
+    call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
     if (ok) {
         state.current_br_pct = pct;
     }

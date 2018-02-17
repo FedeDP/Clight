@@ -36,9 +36,9 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 By default Clight enables all its functions, fallbacking to disable them when they are not supported.
 This means that these features are all enabled with default values:  
 * BRIGHTNESS: to make webcam captures and change screen backlight level to match ambient brightness
-* GAMMA: to change screen temperature based on current time of day
-* DIMMER: to dim screen after a certain idle time
-* DPMS: to switch off screen after a certain idle time
+* GAMMA: to change screen temperature based on current time of day (X-only feature)
+* DIMMER: to dim screen after a certain idle time (X-only feature)
+* DPMS: to switch off screen after a certain idle time (X-only feature)
 
 **All these features but BRIGHTNESS can be turned off through cmdline and config file options.**
 
@@ -69,11 +69,11 @@ Location received will be then cached when clight exit. This way, if no internet
 * UPower support, to set longer timeouts between captures while on battery, in order to save some energy.
 Moreover, you can set a percentage of maximum settable brightness while on battery.
 * You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
-* It will check if current backlight interface is enabled before changing backlight/dimming screen. It will avoid doing any frame capture at all if interface is disabled. It can happen when you use your laptop connected to an external monitor, with internal monitor switched off; thus changing backlight would be useless.
 * DPMS support: it will set desired dpms timeouts for AC/batt states.
 * Dpms and dimmer can be disabled while on AC, just set dimmer timeout/any dpms timeout for given AC state <= 0.
 * Clight supports org.freedesktop.PowerManagement.Inhibit interface. Thus, when for example watching a youtube video from chromium, dimmer module won't dim your screen.
 * Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
+* Supports both internal laptop monitor and external monitors (thus desktop PCs too), thanks to [ddcutil](https://github.com/rockowitz/ddcutil).
 
 ### Valgrind is run with:
 
@@ -87,7 +87,7 @@ For cmdline options, check clight [-?|--help] [--usage].
 **Please note that cmdline "--device" and "--backlight" switches require only last part of syspath** (eg: "video0" or "intel_backlight").  
 
 ## Config file
-A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is all commented.  
+A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is full of comments.  
 You can customize it or you can copy it in your $XDG_CONFIG_HOME folder (fallbacks to $HOME/.config/) and customize it there.  
 Both files are checked when clight starts, in this order: global -> user-local -> cmdline opts.  
 
@@ -108,7 +108,7 @@ If you run clight from wayland or from a tty, gamma support will be automaticall
 
 ## Other info
 You can only run one clight instance per-user: if a clight instance is running, you cannot start another full clight instance.  
-Obviously you can still invoke "clight -c" from a terminal/shortcut to make a fast capture/screen brightness calibration.  
+Obviously you can still invoke "clight -c" from a terminal/shortcut/clight desktop file to make a fast capture/screen brightness calibration.  
 This is achieved through a clight.lock file placed in current user home.
 
 Every functionality in clight is achieved through a "module". An inter-modules dependencies system has been created ad-hoc to ease development of such modules.  
