@@ -107,6 +107,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"batt-dimmer-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_timeout[ON_BATTERY], 100, "Seconds of inactivity before dimmin screen on battery", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &modules[DPMS].state, 100, "Disable dpms tool", NULL},
         {"no-inhibit", 0, POPT_ARG_NONE, &modules[INHIBIT].state, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
+        {"no-brightness", 0, POPT_ARG_NONE, &modules[BRIGHTNESS].state, 100, "Disable brightness module", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         POPT_AUTOHELP
@@ -255,5 +256,10 @@ static void check_conf(void) {
         memcpy(conf.regression_points[ON_BATTERY], 
                (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
                SIZE_POINTS * sizeof(double));
+    }
+    
+    /* in single capture mode, forcefully enable brightness module */
+    if (conf.single_capture_mode) {
+        modules[BRIGHTNESS].state = IDLE;
     }
 }

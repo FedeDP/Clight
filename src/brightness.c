@@ -41,7 +41,11 @@ static void init(void) {
 }
 
 static int check(void) {
-    return 0; /* Skeleton function needed for modules interface */
+    int webcam_available;
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "iswebcamavailable"};
+    
+    call(&webcam_available, "b", &args, NULL);
+    return !webcam_available;
 }
 
 static void destroy(void) {

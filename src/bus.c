@@ -264,7 +264,7 @@ void add_mod_callback(const struct bus_cb cb) {
 
 static void run_callbacks(const enum modules mod, const void *payload) {
     for (int i = 0; i < _cb.num_callbacks; i++) {
-        if (_cb.callbacks[i].module == mod) {
+        if (_cb.callbacks[i].module == mod && is_inited(mod)) {
             _cb.callbacks[i].cb(payload);
         }
     }

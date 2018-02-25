@@ -19,7 +19,8 @@ static struct self_t self = {
     .name = "Gamma",
     .idx = GAMMA,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps =  dependencies,
+    .standalone = 1
 };
 
 void set_gamma_self(void) {

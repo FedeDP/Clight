@@ -52,6 +52,7 @@ void log_conf(void) {
             );
             
             fprintf(log_file, "\n### Modules ###\n");
+            fprintf(log_file, "* Brightness correction:\t\t%s\n", is_started_disabled(BRIGHTNESS) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Gamma correction:\t\t%s\n", is_started_disabled(GAMMA) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dpms tool:\t\t%s\n", is_started_disabled(DPMS) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dimmer tool:\t\t%s\n\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");

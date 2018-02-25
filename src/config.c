@@ -41,6 +41,7 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "backlight_trans_timeout", &conf.backlight_trans_timeout);
         config_lookup_int(&cfg, "gamma_trans_timeout", &conf.gamma_trans_timeout);
         config_lookup_int(&cfg, "dimmer_trans_timeout", &conf.dimmer_trans_timeout);
+        config_lookup_int(&cfg, "no_brightness", (int *)&modules[BRIGHTNESS].state);
         config_lookup_int(&cfg, "no_gamma", (int *)&modules[GAMMA].state);
         config_lookup_float(&cfg, "latitude", &conf.loc.lat);
         config_lookup_float(&cfg, "longitude", &conf.loc.lon);

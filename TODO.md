@@ -21,8 +21,13 @@
 - [x] intercept SIGSEGV and remove lock file
 - [x] make smooth_steps and smooth_timeouts for backlight/dimmer and gamma configurable!
 - [x] update readme
+- [x] make brightness module optional too
+- [x] automatically disable brightness module on PCs with no webcam
+- [x] force brightness module enabled in single capture mode
+- [x] don't run bus callbacks on disabled modules
 - [ ] NEW RELEASE!
 
 ## 2.1
 - [ ] add a kde/gnome module to set a dark theme on sunrise/sunset (gnome: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html)
 - [ ] properly add a onBusCallFail callback to bus_args, with a default one like the current check_err function
+- [ ] add a small bus interface to query clight status/set new timeouts/make new fast capture ("-c" switch to follow this new api)
