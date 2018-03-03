@@ -24,7 +24,6 @@
 #include "../inc/bus.h"
 #include "../inc/brightness.h"
 #include "../inc/gamma.h"
-#include "../inc/gamma_smooth.h"
 #include "../inc/location.h"
 #include "../inc/signal.h"
 #include "../inc/dpms.h"
@@ -32,14 +31,13 @@
 #include "../inc/lock.h"
 #include "../inc/upower.h"
 #include "../inc/dimmer.h"
-#include "../inc/dimmer_smooth.h"
 #include "../inc/xorg.h"
 #include "../inc/inhibit.h"
 #include "../inc/userbus.h"
-#include "../inc/weather.h"
-#include "../inc/network.h"
+#include "../inc/clightd.h"
 
 static void init(int argc, char *argv[]);
+static void sigsegv_handler(int signum);
 static void set_modules_selfs(void);
 static void init_all_modules(void);
 static void destroy(void);
@@ -50,11 +48,11 @@ static void main_poll(void);
  */
 static void (*const set_selfs[])(void) = {
     set_brightness_self, set_location_self, set_upower_self, set_gamma_self,
-    set_gamma_smooth_self, set_signal_self, set_bus_self, set_dimmer_self,
-    set_dimmer_smooth_self, set_dpms_self, set_xorg_self, set_inhibit_self, 
-    set_userbus_self, set_weather_self, set_network_self
+    set_signal_self, set_bus_self, set_dimmer_self, set_dpms_self, 
+    set_xorg_self, set_inhibit_self, set_userbus_self, set_clightd_self
 };
 
+/* Debug check as i always forget to add functions there... */
 _Static_assert(MODULES_NUM == SIZE(set_selfs), "Wrong number of set_selfs() function pointers in clight.c");
 
 int main(int argc, char *argv[]) {
@@ -64,7 +62,7 @@ int main(int argc, char *argv[]) {
         main_poll();
     }
     destroy();
-    return state.quit == ERR_QUIT ? EXIT_FAILURE : EXIT_SUCCESS;
+    return state.quit == NORM_QUIT ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /*
@@ -73,12 +71,30 @@ int main(int argc, char *argv[]) {
  * Then init needed modules.
  */
 static void init(int argc, char *argv[]) {
+    // when receiving segfault signal,
+    // call our sigsegv handler that just logs
+    // a debug message before dying
+    signal(SIGSEGV, sigsegv_handler);
+    
     init_opts(argc, argv);
     gain_lck();
     open_log();
     log_conf();
     set_modules_selfs();
     init_all_modules();
+}
+
+/*
+ * If received a sigsegv, log a message, destroy lock then
+ * set sigsegv signal handler to default (SIG_DFL),
+ * and send again the signal to the process.
+ */
+static void sigsegv_handler(int signum) {
+    WARN("Received sigsegv signal. Aborting.");
+    close_log();
+    destroy_lck();
+    signal(signum, SIG_DFL);
+    kill(getpid(), signum);
 }
 
 /*
@@ -122,6 +138,8 @@ static void destroy(void) {
  * Listens on all fds and calls correct callback
  */
 static void main_poll(void) {
+    /* Force a sd_bus_process before entering loop */
+    poll_cb(BUS);
     while (!state.quit) {
         int r = poll(main_p, MODULES_NUM, -1);
         if (r == -1) {

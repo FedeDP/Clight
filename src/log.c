@@ -39,26 +39,35 @@ void log_conf(void) {
             fprintf(log_file, "* User setted sunrise:\t\t%s\n", strlen(conf.events[SUNRISE]) ? conf.events[SUNRISE] : "Unsetted");
             fprintf(log_file, "* User setted sunset:\t\t%s\n", strlen(conf.events[SUNSET]) ? conf.events[SUNSET] : "Unsetted");
             fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
-            fprintf(log_file, "* Dimmer backlight:\t\t%d%%\n", conf.dimmer_pct);
+            fprintf(log_file, "* Dimmer backlight pct:\t\t%.2lf\n", conf.dimmer_pct);
             
             fprintf(log_file, "\n### Timeouts ###\n");
             fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
             fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
             fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
             fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
-            fprintf(log_file, "* Weather timeouts:\t\tAC %d\tBATT %d\n", conf.weather_timeout[ON_AC], conf.weather_timeout[ON_BATTERY]);
             fprintf(log_file, "* Dpms timeouts:\t\tAC %d:%d:%d\tBATT %d:%d:%d\n",
                     conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],
                     conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]
             );
             
             fprintf(log_file, "\n### Modules ###\n");
-            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", is_started_disabled(GAMMA_SMOOTH) ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", is_started_disabled(DIMMER_SMOOTH) ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Brightness correction:\t\t%s\n", is_started_disabled(BRIGHTNESS) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Gamma correction:\t\t%s\n", is_started_disabled(GAMMA) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dpms tool:\t\t%s\n", is_started_disabled(DPMS) ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Weather support:\t\t%s\n", is_started_disabled(WEATHER) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dimmer tool:\t\t%s\n\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");
+            
+            fprintf(log_file, "\n### Smooth ###\n");
+            fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", conf.no_smooth_gamma ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", conf.no_smooth_dimmer ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Bright smooth steps:\t\t%lf\n", conf.backlight_trans_step);
+            fprintf(log_file, "* Gamma smooth steps:\t\t%d\n", conf.gamma_trans_step);
+            fprintf(log_file, "* Dimmer smooth steps:\t\t%lf\n", conf.dimmer_trans_step);
+            fprintf(log_file, "* Bright smooth timeout:\t\t%d\n", conf.backlight_trans_timeout);
+            fprintf(log_file, "* Gamma smooth timeout:\t\t%d\n", conf.gamma_trans_timeout);
+            fprintf(log_file, "* Dimmer smooth timeout:\t\t%d\n", conf.dimmer_trans_timeout);
+            
         }
         fflush(log_file);
     }

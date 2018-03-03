@@ -237,7 +237,7 @@ void destroy_modules(void) {
 /*
  * Calls correct destroy function for each module
  */
-static void destroy_module(const enum modules module) {    
+static void destroy_module(const enum modules module) {
     if (!is_destroyed(module)) {
         /* call module destroy func */
         modules[module].destroy();

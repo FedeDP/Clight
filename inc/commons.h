@@ -28,7 +28,7 @@
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, GAMMA_SMOOTH, SIGNAL, BUS, DIMMER, DIMMER_SMOOTH, DPMS, XORG, INHIBIT, USERBUS, WEATHER, NETWORK, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -60,17 +60,13 @@ enum bus_type { SYSTEM, USER };
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
 
-enum NMState {  NM_STATE_UNKNOWN = 0, NM_STATE_ASLEEP = 10, NM_STATE_DISCONNECTED = 20, 
-                NM_STATE_DISCONNECTING = 30, NM_STATE_CONNECTING = 40, NM_STATE_CONNECTED_LOCAL = 50, 
-                NM_STATE_CONNECTED_SITE = 60, NM_STATE_CONNECTED_GLOBAL = 70 };
-
 /* Struct that holds data about a geographic location */
 struct location {
     double lat;
     double lon;
 };
 
-/* Struct that holds global config as passed through cmdline args */
+/* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
     int single_capture_mode;                // do a capture and leave
@@ -83,20 +79,18 @@ struct config {
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
-    int dimmer_pct;                         // pct of max brightness to be used while dimming
+    double dimmer_pct;                      // pct of max brightness to be used while dimming
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
-    char weather_apikey[32 + 1];            // apikey for openweathermap
-    int weather_timeout[SIZE_AC];          // timeouts for weather update
-};
-
-/*
- * Storage struct for our needed variables.
- */
-struct brightness {
-    int current;
-    int max;
-    int old;
+    int no_smooth_backlight;
+    int no_smooth_dimmer;
+    int no_smooth_gamma;
+    double backlight_trans_step;
+    int gamma_trans_step;
+    double dimmer_trans_step;
+    int backlight_trans_timeout;
+    int gamma_trans_timeout;
+    int dimmer_trans_timeout;
 };
 
 /* Global state of program */
@@ -109,14 +103,11 @@ struct state {
     enum ac_states ac_state;                // is laptop on battery?
     int fast_recapture;                     // fast recapture after huge brightness drop?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
-    const char *xauthority;                 // xauthority env variable, to be used in gamma calls
-    const char *display;                    // display env variable, to be used in gamma calls
-    struct brightness br;                   // struct that hold screen backlight info
+    char *xauthority;                       // xauthority env variable, to be used in gamma calls
+    char *display;                          // display env variable, to be used in gamma calls
+    double current_br_pct;                  // current backlight pct
     int is_dimmed;                          // whether we are currently in dimmed state
-    int dimmed_br;                          // backlight level when dimmed
     int pm_inhibited;                       // whether powermanagement is inhibited
-    int cloudiness;                         // weather cloudiness for user location
-    enum NMState nmstate;                           // NetworkManager own states
     jmp_buf quit_buf;                       // quit jump called by longjmp
 };
 

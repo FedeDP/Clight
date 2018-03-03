@@ -11,7 +11,7 @@ Finally, it can dim your screen after a timeout.
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
 ## Build deps
-* libsystemd >= 221 (systemd/sd-bus.h)
+* libsystemd >= 221 (systemd/sd-bus.h, systemd/sd-login.h)
 * libpopt (popt.h)
 * gsl (gsl/gsl_multifit.h, gsl/gsl_statistics_double.h)
 * libconfig (libconfig.h)
@@ -19,12 +19,11 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## Runtime deps:
 * shared objects from build libraries
-* [clightd](https://github.com/FedeDP/Clightd) >= 1.4
+* [clightd](https://github.com/FedeDP/Clightd) >= 2.0
 
 ## Optional runtime deps:
 * Geoclue2 to automatically retrieve user location (no geoclue and no user position specified will disable GAMMA support)
 * Upower to honor timeouts between captures, to use different ambient brightness -> screen backlight matching coefficients, to change dimmer timeout and to change dpms timeouts depending on ac state.
-* NetworkManager to let modules react to connection state changes. Only used by weather module for now.
 
 ## How to run it
 Clight tries to be a 0-conf software; therefore, it installs a desktop file in /etc/xdg/autostart. This way, no matter what's your DE is, if it is xdg-compliant, it will automatically start clight.   User has to do nothing but reboot after installing clight.  
@@ -37,9 +36,9 @@ Finally, a desktop file to take a fast screen backlight recalibration ("clight -
 By default Clight enables all its functions, fallbacking to disable them when they are not supported.
 This means that these features are all enabled with default values:  
 * BRIGHTNESS: to make webcam captures and change screen backlight level to match ambient brightness
-* GAMMA: to change screen temperature based on current time of day
-* DIMMER: to dim screen after a certain idle time
-* DPMS: to switch off screen after a certain idle time
+* GAMMA: to change screen temperature based on current time of day (X-only feature)
+* DIMMER: to dim screen after a certain idle time (X-only feature)
+* DPMS: to switch off screen after a certain idle time (X-only feature)
 
 **All these features but BRIGHTNESS can be turned off through cmdline and config file options.**
 
@@ -70,13 +69,11 @@ Location received will be then cached when clight exit. This way, if no internet
 * UPower support, to set longer timeouts between captures while on battery, in order to save some energy.
 Moreover, you can set a percentage of maximum settable brightness while on battery.
 * You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
-* It will check if current backlight interface is enabled before changing backlight/dimming screen. It will avoid doing any frame capture at all if interface is disabled. It can happen when you use your laptop connected to an external monitor, with internal monitor switched off; thus changing backlight would be useless.
 * DPMS support: it will set desired dpms timeouts for AC/batt states.
 * Dpms and dimmer can be disabled while on AC, just set dimmer timeout/any dpms timeout for given AC state <= 0.
 * Clight supports org.freedesktop.PowerManagement.Inhibit interface. Thus, when for example watching a youtube video from chromium, dimmer module won't dim your screen.
-* Weather support: if an OpenWeatherMap apikey is provided through conf file or cmdline option, clight will adjust timeouts between captures given current cloudiness. Function that adjusts timeouts is quite simple: if cloudiness > 50 -> current timeout is shorten of (cloudiness - 50) / 100. This way, at 51 timeout will be 99% of original timeout. At 100 it will be 50%.
-* NetworkManager StateChanged signal is supported, thus modules can react to connection state changes (only used by weather for now).
 * Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
+* Supports both internal laptop monitor and external monitors (thus desktop PCs too), thanks to [ddcutil](https://github.com/rockowitz/ddcutil).
 
 ### Valgrind is run with:
 
@@ -90,7 +87,7 @@ For cmdline options, check clight [-?|--help] [--usage].
 **Please note that cmdline "--device" and "--backlight" switches require only last part of syspath** (eg: "video0" or "intel_backlight").  
 
 ## Config file
-A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is all commented.  
+A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is full of comments.  
 You can customize it or you can copy it in your $XDG_CONFIG_HOME folder (fallbacks to $HOME/.config/) and customize it there.  
 Both files are checked when clight starts, in this order: global -> user-local -> cmdline opts.  
 
@@ -102,7 +99,7 @@ By customizing these values, you can adapt screen backlight curve to meet your n
 Clight supports different curves on different ac states. In fact, by default on BATT points are different from above. See config file for more info.  
 
 ## Gamma support info
-*Gamma support is only available on X. Sadly on wayland there is still no standard way to achieve gamma correction. Let's way with fingers crossed.*  
+*Gamma support is only available on X. Sadly on wayland there is still no standard way to achieve gamma correction. Let's wait with fingers crossed.*  
 Consequently, on not X environments, gamma correction tool gets autodisabled.  
 
 As [clightd](https://github.com/FedeDP/Clightd#devel-info) getgamma function properly supports only 50-steps temperature values (ie if you use "setgamma 6000" and then getgamma, it will return 6000. If you use setgamma 4578, getgamma won't return exactly it; it will return 4566 or something similar.), do not set in your conf not-50-multiple temperatures.  
@@ -111,7 +108,7 @@ If you run clight from wayland or from a tty, gamma support will be automaticall
 
 ## Other info
 You can only run one clight instance per-user: if a clight instance is running, you cannot start another full clight instance.  
-Obviously you can still invoke "clight -c" from a terminal/shortcut to make a fast capture/screen brightness calibration.  
+Obviously you can still invoke "clight -c" from a terminal/shortcut/clight desktop file to make a fast capture/screen brightness calibration.  
 This is achieved through a clight.lock file placed in current user home.
 
 Every functionality in clight is achieved through a "module". An inter-modules dependencies system has been created ad-hoc to ease development of such modules.  

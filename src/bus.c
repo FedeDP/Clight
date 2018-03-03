@@ -5,6 +5,7 @@ static int check(void);
 static void destroy(void);
 static void callback(void);
 static void run_callbacks(const enum modules mod, const void *payload);
+static int read_array(void *userptr, const char *userptr_type, sd_bus_message *reply);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
@@ -33,7 +34,7 @@ void set_bus_self(void) {
 }
 
 /*
- * Open our bus and start lisetining on its fd
+ * Open system bus and start listening on its fd
  */
 static void init(void) {
     int r = sd_bus_default_system(&bus);
@@ -154,21 +155,14 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
 
     /* Parse the response message */
     if (userptr != NULL) {
-        if (!strncmp(userptr_type, "o", strlen("o"))) {
+        if (!strncmp(userptr_type, "o", 1)) {
             const char *obj = NULL;
             r = sd_bus_message_read(reply, userptr_type, &obj);
             if (r >= 0) {
                 strncpy(userptr, obj, PATH_MAX);
             }
         } else if (userptr_type[0] == 'a') {
-            r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, userptr_type + 1);
-            if (r >= 0) {
-                int i = 0;
-                while (sd_bus_message_read(reply, userptr_type + 1, &(((double *)userptr)[i])) > 0) {
-                    i++;
-                }
-                sd_bus_message_exit_container(reply);
-            }
+            r = read_array(userptr, userptr_type, reply);
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
@@ -177,6 +171,18 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
 
 finish:
     free_bus_structs(&error, m, reply);
+    return r;
+}
+
+static int read_array(void *userptr, const char *userptr_type, sd_bus_message *reply) {
+    int r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, userptr_type + 1);
+    if (r >= 0) {
+        int i = 0;
+        while (sd_bus_message_read(reply, userptr_type + 1, &(((double *)userptr)[i])) > 0) {
+            i++;
+        }
+        sd_bus_message_exit_container(reply);
+    }
     return r;
 }
 
@@ -258,7 +264,7 @@ void add_mod_callback(const struct bus_cb cb) {
 
 static void run_callbacks(const enum modules mod, const void *payload) {
     for (int i = 0; i < _cb.num_callbacks; i++) {
-        if (_cb.callbacks[i].module == mod) {
+        if (_cb.callbacks[i].module == mod && is_inited(mod)) {
             _cb.callbacks[i].cb(payload);
         }
     }
