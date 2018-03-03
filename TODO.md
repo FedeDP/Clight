@@ -25,9 +25,13 @@
 - [x] automatically disable brightness module on PCs with no webcam
 - [x] force brightness module enabled in single capture mode
 - [x] don't run bus callbacks on disabled modules
+- [ ] require clightd 2.0
+- [x] fix gamma/location loading ? -> xorg disabled??? Wait until loginctl interface is not ready?
+- [x] fix dimmer not restoring old backlight
 - [ ] NEW RELEASE!
 
 ## 2.1
+- [ ] drop sytemd timer?
 - [ ] add a kde/gnome module to set a dark theme on sunrise/sunset (gnome: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html)
 - [ ] properly add a onBusCallFail callback to bus_args, with a default one like the current check_err function
 - [ ] add a small bus interface to query clight status/set new timeouts/make new fast capture ("-c" switch to follow this new api)

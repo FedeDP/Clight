@@ -11,7 +11,7 @@ Finally, it can dim your screen after a timeout.
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
 ## Build deps
-* libsystemd >= 221 (systemd/sd-bus.h, systemd/sd-login.h)
+* libsystemd >= 221 (systemd/sd-bus.h)
 * libpopt (popt.h)
 * gsl (gsl/gsl_multifit.h, gsl/gsl_statistics_double.h)
 * libconfig (libconfig.h)

@@ -70,7 +70,7 @@ static void destroy(void) {
  * resume BACKLIGHT module and reset latest backlight level. 
  */
 static void callback(void) {
-    static int old_pct;
+    static double old_pct;
     
     if (!state.is_dimmed) {
         uint64_t t;

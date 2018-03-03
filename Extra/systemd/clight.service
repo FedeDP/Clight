@@ -1,7 +1,7 @@
 [Unit]
 Description=C daemon to adjust screen brightness to match ambient brightness, as computed capturing frames from webcam
-Wants=geoclue.service upower.service clightd.service NetworkManager.service
-After=display-manager.service clightd.service geoclue.service upower.service NetworkManager.service
+Wants=geoclue.service upower.service clightd.service
+After=display-manager.service clightd.service geoclue.service upower.service
 
 [Service]
 Type=simple
