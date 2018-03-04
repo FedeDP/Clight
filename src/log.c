@@ -55,7 +55,7 @@ void log_conf(void) {
             fprintf(log_file, "* Brightness correction:\t\t%s\n", is_started_disabled(BRIGHTNESS) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Gamma correction:\t\t%s\n", is_started_disabled(GAMMA) ? "Disabled" : "Enabled");
             fprintf(log_file, "* Screen dpms tool:\t\t%s\n", is_started_disabled(DPMS) ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Screen dimmer tool:\t\t%s\n\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");
+            fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");
             
             fprintf(log_file, "\n### Smooth ###\n");
             fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");
@@ -66,7 +66,7 @@ void log_conf(void) {
             fprintf(log_file, "* Dimmer smooth steps:\t\t%.2lf\n", conf.dimmer_trans_step);
             fprintf(log_file, "* Bright smooth timeout:\t\t%d\n", conf.backlight_trans_timeout);
             fprintf(log_file, "* Gamma smooth timeout:\t\t%d\n", conf.gamma_trans_timeout);
-            fprintf(log_file, "* Dimmer smooth timeout:\t\t%d\n", conf.dimmer_trans_timeout);
+            fprintf(log_file, "* Dimmer smooth timeout:\t\t%d\n\n", conf.dimmer_trans_timeout);
             
         }
         fflush(log_file);
