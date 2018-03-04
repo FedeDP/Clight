@@ -16,7 +16,7 @@ static void upower_callback(const void *ptr);
 static void inhibit_callback(const void * ptr);
 
 static int inot_wd, inot_fd, timer_fd;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD} };
 static struct self_t self = {
     .name = "Dimmer",
     .idx = DIMMER,
