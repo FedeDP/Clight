@@ -7,8 +7,8 @@ static void destroy(void);
 static void callback(void);
 static int check_clightd_version(void);
 
-#define MINIMUM_CLIGHTD_VERSION_MAJ 1
-#define MINIMUM_CLIGHTD_VERSION_MIN 5
+#define MINIMUM_CLIGHTD_VERSION_MAJ 2
+#define MINIMUM_CLIGHTD_VERSION_MIN 0
 
 static struct self_t self = {
     .name = "Clightd",
