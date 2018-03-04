@@ -40,7 +40,7 @@ This means that these features are all enabled with default values:
 * DIMMER: to dim screen after a certain idle time (X-only feature)
 * DPMS: to switch off screen after a certain idle time (X-only feature)
 
-**All these features but BRIGHTNESS can be turned off through cmdline and config file options.**
+**All these features can be turned off through cmdline and config file options.**
 
 ## Will it eat my battery?
 No, it won't. Clight aims to be very power friendly. In fact, thanks to blocking I/O, it uses CPU only when needed.  
@@ -61,8 +61,6 @@ Location received will be then cached when clight exit. This way, if no internet
 * nice log file, placed in $HOME/.clight.log
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time
 * more frequent captures inside "events": an event starts by default 30mins before sunrise/sunset and ends 30mins after. Configurable.
-* gamma correction tool support can be disabled at runtime (--no-gamma cmdline switch)
-* in case of huge brightness drop (> 60%), a new capture will quickly be done (after 15 seconds), to check if this was an accidental event (eg: you changed room and capture happened before you switched on the light) or if brightness has really dropped that much (eg: you switched off the light)
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
 * only 1 clight instance can be running for same user. You can still invoke a fast capture when an instance is already running, obviously
 * sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
@@ -74,6 +72,8 @@ Moreover, you can set a percentage of maximum settable brightness while on batte
 * Clight supports org.freedesktop.PowerManagement.Inhibit interface. Thus, when for example watching a youtube video from chromium, dimmer module won't dim your screen.
 * Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
 * Supports both internal laptop monitor and external monitors (thus desktop PCs too), thanks to [ddcutil](https://github.com/rockowitz/ddcutil).
+* Autodisable brightness module on PCs without webcam
+* Check clightd version on clight startup
 
 ### Valgrind is run with:
 
@@ -135,7 +135,7 @@ You only need to issue:
     $ make deb
 
 A deb file will be created in "Debian" folder, inside Clight root.  
-Please note that while i am using Debian testing at my job, i am developing clightd from archlinux.  
+Please note that i am developing clightd from archlinux.  
 Thus, you can encounter some packaging issues. Please, report back.  
 
 ## License
