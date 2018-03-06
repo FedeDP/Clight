@@ -22,7 +22,7 @@ void set_signal_self(void) {
 /*
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)
  */
-static void init(void) {    
+static void init(void) {
     sigset_t mask;
 
     sigemptyset(&mask);
