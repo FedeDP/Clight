@@ -1,8 +1,7 @@
 ## 2.1
 - [x] Dimmer should be available even in Brightness gets disabled (eg: on desktop PCs without webcam)
-- [ ] Shorten dimmer timeouts (45 on AC, 20 on batt?)
-- [ ] Use BindsTo instead of require for Clightd in systemd service
-- [ ] use __TIME__ and __DATE__ macros in logger
+- [x] Shorten dimmer timeouts (45 on AC, 20 on batt?)
+- [x] use __TIME__ and __DATE__ macros in logger
 
 ## 2.2
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules

@@ -24,8 +24,8 @@ void init_opts(int argc, char *argv[]) {
     conf.temp[NIGHT] = 4000;
     conf.temp[EVENT] = -1;
     conf.event_duration = 30 * 60;
-    conf.dimmer_timeout[ON_AC] = 300;
-    conf.dimmer_timeout[ON_BATTERY] = 45;
+    conf.dimmer_timeout[ON_AC] = 45;
+    conf.dimmer_timeout[ON_BATTERY] = 20;
     conf.dimmer_pct = 0.2;
     conf.backlight_trans_step = 0.05;
     conf.dimmer_trans_step = 0.05;
