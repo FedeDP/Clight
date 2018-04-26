@@ -181,27 +181,13 @@ static void check_state(time_t *now) {
     }
 }
 
-/*
- * First, it gets current gamma value.
- * Then, if current value is != from temp, it will adjust screen temperature accordingly.
- * If smooth_transition is enabled, the function will return 1 until they are the same.
- * old_temp is static so we don't have to call getgamma everytime the function is called (if smooth_transition is enabled.)
- * and gets resetted when old_temp reaches correct temp.
- */
 static void set_temp(int temp) {
-    int ok, old_temp;
+    int ok;
     
-    struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getgamma"};
-    call(&old_temp, "i", &args_get, "ss", state.display, state.xauthority);
-    
-    if (old_temp != temp) {
-        struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setgamma"};
-        call(&ok, "b", &args_set, "ssi(buu)", state.display, state.xauthority, temp, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
-        if (ok) {
-            INFO("%d gamma temp setted.\n", temp);
-        }
-    } else {
-        INFO("Gamma temp was already %d\n", temp);
+    struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setgamma"};
+    call(&ok, "b", &args_set, "ssi(buu)", state.display, state.xauthority, temp, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
+    if (ok) {
+        INFO("%d gamma temp setted.\n", temp);
     }
 }
 
