@@ -122,6 +122,14 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
         }
 
         if (calculate_sunrise(lat, lon, &t, day) == 0) {
+            /* 
+             * Force computation of today event if SUNRISE is 
+             * not today; eg: in local time it is at 6am, but utc time is 22,
+             * so it counts as today while it is indeed tomorrow...
+             */
+            if (t > state.events[SUNSET]) {
+                calculate_sunrise(lat, lon, &t, day - 1);
+            }
             state.events[SUNRISE] = t;
         } else {
             state.events[SUNRISE] = -1;

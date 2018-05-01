@@ -23,7 +23,7 @@ double get_distance(struct location loc1, struct location loc2) {
 /*
  * Convert degrees to radians
  */
-double  degToRad(double angleDeg) {
+double degToRad(double angleDeg) {
     return (M_PI * angleDeg / 180.0);
 }
 
@@ -105,19 +105,14 @@ static float to_hours(const float rad) {
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow) {
     // 1. compute the day of the year (timeinfo->tm_yday below)
     time(tt);
-    struct tm *timeinfo;
-    
-    if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
-        timeinfo = localtime(tt);
-    } else {
-        timeinfo = gmtime(tt);
-    }
+    struct tm *timeinfo = localtime(tt);
     if (!timeinfo) {
         return -1;
     }
     // if needed, set tomorrow
     timeinfo->tm_yday += tomorrow;
     timeinfo->tm_mday += tomorrow;
+    timeinfo->tm_sec = 0;
     
     /* If user provided a sunrise/sunset time, use them */
     if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
@@ -126,7 +121,6 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
             ERROR("Wrong sunrise/sunset time setted by a cmdline arg. Leaving.\n");
             return -1;
         }
-        timeinfo->tm_sec = 0;
         *tt = mktime(timeinfo);
         return 0;
     }
@@ -135,9 +129,9 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     float lngHour = to_hours(lng);
     float t;
     if (event == SUNRISE) {
-        t = timeinfo->tm_yday + (6 - lngHour) / 24;
+        t = timeinfo->tm_yday + (6.0 - lngHour) / 24.0;
     } else {
-        t = timeinfo->tm_yday + (18 - lngHour) / 24;
+        t = timeinfo->tm_yday + (18.0 - lngHour) / 24.0;
     }
     
     // 3. calculate the Sun's mean anomaly
@@ -150,37 +144,37 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     float RA = fmod(radToDeg(atan(0.91764 * tan(degToRad(L)))), 360.0);
     
     // 5b. right ascension value needs to be in the same quadrant as L
-    float Lquadrant  = floor(L/90) * 90;
-    float RAquadrant = floor(RA/90) * 90;
+    float Lquadrant = floor(L / 90) * 90;
+    float RAquadrant = floor(RA / 90) * 90;
     RA += (Lquadrant - RAquadrant);
-    
+
     // 5c. right ascension value needs to be converted into hours
     RA = to_hours(RA);
-    
+
     // 6. calculate the Sun's declination
     float sinDec = 0.39782 * sin(degToRad(L));
     float cosDec = cos(asin(sinDec));
-    
+
     // 7a. calculate the Sun's local hour angle
     float cosH = sin(degToRad(ZENITH)) - (sinDec * sin(degToRad(lat))) / (cosDec * cos(degToRad(lat)));
     if ((cosH > 1 && event == SUNRISE) || (cosH < -1 && event == SUNSET)) {
         return -2; // no sunrise/sunset today!
     }
-    
+
     // 7b. finish calculating H and convert into hours
     float H;
     if (event == SUNRISE) {
-        H = 360 - radToDeg(acos(cosH));
+        H = 360.0 - radToDeg(acos(cosH));
     } else {
         H = radToDeg(acos(cosH));
     }
     H = to_hours(H);
-    
+
     // 8. calculate local mean time of rising/setting
     float T = H + RA - (0.06571 * t) - 6.622;
-    
+
     // 9. adjust back to UTC
-    float UT = fmod(24 + fmod(T - lngHour,24.0), 24.0);
+    float UT = fmod(24 + fmod(T - lngHour, 24.0), 24.0);
     
     double hours;
     double minutes = modf(UT, &hours) * 60;
@@ -188,7 +182,6 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     // set correct values
     timeinfo->tm_hour = hours;
     timeinfo->tm_min = minutes;
-    timeinfo->tm_sec = 0;
     
     // store in user provided ptr correct data
     *tt = timegm(timeinfo);
