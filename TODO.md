@@ -1,9 +1,3 @@
-## 2.1
-- [x] Dimmer should be available even in Brightness gets disabled (eg: on desktop PCs without webcam)
-- [x] Shorten dimmer timeouts (45 on AC, 20 on batt?)
-- [x] use __TIME__ and __DATE__ macros in logger
-- [x] Fix #26
-
 ## 2.2
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules
 
