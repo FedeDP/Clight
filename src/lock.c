@@ -10,7 +10,7 @@ void gain_lck(void) {
     } else {
         snprintf(lockfile, PATH_MAX, "%s/.clight.lock", getpwuid(getuid())->pw_dir);
     }
-    lck_fd = open(lockfile, O_RDWR | O_CREAT);
+    lck_fd = open(lockfile, O_RDWR | O_CREAT, 0600);
     if (lck_fd == -1) {
         ERROR("%s\n", strerror(errno));
     }
