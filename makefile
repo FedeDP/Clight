@@ -30,7 +30,7 @@ endif
 
 endif
 
-CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)
+CLIGHT_VERSION ?= $(shell git describe --abbrev=0 --always --tags)
 SYSTEMD_VERSION = $(shell pkg-config --modversion systemd)
 CFLAGS+=-DVERSION=\"$(CLIGHT_VERSION)\" -DLIBSYSTEMD_VERSION=$(SYSTEMD_VERSION)
 
