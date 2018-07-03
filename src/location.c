@@ -142,7 +142,7 @@ static int check(void) {
  */
 static int geoclue_get_client(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient"};
-    return call(client, "o", &args, "");
+    return call(client, "o", &args, NULL);
 }
 
 /*
@@ -188,7 +188,7 @@ static int geoclue_client_start(void) {
     set_property(&id_args, 's', "clight");
     unsigned int loc_thrs = LOC_DISTANCE_THRS;
     set_property(&thres_args, 'u', &loc_thrs); // 50kms
-    return call(NULL, "", &call_args, "");
+    return call(NULL, "", &call_args, NULL);
 }
 
 /*
@@ -196,7 +196,7 @@ static int geoclue_client_start(void) {
  */
 static void geoclue_client_stop(void) {
     struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop"};
-    call(NULL, "", &args, "");
+    call(NULL, "", &args, NULL);
 }
 
 static void cache_location(void) {

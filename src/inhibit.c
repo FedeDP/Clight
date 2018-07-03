@@ -45,7 +45,7 @@ static void destroy(void) {
 static int inhibit_init(void) {
     /* check initial inhibit state */
     struct bus_args inhibit_args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
-    int r = call(&state.pm_inhibited, "b", &inhibit_args, "");
+    int r = call(&state.pm_inhibited, "b", &inhibit_args, NULL);
     if (r < 0) {
         WARN("PowerManagement inhibition appears to be unsupported.\n");
         return -1;   // disable this module
@@ -67,7 +67,7 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
     *(int *)(data->ptr) = state.pm_inhibited;
 
     struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
-    call(&state.pm_inhibited, "b", &args, "");
+    call(&state.pm_inhibited, "b", &args, NULL);
     
     INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
     return 0;
