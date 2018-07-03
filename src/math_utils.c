@@ -52,22 +52,22 @@ void polynomialfit(enum ac_states s) {
     gsl_vector *y, *c;
     double chisq;
     int i, j;
-    
+
     X = gsl_matrix_alloc(SIZE_POINTS, DEGREE);
     y = gsl_vector_alloc(SIZE_POINTS);
     c = gsl_vector_alloc(DEGREE);
     cov = gsl_matrix_alloc(DEGREE, DEGREE);
-    
+
     for(i=0; i < SIZE_POINTS; i++) {
         for(j=0; j < DEGREE; j++) {
             gsl_matrix_set(X, i, j, pow(i, j));
         }
         gsl_vector_set(y, i, conf.regression_points[s][i]);
     }
-    
+
     ws = gsl_multifit_linear_alloc(SIZE_POINTS, DEGREE);
     gsl_multifit_linear(X, y, c, cov, &chisq, ws);
-    
+
     /* store results */
     for(i = 0; i < DEGREE; i++) {
         state.fit_parameters[s][i] = gsl_vector_get(c, i);

@@ -115,17 +115,18 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         goto finish;
     }
 
-    va_list args;
-    va_start(args, signature);
+    if (signature) {
+        va_list args;
+        va_start(args, signature);
     
 #if LIBSYSTEMD_VERSION >= 234
-    sd_bus_message_appendv(m, signature, args);
+        sd_bus_message_appendv(m, signature, args);
 #else
-    int i = 0;
-    char *s;
-    int val;
-    while (signature[i] != '\0') {
-        switch (signature[i]) {
+        int i = 0;
+        char *s;
+        int val;
+        while (signature[i] != '\0') {
+            switch (signature[i]) {
             case SD_BUS_TYPE_STRING:
                 s = va_arg(args, char *);
                 r = sd_bus_message_append_basic(m, 's', s);
@@ -143,11 +144,13 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
             default:
                 WARN("Wrong signature in bus call: %c.\n", signature[i]);
                 break;
+            }
+            i++;
         }
-        i++;
-    }
 #endif
-    va_end(args);
+        va_end(args);
+    }
+
     r = sd_bus_call(tmp, m, 0, &error, &reply);
     if (check_err(r, &error)) {
         goto finish;
