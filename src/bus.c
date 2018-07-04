@@ -109,7 +109,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
     sd_bus *tmp = a->type == USER ? userbus : bus;
-    
+
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
     if (check_err(r, &error)) {
         goto finish;
@@ -118,32 +118,54 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
     if (signature) {
         va_list args;
         va_start(args, signature);
-    
+
 #if LIBSYSTEMD_VERSION >= 234
         sd_bus_message_appendv(m, signature, args);
 #else
         int i = 0;
-        char *s;
-        int val;
         while (signature[i] != '\0') {
             switch (signature[i]) {
-            case SD_BUS_TYPE_STRING:
-                s = va_arg(args, char *);
-                r = sd_bus_message_append_basic(m, 's', s);
-                if (check_err(r, &error)) {
-                    goto finish;
+                case SD_BUS_TYPE_STRING: {
+                    char *val = va_arg(args, char *);
+                    r = sd_bus_message_append_basic(m, signature[i], val);
                 }
                 break;
-            case SD_BUS_TYPE_INT32:
-                val = va_arg(args, int);
-                r = sd_bus_message_append_basic(m, 'i', &val);
-                if (check_err(r, &error)) {
-                    goto finish;
+
+                case SD_BUS_TYPE_INT32:
+                case SD_BUS_TYPE_UINT32:
+                case SD_BUS_TYPE_BOOLEAN: {
+                    int val = va_arg(args, int);
+                    r = sd_bus_message_append_basic(m, signature[i], &val);
                 }
                 break;
-            default:
-                WARN("Wrong signature in bus call: %c.\n", signature[i]);
+
+                case SD_BUS_TYPE_DOUBLE: {
+                    double val = va_arg(args, double);
+                    r = sd_bus_message_append_basic(m, signature[i], &val);
+                }
                 break;
+
+                case SD_BUS_TYPE_STRUCT_BEGIN: {
+                    char *ptr = strchr(signature + i, SD_BUS_TYPE_STRUCT_END);
+                    if (ptr) {
+                        char str[30] = {0};
+                        strncpy(str, signature + i + 1, strlen(signature + i + 1) - strlen(ptr));
+                        r = sd_bus_message_open_container(m, SD_BUS_TYPE_STRUCT, str);
+                    }
+                    break;
+                }
+
+                case SD_BUS_TYPE_STRUCT_END:
+                    r = sd_bus_message_close_container(m);
+                    break;
+
+                default:
+                    WARN("Wrong signature in bus call: %c.\n", signature[i]);
+                    break;
+            }
+
+            if (check_err(r, &error)) {
+                goto finish;
             }
             i++;
         }

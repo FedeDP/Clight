@@ -1,5 +1,5 @@
 ## 2.2
-- [ ] Properly implement required signature for LIBSYSTEMD_VERSION < 234 in bus.c call()
+- [x] Properly implement required signature for LIBSYSTEMD_VERSION < 234 in bus.c call()
 - [ ] Automatically leave clight if no functional modules is started(eg: no brightness, gamma, dimmer, dpms)
 - [x] Fix bug when signature is NULL, it is an undefined behaviour
 
