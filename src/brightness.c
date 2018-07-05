@@ -18,7 +18,8 @@ static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
     .standalone = 1,
-    .enabled_single_capture = 1
+    .enabled_single_capture = 1,
+    .functional_module = 1
 };
 
 void set_brightness_self(void) {

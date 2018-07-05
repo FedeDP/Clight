@@ -109,6 +109,7 @@ struct state {
     int is_dimmed;                          // whether we are currently in dimmed state
     int pm_inhibited;                       // whether powermanagement is inhibited
     jmp_buf quit_buf;                       // quit jump called by longjmp
+    int needed_functional_modules;          // we need at least 1 functional module (BRIGHTNESS, GAMMA, DPMS, DIMMER) otherwise quit
 };
 
 /* Struct that holds info about an inter-modules dep */
@@ -126,6 +127,7 @@ struct self_t {
     struct dependency *deps;              // module on which there is a dep
     int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
     int enabled_single_capture;           // whether this module is enabled during single capture mode
+    int functional_module;                // whether this module offers a high-level feature
 };
 
 /* Struct that holds data for each module */
@@ -140,7 +142,7 @@ struct module {
     enum module_states state;             // state of a module
 };
 
-struct state state;
-struct config conf;
-struct module modules[MODULES_NUM];
-struct pollfd main_p[MODULES_NUM];
+extern struct state state;
+extern struct config conf;
+extern struct module modules[MODULES_NUM];
+extern struct pollfd main_p[MODULES_NUM];

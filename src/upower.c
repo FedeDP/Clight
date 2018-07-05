@@ -28,7 +28,14 @@ static void init(void) {
 }
 
 static int check(void) {
-    return 0; /* Skeleton function needed for modules interface */
+    /* check initial AC state */
+    struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
+    int r = get_property(&power_args, "b", &state.ac_state);
+    if (r < 0) {
+        WARN("Upower appears to be unsupported.\n");
+        return -1;   // disable this module
+    }
+    return 0;
 }
 
 static void callback(void) {
@@ -38,22 +45,13 @@ static void callback(void) {
 static void destroy(void) {
     /* Destroy this match slot */
     if (slot) {
-        sd_bus_slot_unref(slot);
+        slot = sd_bus_slot_unref(slot);
     }
 }
 
 static int upower_init(void) {
-    /* check initial AC state */
-    struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
-    int r = get_property(&power_args, "b", &state.ac_state);
-    if (r < 0) {
-        WARN("Upower appears to be unsupported.\n");
-        return -1;   // disable this module
-    }
-    
     struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
-    r = add_match(&args, &slot, on_upower_change);
-    return -(r < 0);
+    return -(add_match(&args, &slot, on_upower_change) < 0);
 }
 
 /* 

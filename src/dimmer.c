@@ -22,7 +22,8 @@ static struct self_t self = {
     .idx = DIMMER,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
-    .standalone = 1
+    .standalone = 1,
+    .functional_module = 1
 };
 
 void set_dimmer_self(void) {
@@ -30,15 +31,17 @@ void set_dimmer_self(void) {
 }
 
 static void init(void) {
+    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
+    
+    int fd = DONT_POLL_W_ERR;
+    
     inot_fd = inotify_init();
     if (inot_fd != -1) {
-        struct bus_cb upower_cb = { UPOWER, upower_callback };
-        struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
-        
-        timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
+        fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
                                 0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited AND dimmer timeout > 0, else disarmed
-        INIT_MOD(timer_fd, &upower_cb, &inhibit_cb);
     }
+    INIT_MOD(fd, &upower_cb, &inhibit_cb);
 }
 
 /* Check we're on X */

@@ -222,6 +222,11 @@ void disable_module(const enum modules module) {
             }
         }
         
+        /* Update the list of active functional modules */
+        state.needed_functional_modules -= modules[module].self->functional_module;
+        if (state.needed_functional_modules == 0) {
+            ERROR("No functional module is running. Nothing to do...leaving.\n");
+        }
         /* Finally, destroy this module */
         destroy_module(module);
     }

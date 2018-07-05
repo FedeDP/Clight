@@ -43,6 +43,11 @@ static void init_all_modules(void);
 static void destroy(void);
 static void main_poll(void);
 
+struct state state;
+struct config conf;
+struct module modules[MODULES_NUM];
+struct pollfd main_p[MODULES_NUM];
+
 /*
  * pointers to init modules functions;
  */
@@ -90,7 +95,7 @@ static void init(int argc, char *argv[]) {
  * and send again the signal to the process.
  */
 static void sigsegv_handler(int signum) {
-    WARN("Received sigsegv signal. Aborting.");
+    WARN("Received sigsegv signal. Aborting.\n");
     close_log();
     destroy_lck();
     signal(signum, SIG_DFL);
@@ -103,6 +108,7 @@ static void sigsegv_handler(int signum) {
 static void set_modules_selfs(void) {
     for (int i = 0; i < MODULES_NUM; i++) {
         set_selfs[i]();
+        state.needed_functional_modules += modules[i].self->functional_module;
     }
 }
 

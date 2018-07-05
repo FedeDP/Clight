@@ -121,7 +121,7 @@ static void destroy(void) {
     cache_location();
     /* Destroy this match slot */
     if (slot) {
-        sd_bus_slot_unref(slot);
+        slot = sd_bus_slot_unref(slot);
     }
 }
 
@@ -134,7 +134,7 @@ static int check(void) {
         change_dep_type(GAMMA, self.idx, SOFT);
         return 1;
     }
-    return !is_idle(GAMMA) && !is_inited(GAMMA);
+    return 0;
 }
 
 /*

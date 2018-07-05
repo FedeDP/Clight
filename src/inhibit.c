@@ -28,7 +28,13 @@ static void init(void) {
 }
 
 static int check(void) {
-    return 0; /* Skeleton function needed for modules interface */
+    /* check initial inhibit state */
+    struct bus_args inhibit_args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
+    int r = call(&state.pm_inhibited, "b", &inhibit_args, NULL);
+    if (r < 0) {
+        WARN("PowerManagement inhibition appears to be unsupported.\n");
+    }
+    return -(r < 0);
 }
 
 static void callback(void) {
@@ -38,22 +44,13 @@ static void callback(void) {
 static void destroy(void) {
     /* Destroy this match slot */
     if (slot) {
-        sd_bus_slot_unref(slot);
+        slot = sd_bus_slot_unref(slot);
     }
 }
 
 static int inhibit_init(void) {
-    /* check initial inhibit state */
-    struct bus_args inhibit_args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
-    int r = call(&state.pm_inhibited, "b", &inhibit_args, NULL);
-    if (r < 0) {
-        WARN("PowerManagement inhibition appears to be unsupported.\n");
-        return -1;   // disable this module
-    }
-    
     struct bus_args args = {"org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibitChanged", USER};
-    r = add_match(&args, &slot, on_inhibit_change);
-    return -(r < 0);
+    return -(add_match(&args, &slot, on_inhibit_change) < 0);
 }
 
 /* 

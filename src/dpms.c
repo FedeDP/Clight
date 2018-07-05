@@ -17,7 +17,8 @@ static struct self_t self = {
     .name = "Dpms",
     .idx = DPMS,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps =  dependencies,
+    .functional_module = 1
 };
 
 void set_dpms_self(void) {

@@ -21,6 +21,7 @@ int is_inited(const enum modules module);
 int is_started_disabled(const enum modules module);
 int is_idle(const enum modules module);
 int is_destroyed(const enum modules module);
+int check_functional_modules(void);
 void set_self_deps(struct self_t *self);
 void poll_cb(const enum modules module);
 void change_dep_type(const enum modules mod, const enum modules mod_dep, const enum dep_type type);
