@@ -260,7 +260,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
     if (check_err(r, &error)) {
         goto finish;
     }
-    if (!strcmp(type, "o")) {
+    if (!strcmp(type, "o") || !strcmp(type, "s")) {
         const char *obj = NULL;
         r = sd_bus_message_read(m, type, &obj);
         if (r >= 0) {

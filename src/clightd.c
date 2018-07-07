@@ -39,11 +39,11 @@ static void callback(void) {
 
 static int check_clightd_version(void) {
     int ret = -1;
-    const char *clightd_version = NULL;
+    char clightd_version[PATH_MAX + 1] = {0};
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "version"};
-    get_property(&args, "s", &clightd_version);
+    get_property(&args, "s", clightd_version);
 
-    if (!clightd_version) {
+    if (!strlen(clightd_version)) {
         WARN("No clightd found. Clightd is a mandatory dep.\n");
     } else {
         int maj_val = atoi(clightd_version);
