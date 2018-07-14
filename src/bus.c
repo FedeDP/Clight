@@ -191,7 +191,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
-        check_err(r, &error);
+        r = check_err(r, &error);
     }
 
 finish:
@@ -220,8 +220,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
     int r = sd_bus_add_match(tmp, slot, match, cb, &_cb.userdata);
-    check_err(r, NULL);
-    return r;
+    return check_err(r, NULL);
 }
 
 /*
@@ -243,7 +242,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
             WARN("Wrong signature in bus call: %c.\n", type);
             break;
     }
-    check_err(r, &error);
+    r = check_err(r, &error);
     free_bus_structs(&error, NULL, NULL);
     return r;
 }
@@ -269,7 +268,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
     } else {
         r = sd_bus_message_read(m, type, userptr);
     }
-    check_err(r, NULL);
+    r = check_err(r, NULL);
 
 finish:
     free_bus_structs(&error, m, NULL);
@@ -323,7 +322,6 @@ static int check_err(int r, sd_bus_error *err) {
         if (r == -EHOSTUNREACH && err && err->message) {
             if (strstr(err->message, "/org/clightd/backlight")) {
                 ERROR("%s\n", err->message);
-                goto end; // this line won't be executed as ERROR() macro does a longjmp for error handling and leave
             }
         }
         /* Don't leave for ebusy/eperm/EHOSTUNREACH errors. eperm may mean that a not-active session called a method on clightd */
@@ -333,9 +331,8 @@ static int check_err(int r, sd_bus_error *err) {
             ERROR("%s\n", err && err->message ? err->message : strerror(-r));
         }
     }
-
-end:
-    return r < 0;
+    /* -1 on error, 0 ok */
+    return -(r < 0);
 }
 
 sd_bus **get_user_bus(void) {

@@ -170,10 +170,10 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
     struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
 
-    get_property(&lat_args, "d", &conf.loc.lat);
-    get_property(&lon_args, "d", &conf.loc.lon);
-
-    INFO("New location received: %.2lf, %.2lf\n", conf.loc.lat, conf.loc.lon);
+    int r = get_property(&lat_args, "d", &conf.loc.lat) + get_property(&lon_args, "d", &conf.loc.lon);
+    if (!r) {
+        INFO("New location received: %.2lf, %.2lf\n", conf.loc.lat, conf.loc.lon);
+    }
     return 0;
 }
 
@@ -185,10 +185,15 @@ static int geoclue_client_start(void) {
     struct bus_args id_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId"};
     struct bus_args thres_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold"};
 
-    set_property(&id_args, 's', "clight");
-    unsigned int loc_thrs = LOC_DISTANCE_THRS;
-    set_property(&thres_args, 'u', &loc_thrs); // 50kms
-    return call(NULL, "", &call_args, NULL);
+    int r = set_property(&id_args, 's', "clight");
+    if (!r) {
+        unsigned int loc_thrs = LOC_DISTANCE_THRS;
+        r = set_property(&thres_args, 'u', &loc_thrs); // 50kms
+    }
+    if (!r) {
+        r = call(NULL, "", &call_args, NULL);
+    }
+    return r;
 }
 
 /*

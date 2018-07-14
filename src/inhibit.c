@@ -34,7 +34,7 @@ static int check(void) {
     if (r < 0) {
         WARN("PowerManagement inhibition appears to be unsupported.\n");
     }
-    return -(r < 0);
+    return r;
 }
 
 static void callback(void) {
@@ -50,7 +50,7 @@ static void destroy(void) {
 
 static int inhibit_init(void) {
     struct bus_args args = {"org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibitChanged", USER};
-    return -(add_match(&args, &slot, on_inhibit_change) < 0);
+    return add_match(&args, &slot, on_inhibit_change);
 }
 
 /* 
@@ -64,9 +64,11 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
     *(int *)(data->ptr) = state.pm_inhibited;
 
     struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
-    call(&state.pm_inhibited, "b", &args, NULL);
+    int r = call(&state.pm_inhibited, "b", &args, NULL);
     
-    INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
+    if (!r) {
+        INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
+    }
     return 0;
 }
 

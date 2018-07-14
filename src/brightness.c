@@ -45,8 +45,8 @@ static int check(void) {
     int webcam_available;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "iswebcamavailable"};
     
-    call(&webcam_available, "b", &args, NULL);
-    return !webcam_available;
+    int r = call(&webcam_available, "b", &args, NULL);
+    return r || !webcam_available;
 }
 
 static void destroy(void) {
@@ -106,8 +106,8 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     
     /* Set brightness on both internal monitor (in case of laptop) and external ones */
     int ok;
-    call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
-    if (ok) {
+    int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
+    if (!r && ok) {
         state.current_br_pct = pct;
     }
 }
@@ -115,8 +115,11 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
 static double capture_frames_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
     double intensity[conf.num_captures];
-    call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
-    return compute_average(intensity, conf.num_captures);
+    int r = call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
+    if (!r) {
+        return compute_average(intensity, conf.num_captures);
+    }
+    return -1.0f;
 }
 
 static void upower_callback(const void *ptr) {

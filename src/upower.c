@@ -51,7 +51,7 @@ static void destroy(void) {
 
 static int upower_init(void) {
     struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
-    return -(add_match(&args, &slot, on_upower_change) < 0);
+    return add_match(&args, &slot, on_upower_change);
 }
 
 /* 
@@ -75,8 +75,8 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
      * .LidIsPresent                       property  b         true         emits-change
      * .OnBattery                          property  b         false        emits-change
      */
-    get_property(&power_args, "b", &state.ac_state);
-    if (*(int *)(data->ptr) != state.ac_state) {
+    int r = get_property(&power_args, "b", &state.ac_state);
+    if (!r && (*(int *)(data->ptr) != state.ac_state)) {
         INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
     }
     return 0;

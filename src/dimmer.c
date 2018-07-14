@@ -127,11 +127,14 @@ static void restore_backlight(const double pct) {
 }
 
 static int get_idle_time(void) {
-    int idle_time = -1;
+    int idle_time;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "getidletime"};
-    call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
-    /* clightd returns ms of inactivity. We need seconds */
-    return round(idle_time / 1000);
+    int r = call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
+    if (!r) {
+        /* clightd returns ms of inactivity. We need seconds */
+        return round(idle_time / 1000);
+    }
+    return r;
 }
 
 /* Reset dimmer timeout */
