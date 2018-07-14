@@ -132,7 +132,7 @@ static int get_idle_time(void) {
     int r = call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
     if (!r) {
         /* clightd returns ms of inactivity. We need seconds */
-        return round(idle_time / 1000);
+        return idle_time / 1000;
     }
     return r;
 }
