@@ -4,7 +4,7 @@
 - [x] Fix bug when signature is NULL, it is an undefined behaviour
 - [x] Various improvements in modules
 - [x] Fix issues on ubuntu 16.04
-- [ ] Fix dimmer/backlight issue (probably a clightd issue)
+- [x] Fix dimmer/backlight issue (probably a clightd issue)
 
 ## 2.3
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules

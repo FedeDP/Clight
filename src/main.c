@@ -61,6 +61,8 @@ static void (*const set_selfs[])(void) = {
 _Static_assert(MODULES_NUM == SIZE(set_selfs), "Wrong number of set_selfs() function pointers in clight.c");
 
 int main(int argc, char *argv[]) {
+    /* Assume max backlight level on startup */
+    state.current_br_pct = 1.0;
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         init(argc, argv);

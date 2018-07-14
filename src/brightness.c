@@ -33,10 +33,8 @@ static void init(void) {
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
-    /* Assume max backlight level on startup */
-    state.current_br_pct = 1.0;
+
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     INIT_MOD(fd, &upower_cb);
 }

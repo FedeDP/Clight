@@ -34,17 +34,15 @@ static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
     
-    int fd = DONT_POLL_W_ERR;
-    
+    timer_fd = DONT_POLL_W_ERR;
     inot_fd = inotify_init();
     if (inot_fd != -1) {
-        fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
+        timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
                                 0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited AND dimmer timeout > 0, else disarmed
     }
-    INIT_MOD(fd, &upower_cb, &inhibit_cb);
+    INIT_MOD(timer_fd, &upower_cb, &inhibit_cb);
 }
 
-/* Check we're on X */
 static int check(void) {
     return 0;
 }
@@ -82,7 +80,7 @@ static void callback(void) {
         /* If interface is not enabled, avoid entering dimmed state */
         int idle_t = get_idle_time();
         if (idle_t > 0) {
-            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state] - 1;
+            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
             if (state.is_dimmed) {
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
