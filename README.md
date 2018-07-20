@@ -127,16 +127,5 @@ Uninstall:
 ## Arch AUR packages
 Clight is available on AUR: https://aur.archlinux.org/packages/clight-git/ .
 
-## Deb packages
-Deb package for amd64 architecture is provided for each [release](https://github.com/FedeDP/Clight/releases).  
-Moreover, you can very easily build your own packages, if you wish to test latest Clight code.  
-You only need to issue:
-
-    $ make deb
-
-A deb file will be created in "Debian" folder, inside Clight root.  
-Please note that i am developing clightd from archlinux.  
-Thus, you can encounter some packaging issues. Please, report back.  
-
 ## License
 This software is distributed with GPL license, see [COPYING](https://github.com/FedeDP/Clight/blob/master/COPYING) file for more informations.

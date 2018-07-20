@@ -5,6 +5,7 @@
 - [x] Various improvements in modules
 - [x] Fix issues on ubuntu 16.04
 - [x] Fix dimmer/backlight issue (probably a clightd issue)
+- [x] drop deb package
 
 ## 2.3
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules

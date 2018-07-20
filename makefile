@@ -3,8 +3,6 @@ BINNAME = clight
 SYSTEMDDIR = /usr/lib/systemd/user/
 SYSTEMDUNIT = clight.service
 SYSTEMDTIMER = clight.timer
-DEBIANDIR = ./Clight
-DEBOUTPUTDIR = ./Debian
 EXTRADIR = Extra
 CONFDIR = /etc/default
 CONFNAME = clight.conf
@@ -52,24 +50,6 @@ clight-debug: objects-debug
 
 clean:
 	@cd $(SRCDIR); $(RM) *.o
-
-deb: all install-deb build-deb clean-deb
-
-install-deb: DESTDIR=$(DEBIANDIR)
-install-deb: install
-
-build-deb:
-	$(info setting deb package version.)
-	@sed -i 's/Version:.*/Version: $(CLIGHT_VERSION)/' ./DEBIAN/control
-	$(info copying debian build script.)
-	@cp -r DEBIAN/ $(DEBIANDIR)
-	@$(INSTALL_DIR) $(DEBOUTPUTDIR)
-	$(info creating debian package.)
-	@dpkg-deb --build $(DEBIANDIR) $(DEBOUTPUTDIR)
-
-clean-deb:
-	$(info cleaning up.)
-	@$(RMDIR) $(DEBIANDIR)
 
 install:
 	$(info installing bin.)

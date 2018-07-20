@@ -1,9 +1,0 @@
-Package: clight
-Version: 2.1
-Section: base
-Priority: optional
-Architecture: amd64
-Depends: libpopt0, libsystemd0 (>= 221), libconfig9, libgsl23 | libgsl2, clightd (>= 2.0)
-Suggests: geoclue-2.0, upower
-Maintainer: Federico Di Pierro <nierro92@gmail.com>
-Description: A C daemon that turns your webcam into a light sensor. It can also change display gamma temperature, dim your screen and set your dpms.
