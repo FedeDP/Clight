@@ -1,12 +1,3 @@
-## 2.2
-- [x] Properly implement required signature for LIBSYSTEMD_VERSION < 234 in bus.c call()
-- [x] Automatically leave clight if no functional modules is started(eg: no brightness, gamma, dimmer, dpms)
-- [x] Fix bug when signature is NULL, it is an undefined behaviour
-- [x] Various improvements in modules
-- [x] Fix issues on ubuntu 16.04
-- [x] Fix dimmer/backlight issue (probably a clightd issue)
-- [x] drop deb package
-
 ## 2.3
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules
 
