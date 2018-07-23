@@ -48,7 +48,11 @@ static void init(void) {
         fd = start_timer(CLOCK_MONOTONIC, 3, 0);
     } else {
         int ret = load_cache_location();
-        fd = ret == 0 ? DONT_POLL : DONT_POLL_W_ERR;
+        if (ret == 0) {
+            /* We have a location, but no geoclue instance is running. */
+            change_dep_type(GAMMA, self.idx, SOFT);
+        }
+        fd = DONT_POLL_W_ERR;
     }
     /* In case of errors, geoclue_init returns -1 -> disable location. */
     INIT_MOD(fd);

@@ -82,6 +82,7 @@ static void callback(void) {
         if (idle_t > 0) {
             state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
             if (state.is_dimmed) {
+                DEBUG("Entering dimmed state...\n");
                 inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
                 if (inot_wd != -1) {
                     main_p[self.idx].fd = inot_fd;
@@ -130,7 +131,7 @@ static int get_idle_time(void) {
     int r = call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
     if (!r) {
         /* clightd returns ms of inactivity. We need seconds */
-        return idle_time / 1000;
+        return lround((double)idle_time / 1000);
     }
     return r;
 }

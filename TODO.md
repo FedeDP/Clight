@@ -1,4 +1,8 @@
 ## 2.4
+- [x] Properly destroy location module if geoclue could not be inited, even if a cached locations is present
+- [x] Fix dimmer
+
+## 2.5
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules
 
 ## 2.X
