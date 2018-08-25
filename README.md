@@ -65,26 +65,24 @@ Finally, remember that webcam is not always on; it is used only when needed with
 * very lightweight
 * fully valgrind and cppcheck clean
 * external signals catching (sigint/sigterm)
-* systemd user unit and autostart desktop file shipped
+* systemd user unit shipped
 * a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does) -> **X only**
 * dimmer support: it will dim your screen after specified timeout of user inactivity (ie: no mouse/keyboard) -> **X only**
 * geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates. Otherwise gamma support will be disabled.
-Location received will be then cached when clight exit. This way, if no internet connection is present (thus geoclue2 cannot give us any location) instead of hanging, clight will load latest available location from cache file.
-* different nightly and daily captures timeout (by default 45mins during the night and 10mins during the day; both configurable)
+Location received will be then cached when clight exit. This way, if no internet connection is present (thus geoclue2 cannot give us any location), clight will load latest available location from cache file. If no cached location is present, gamma will be disabled.
 * nice log file, placed in $HOME/.clight.log
 * --sunrise/--sunset times user-specified support: gamma nightly temp will be setted at sunset time, daily temp at sunrise time
 * more frequent captures inside "events": an event starts by default 30mins before sunrise/sunset and ends 30mins after. Configurable.
 * conf file placed in both /etc/default and $XDG_CONFIG_HOME (fallbacks to $HOME/.config/) support
-* only 1 clight instance can be running for same user. You can still invoke a fast capture when an instance is already running, obviously
-* sweet inter-modules dependencies management system with "modules"(CAPTURE, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved.
+* Lots of configurations available
+* only 1 clight instance can be running for each user. You can still invoke a fast capture when an instance is already running, obviously
+* sweet inter-modules dependencies management system with "modules"(BRIGHTNESS, GAMMA, LOCATION, etc etc) lazy loading: every module will only be started at the right time, eg: GAMMA module will only be started after a location has been retrieved. Moreover, modules gets gracefully auto-disabled where unsupported (eg: GAMMA on non-X environments)
 * UPower support, to set longer timeouts between captures while on battery, in order to save some energy.
-Moreover, you can set a percentage of maximum settable brightness while on battery.
 * You can specify curve points to be used to match ambient brightness to screen backlight from config file. For more info, see [Polynomial fit](https://github.com/FedeDP/Clight#polynomial-fit) section below.
 * DPMS support: it will set desired dpms timeouts for AC/batt states.
 * Dpms and dimmer can be disabled while on AC, just set dimmer timeout/any dpms timeout for given AC state <= 0.
 * Clight supports org.freedesktop.PowerManagement.Inhibit interface. Thus, when for example watching a youtube video from chromium, dimmer module won't dim your screen.
-* Gracefully auto-disabling unsupported module (eg: GAMMA on non-X environments)
 * Supports both internal laptop monitor and external monitors (thus desktop PCs too), thanks to [ddcutil](https://github.com/rockowitz/ddcutil).
 * Autodisable brightness module on PCs without webcam
 * Check clightd version on clight startup
