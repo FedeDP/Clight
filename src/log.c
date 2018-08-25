@@ -25,8 +25,8 @@ void log_conf(void) {
         fprintf(log_file, "\n### Generic ###\n");
         fprintf(log_file, "* Verbose (debugging):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
         fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
-        fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unsetted");
-        fprintf(log_file, "* Backlight path:\t\t%s%s", strlen(conf.screen_path) ? conf.screen_path : "Unsetted", conf.single_capture_mode ? "\n\n" : "\n");
+        fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
+        fprintf(log_file, "* Backlight path:\t\t%s%s", strlen(conf.screen_path) ? conf.screen_path : "Unset", conf.single_capture_mode ? "\n\n" : "\n");
         
         if (!conf.single_capture_mode) {
             if (conf.loc.lat != 0.0f || conf.loc.lon != 0.0f) {
@@ -36,8 +36,8 @@ void log_conf(void) {
             }
             fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
             fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
-            fprintf(log_file, "* User setted sunrise:\t\t%s\n", strlen(conf.events[SUNRISE]) ? conf.events[SUNRISE] : "Unsetted");
-            fprintf(log_file, "* User setted sunset:\t\t%s\n", strlen(conf.events[SUNSET]) ? conf.events[SUNSET] : "Unsetted");
+            fprintf(log_file, "* User setted sunrise:\t\t%s\n", strlen(conf.events[SUNRISE]) ? conf.events[SUNRISE] : "Unset");
+            fprintf(log_file, "* User setted sunset:\t\t%s\n", strlen(conf.events[SUNSET]) ? conf.events[SUNSET] : "Unset");
             fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
             fprintf(log_file, "* Dimmer backlight pct:\t\t%.2lf\n", conf.dimmer_pct);
             
