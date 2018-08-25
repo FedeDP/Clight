@@ -34,6 +34,18 @@ Note that timer is needed to ensure that any needed bus interface is completely 
 
 Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
 
+## Geoclue issues
+If you have got any issue with geoclue, please try to append following lines to /etc/geoclue/geoclue.conf:
+
+```
+[clightc]
+allowed=true
+system=false
+users=
+```
+
+If issues persist, please fill a bug report.
+
 ## Default Enabled Modules
 By default Clight enables all its functions, fallbacking to disable them when they are not supported.
 This means that these features are all enabled with default values:  

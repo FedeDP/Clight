@@ -14,7 +14,7 @@ static struct self_t self = {
     .name = "Inhibit",
     .idx = INHIBIT,
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies
+    .deps = dependencies
 };
 
 void set_inhibit_self(void) {
