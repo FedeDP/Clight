@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Clight
-Exec=systemctl --user start clight.timer
-NoDisplay=true
-Comment=Start Clight user daemon to turn your webcam into a light sensor
-Categories=System

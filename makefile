@@ -9,7 +9,7 @@ CONFNAME = clight.conf
 ICONSDIR = /usr/share/icons/hicolor/scalable/apps
 ICONNAME = clight.svg
 DESKTOPDIR = /usr/share/applications
-AUTOSTARTDIR = /etc/xdg/autostart
+LICENSEDIR = /usr/share/licenses/clight
 RM = rm -f
 RMDIR = rm -rf
 INSTALL = install -p
@@ -69,12 +69,13 @@ install:
 	@$(INSTALL_DIR) "$(DESTDIR)$(ICONSDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/icons/$(ICONNAME) "$(DESTDIR)$(ICONSDIR)"
 	
-	$(info installing desktop files.)
-	@$(INSTALL_DIR) "$(DESTDIR)$(AUTOSTARTDIR)"
-	@$(INSTALL_DATA) $(EXTRADIR)/desktop/clight.desktop "$(DESTDIR)$(AUTOSTARTDIR)"
-	
+	$(info installing desktop file.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(DESKTOPDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/desktop/clightc.desktop "$(DESTDIR)$(DESKTOPDIR)"
+	
+	$(info installing license file.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(LICENSEDIR)"
+	@$(INSTALL_DATA) COPYING "$(DESTDIR)$(LICENSEDIR)"
 
 uninstall:
 	$(info uninstalling bin.)
@@ -90,6 +91,8 @@ uninstall:
 	$(info uninstalling icon.)
 	@$(RM) "$(DESTDIR)$(ICONSDIR)/$(ICONNAME)"
 	
-	$(info uninstalling desktop files.)
-	@$(RM) "$(DESTDIR)$(AUTOSTARTDIR)/clight.desktop"
+	$(info uninstalling desktop file.)
 	@$(RM) "$(DESTDIR)$(DESKTOPDIR)/clightc.desktop"
+	
+	$(info uninstalling license file.)
+	@$(RMDIR) "$(DESTDIR)$(LICENSEDIR)"

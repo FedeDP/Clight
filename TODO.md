@@ -1,7 +1,8 @@
 ## 2.5
-- [ ] Install license file in /usr/share/licenses/clight/
+- [x] Fix geoclue2 issues
+- [x] Install license file in /usr/share/licenses/clight/
+- [x] Drop support for /etc/xdg/autostart, and tell user to issue a "systemctl --user enable clight.timer" instead. This way even not-xdg-compliant DE will work out of the box
 - [ ] Drop XORG module and let all modules check if they can be enabled in check() function
-- [ ] Add wayland (wlroots) support for gamma in clightd (dpms too?)
 
 ## 2.6
 - [ ] add a small bus interface to query clight status/set new timeouts/make new fast capture ("-c" switch to follow this new api)
