@@ -189,7 +189,8 @@ static int geoclue_client_start(void) {
     struct bus_args id_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId"};
     struct bus_args thres_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold"};
 
-    int r = set_property(&id_args, 's', "clight");
+    /* It now needs proper /usr/share/applications/clightc.desktop name */
+    int r = set_property(&id_args, 's', "clightc");
     if (!r) {
         unsigned int loc_thrs = LOC_DISTANCE_THRS;
         r = set_property(&thres_args, 'u', &loc_thrs); // 50kms
