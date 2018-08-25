@@ -32,7 +32,7 @@ void log_conf(void) {
             if (conf.loc.lat != 0.0f || conf.loc.lon != 0.0f) {
                 fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.loc.lat, conf.loc.lon);
             } else {
-                fprintf(log_file, "* User position:\t\tUnsetted\n");
+                fprintf(log_file, "* User position:\t\tUnset\n");
             }
             fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
             fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
