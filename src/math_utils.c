@@ -99,7 +99,7 @@ static float to_hours(const float rad) {
 /*
  * Just a small function to compute sunset/sunrise for today (or tomorrow).
  * See: http://stackoverflow.com/questions/7064531/sunrise-sunset-times-in-c
- * IF conf.events are both set, it means sunrise/sunset times are user-setted.
+ * IF conf.events are both set, it means sunrise/sunset times are user-set.
  * So, only store in *tt their corresponding time_t values.
  */
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow) {
@@ -118,7 +118,7 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     if (strlen(conf.events[SUNRISE]) > 0 && strlen(conf.events[SUNSET]) > 0) {
         char *s = strptime(conf.events[event], "%R", timeinfo);
         if (!s) {
-            ERROR("Wrong sunrise/sunset time setted by a cmdline arg. Leaving.\n");
+            ERROR("Wrong sunrise/sunset time set by user. Leaving.\n");
             return -1;
         }
         *tt = mktime(timeinfo);

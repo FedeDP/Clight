@@ -54,7 +54,7 @@ static void callback(void) {
  * checks next day events (or current day if clight has started right now).
  * Then, if needed (ie: first time this func is called or when state.time changed),
  * calls set_temp with correct temp, given current state(night or day).
- * It returns 0 if: smooth_transition is off or desired temp has finally been setted (after transitioning).
+ * It returns 0 if: smooth_transition is off or desired temp has finally been set (after transitioning).
  * If it returns 0, reset transitioning flag and set next event timeout.
  * Else, set a timeout for smooth transition and set transitioning flag to 1.
  * If ret == 0, it can also mean we haven't called set_temp, and this means an
@@ -82,7 +82,7 @@ static void check_gamma(void) {
      */
     set_temp(conf.temp[state.time]);
 
-    /* desired gamma temp has been setted. Set new GAMMA timer and reset transitioning state. */
+    /* desired gamma temp has been set. Set new GAMMA timer and reset transitioning state. */
     t = state.events[state.next_event] + state.event_time_range;
     INFO("Next gamma alarm due to: %s", ctime(&t));
     set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
@@ -196,7 +196,7 @@ static void set_temp(int temp) {
     struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setgamma"};
     int r = call(&ok, "b", &args_set, "ssi(buu)", state.display, state.xauthority, temp, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     if (!r && ok) {
-        INFO("%d gamma temp setted.\n", temp);
+        INFO("%d gamma temp set.\n", temp);
     }
 }
 

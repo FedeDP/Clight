@@ -31,7 +31,7 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
     if (flag == 0) {
         if (sec != 0 || nsec != 0) {
-            DEBUG("Setted timeout of %ds %dns on fd %d.\n", sec, nsec, fd);
+            DEBUG("Set timeout of %ds %dns on fd %d.\n", sec, nsec, fd);
         } else {
             DEBUG("Disarmed timerfd on fd %d.\n", fd);
         }

@@ -10,7 +10,7 @@ static enum modules *sorted_modules; // modules sorted by their starting place
 static int started_modules = 0; // number of started modules
 
 /* 
- * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been setted.
+ * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been set.
  * Check if all deps modules have been started too.
  * If module has not a poll_cb (it is not waiting on poll), call poll_cb right now as it is fully started already.
  */

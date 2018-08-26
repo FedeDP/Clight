@@ -10,7 +10,7 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
 static int check_err(int r, sd_bus_error *err);
 
 /* 
- * bus_mod_idx: setted in every module's match callback to their self.idx.
+ * bus_mod_idx: set in every module's match callback to their self.idx.
  * It is the idx of the module on which bus should call callbacks
  * stored in struct bus_cb *callbacks
  */

@@ -153,7 +153,7 @@ static void parse_cmd(int argc, char *const argv[]) {
 
 /* 
  * It does all needed checks to correctly reset default values
- * in case of wrong options setted.
+ * in case of wrong options set.
  */
 static void check_conf(void) {
     if (conf.timeout[ON_AC][DAY] <= 0) {
