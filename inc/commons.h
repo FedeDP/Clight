@@ -28,7 +28,7 @@
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, MODULES_NUM };
+enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -69,7 +69,6 @@ struct location {
 /* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
-    int single_capture_mode;                // do a capture and leave
     int timeout[SIZE_AC][SIZE_STATES];      // timeout between captures for each ac_state and time state (day/night/event)
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
@@ -126,7 +125,6 @@ struct self_t {
     int satisfied_deps;                   // number of satisfied deps
     struct dependency *deps;              // module on which there is a dep
     int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
-    int enabled_single_capture;           // whether this module is enabled during single capture mode
     int functional_module;                // whether this module offers a high-level feature
 };
 

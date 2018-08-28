@@ -80,7 +80,6 @@ void init_opts(int argc, char *argv[]) {
 static void parse_cmd(int argc, char *const argv[]) {
     poptContext pc;
     const struct poptOption po[] = {
-        {"capture", 'c', POPT_ARG_NONE, &conf.single_capture_mode, 100, "Take a fast capture/screen brightness calibration and quit", NULL},
         {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 100, "Frames taken for each capture, Between 1 and 20", NULL},
         {"ac-day-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][DAY], 100, "Seconds between each capture during the day on AC", NULL},
         {"ac-night-timeout", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.timeout[ON_AC][NIGHT], 100, "Seconds between each capture during the night on AC", NULL},
@@ -256,10 +255,5 @@ static void check_conf(void) {
         memcpy(conf.regression_points[ON_BATTERY], 
                (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
                SIZE_POINTS * sizeof(double));
-    }
-    
-    /* in single capture mode, forcefully enable brightness module */
-    if (conf.single_capture_mode) {
-        modules[BRIGHTNESS].state = IDLE;
     }
 }

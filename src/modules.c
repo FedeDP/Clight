@@ -18,7 +18,7 @@ void init_modules(const enum modules module) {
     /* if module is not disabled, try to start it */
     if (is_idle(module)) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
-            if ((conf.single_capture_mode && !modules[module].self->enabled_single_capture) || modules[module].check()) {
+            if (modules[module].check()) {
                 disable_module(module);
             } else {
                 modules[module].init();

@@ -10,11 +10,13 @@ static int check_clightd_version(void);
 #define MINIMUM_CLIGHTD_VERSION_MAJ 2
 #define MINIMUM_CLIGHTD_VERSION_MIN 0
 
+static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .name = "Clightd",
     .idx = CLIGHTD,
+    .num_deps = SIZE(dependencies),
+    .deps =  dependencies,
     .standalone = 1,
-    .enabled_single_capture = 1
 };
 
 void set_clightd_self(void) {

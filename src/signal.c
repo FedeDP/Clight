@@ -12,7 +12,6 @@ static struct self_t self = {
     .name = "Signal",
     .idx = SIGNAL,
     .standalone = 1,
-    .enabled_single_capture = 1
 };
 
 void set_signal_self(void) {

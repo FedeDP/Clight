@@ -18,7 +18,6 @@ static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
     .standalone = 1,
-    .enabled_single_capture = 1,
     .functional_module = 1
 };
 
@@ -56,9 +55,6 @@ static void callback(void) {
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     
     do_capture();
-    if (conf.single_capture_mode) {
-        state.quit = NORM_QUIT;
-    }
 }
 
 /*
@@ -83,11 +79,7 @@ static void do_capture(void) {
     } else {
         DEBUG("Screen is currently dimmed. Avoid changing backlight level.\n");
     }
-
-    if (!conf.single_capture_mode) {
-        // reset normal timer
-        set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
-    }
+    set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
 }
 
 static void set_brightness(const double perc) {

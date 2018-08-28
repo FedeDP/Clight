@@ -26,7 +26,6 @@ static struct self_t self = {
     .name = "Bus",
     .idx = BUS,
     .standalone = 1,
-    .enabled_single_capture = 1
 };
 
 void set_bus_self(void) {
