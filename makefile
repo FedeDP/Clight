@@ -20,7 +20,7 @@ SRCDIR = src/
 LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl libconfig)
 CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
 
-FOLDERS = ./ conf/ modules/ utils/
+FOLDERS = $(subst src,.,$(sort $(dir $(wildcard $(SRCDIR)*/))))
 SRCS = $(addsuffix *.c, $(FOLDERS))
 INCS = $(addprefix -I, $(FOLDERS))
 
