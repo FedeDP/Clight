@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include <bus.h>
 
 static int check_clightd_version(void);
 

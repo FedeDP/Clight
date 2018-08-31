@@ -1,4 +1,4 @@
-#include "../inc/timer.h"
+#include <timer.h>
 #include <stddef.h>
 
 static long get_timeout(int fd, size_t member);

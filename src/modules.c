@@ -1,5 +1,5 @@
-#include "../inc/modules.h"
-#include "../inc/bus.h"
+#include <modules.h>
+#include <bus.h>
 
 static void init_submodules(const enum modules module);
 static void started_cb(enum modules module);

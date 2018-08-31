@@ -1,6 +1,6 @@
 #include <sys/signalfd.h>
 #include <signal.h>
-#include "../inc/modules.h"
+#include <modules.h>
 
 static struct self_t self = {
     .standalone = 1,

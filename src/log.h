@@ -1,6 +1,6 @@
 #pragma once
 
-#include "commons.h"
+#include <commons.h>
 
 #define DEBUG(msg, ...) if (conf.verbose) log_message(__FILE__, __LINE__, 'D', msg, ##__VA_ARGS__)
 #define INFO(msg, ...) log_message(__FILE__, __LINE__, 'I', msg, ##__VA_ARGS__)

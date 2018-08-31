@@ -1,5 +1,5 @@
-#include "../inc/bus.h"
-#include "../inc/math_utils.h"
+#include <bus.h>
+#include <my_math.h>
 
 static void check_gamma(void);
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day);

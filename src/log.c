@@ -1,5 +1,5 @@
-#include "../inc/log.h"
-#include "../inc/modules.h"
+#include <log.h>
+#include <modules.h>
 
 static FILE *log_file;
 

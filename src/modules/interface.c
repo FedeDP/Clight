@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include <bus.h>
 
 static int get_version( sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);

@@ -1,5 +1,5 @@
-#include "../inc/config.h"
-#include "../inc/opts.h"
+#include <config.h>
+#include <opts.h>
 #include <popt.h>
 
 static void parse_cmd(int argc, char *const argv[]);

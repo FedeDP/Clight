@@ -10,6 +10,8 @@
 
 - [x] Automatically set module self at startup
 - [x] Drop unused code
+- [x] Require c99 as no more c11 is used
+- [x] Better code organization and repo architecture
 
 ## 2.X
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules

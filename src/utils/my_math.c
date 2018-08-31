@@ -1,4 +1,4 @@
-#include "../inc/math_utils.h"
+#include <my_math.h>
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 

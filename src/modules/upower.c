@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include <bus.h>
 
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);

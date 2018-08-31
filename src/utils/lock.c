@@ -1,4 +1,4 @@
-#include "../inc/lock.h"
+#include <lock.h>
 #include <sys/file.h>
 
 static int lck_fd; // fd on which clight enforces a lock to disable multiple clight instances running

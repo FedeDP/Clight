@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include <bus.h>
 
 #define DPMS_DISABLED -1
 

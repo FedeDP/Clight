@@ -1,6 +1,6 @@
-#include "../inc/brightness.h"
-#include "../inc/bus.h"
-#include "../inc/math_utils.h"
+#include <brightness.h>
+#include <bus.h>
+#include <my_math.h>
 
 static void do_capture(void);
 static void set_brightness(const double perc);

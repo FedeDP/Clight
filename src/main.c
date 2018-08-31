@@ -21,9 +21,9 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#include "../inc/modules.h"
-#include "../inc/opts.h"
-#include "../inc/lock.h"
+#include <modules.h>
+#include <opts.h>
+#include <lock.h>
 
 static void init(int argc, char *argv[]);
 static void sigsegv_handler(int signum);

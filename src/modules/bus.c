@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include <bus.h>
 
 static void run_callbacks(const enum modules mod, const void *payload);
 static int read_array(void *userptr, const char *userptr_type, sd_bus_message *reply);

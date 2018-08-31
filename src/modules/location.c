@@ -1,5 +1,5 @@
-#include "../inc/bus.h"
-#include "../inc/math_utils.h"
+#include <bus.h>
+#include <my_math.h>
 
 static int load_cache_location(void);
 static void init_cache_file(void);

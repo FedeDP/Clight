@@ -1,7 +1,6 @@
 #pragma once
 
-#include "modules.h"
-#include <systemd/sd-bus.h>
+#include <modules.h>
 
 struct bus_match_data {
     int bus_mod_idx;

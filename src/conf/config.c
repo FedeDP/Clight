@@ -1,4 +1,4 @@
-#include "../inc/config.h"
+#include <config.h>
 #include <libconfig.h>
 
 static void init_config_file(enum CONFIG file);

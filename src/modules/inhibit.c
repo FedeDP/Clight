@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include <bus.h>
 
 static int inhibit_init(void);
 static int on_inhibit_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);

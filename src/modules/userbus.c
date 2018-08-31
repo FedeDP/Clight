@@ -1,4 +1,4 @@
-#include "../inc/bus.h"
+#include <bus.h>
 
 static struct dependency dependencies[] = { {SUBMODULE, BUS} };
 static struct self_t self = {

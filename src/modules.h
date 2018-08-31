@@ -1,6 +1,6 @@
 #pragma once
 
-#include "timer.h"
+#include <timer.h>
 
 #define _ctor_ __attribute__((constructor))
 

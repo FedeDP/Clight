@@ -1,4 +1,4 @@
-#include "log.h"
+#include <log.h>
 
 double get_distance(struct location loc1, struct location loc2);
 double degToRad(double angleDeg);
