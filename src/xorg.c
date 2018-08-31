@@ -1,20 +1,10 @@
-#include "../inc/xorg.h"
 #include "../inc/modules.h"
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
-
 static struct self_t self = {
-    .name = "Xorg",
-    .idx = XORG,
     .standalone = 1
 };
 
-void set_xorg_self(void) {
-    SET_SELF();
-}
+MODULE(XORG);
 
 static void init(void) {
     INIT_MOD(DONT_POLL);

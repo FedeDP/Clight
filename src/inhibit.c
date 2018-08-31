@@ -1,25 +1,16 @@
-#include "../inc/inhibit.h"
 #include "../inc/bus.h"
 
-static void init(void);
-static int check(void);
-static void callback(void);
-static void destroy(void);
 static int inhibit_init(void);
 static int on_inhibit_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {HARD, USERBUS} };
 static struct self_t self = {
-    .name = "Inhibit",
-    .idx = INHIBIT,
     .num_deps = SIZE(dependencies),
     .deps = dependencies
 };
 
-void set_inhibit_self(void) {
-    SET_SELF();
-}
+MODULE(INHIBIT);
 
 static void init(void) {
     int r = inhibit_init();

@@ -1,25 +1,16 @@
-#include "../inc/upower.h"
 #include "../inc/bus.h"
 
-static void init(void);
-static int check(void);
-static void callback(void);
-static void destroy(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
-    .name = "Upower",
-    .idx = UPOWER,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
 
-void set_upower_self(void) {
-    SET_SELF();
-}
+MODULE(UPOWER);
 
 static void init(void) {
     int r = upower_init();

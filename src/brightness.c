@@ -2,10 +2,6 @@
 #include "../inc/bus.h"
 #include "../inc/math_utils.h"
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
 static void do_capture(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
@@ -13,17 +9,13 @@ static void upower_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD} };
 static struct self_t self = {
-    .name = "Brightness",
-    .idx = BRIGHTNESS,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
     .standalone = 1,
     .functional_module = 1
 };
 
-void set_brightness_self(void) {
-    SET_SELF();
-}
+MODULE(BRIGHTNESS);
 
 /*
  * Init brightness values (max and current)

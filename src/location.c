@@ -1,10 +1,6 @@
-#include "../inc/location.h"
+#include "../inc/bus.h"
 #include "../inc/math_utils.h"
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
 static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
@@ -19,15 +15,11 @@ static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
-    .name = "Location",
-    .idx = LOCATION,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies
 };
 
-void set_location_self(void) {
-    SET_SELF();
-}
+MODULE(LOCATION);
 
 /*
  * init location:

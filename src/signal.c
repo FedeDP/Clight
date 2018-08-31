@@ -1,22 +1,13 @@
 #include <sys/signalfd.h>
 #include <signal.h>
-#include "../inc/signal.h"
 #include "../inc/modules.h"
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
-
 static struct self_t self = {
-    .name = "Signal",
-    .idx = SIGNAL,
     .standalone = 1,
 };
 
-void set_signal_self(void) {
-    SET_SELF();
-}
+
+MODULE(SIGNAL);
 
 /*
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)

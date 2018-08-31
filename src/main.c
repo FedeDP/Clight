@@ -21,25 +21,12 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#include "../inc/bus.h"
-#include "../inc/brightness.h"
-#include "../inc/gamma.h"
-#include "../inc/location.h"
-#include "../inc/signal.h"
-#include "../inc/dpms.h"
+#include "../inc/modules.h"
 #include "../inc/opts.h"
 #include "../inc/lock.h"
-#include "../inc/upower.h"
-#include "../inc/dimmer.h"
-#include "../inc/xorg.h"
-#include "../inc/inhibit.h"
-#include "../inc/userbus.h"
-#include "../inc/clightd.h"
-#include "../inc/interface.h"
 
 static void init(int argc, char *argv[]);
 static void sigsegv_handler(int signum);
-static void set_modules_selfs(void);
 static void init_all_modules(void);
 static void destroy(void);
 static void main_poll(void);
@@ -48,18 +35,6 @@ struct state state;
 struct config conf;
 struct module modules[MODULES_NUM];
 struct pollfd main_p[MODULES_NUM];
-
-/*
- * pointers to init modules functions;
- */
-static void (*const set_selfs[])(void) = {
-    set_brightness_self, set_location_self, set_upower_self, set_gamma_self,
-    set_signal_self, set_bus_self, set_dimmer_self, set_dpms_self, 
-    set_xorg_self, set_inhibit_self, set_userbus_self, set_clightd_self, set_interface_self
-};
-
-/* Debug check as i always forget to add functions there... */
-_Static_assert(MODULES_NUM == SIZE(set_selfs), "Wrong number of set_selfs() function pointers in clight.c");
 
 int main(int argc, char *argv[]) {
     /* Assume max backlight level on startup */
@@ -88,7 +63,6 @@ static void init(int argc, char *argv[]) {
     gain_lck();
     open_log();
     log_conf();
-    set_modules_selfs();
     init_all_modules();
 }
 
@@ -103,16 +77,6 @@ static void sigsegv_handler(int signum) {
     destroy_lck();
     signal(signum, SIG_DFL);
     kill(getpid(), signum);
-}
-
-/*
- * Set each module self struct
- */
-static void set_modules_selfs(void) {
-    for (int i = 0; i < MODULES_NUM; i++) {
-        set_selfs[i]();
-        state.needed_functional_modules += modules[i].self->functional_module;
-    }
 }
 
 /* 

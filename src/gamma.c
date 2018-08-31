@@ -1,12 +1,6 @@
-#include "../inc/gamma.h"
-#include "../inc/location.h"
 #include "../inc/bus.h"
 #include "../inc/math_utils.h"
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
 static void check_gamma(void);
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day);
 static void check_next_event(time_t *now);
@@ -16,17 +10,13 @@ static void location_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION}, {HARD, XORG}, {HARD, CLIGHTD} };
 static struct self_t self = {
-    .name = "Gamma",
-    .idx = GAMMA,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
     .standalone = 1,
     .functional_module = 1
 };
 
-void set_gamma_self(void) {
-    SET_SELF();
-}
+MODULE(GAMMA);
 
 static void init(void) {
     struct bus_cb loc_cb = { LOCATION, location_callback };

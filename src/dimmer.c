@@ -1,14 +1,9 @@
-#include "../inc/dimmer.h"
 #include "../inc/brightness.h"
 #include "../inc/bus.h"
 #include <sys/inotify.h>
 
 #define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
 static void dim_backlight(const double pct);
 static void restore_backlight(const double pct);
 static int get_idle_time(void);
@@ -18,17 +13,13 @@ static void inhibit_callback(const void * ptr);
 static int inot_wd, inot_fd, timer_fd;
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD} };
 static struct self_t self = {
-    .name = "Dimmer",
-    .idx = DIMMER,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
     .standalone = 1,
     .functional_module = 1
 };
 
-void set_dimmer_self(void) {
-    SET_SELF();
-}
+MODULE(DIMMER);
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };

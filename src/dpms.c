@@ -1,29 +1,19 @@
-#include "../inc/dpms.h"
 #include "../inc/bus.h"
-#include "../inc/upower.h"
 
 #define DPMS_DISABLED -1
 
-static void init(void);
-static int check(void);
-static void callback(void);
-static void destroy(void);
 static void set_dpms_timeouts(void);
 static void set_dpms(int dpms_state);
 static void upower_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BUS}, {HARD, XORG}, {HARD, CLIGHTD} };
 static struct self_t self = {
-    .name = "Dpms",
-    .idx = DPMS,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
     .functional_module = 1
 };
 
-void set_dpms_self(void) {
-    SET_SELF();
-}
+MODULE(DPMS);
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };

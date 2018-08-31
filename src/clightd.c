@@ -1,10 +1,5 @@
-#include "../inc/clightd.h"
 #include "../inc/bus.h"
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
 static int check_clightd_version(void);
 
 #define MINIMUM_CLIGHTD_VERSION_MAJ 2
@@ -12,16 +7,12 @@ static int check_clightd_version(void);
 
 static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
-    .name = "Clightd",
-    .idx = CLIGHTD,
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
     .standalone = 1,
 };
 
-void set_clightd_self(void) {
-    SET_SELF();
-}
+MODULE(CLIGHTD);
 
 static void init(void) {
     INIT_MOD(DONT_POLL);

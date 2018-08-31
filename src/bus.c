@@ -1,9 +1,5 @@
 #include "../inc/bus.h"
 
-static void init(void);
-static int check(void);
-static void destroy(void);
-static void callback(void);
 static void run_callbacks(const enum modules mod, const void *payload);
 static int read_array(void *userptr, const char *userptr_type, sd_bus_message *reply);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
@@ -23,14 +19,10 @@ struct bus_callback {
 static struct bus_callback _cb;
 static sd_bus *bus, *userbus;
 static struct self_t self = {
-    .name = "Bus",
-    .idx = BUS,
     .standalone = 1,
 };
 
-void set_bus_self(void) {
-    SET_SELF();
-}
+MODULE(BUS);
 
 /*
  * Open system bus and start listening on its fd

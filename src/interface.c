@@ -1,10 +1,5 @@
-#include "../inc/interface.h"
 #include "../inc/bus.h"
 
-static void init(void);
-static int check(void);
-static void callback(void);
-static void destroy(void);
 static int get_version( sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -29,16 +24,12 @@ static const sd_bus_vtable clight_vtable[] = {
 
 static struct dependency dependencies[] = { {HARD, USERBUS}, {SOFT, BRIGHTNESS} };
 static struct self_t self = {
-    .name = "BusInterface",
-    .idx = INTERFACE,
     .num_deps = SIZE(dependencies),
     .deps = dependencies,
     .standalone = 1
 };
 
-void set_interface_self(void) {
-    SET_SELF();
-}
+MODULE(INTERFACE);
 
 static void init(void) {
     sd_bus **userbus = get_user_bus();

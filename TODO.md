@@ -8,6 +8,9 @@
 
 - [ ] Improve bus interface with more methods
 
+- [x] Automatically set module self at startup
+- [x] Drop unused code
+
 ## 2.X
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules
 
