@@ -22,7 +22,7 @@ CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"
 
 FOLDERS = ./ conf/ modules/ utils/
 SRCS = $(addsuffix *.c, $(FOLDERS))
-INCS = $(addprefix -I,$(dir $(SRCS)))
+INCS = $(addprefix -I, $(FOLDERS))
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
