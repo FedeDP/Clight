@@ -55,9 +55,6 @@ static void callback(void) {
  * webcam device fd. This way our main poll will get events (frames) from webcam device too.
  */
 static void do_capture(void) {
-    /* reset fast recapture */
-    state.fast_recapture = 0;
-
     if (!state.is_dimmed) {
         double val = capture_frames_brightness();
         /* 
@@ -107,7 +104,7 @@ static double capture_frames_brightness(void) {
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (!state.fast_recapture && old_ac_state != state.ac_state) {
+    if (old_ac_state != state.ac_state) {
         /* 
          * do a capture right now as we have 2 different curves for 
          * different AC_STATES, so let's properly honor new curve

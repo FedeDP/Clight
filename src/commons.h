@@ -52,7 +52,10 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
 /* Module states */
-enum module_states { IDLE, STARTED_DISABLED, DISABLED, INITED, DESTROYED };
+enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, PAUSED, DESTROYED };
+
+/* Module management operations */
+enum module_op { PAUSE, RESUME, OP_NUM };
 
 /* Bus types */
 enum bus_type { SYSTEM, USER };
@@ -100,7 +103,6 @@ struct state {
     enum events next_event;                 // next event index (sunrise/sunset)
     int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
-    int fast_recapture;                     // fast recapture after huge brightness drop?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     char *xauthority;                       // xauthority env variable, to be used in gamma calls
     char *display;                          // display env variable, to be used in gamma calls

@@ -1,8 +1,9 @@
 #include <bus.h>
 
-static int get_version( sd_bus *b, const char *path, const char *interface, const char *property,
+static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_manage(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
@@ -10,14 +11,13 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_PROPERTY("version", "s", get_version, 0, SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_METHOD("calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("manage_module", "uu", "b", method_manage, SD_BUS_VTABLE_UNPRIVILEGED),
     /* TODO: add methods to: 
      * update timeouts
      * update gamma temperatures + re-apply correct gamma temperature (eg: you change daily temp to 6200, theb re-apply it)
      * query timeouts
      * query current settings (eg gamma temperatures)
      * change backlight curve points
-     * pause/resume functional modules
-     * enable presentation mode (useful when inhibit is disabled)
      */
     SD_BUS_VTABLE_END
 };
@@ -74,7 +74,7 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int r;
     
-    if (is_inited(BRIGHTNESS)) {
+    if (is_running(BRIGHTNESS)) {
         set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
         r = 0;
     } else {
@@ -82,4 +82,29 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
         r = -EINVAL;
     }
     return r;
+}
+
+static int method_manage(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int r;
+    enum modules mod;
+    enum module_op op;
+    
+    /* Read the parameters */
+    r = sd_bus_message_read(m, "uu", &mod, &op);
+    if (r < 0) {
+        WARN("Failed to parse parameters: %s\n", strerror(-r));
+        return r;
+    }
+    
+    r = -EINVAL;
+    if (mod >= MODULES_NUM || op >= OP_NUM || !is_functional(mod)) {
+        WARN("Wrong parameters.\n");
+        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
+    } else if ((op == PAUSE && is_paused(mod)) || (op == RESUME && !is_paused(mod))) {
+        WARN("Module %s already in required state.\n", modules[mod].self->name);
+        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Module already in required state.");
+    } else {
+        r = manage_module(mod, op);
+    }
+    return sd_bus_reply_method_return(m, "b", r != -EINVAL && r != -1);
 }

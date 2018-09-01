@@ -78,7 +78,7 @@ static void check_gamma(void) {
     set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
 
     /* if we entered/left an event, set correct timeout to BRIGHTNESS */
-    if (old_state != state.time && is_inited(BRIGHTNESS) && !state.fast_recapture) {
+    if (old_state != state.time && is_running(BRIGHTNESS)) {
         reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
     }
 }

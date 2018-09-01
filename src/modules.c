@@ -55,7 +55,7 @@ void init_module(int fd, enum modules module, ...) {
      * eg: geoclue2 support is enabled but geoclue2 could not be found.
      */
     if (fd != DONT_POLL_W_ERR) {
-        modules[module].state = INITED;
+        modules[module].state = RUNNING;
         DEBUG("%s module started.\n", modules[module].self->name);
         
         /* foreach bus_cb passed in, call add_mod_callback on bus */
@@ -63,7 +63,7 @@ void init_module(int fd, enum modules module, ...) {
         va_start(args, module);
         struct bus_cb *cb = va_arg(args, struct bus_cb *);
         while (cb) {
-            if (is_inited(cb->module)) {
+            if (is_running(cb->module)) {
                 add_mod_callback(*cb);
                 DEBUG("Callback added for module %s on module %s bus match.\n", modules[module].self->name, modules[cb->module].self->name);
             }
@@ -105,8 +105,8 @@ int is_disabled(const enum modules module) {
     return modules[module].state == DISABLED;
 }
 
-int is_inited(const enum modules module) {
-    return modules[module].state == INITED;
+int is_running(const enum modules module) {
+    return modules[module].state == RUNNING;
 }
 
 int is_started_disabled(const enum modules module) {
@@ -119,6 +119,28 @@ int is_idle(const enum modules module) {
 
 int is_destroyed(const enum modules module) {
     return modules[module].state == DESTROYED;
+}
+
+int is_paused(const enum modules module) {
+    return modules[module].state == PAUSED;
+}
+
+int manage_module(const enum modules module, enum module_op op) {
+    if (is_running(module) || is_paused(module)) {
+        INFO("%s module %s.\n", op == PAUSE ? "Pausing" : "Resuming", modules[module].self->name);
+        set_timeout(0, op, main_p[module].fd, 0);
+        if (op == PAUSE) {
+            modules[module].state = PAUSED;
+        } else {
+            modules[module].state = RUNNING;
+        }
+        return 0;
+    }
+    return -1;
+}
+
+int is_functional(const enum modules module) {
+    return modules[module].self->functional_module;
 }
 
 /*
@@ -156,7 +178,7 @@ static void started_cb(enum modules module) {
  * try to start them calling started_cb.
  */
 void poll_cb(const enum modules module) {
-    if (is_inited(module)) {
+    if (is_running(module)) {
         if (modules[module].poll_cb) {
             modules[module].poll_cb();
         }

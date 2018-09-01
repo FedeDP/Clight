@@ -21,6 +21,10 @@ int start_timer(int clockid, int initial_s, int initial_ns) {
  * Helper to set a new trigger on timerfd in sec seconds and n nsec
  */
 void set_timeout(int sec, int nsec, int fd, int flag) {
+    if (fd == DONT_POLL) {
+        return;
+    }
+    
     struct itimerspec timerValue = {{0}};
 
     timerValue.it_value.tv_sec = sec;

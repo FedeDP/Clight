@@ -5,16 +5,17 @@
 - [x] add a small bus interface to query clight status/set new timeouts/make new fast capture ("-c" switch to follow this new api)
 - [x] Clight single capture log should be logged to same log as main clight (obviously as it will be now redirected to new api (that will just reset brightness timeout to 1ns))
 - [x] Clightd module should depend on bus
-
-- [ ] Improve bus interface with more methods
-
 - [x] Automatically set module self at startup
 - [x] Drop unused code
 - [x] Require c99 as no more c11 is used
 - [x] Better code organization and repo architecture
 
+- [ ] Improve bus interface with more methods
+- [x] rename INITED state to RUNNING state
+- [x] Dropped state.fast_recapture leftover references
+
 ## 2.X
-- [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules
+- [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules (?)
 
 ## Later/ideas
 - [ ] Add a bus signal "TimeChanged" on sunrise/sunset that returns an enum time { SUNRISE, SUNSET }
