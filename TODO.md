@@ -13,6 +13,8 @@
 - [ ] Improve bus interface with more methods
 - [x] rename INITED state to RUNNING state
 - [x] Dropped state.fast_recapture leftover references
+- [ ] fix resuming a module that is currently paused by other sources (eg dimmer while watching a video)
+- [ ] Use pause module wherever it is used set_timeout(0, 0, fd, 0) (eg dimmer)
 
 ## 2.X
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules (?)

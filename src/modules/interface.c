@@ -114,16 +114,16 @@ static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *
     int r = -EINVAL;
 
     if (is_running(BRIGHTNESS)) {
-        enum ac_states state;
+        enum ac_states ac_state;
     
         /* Read the parameters */
-        r = sd_bus_message_read(m, "u", &state);
+        r = sd_bus_message_read(m, "u", &ac_state);
         if (r < 0) {
             WARN("Failed to parse parameters: %s\n", strerror(-r));
             return r;
         }
     
-        double *data = NULL;
+        const double *data = NULL;
         size_t length;
         r = sd_bus_message_read_array(m, 'd', (const void**) &data, &length);
         if (r < 0) {
@@ -131,12 +131,12 @@ static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *
             return r;
         }
 
-        if (state >= SIZE_AC || length / sizeof(double) != SIZE_POINTS) {
+        if (ac_state >= SIZE_AC || length / sizeof(double) != SIZE_POINTS) {
             WARN("Wrong parameters.\n");
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         } else {
-            memcpy(conf.regression_points[state], data, length);
-            polynomialfit(state);
+            memcpy(conf.regression_points[ac_state], data, length);
+            polynomialfit(ac_state);
             r = sd_bus_reply_method_return(m, NULL);
         }
     } else {

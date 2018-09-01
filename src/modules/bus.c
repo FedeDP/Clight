@@ -1,7 +1,6 @@
 #include <bus.h>
 
 static void run_callbacks(const enum modules mod, const void *payload);
-static int read_array(void *userptr, const char *userptr_type, sd_bus_message *reply);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
@@ -178,7 +177,10 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
                 strncpy(userptr, obj, PATH_MAX);
             }
         } else if (userptr_type[0] == 'a') {
-            r = read_array(userptr, userptr_type, reply);
+            const void *data = NULL;
+            size_t length;
+            r = sd_bus_message_read_array(reply, userptr_type[1], &data, &length);
+            memcpy(userptr, data, length);
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
@@ -187,18 +189,6 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
 
 finish:
     free_bus_structs(&error, m, reply);
-    return r;
-}
-
-static int read_array(void *userptr, const char *userptr_type, sd_bus_message *reply) {
-    int r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, userptr_type + 1);
-    if (r >= 0) {
-        int i = 0;
-        while (sd_bus_message_read(reply, userptr_type + 1, &(((double *)userptr)[i])) > 0) {
-            i++;
-        }
-        sd_bus_message_exit_container(reply);
-    }
     return r;
 }
 
