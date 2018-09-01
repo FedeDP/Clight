@@ -32,7 +32,7 @@ Clight tries to be a 0-conf software; therefore, you only have to enable the cli
 
 Note that timer is needed to ensure that any needed bus interface is completely started; it will delay clight startup of 5s. User service will then kick in clightd dependency.  
 
-Finally, a desktop file to take a fast screen backlight recalibration ("clight -c"), useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
+Finally, a desktop file to take a fast screen backlight recalibration, useful to be binded to a keyboard shortcut, is installed too, and it will show up in your applications menu.  
 
 ## Geoclue issues
 If you have got any issue with geoclue, please try to append following lines to /etc/geoclue/geoclue.conf:
@@ -66,7 +66,6 @@ Finally, remember that webcam is not always on; it is used only when needed with
 * fully valgrind and cppcheck clean
 * external signals catching (sigint/sigterm)
 * systemd user unit shipped
-* a quick single capture mode (ie: do captures, change screen brightness and leave) is provided, together with a desktop file.
 * gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does) -> **X only**
 * dimmer support: it will dim your screen after specified timeout of user inactivity (ie: no mouse/keyboard) -> **X only**
 * geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates. Otherwise gamma support will be disabled.
@@ -96,7 +95,6 @@ Location received will be then cached when clight exit. This way, if no internet
     $  cppcheck --enable=style --enable=performance --enable=unusedFunction
 
 For cmdline options, check clight [-?|--help] [--usage].  
-**Please note that cmdline "--device" and "--backlight" switches require only last part of syspath** (eg: "video0" or "intel_backlight").  
 
 ## Config file
 A global config file is shipped with clight. It is installed in /etc/default/clight.conf and it is full of comments.  
@@ -115,16 +113,14 @@ Clight supports different curves on different ac states. In fact, by default on 
 Consequently, on not X environments, gamma correction tool gets autodisabled.  
 
 As [clightd](https://github.com/FedeDP/Clightd#devel-info) getgamma function properly supports only 50-steps temperature values (ie if you use "setgamma 6000" and then getgamma, it will return 6000. If you use setgamma 4578, getgamma won't return exactly it; it will return 4566 or something similar.), do not set in your conf not-50-multiple temperatures.  
-Moreover, since there is still no standard way to deal with gamma correction on wayland, it is only supported on X11.  
-If you run clight from wayland or from a tty, gamma support will be automatically disabled.  
+Moreover, since there is still no standard way to deal with gamma correction on wayland, it is only supported on X11: if you run clight from wayland or from a tty, gamma support will be automatically disabled.
 
 ## Other info
 You can only run one clight instance per-user: if a clight instance is running, you cannot start another full clight instance.  
-Obviously you can still invoke "clight -c" from a terminal/shortcut/clight desktop file to make a fast capture/screen brightness calibration.  
 This is achieved through a clight.lock file placed in current user home.
 
 Every functionality in clight is achieved through a "module". An inter-modules dependencies system has been created ad-hoc to ease development of such modules.  
-This way, it does not matter modules' init calls sorting; moreover, each module can be easily disabled if not needed (eg: when --no-gamma option is passed.)
+This way, it does not matter modules' init calls sorting; moreover, each module can be easily disabled if not needed/desired.
 
 ## Build instructions:
 Build and install:

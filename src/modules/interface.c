@@ -16,7 +16,8 @@ static const sd_bus_vtable clight_vtable[] = {
      * query timeouts
      * query current settings (eg gamma temperatures)
      * change backlight curve points
-     * start/pause functional modules
+     * pause/resume functional modules
+     * enable presentation mode (useful when inhibit is disabled)
      */
     SD_BUS_VTABLE_END
 };
