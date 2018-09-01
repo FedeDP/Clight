@@ -50,9 +50,9 @@ If issues persist, please fill a bug report.
 By default Clight enables all its functions, fallbacking to disable them when they are not supported.
 This means that these features are all enabled with default values:  
 * BRIGHTNESS: to make webcam captures and change screen backlight level to match ambient brightness
-* GAMMA: to change screen temperature based on current time of day (X-only feature)
-* DIMMER: to dim screen after a certain idle time (X-only feature)
-* DPMS: to switch off screen after a certain idle time (X-only feature)
+* GAMMA: to change screen temperature based on current time of day (**X only**)
+* DIMMER: to dim screen after a certain idle time (**X only**)
+* DPMS: to switch off screen after a certain idle time (**X only**)
 
 **All these features can be turned off through cmdline and config file options.**
 
@@ -66,8 +66,8 @@ Finally, remember that webcam is not always on; it is used only when needed with
 * fully valgrind and cppcheck clean
 * external signals catching (sigint/sigterm)
 * systemd user unit shipped
-* gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does) -> **X only**
-* dimmer support: it will dim your screen after specified timeout of user inactivity (ie: no mouse/keyboard) -> **X only**
+* gamma support: it will compute sunset and sunrise and will automagically change screen temperature (just like redshift does)
+* dimmer support: it will dim your screen after specified timeout of user inactivity (ie: no mouse/keyboard)
 * geoclue2 support: when launched without [--lat|--lon] parameters, if geoclue2 is available, it will use it to get user location updates. Otherwise gamma support will be disabled.
 Location received will be then cached when clight exit. This way, if no internet connection is present (thus geoclue2 cannot give us any location), clight will load latest available location from cache file. If no cached location is present, gamma will be disabled.
 * nice log file, placed in $HOME/.clight.log
