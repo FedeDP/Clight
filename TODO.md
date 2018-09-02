@@ -10,11 +10,10 @@
 - [x] Require c99 as no more c11 is used
 - [x] Better code organization and repo architecture
 
-- [ ] Improve bus interface with more methods
+- [x] Improve bus interface with more methods (setgamma + inhibit (presentation mode))
 - [x] rename INITED state to RUNNING state
 - [x] Dropped state.fast_recapture leftover references
-- [ ] fix resuming a module that is currently paused by other sources (eg dimmer while watching a video)
-- [ ] Use pause module wherever it is used set_timeout(0, 0, fd, 0) (eg dimmer)
+- [ ] Add API reference for bus interface
 
 ## 2.X
 - [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules (?)
@@ -26,5 +25,3 @@
 - [ ] GNOME: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html / https://askubuntu.com/questions/546402/how-to-change-gnome-shell-theme-in-ubuntu-14-10)
 
 - [ ] KDE: https://userbase.kde.org/KDE_Connect/Tutorials/Useful_commands#Change_look_and_feel
-
-- [ ] Add a clight command for kdeconnect to run "clight -c" (is that even possible? -> yes, see .config/kdeconnect/X/kdeconnect_runcommand/config

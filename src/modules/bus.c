@@ -17,9 +17,7 @@ struct bus_callback {
 
 static struct bus_callback _cb;
 static sd_bus *bus, *userbus;
-static struct self_t self = {
-    .standalone = 1,
-};
+static struct self_t self;
 
 MODULE(BUS);
 
@@ -309,3 +307,6 @@ sd_bus **get_user_bus(void) {
     return &userbus;
 }
 
+struct bus_match_data *get_user_data(void) {
+    return &_cb.userdata;
+}

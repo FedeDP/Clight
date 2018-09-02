@@ -8,11 +8,10 @@ static void check_state(time_t *now);
 static void set_temp(int temp);
 static void location_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {HARD, LOCATION}, {HARD, XORG}, {HARD, CLIGHTD} };
+static struct dependency dependencies[] = { {HARD, LOCATION}, {HARD, XORG}, {HARD, CLIGHTD} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
-    .standalone = 1,
     .functional_module = 1
 };
 

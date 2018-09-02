@@ -1,8 +1,6 @@
 #include <modules.h>
 
-static struct self_t self = {
-    .standalone = 1
-};
+static struct self_t self;
 
 MODULE(XORG);
 

@@ -121,28 +121,6 @@ int is_destroyed(const enum modules module) {
     return modules[module].state == DESTROYED;
 }
 
-int is_paused(const enum modules module) {
-    return modules[module].state == PAUSED;
-}
-
-int manage_module(const enum modules module, enum module_op op) {
-    if (is_running(module) || is_paused(module)) {
-        INFO("%s module %s.\n", op == PAUSE ? "Pausing" : "Resuming", modules[module].self->name);
-        set_timeout(0, op, main_p[module].fd, 0);
-        if (op == PAUSE) {
-            modules[module].state = PAUSED;
-        } else {
-            modules[module].state = RUNNING;
-        }
-        return 0;
-    }
-    return -1;
-}
-
-int is_functional(const enum modules module) {
-    return modules[module].self->functional_module;
-}
-
 /*
  * Foreach dep, set self as dependent on that module
  */
@@ -239,7 +217,7 @@ void disable_module(const enum modules module) {
              * if there are no more dependent_m on this module, 
              * and it is not a standalone module, disable it
              */
-            if (--modules[m].num_dependent == 0 && !modules[m].self->standalone) {
+            if (--modules[m].num_dependent == 0 && !modules[m].self->standalone && !modules[m].self->functional_module) {
                 disable_module(m);
             }
         }

@@ -9,7 +9,6 @@ static struct dependency dependencies[] = { {HARD, BUS} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
-    .standalone = 1,
 };
 
 MODULE(CLIGHTD);

@@ -4,8 +4,9 @@
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static int method_manage(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
@@ -13,19 +14,14 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_PROPERTY("version", "s", get_version, 0, SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_METHOD("calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_METHOD("manage_module", "uu", "b", method_manage, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("set_backlight_curve", "uad", NULL, method_update_curve, SD_BUS_VTABLE_UNPRIVILEGED),
-    /* TODO -> add methods to:
-     * update timeouts
-     * update gamma temperatures + re-apply correct gamma temperature (eg: you change daily temp to 6200, theb re-apply it)
-     * query timeouts
-     * query current settings (eg gamma temperatures)
-     */
+    SD_BUS_METHOD("set_gamma", "ui", NULL, method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
 
-static struct dependency dependencies[] = { {HARD, USERBUS}, {SOFT, BRIGHTNESS} };
+static struct dependency dependencies[] = { {HARD, USERBUS}, {SOFT, BRIGHTNESS}, {SOFT, GAMMA} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps = dependencies,
@@ -41,7 +37,7 @@ static void init(void) {
                                  object_path,
                                  bus_interface,
                                  clight_vtable,
-                                 NULL);
+                                 get_user_data());
     if (r < 0) {
         WARN("Failed to issue method call: %s\n", strerror(-r));
     } else {
@@ -86,28 +82,21 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
     return r;
 }
 
-static int method_manage(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    enum modules mod;
-    enum module_op op;
+static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    struct bus_match_data *data = (struct bus_match_data *) userdata;
+    data->bus_mod_idx = self.idx;
+    /* Fill data->ptr with old inhibit state */
+    data->ptr = malloc(sizeof(int));
+    *(int *)(data->ptr) = state.pm_inhibited;
     
     /* Read the parameters */
-    int r = sd_bus_message_read(m, "uu", &mod, &op);
+    int r = sd_bus_message_read(m, "b", &state.pm_inhibited);
     if (r < 0) {
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-    
-    r = -EINVAL;
-    if (mod >= MODULES_NUM || op >= OP_NUM || !is_functional(mod)) {
-        WARN("Wrong parameters.\n");
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
-    } else if ((op == PAUSE && is_paused(mod)) || (op == RESUME && !is_paused(mod))) {
-        WARN("Module %s already in required state.\n", modules[mod].self->name);
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Module already in required state.");
-    } else {
-        r = manage_module(mod, op);
-    }
-    return sd_bus_reply_method_return(m, "b", r != -EINVAL && r != -1);
+
+   return sd_bus_reply_method_return(m, NULL);
 }
 
 static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
@@ -116,7 +105,6 @@ static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *
     if (is_running(BRIGHTNESS)) {
         enum ac_states ac_state;
     
-        /* Read the parameters */
         r = sd_bus_message_read(m, "u", &ac_state);
         if (r < 0) {
             WARN("Failed to parse parameters: %s\n", strerror(-r));
@@ -141,6 +129,37 @@ static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *
         }
     } else {
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Brightness module is not running.");
+    }
+    return r;
+}
+
+static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int r = -EINVAL;
+    
+    if (is_running(GAMMA)) {
+        enum states target_state;
+        int gamma_val;
+        
+        r = sd_bus_message_read(m, "ui", &target_state, &gamma_val);
+        if (r < 0) {
+            WARN("Failed to parse parameters: %s\n", strerror(-r));
+            return r;
+        }
+    
+        if (target_state >= SIZE_STATES || gamma_val < 1000 || gamma_val > 10000) {
+            WARN("Wrong parameters.\n");
+            sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
+        } else {
+            /* Use current state */
+            if (target_state == EVENT) {
+                target_state = state.time;
+            }
+            conf.temp[target_state] = gamma_val;
+            set_timeout(0, 1, main_p[GAMMA].fd, 0);
+            r = sd_bus_reply_method_return(m, NULL);
+        }
+    } else {
+        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Gamma module is not running.");
     }
     return r;
 }

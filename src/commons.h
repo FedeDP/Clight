@@ -52,7 +52,7 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 
 /* Module states */
-enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, PAUSED, DESTROYED };
+enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, DESTROYED };
 
 /* Module management operations */
 enum module_op { PAUSE, RESUME, OP_NUM };

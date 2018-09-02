@@ -11,11 +11,10 @@ static void upower_callback(const void *ptr);
 static void inhibit_callback(const void * ptr);
 
 static int inot_wd, inot_fd, timer_fd;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BRIGHTNESS}, {HARD, BUS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BRIGHTNESS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
-    .standalone = 1,
     .functional_module = 1
 };
 
@@ -24,6 +23,7 @@ MODULE(DIMMER);
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
+    struct bus_cb interface_cb = { INTERFACE, inhibit_callback };
     
     timer_fd = DONT_POLL_W_ERR;
     inot_fd = inotify_init();
@@ -31,7 +31,7 @@ static void init(void) {
         timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
                                 0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited AND dimmer timeout > 0, else disarmed
     }
-    INIT_MOD(timer_fd, &upower_cb, &inhibit_cb);
+    INIT_MOD(timer_fd, &upower_cb, &inhibit_cb, &interface_cb);
 }
 
 static int check(void) {

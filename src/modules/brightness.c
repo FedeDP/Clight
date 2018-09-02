@@ -7,11 +7,10 @@ static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {HARD, BUS}, {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD} };
+static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
-    .standalone = 1,
     .functional_module = 1
 };
 
