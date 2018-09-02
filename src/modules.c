@@ -215,7 +215,7 @@ void disable_module(const enum modules module) {
             const enum modules m = modules[module].self->deps[i].dep;
             /* 
              * if there are no more dependent_m on this module, 
-             * and it is not a standalone module, disable it
+             * and it is not a standalone module neither a functional module, disable it
              */
             if (--modules[m].num_dependent == 0 && !modules[m].self->standalone && !modules[m].self->functional_module) {
                 disable_module(m);

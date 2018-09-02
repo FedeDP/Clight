@@ -3,7 +3,7 @@
 static struct dependency dependencies[] = { {SUBMODULE, BUS} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
-    .deps =  dependencies,
+    .deps =  dependencies
 };
 
 MODULE(USERBUS);

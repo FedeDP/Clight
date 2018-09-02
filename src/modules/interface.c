@@ -95,8 +95,8 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-
-   return sd_bus_reply_method_return(m, NULL);
+    INFO("PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
+    return sd_bus_reply_method_return(m, NULL);
 }
 
 static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
