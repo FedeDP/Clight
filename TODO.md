@@ -14,9 +14,9 @@
 - [x] rename INITED state to RUNNING state
 - [x] Dropped state.fast_recapture leftover references
 - [ ] Add API reference for bus interface
-
-## 2.X
-- [ ] Switch to [libmodule](https://github.com/FedeDP/libmodule) to manage modules (?)
+- [ ] Add gh wiki pages
+- [ ] Add completion script for bash
+- [x] Drop lock files: when INTERFACE module requests a bus name, request will fail if another daemon is already registered
 
 ## Later/ideas
 - [ ] Add a bus signal "TimeChanged" on sunrise/sunset that returns an enum time { SUNRISE, SUNSET }

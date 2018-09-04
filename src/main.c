@@ -23,7 +23,6 @@
 
 #include <modules.h>
 #include <opts.h>
-#include <lock.h>
 
 static void init(int argc, char *argv[]);
 static void sigsegv_handler(int signum);
@@ -60,7 +59,6 @@ static void init(int argc, char *argv[]) {
     signal(SIGSEGV, sigsegv_handler);
     
     init_opts(argc, argv);
-    gain_lck();
     open_log();
     log_conf();
     init_all_modules();
@@ -74,7 +72,6 @@ static void init(int argc, char *argv[]) {
 static void sigsegv_handler(int signum) {
     WARN("Received sigsegv signal. Aborting.\n");
     close_log();
-    destroy_lck();
     signal(signum, SIG_DFL);
     kill(getpid(), signum);
 }
@@ -104,7 +101,6 @@ static void destroy(void) {
         destroy_modules();
     }
     close_log();
-    destroy_lck();
 }
 
 /*

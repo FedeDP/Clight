@@ -21,7 +21,7 @@ static const sd_bus_vtable clight_vtable[] = {
 };
 
 
-static struct dependency dependencies[] = { {HARD, USERBUS}, {SOFT, BRIGHTNESS}, {SOFT, GAMMA} };
+static struct dependency dependencies[] = { {SUBMODULE, USERBUS} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps = dependencies,
@@ -39,11 +39,11 @@ static void init(void) {
                                  clight_vtable,
                                  get_user_data());
     if (r < 0) {
-        WARN("Failed to issue method call: %s\n", strerror(-r));
+        ERROR("Could not create Bus Interface: %s\n", strerror(-r));
     } else {
         r = sd_bus_request_name(*userbus, bus_interface, 0);
         if (r < 0) {
-            WARN("Failed to acquire service name: %s\n", strerror(-r));
+            ERROR("Failed to acquire Bus Interface name: %s\nIs another clight instance already running?\n", strerror(-r));
         }
     }
 
