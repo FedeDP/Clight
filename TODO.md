@@ -15,11 +15,13 @@
 - [x] Dropped state.fast_recapture leftover references
 - [ ] Add API reference for bus interface
 - [ ] Add gh wiki pages
-- [ ] Add completion script for bash
 - [x] Drop lock files: when INTERFACE module requests a bus name, request will fail if another daemon is already registered
+- [x] Add completion script for bash
+- [x] Dropped timeouts setting from cmdline options, way too chaotic
+- [ ] Add a bus signal "TimeChanged" on sunrise/sunset that returns an enum time { SUNRISE, SUNSET }
+- [ ] Add querySunrise/querySunset to interface
 
 ## Later/ideas
-- [ ] Add a bus signal "TimeChanged" on sunrise/sunset that returns an enum time { SUNRISE, SUNSET }
 - [ ] Use the TimeChanged signal to change KDE/GNOME theme at sunset/sunrise 
 
 - [ ] GNOME: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html / https://askubuntu.com/questions/546402/how-to-change-gnome-shell-theme-in-ubuntu-14-10)

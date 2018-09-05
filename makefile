@@ -10,6 +10,8 @@ ICONSDIR = /usr/share/icons/hicolor/scalable/apps
 ICONNAME = clight.svg
 DESKTOPDIR = /usr/share/applications
 LICENSEDIR = /usr/share/licenses/clight
+COMPLNAME = clight
+COMPLDIR = $(shell pkg-config --variable=completionsdir bash-completion)
 RM = rm -f
 RMDIR = rm -rf
 INSTALL = install -p
@@ -80,6 +82,10 @@ install:
 	$(info installing license file.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(LICENSEDIR)"
 	@$(INSTALL_DATA) COPYING "$(DESTDIR)$(LICENSEDIR)"
+	
+	$(info installing bash autocompletion.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(COMPLDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/$(COMPLNAME) "$(DESTDIR)$(COMPLDIR)/$(COMPLNAME)"
 
 uninstall:
 	$(info uninstalling bin.)
@@ -100,3 +106,6 @@ uninstall:
 	
 	$(info uninstalling license file.)
 	@$(RMDIR) "$(DESTDIR)$(LICENSEDIR)"
+	
+	$(info uninstalling bash autocompletion.)
+	@$(RM) "$(DESTDIR)$(COMPLDIR)/$(COMPLNAME)"

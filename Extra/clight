@@ -1,0 +1,46 @@
+# bash completion for clight                                  -*- shell-script -*-
+
+_clight()
+{
+    local cur prev words cword
+    _init_completion || return
+
+    case $prev in
+        "--device"|"-b"|"--backlight")
+            _filedir
+            return 0
+            ;;
+        "--frames")
+            COMPREPLY=( $( compgen -W "5" -- ${cur}) )
+            return 0
+            ;;
+        "--day-temp")
+            COMPREPLY=( $( compgen -W "6500" -- ${cur}) )
+            return 0
+            ;;
+        "--night-temp")
+            COMPREPLY=( $( compgen -W "4000" -- ${cur}) )
+            return 0
+            ;;
+        "--sunrise")
+            COMPREPLY=( $( compgen -W "07:00" -- ${cur}) )
+            return 0
+            ;;
+        "--sunset")
+            COMPREPLY=( $( compgen -W "19:00" -- ${cur}) )
+            return 0
+            ;;
+        "----dimmer-pct")
+            COMPREPLY=( $( compgen -W "0.2" -- ${cur}) )
+            return 0
+            ;;
+    esac
+    opts="--device --backlight --frames --no-backlight-smooth --no-gamma-smooth --no-dimmer-smooth --day-temp --night-temp --lat --lon --sunrise --sunset --no-gamma --dimmer-pct --no-dimmer --no-dpms --no-inhibit --no-brightness --verbose --version"
+    if [[ "$cur" == -* ]] || [[ -z "$cur" ]]; then
+        COMPREPLY=( $( compgen -W "${opts}" -- ${cur}) )
+    fi
+
+} &&
+complete -F _clight clight
+
+# ex: ts=4 sw=4 et filetype=sh

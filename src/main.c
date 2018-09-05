@@ -3,7 +3,7 @@
  * clight: C daemon utility to automagically adjust screen backlight to match ambient brightness.
  * https://github.com/FedeDP/Clight/tree/master/clight
  *
- * Copyright (C) 2017  Federico Di Pierro <nierro92@gmail.com>
+ * Copyright (C) 2018  Federico Di Pierro <nierro92@gmail.com>
  *
  * This file is part of clight.
  * clight is free software: you can redistribute it and/or modify
