@@ -1,5 +1,6 @@
 #include <log.h>
 #include <modules.h>
+#include <sys/file.h>
 
 static FILE *log_file;
 
@@ -10,6 +11,11 @@ void open_log(void) {
     log_file = fopen(log_path, "w");
     if (!log_file) {
         WARN("%s\n", strerror(errno));
+    }
+    
+    if (flock(fileno(log_file), LOCK_EX | LOCK_NB) == -1) {
+        WARN("%s\n", strerror(errno));
+        ERROR("A lock is present on %s. Another clight instance running?%s\n", log_file);
     }
 }
 
@@ -96,6 +102,7 @@ void log_message(const char *filename, int lineno, const char type, const char *
 
 void close_log(void) {
     if (log_file) {
+        flock(fileno(log_file), LOCK_UN);
         fclose(log_file);
     }
 }

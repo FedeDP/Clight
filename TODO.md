@@ -14,12 +14,13 @@
 - [x] rename INITED state to RUNNING state
 - [x] Dropped state.fast_recapture leftover references
 - [ ] Add API reference for bus interface
-- [ ] Add gh wiki pages
+- [ ] Add gh wiki pages (?) for "How to build", "features", "Geoclue2 issues", "Bus API"...
 - [x] Drop lock files: when INTERFACE module requests a bus name, request will fail if another daemon is already registered
 - [x] Add completion script for bash
 - [x] Dropped timeouts setting from cmdline options, way too chaotic
-- [ ] Add a bus signal "TimeChanged" on sunrise/sunset that returns an enum time { SUNRISE, SUNSET }
+- [x] Add a bus signal "TimeChanged" on sunrise/sunset that returns an enum time { SUNRISE, SUNSET }
 - [ ] Add querySunrise/querySunset to interface
+- [x] Use log file as lock; avoid leaving clight if interface name can not be requested
 
 ## Later/ideas
 - [ ] Use the TimeChanged signal to change KDE/GNOME theme at sunset/sunrise 

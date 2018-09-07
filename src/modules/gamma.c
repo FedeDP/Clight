@@ -1,5 +1,6 @@
 #include <bus.h>
 #include <my_math.h>
+#include <interface.h>
 
 static void check_gamma(void);
 static void get_gamma_events(time_t *now, const float lat, const float lon, int day);
@@ -79,6 +80,7 @@ static void check_gamma(void) {
     /* if we entered/left an event, set correct timeout to BRIGHTNESS */
     if (old_state != state.time && is_running(BRIGHTNESS)) {
         reset_timer(main_p[BRIGHTNESS].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+        emit_signal("TimeChanged");
     }
 }
 

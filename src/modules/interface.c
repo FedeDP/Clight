@@ -17,6 +17,9 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_METHOD("inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("set_backlight_curve", "uad", NULL, method_update_curve, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("set_gamma", "ui", NULL, method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
+    // TODO: generic query method that returns array of unsigned long (timeouts)
+//     SD_BUS_METHOD("query", "ui", NULL, method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_SIGNAL("TimeChanged", NULL, 0),
     SD_BUS_VTABLE_END
 };
 
@@ -39,11 +42,11 @@ static void init(void) {
                                  clight_vtable,
                                  get_user_data());
     if (r < 0) {
-        ERROR("Could not create Bus Interface: %s\n", strerror(-r));
+        WARN("Could not create Bus Interface: %s\n", strerror(-r));
     } else {
         r = sd_bus_request_name(*userbus, bus_interface, 0);
         if (r < 0) {
-            ERROR("Failed to acquire Bus Interface name: %s\nIs another clight instance already running?\n", strerror(-r));
+            WARN("Failed to acquire Bus Interface name: %s\n", strerror(-r));
         }
     }
 
@@ -162,4 +165,12 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Gamma module is not running.");
     }
     return r;
+}
+
+int emit_signal(const char *signal) {
+    if (is_running((self.idx))) {
+        sd_bus **userbus = get_user_bus();
+        return sd_bus_emit_signal(*userbus, object_path, bus_interface, signal, NULL);
+    }
+    return 0;
 }
