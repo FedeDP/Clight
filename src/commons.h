@@ -69,6 +69,16 @@ struct location {
     double lon;
 };
 
+/* 
+ * bus_mod_idx: set in every module's match callback to their self.idx.
+ * It is the idx of the module on which bus should call callbacks
+ * stored in struct bus_cb *callbacks
+ */
+struct bus_match_data {
+    int bus_mod_idx;
+    void *ptr;
+};
+
 /* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
     int num_captures;                       // number of frame captured for each screen brightness compute
@@ -84,15 +94,15 @@ struct config {
     double dimmer_pct;                      // pct of max brightness to be used while dimming
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
-    int no_smooth_backlight;
-    int no_smooth_dimmer;
-    int no_smooth_gamma;
-    double backlight_trans_step;
-    int gamma_trans_step;
-    double dimmer_trans_step;
-    int backlight_trans_timeout;
-    int gamma_trans_timeout;
-    int dimmer_trans_timeout;
+    int no_smooth_backlight;                // disable smooth backlight changes for BRIGHTNESS module
+    int no_smooth_dimmer;                   // disable smooth backlight changes for DIMMER module
+    int no_smooth_gamma;                    // disable smooth gamma changes
+    double backlight_trans_step;            // every backlight transition step value (in pct), used when smooth BRIGHTNESS transitions are enabled
+    int gamma_trans_step;                   // every gamma transition step value, used when smooth GAMMA transitions are enabled
+    double dimmer_trans_step;               // every backlight transition step value (in pct), used when smooth DIMMER transitions are enabled
+    int backlight_trans_timeout;            // every backlight transition timeout value, used when smooth BRIGHTNESS transitions are enabled
+    int gamma_trans_timeout;                // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
+    int dimmer_trans_timeout;               // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
 };
 
 /* Global state of program */
@@ -100,8 +110,6 @@ struct state {
     int quit;                               // should we quit?
     enum states time;                       // whether it is day or night time
     time_t events[SIZE_EVENTS];             // today events (sunrise/sunset)
-    enum events next_event;                 // next event index (sunrise/sunset)
-    int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
     enum ac_states ac_state;                // is laptop on battery?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     char *xauthority;                       // xauthority env variable, to be used in gamma calls
@@ -111,6 +119,7 @@ struct state {
     int pm_inhibited;                       // whether powermanagement is inhibited
     jmp_buf quit_buf;                       // quit jump called by longjmp
     int needed_functional_modules;          // we need at least 1 functional module (BRIGHTNESS, GAMMA, DPMS, DIMMER) otherwise quit
+    struct bus_match_data userdata;         // Data used by modules that own a match on bus
 };
 
 /* Struct that holds info about an inter-modules dep */

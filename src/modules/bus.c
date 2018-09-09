@@ -4,14 +4,8 @@ static void run_callbacks(const enum modules mod, const void *payload);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
-/* 
- * bus_mod_idx: set in every module's match callback to their self.idx.
- * It is the idx of the module on which bus should call callbacks
- * stored in struct bus_cb *callbacks
- */
 struct bus_callback {
     int num_callbacks;
-    struct bus_match_data userdata;
     struct bus_cb *callbacks;
 };
 
@@ -57,22 +51,22 @@ static void callback(void) {
     int r;
     do {
         /* reset bus_cb_idx to impossible state */
-        _cb.userdata.bus_mod_idx = MODULES_NUM;
+        state.userdata.bus_mod_idx = MODULES_NUM;
         r = sd_bus_process(bus, NULL);
         /* check if any match changed bus_cb_idx, then call correct callback */
-        if (_cb.userdata.bus_mod_idx != MODULES_NUM) {
+        if (state.userdata.bus_mod_idx != MODULES_NUM) {
             /* 
              * Run callbacks before poll_cb, as poll_cb will call
              * started_cb, thus starting all of dependent modules;
              * some of these modules may hook a callback on this module
              * and that callback would be ran if poll_cb was before run_callbacks()
              */
-            run_callbacks(_cb.userdata.bus_mod_idx, _cb.userdata.ptr);
-            if (_cb.userdata.ptr) {
-                free(_cb.userdata.ptr);
-                _cb.userdata.ptr = NULL;
+            run_callbacks(state.userdata.bus_mod_idx, state.userdata.ptr);
+            if (state.userdata.ptr) {
+                free(state.userdata.ptr);
+                state.userdata.ptr = NULL;
             }
-            poll_cb(_cb.userdata.bus_mod_idx);
+            poll_cb(state.userdata.bus_mod_idx);
         }
     } while (r > 0);
 }
@@ -196,9 +190,13 @@ finish:
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     sd_bus *tmp = a->type == USER ? userbus : bus;
     
+#if LIBSYSTEMD_VERSION >= 237
+    int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state.userdata);
+#else
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(tmp, slot, match, cb, &_cb.userdata);
+    int r = sd_bus_add_match(tmp, slot, match, cb, &state.userdata);
+#endif
     return check_err(r, NULL);
 }
 
@@ -308,5 +306,5 @@ sd_bus **get_user_bus(void) {
 }
 
 struct bus_match_data *get_user_data(void) {
-    return &_cb.userdata;
+    return &state.userdata;
 }

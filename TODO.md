@@ -1,4 +1,4 @@
-## 2.5
+## 3.0
 - [x] Fix geoclue2 issues
 - [x] Install license file in /usr/share/licenses/clight/
 - [x] Drop support for /etc/xdg/autostart, and tell user to issue a "systemctl --user enable clight.timer" instead. This way even not-xdg-compliant DE will work out of the box
@@ -13,18 +13,31 @@
 - [x] Improve bus interface with more methods (setgamma + inhibit (presentation mode))
 - [x] rename INITED state to RUNNING state
 - [x] Dropped state.fast_recapture leftover references
-- [ ] Add API reference for bus interface
-- [ ] Add gh wiki pages (?) for "How to build", "features", "Geoclue2 issues", "Bus API"...
 - [x] Drop lock files: when INTERFACE module requests a bus name, request will fail if another daemon is already registered
 - [x] Add completion script for bash
 - [x] Dropped timeouts setting from cmdline options, way too chaotic
 - [x] Add a bus signal "TimeChanged" on sunrise/sunset that returns an enum time { SUNRISE, SUNSET }
-- [ ] Add querySunrise/querySunset to interface
+- [x] Add querySunrise/querySunset to interface
 - [x] Use log file as lock; avoid leaving clight if interface name can not be requested
+- [x] Pause BRIGHTNESS module in dimmed state (and remove if (!state.is_dimmed) check in brightness.c)
+- [x] BRIGHTNESS module will add a match on Dimmed and Time signals
+- [x] Start Inhibit anyway if initial polling fails: interface may be added later and we are allowed to add a match on non-existent interface
+- [x] Use sd_bus_match_signal instead of sd_bus_add_match
+- [x] Expose state.time and state.is_dimmed too
+- [x] Use sd_bus_emit_properties_changed instead of emit_signal on exposed properties (drop 2 signals)
+
+- [ ] Fix clight_callback and upower_callback in BRIGHTNESS
+- [x] Drop clight timer
+
+### TEST
+- [ ] BRIGHTNESS MODULE callback on clight state changes
+
+### Doc
+- [x] Add API reference for bus interface
+- [x] Add gh wiki pages (?) for "How to build", "features", "Geoclue2 issues", "Bus API"...
+- [x] Remove everything from readme
 
 ## Later/ideas
-- [ ] Use the TimeChanged signal to change KDE/GNOME theme at sunset/sunrise 
-
+- [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 
 - [ ] GNOME: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html / https://askubuntu.com/questions/546402/how-to-change-gnome-shell-theme-in-ubuntu-14-10)
-
 - [ ] KDE: https://userbase.kde.org/KDE_Connect/Tutorials/Useful_commands#Change_look_and_feel

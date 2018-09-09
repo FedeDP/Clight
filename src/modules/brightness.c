@@ -1,13 +1,17 @@
 #include <brightness.h>
 #include <bus.h>
 #include <my_math.h>
+#include <interface.h>
 
 static void do_capture(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
+static int on_clight_change(__attribute__((unused)) sd_bus_message *m, 
+                           __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error);
 
-static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD} };
+static sd_bus_slot *slot;
+static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
@@ -20,12 +24,17 @@ MODULE(BRIGHTNESS);
  * Init brightness values (max and current)
  */
 static void init(void) {
+    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
 
-    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    struct bus_cb upower_cb = { UPOWER, upower_callback };
+    int fd = DONT_POLL_W_ERR;
+    int r = add_interface_match(&slot, on_clight_change);
+    if (r >= 0) {
+        fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    }
     INIT_MOD(fd, &upower_cb);
 }
 
@@ -38,7 +47,10 @@ static int check(void) {
 }
 
 static void destroy(void) {
-    /* Skeleton function needed for modules interface */
+    /* Destroy this match slot */
+    if (slot) {
+        slot = sd_bus_slot_unref(slot);
+    }
 }
 
 static void callback(void) {
@@ -54,18 +66,14 @@ static void callback(void) {
  * webcam device fd. This way our main poll will get events (frames) from webcam device too.
  */
 static void do_capture(void) {
-    if (!state.is_dimmed) {
-        double val = capture_frames_brightness();
-        /* 
-         * if captureframes clightd method did not return any non-critical error (eg: eperm).
-         * I won't check setbrightness too because if captureframes did not return any error,
-         * it is very very unlikely that setbrightness would return some.
-         */
-        if (val >= 0.0) {
-            set_brightness(val * 10);
-        }
-    } else {
-        DEBUG("Screen is currently dimmed. Avoid changing backlight level.\n");
+    double val = capture_frames_brightness();
+    /* 
+     * if captureframes clightd method did not return any non-critical error (eg: eperm).
+     * I won't check setbrightness too because if captureframes did not return any error,
+     * it is very very unlikely that setbrightness would return some.
+     */
+    if (val >= 0.0) {
+        set_brightness(val * 10);
     }
     set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
 }
@@ -87,6 +95,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
     if (!r && ok) {
         state.current_br_pct = pct;
+        emit_prop("CurrentBrPct");
     }
 }
 
@@ -103,11 +112,37 @@ static double capture_frames_brightness(void) {
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (old_ac_state != state.ac_state) {
+    if (!state.is_dimmed && old_ac_state != state.ac_state) {
         /* 
          * do a capture right now as we have 2 different curves for 
          * different AC_STATES, so let's properly honor new curve
          */
         set_timeout(0, 1, main_p[self.idx].fd, 0);
     }
+}
+
+/* 
+ * Callback on clight state changed (for properties that expose a PropertiesChanged signal)
+ */
+static int on_clight_change(__attribute__((unused)) sd_bus_message *m, 
+                            __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+    static int old_timeout = 0;
+    static int old_state = 0;
+    
+   if (state.is_dimmed && old_timeout == 0) {
+       /* We have just entered dimmed state, pause the module */
+       old_timeout = get_timeout_sec(main_p[self.idx].fd);
+       set_timeout(0, 0, main_p[self.idx].fd, 0);
+    } else if (!state.is_dimmed) {
+        if (old_timeout != 0) {
+            /* We have just left dimmed state, reset old timeout (checking if state.time changed in the meantime) */
+            reset_timer(main_p[self.idx].fd, old_timeout, conf.timeout[state.ac_state][state.time]);
+            old_timeout = 0;
+        } else if (old_state != state.time) {
+            /* A state.time change happened, react! */
+            reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+            old_state = state.time;
+        }
+    }
+    return 0;
 }

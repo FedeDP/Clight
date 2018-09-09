@@ -1,5 +1,6 @@
 #include <bus.h>
 #include <my_math.h>
+#include <stddef.h>
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
@@ -12,14 +13,16 @@ static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("version", "s", get_version, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_METHOD("calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_METHOD("inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_METHOD("set_backlight_curve", "uad", NULL, method_update_curve, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_METHOD("set_gamma", "ui", NULL, method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
-    // TODO: generic query method that returns array of unsigned long (timeouts)
-//     SD_BUS_METHOD("query", "ui", NULL, method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_SIGNAL("TimeChanged", NULL, 0),
+    SD_BUS_PROPERTY("Version", "s", get_version, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(struct state, events), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(struct state, events) + sizeof(time_t), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Time", "i", NULL, offsetof(struct state, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Dimmed", "b", NULL, offsetof(struct state, is_dimmed), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentBrPct", "d", NULL, offsetof(struct state, current_br_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("SetBacklightCurve", "uad", NULL, method_update_curve, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("SetGamma", "ui", NULL, method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
@@ -40,7 +43,7 @@ static void init(void) {
                                  object_path,
                                  bus_interface,
                                  clight_vtable,
-                                 get_user_data());
+                                 &state);
     if (r < 0) {
         WARN("Could not create Bus Interface: %s\n", strerror(-r));
     } else {
@@ -86,11 +89,11 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
 }
 
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    struct bus_match_data *data = (struct bus_match_data *) userdata;
-    data->bus_mod_idx = self.idx;
+    struct state *s = (struct state *) userdata;
+    s->userdata.bus_mod_idx = self.idx;
     /* Fill data->ptr with old inhibit state */
-    data->ptr = malloc(sizeof(int));
-    *(int *)(data->ptr) = state.pm_inhibited;
+    s->userdata.ptr = malloc(sizeof(int));
+    *(int *)(s->userdata.ptr) = state.pm_inhibited;
     
     /* Read the parameters */
     int r = sd_bus_message_read(m, "b", &state.pm_inhibited);
@@ -167,10 +170,18 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
     return r;
 }
 
-int emit_signal(const char *signal) {
+int emit_prop(const char *signal) {
     if (is_running((self.idx))) {
         sd_bus **userbus = get_user_bus();
-        return sd_bus_emit_signal(*userbus, object_path, bus_interface, signal, NULL);
+        return sd_bus_emit_properties_changed(*userbus, object_path, bus_interface, signal, NULL);
     }
-    return 0;
+    return -1;
+}
+
+int add_interface_match(sd_bus_slot **slot, sd_bus_message_handler_t cb) {
+    if (is_running((self.idx))) {
+        struct bus_args args = { bus_interface, object_path, "org.freedesktop.DBus.Properties", "PropertiesChanged", USER};
+        return add_match(&args, slot, cb);
+    }
+    return -1;
 }

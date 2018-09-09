@@ -1,6 +1,7 @@
 #include <brightness.h>
 #include <bus.h>
 #include <sys/inotify.h>
+#include <interface.h>
 
 #define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
 
@@ -79,6 +80,7 @@ static void callback(void) {
                     main_p[self.idx].fd = inot_fd;
                     old_pct = state.current_br_pct;
                     dim_backlight(conf.dimmer_pct);
+                    emit_prop("Dimmed");
                 } else {
                     // in case of error, reset is_dimmed state
                     state.is_dimmed = 0;
@@ -94,9 +96,11 @@ static void callback(void) {
         char buffer[BUF_LEN];
         int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
         if (length > 0) {
+            DEBUG("Leaving dimmed state...\n");
             state.is_dimmed = 0;
             main_p[self.idx].fd = timer_fd;
             restore_backlight(old_pct);
+            emit_prop("Dimmed");
             set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
         }
     }
@@ -131,12 +135,8 @@ static int get_idle_time(void) {
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (!state.is_dimmed && !state.pm_inhibited && old_ac_state != state.ac_state) {
-        if (conf.dimmer_timeout[state.ac_state] <= 0) {
-            set_timeout(0, 0, main_p[self.idx].fd, 0); // if timeout is <= 0, pause this module
-        } else {
-            reset_timer(main_p[self.idx].fd, conf.dimmer_timeout[old_ac_state], conf.dimmer_timeout[state.ac_state]);
-        }
+    if (!state.is_dimmed && old_ac_state != state.ac_state) {
+        reset_timer(main_p[self.idx].fd * !state.pm_inhibited, conf.dimmer_timeout[old_ac_state], conf.dimmer_timeout[state.ac_state]);
     }
 }
 
@@ -146,7 +146,7 @@ static void upower_callback(const void *ptr) {
  */
 static void inhibit_callback(const void *ptr) {
     int old_pm_state = *(int *)ptr;
-    if (!state.is_dimmed && old_pm_state != state.pm_inhibited && conf.dimmer_timeout[state.ac_state] > 0) {
+    if (!state.is_dimmed && old_pm_state != state.pm_inhibited) {
         DEBUG("Dimmer module being %s.\n", state.pm_inhibited ? "paused" : "restarted");
         set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
     }

@@ -12,6 +12,7 @@ static struct self_t self = {
     .deps =  dependencies,
     .functional_module = 1
 };
+static int need_disable[SIZE_AC];
 
 MODULE(DPMS);
 
@@ -20,6 +21,16 @@ static void init(void) {
     
     /* pass a non-void ptr to avoid logging in inhibit_callback */
     set_dpms_timeouts();
+    
+    /* Init need_disable array */
+    for (int j = 0; j < SIZE_AC; j++) {
+        for (int i = 0; i < SIZE_DPMS && !need_disable[j]; i++) {
+            if (conf.dpms_timeouts[state.ac_state][i] <= 0) {
+                need_disable[j] = 1;
+            }
+        }
+    }
+    
     INIT_MOD(DONT_POLL, &upower_cb);
 }
 
@@ -41,14 +52,7 @@ static void destroy(void) {
  * if any timeout for current AC state is <= 0.
  */
 static void set_dpms_timeouts(void) {
-    int need_disable = 0;
-    for (int i = 0; i < SIZE_DPMS && !need_disable; i++) {
-        if (conf.dpms_timeouts[state.ac_state][i] <= 0) {
-            need_disable = 1;
-        }
-    }
-    
-    if (!need_disable) {
+    if (!need_disable[state.ac_state]) {
         struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setdpms_timeouts"};
         call(NULL, NULL, &args_get, "ssiii", state.display, state.xauthority, 
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);

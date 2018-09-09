@@ -25,7 +25,12 @@ static int check(void) {
     if (r < 0) {
         WARN("PowerManagement inhibition appears to be unsupported.\n");
     }
-    return r;
+    /* 
+     * Init INHIBIT module even if initial polling fails,
+     * as interface may be later added.
+     * We are allowed to add a match on non-existent bus interface.
+     */
+    return 0;
 }
 
 static void callback(void) {
@@ -44,7 +49,7 @@ static int inhibit_init(void) {
     return add_match(&args, &slot, on_inhibit_change);
 }
 
-/* 
+/*
  * Callback on inhibit state changed: recheck new HasInhibit value
  */
 static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
@@ -62,4 +67,3 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
     }
     return 0;
 }
-
