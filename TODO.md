@@ -28,6 +28,7 @@
 
 - [ ] Fix clight_callback and upower_callback in BRIGHTNESS
 - [x] Drop clight timer
+- [ ] BRIGHTNESS and GAMMA to add a callback on INTERFACE module (and drop set_timeout(0, 1, main_p[BRIGHTNESS/GAMMA].fd, 0) in INTERFACE)
 
 ### TEST
 - [ ] BRIGHTNESS MODULE callback on clight state changes

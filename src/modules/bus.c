@@ -304,7 +304,3 @@ static int check_err(int r, sd_bus_error *err) {
 sd_bus **get_user_bus(void) {
     return &userbus;
 }
-
-struct bus_match_data *get_user_data(void) {
-    return &state.userdata;
-}

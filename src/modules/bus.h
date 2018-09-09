@@ -25,4 +25,3 @@ int set_property(const struct bus_args *a, const char type, const void *value);
 int get_property(const struct bus_args *a, const char *type, void *userptr);
 void add_mod_callback(const struct bus_cb cb);
 sd_bus **get_user_bus(void);
-struct bus_match_data *get_user_data(void);
