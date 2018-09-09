@@ -46,7 +46,7 @@ double compute_average(double *intensity, int num) {
 /*
  * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C 
  */
-void polynomialfit(enum ac_states s) {
+void polynomialfit(enum ac_states s, const double *a) {
     gsl_multifit_linear_workspace *ws;
     gsl_matrix *cov, *X;
     gsl_vector *y, *c;
@@ -62,7 +62,7 @@ void polynomialfit(enum ac_states s) {
         for(j=0; j < DEGREE; j++) {
             gsl_matrix_set(X, i, j, pow(i, j));
         }
-        gsl_vector_set(y, i, conf.regression_points[s][i]);
+        gsl_vector_set(y, i, a[i]);
     }
 
     ws = gsl_multifit_linear_alloc(SIZE_POINTS, DEGREE);

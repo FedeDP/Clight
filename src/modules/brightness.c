@@ -28,8 +28,9 @@ static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     
     /* Compute polynomial best-fit parameters */
-    polynomialfit(ON_AC);
-    polynomialfit(ON_BATTERY);
+    for (int i = 0; i < SIZE_AC; i++) {
+        polynomialfit(i, conf.regression_points[i]);
+    }
 
     int fd = DONT_POLL_W_ERR;
     int r = add_interface_match(&slot, on_clight_change);

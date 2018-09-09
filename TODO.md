@@ -28,7 +28,9 @@
 
 - [x] Fix clight_callback and upower_callback in BRIGHTNESS
 - [x] Drop clight timer
-- [ ] BRIGHTNESS and GAMMA to add a callback on INTERFACE module (and drop set_timeout(0, 1, main_p[BRIGHTNESS/GAMMA].fd, 0) in INTERFACE)
+- [X] Polynomial fit to take an array (without forcing conf.regression_points)
+- [x] Avoid overriding conf.regression_points with user passed data.
+- [x] Properly process USERBUS too before start looping on events
 
 ### TEST
 - [ ] BRIGHTNESS MODULE callback on clight state changes

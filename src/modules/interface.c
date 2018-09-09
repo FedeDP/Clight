@@ -76,14 +76,15 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 }
 
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int r;
+    int r = -EINVAL;
     
-    if (is_running(BRIGHTNESS)) {
+    if (is_running(BRIGHTNESS) && !state.is_dimmed) {
         set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
         r = sd_bus_reply_method_return(m, NULL);
-    } else {
+    } else if (!state.is_dimmed) {
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Brightness module is not running.");
-        r = -EINVAL;
+    } else {
+        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Screen is currently dimmed.");
     }
     return r;
 }
@@ -129,8 +130,7 @@ static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *
             WARN("Wrong parameters.\n");
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         } else {
-            memcpy(conf.regression_points[ac_state], data, length);
-            polynomialfit(ac_state);
+            polynomialfit(ac_state, data);
             r = sd_bus_reply_method_return(m, NULL);
         }
     } else {

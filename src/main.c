@@ -109,6 +109,7 @@ static void destroy(void) {
 static void main_poll(void) {
     /* Force a sd_bus_process before entering loop */
     poll_cb(BUS);
+    poll_cb(USERBUS);
     while (!state.quit) {
         int r = poll(main_p, MODULES_NUM, -1);
         if (r == -1) {
