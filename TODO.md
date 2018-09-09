@@ -31,6 +31,8 @@
 - [X] Polynomial fit to take an array (without forcing conf.regression_points)
 - [x] Avoid overriding conf.regression_points with user passed data.
 - [x] Properly process USERBUS too before start looping on events
+- [x] Add a bus service file
+- [x] Improve bus match callbacks handling
 
 ### TEST
 - [ ] BRIGHTNESS MODULE callback on clight state changes
@@ -40,7 +42,11 @@
 - [x] Add gh wiki pages (?) for "How to build", "features", "Geoclue2 issues", "Bus API"...
 - [x] Remove everything from readme
 
-## Later/ideas
+## 3.1
+- [ ] Improve bus callback managing and modules bus callbacks -> eg: BRIGHTNESS module has a very chaotic implementation for its bus callbacks. Simplify it.
+- [ ] Eg: add a "for_mod=X" to "struct bus_match_data" to let bus.c only call module X callback for that event (find a better way possibly)
+
+## Ideas
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 
 - [ ] GNOME: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html / https://askubuntu.com/questions/546402/how-to-change-gnome-shell-theme-in-ubuntu-14-10)
 - [ ] KDE: https://userbase.kde.org/KDE_Connect/Tutorials/Useful_commands#Change_look_and_feel

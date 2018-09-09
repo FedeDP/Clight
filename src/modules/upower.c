@@ -49,11 +49,7 @@ static int upower_init(void) {
  * Callback on upower changes: recheck on_battery boolean value
  */
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    struct bus_match_data *data = (struct bus_match_data *) userdata;
-    data->bus_mod_idx = self.idx;
-    /* Fill data->ptr with old ac state */
-    data->ptr = malloc(sizeof(int));
-    *(int *)(data->ptr) = state.ac_state;
+    FILL_MATCH_DATA(state.ac_state);
     
     struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
     
@@ -67,7 +63,7 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
      * .OnBattery                          property  b         false        emits-change
      */
     int r = get_property(&power_args, "b", &state.ac_state);
-    if (!r && (*(int *)(data->ptr) != state.ac_state)) {
+    if (!r && (*(int *)(s->userdata.ptr) != state.ac_state)) {
         INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
     }
     return 0;

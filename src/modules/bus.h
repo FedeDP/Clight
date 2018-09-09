@@ -2,6 +2,12 @@
 
 #include <modules.h>
 
+#define FILL_MATCH_DATA(data) \
+    struct state *s = (struct state *) userdata; \
+    s->userdata.bus_mod_idx = self.idx; \
+    s->userdata.ptr = malloc(sizeof(data)); \
+    memcpy(s->userdata.ptr, &data, sizeof(data));
+
 struct bus_cb {
     enum modules module;
     void (*cb)(const void *ptr);

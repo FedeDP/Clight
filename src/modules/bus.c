@@ -191,11 +191,11 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
     sd_bus *tmp = a->type == USER ? userbus : bus;
     
 #if LIBSYSTEMD_VERSION >= 237
-    int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state.userdata);
+    int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state);
 #else
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(tmp, slot, match, cb, &state.userdata);
+    int r = sd_bus_add_match(tmp, slot, match, cb, &state);
 #endif
     return check_err(r, NULL);
 }

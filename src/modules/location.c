@@ -154,11 +154,7 @@ static int geoclue_hook_update(void) {
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    struct bus_match_data *data = (struct bus_match_data *) userdata;
-    data->bus_mod_idx = self.idx;
-    /* Fill data->ptr with old latitude/longitude */
-    data->ptr = malloc(sizeof(struct location));
-    memcpy(data->ptr, &conf.loc, sizeof(struct location));
+    FILL_MATCH_DATA(conf.loc);
 
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);

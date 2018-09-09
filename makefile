@@ -11,6 +11,9 @@ DESKTOPDIR = /usr/share/applications
 LICENSEDIR = /usr/share/licenses/clight
 COMPLNAME = clight
 COMPLDIR = $(shell pkg-config --variable=completionsdir bash-completion)
+BUSSERVICEDIR = /usr/share/dbus-1/services/
+BUSSERVICENAME = org.clight.clight.service
+
 RM = rm -f
 RMDIR = rm -rf
 INSTALL = install -p
@@ -84,6 +87,10 @@ install:
 	$(info installing bash autocompletion.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(COMPLDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/$(COMPLNAME) "$(DESTDIR)$(COMPLDIR)/$(COMPLNAME)"
+	
+	$(info installing dbus service file.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(BUSSERVICEDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/$(BUSSERVICENAME) "$(DESTDIR)$(BUSSERVICEDIR)"
 
 uninstall:
 	$(info uninstalling bin.)
@@ -106,3 +113,6 @@ uninstall:
 	
 	$(info uninstalling bash autocompletion.)
 	@$(RM) "$(DESTDIR)$(COMPLDIR)/$(COMPLNAME)"
+	
+	$(info uninstalling dbus service file.)
+	@$(RM) "$(DESTDIR)$(BUSSERVICEDIR)/$(BUSSERVICENAME)"

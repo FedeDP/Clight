@@ -4,10 +4,14 @@ Wants=geoclue.service upower.service clightd.service
 After=display-manager.service clightd.service geoclue.service upower.service
 
 [Service]
-Type=simple
+Type=dbus
+BusName=org.clight.clight
 ExecStart=/usr/bin/clight
 Restart=on-failure
 RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
 
 [Install]
 WantedBy=default.target

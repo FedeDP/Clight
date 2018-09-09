@@ -90,12 +90,8 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
 }
 
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    struct state *s = (struct state *) userdata;
-    s->userdata.bus_mod_idx = self.idx;
-    /* Fill data->ptr with old inhibit state */
-    s->userdata.ptr = malloc(sizeof(int));
-    *(int *)(s->userdata.ptr) = state.pm_inhibited;
-    
+    FILL_MATCH_DATA(state.pm_inhibited);
+
     /* Read the parameters */
     int r = sd_bus_message_read(m, "b", &state.pm_inhibited);
     if (r < 0) {
