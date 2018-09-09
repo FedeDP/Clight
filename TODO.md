@@ -26,7 +26,7 @@
 - [x] Expose state.time and state.is_dimmed too
 - [x] Use sd_bus_emit_properties_changed instead of emit_signal on exposed properties (drop 2 signals)
 
-- [ ] Fix clight_callback and upower_callback in BRIGHTNESS
+- [x] Fix clight_callback and upower_callback in BRIGHTNESS
 - [x] Drop clight timer
 - [ ] BRIGHTNESS and GAMMA to add a callback on INTERFACE module (and drop set_timeout(0, 1, main_p[BRIGHTNESS/GAMMA].fd, 0) in INTERFACE)
 

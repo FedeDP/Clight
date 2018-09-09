@@ -17,6 +17,7 @@ static struct self_t self = {
     .deps =  dependencies,
     .functional_module = 1
 };
+static int force_capture;
 
 MODULE(BRIGHTNESS);
 
@@ -112,12 +113,16 @@ static double capture_frames_brightness(void) {
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (!state.is_dimmed && old_ac_state != state.ac_state) {
-        /* 
-         * do a capture right now as we have 2 different curves for 
-         * different AC_STATES, so let's properly honor new curve
-         */
-        set_timeout(0, 1, main_p[self.idx].fd, 0);
+    if (old_ac_state != state.ac_state) {
+        if (!state.is_dimmed) {
+            /* 
+            * do a capture right now as we have 2 different curves for 
+            * different AC_STATES, so let's properly honor new curve
+            */
+            set_timeout(0, 1, main_p[self.idx].fd, 0);
+        }  else {
+            force_capture++; // if it is even, it means eg: we started on AC, then on Batt, then again on AC (so, ac state is not changed at all in the end while we where dimmed)
+        }
     }
 }
 
@@ -126,18 +131,32 @@ static void upower_callback(const void *ptr) {
  */
 static int on_clight_change(__attribute__((unused)) sd_bus_message *m, 
                             __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    static int old_timeout = 0;
+    static int old_elapsed = 0;
     static int old_state = 0;
     
-   if (state.is_dimmed && old_timeout == 0) {
+    if (state.is_dimmed && old_elapsed == 0) {
        /* We have just entered dimmed state, pause the module */
-       old_timeout = get_timeout_sec(main_p[self.idx].fd);
+       old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
        set_timeout(0, 0, main_p[self.idx].fd, 0);
     } else if (!state.is_dimmed) {
-        if (old_timeout != 0) {
-            /* We have just left dimmed state, reset old timeout (checking if state.time changed in the meantime) */
-            reset_timer(main_p[self.idx].fd, old_timeout, conf.timeout[state.ac_state][state.time]);
-            old_timeout = 0;
+        if (old_elapsed != 0) {
+            /* 
+             * We have just left dimmed state, reset old timeout 
+             * (checking if state.time changed in the meantime) and if ac state changed 
+             */
+            int timeout_nsec = 0;
+            int timeout_sec = 0;
+            if ((force_capture % 2) == 1) {
+                timeout_nsec = 1;
+            } else if (old_state != state.time) {
+                timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
+                if (timeout_sec <= 0) {
+                    timeout_nsec = 1;
+                }
+            }
+            set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
+            old_elapsed = 0;
+            force_capture = 0;
         } else if (old_state != state.time) {
             /* A state.time change happened, react! */
             reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
