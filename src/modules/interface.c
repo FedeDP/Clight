@@ -148,14 +148,11 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
             return r;
         }
     
-        if (target_state >= SIZE_STATES || gamma_val < 1000 || gamma_val > 10000) {
+    if (target_state >= EVENT || gamma_val < 1000 || gamma_val > 10000) {
             WARN("Wrong parameters.\n");
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         } else {
-            /* Use current state */
-            if (target_state == EVENT) {
-                target_state = state.time;
-            }
+
             conf.temp[target_state] = gamma_val;
             set_timeout(0, 1, main_p[GAMMA].fd, 0);
             r = sd_bus_reply_method_return(m, NULL);

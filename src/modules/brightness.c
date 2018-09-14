@@ -17,7 +17,7 @@ static struct self_t self = {
     .deps =  dependencies,
     .functional_module = 1
 };
-static int force_capture;
+static int ac_force_capture;
 
 MODULE(BRIGHTNESS);
 
@@ -122,7 +122,7 @@ static void upower_callback(const void *ptr) {
             */
             set_timeout(0, 1, main_p[self.idx].fd, 0);
         }  else {
-            force_capture++; // if it is even, it means eg: we started on AC, then on Batt, then again on AC (so, ac state is not changed at all in the end while we where dimmed)
+            ac_force_capture++; // if it is even, it means eg: we started on AC, then on Batt, then again on AC (so, ac state is not changed at all in the end while we where dimmed)
         }
     }
 }
@@ -131,10 +131,11 @@ static void upower_callback(const void *ptr) {
  * Callback on clight state changed (for properties that expose a PropertiesChanged signal)
  */
 static int on_clight_change(__attribute__((unused)) sd_bus_message *m, 
-                            __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+                            __attribute__((unused)) void *userdata, 
+                            __attribute__((unused)) sd_bus_error *ret_error) {
     static int old_elapsed = 0;
-    static int old_state = 0;
-    
+    static enum states old_state = SIZE_STATES; // initial value
+
     if (state.is_dimmed && old_elapsed == 0) {
        /* We have just entered dimmed state, pause the module */
        old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
@@ -143,13 +144,13 @@ static int on_clight_change(__attribute__((unused)) sd_bus_message *m,
         if (old_elapsed != 0) {
             /* 
              * We have just left dimmed state, reset old timeout 
-             * (checking if state.time changed in the meantime) and if ac state changed 
+             * (checking if ac state changed in the meantime)
              */
             int timeout_nsec = 0;
             int timeout_sec = 0;
-            if ((force_capture % 2) == 1) {
+            if ((ac_force_capture % 2) == 1) {
                 timeout_nsec = 1;
-            } else if (old_state != state.time) {
+            } else {
                 timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
                 if (timeout_sec <= 0) {
                     timeout_nsec = 1;
@@ -157,10 +158,12 @@ static int on_clight_change(__attribute__((unused)) sd_bus_message *m,
             }
             set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
             old_elapsed = 0;
-            force_capture = 0;
+            ac_force_capture = 0;
         } else if (old_state != state.time) {
-            /* A state.time change happened, react! */
-            reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+            if (old_state != SIZE_STATES) {
+                /* A state.time change happened, react! */
+                reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+            }
             old_state = state.time;
         }
     }
