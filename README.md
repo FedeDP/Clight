@@ -10,7 +10,7 @@ Finally, it can dim your screen after a timeout.
 
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
-**For a guide on how to build, features and lots of other infos, head to [Clight Wiki Pages](https://github.com/FedeDP/Clight/wiki).**
+**For a guide on how to build, features and lots of other infos, head to [Clight Wiki Pages](https://github.com/FedeDP/Clight/wiki).**  
 *For any other info, please feel free to open an issue.*  
 
 ## Arch AUR packages
