@@ -34,6 +34,8 @@
 - [x] Add a bus service file
 - [x] Improve bus match callbacks handling
 
+- [x] Improve bus callback managing and modules bus callbacks -> eg: BRIGHTNESS module has a very chaotic implementation for its bus callbacks. Simplify it.
+
 ### TEST
 - [x] BRIGHTNESS MODULE callback on clight state changes
 
@@ -43,8 +45,6 @@
 - [x] Remove everything from readme
 
 ## 3.1
-- [ ] Improve bus callback managing and modules bus callbacks -> eg: BRIGHTNESS module has a very chaotic implementation for its bus callbacks. Simplify it.
-- [ ] Eg: add a "for_mod=X" to "struct bus_match_data" to let bus.c only call module X callback for that event (find a better way possibly)
 - [ ] BRIGHTNESS module will add a match on clightd WebcamChanged signal if clightd >= 2.4 is found, and will react to it appropriately
 - [ ] Do not require both --sunrise and --sunset options!
 - [ ] Do not leave clight if --sunrise or --sunset are wrong, just disable gamma

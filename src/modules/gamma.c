@@ -8,8 +8,9 @@ static void check_next_event(time_t *now);
 static void check_state(time_t *now);
 static void set_temp(int temp);
 static void location_callback(const void *ptr);
+static void interface_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {HARD, LOCATION}, {HARD, XORG}, {HARD, CLIGHTD} };
+static struct dependency dependencies[] = { {HARD, LOCATION}, {HARD, XORG}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
@@ -23,9 +24,10 @@ MODULE(GAMMA);
 
 static void init(void) {
     struct bus_cb loc_cb = { LOCATION, location_callback };
+    struct bus_cb interface_cb = { INTERFACE, interface_callback, "gamma" };
 
     int gamma_timerfd = start_timer(CLOCK_REALTIME, 0, 1);
-    INIT_MOD(gamma_timerfd, &loc_cb);
+    INIT_MOD(gamma_timerfd, &loc_cb, &interface_cb);
 }
 
 static int check(void) {
@@ -55,6 +57,8 @@ static void callback(void) {
  * set new BRIGHTNESS correct timeout according to new state.
  */
 static void check_gamma(void) {
+    static int first_time = 1;
+    
     time_t t = time(NULL);
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
@@ -80,9 +84,17 @@ static void check_gamma(void) {
     INFO("Next gamma alarm due to: %s", ctime(&t));
     set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
 
-    /* if we entered/left an event, emit PropertiesChanged signal */
-    if (old_state != state.time) {
-        emit_prop("Time");
+    /* 
+     * if we entered/left an event, emit PropertiesChanged signal
+     * Avoid spamming signal firt time we start (as we're computing current time)
+     * eg: we start clight during the NIGHT but state.time defaults to 0 (ie: DAY).
+     */
+    if (!first_time) {
+        if (old_state != state.time) {
+            emit_prop("Time");
+        }
+    } else {
+        first_time = 0;
     }
 }
 
@@ -203,4 +215,8 @@ static void location_callback(const void *ptr) {
         state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
         set_timeout(0, 1, main_p[self.idx].fd, 0);
     }
+}
+
+static void interface_callback(const void *ptr) {
+    set_timeout(0, 1, main_p[self.idx].fd, 0);
 }

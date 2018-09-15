@@ -7,8 +7,9 @@ static void do_capture(void);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
-static int on_clight_change(__attribute__((unused)) sd_bus_message *m, 
-                           __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error);
+static void interface_callback(const void *ptr);
+static void dimmed_callback(void);
+static void time_callback(void);
 
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
@@ -26,18 +27,22 @@ MODULE(BRIGHTNESS);
  */
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
+    struct bus_cb interface_cb = { INTERFACE, interface_callback, "calibrate" };
     
     /* Compute polynomial best-fit parameters */
     for (int i = 0; i < SIZE_AC; i++) {
         polynomialfit(i, conf.regression_points[i]);
     }
 
-    int fd = DONT_POLL_W_ERR;
-    int r = add_interface_match(&slot, on_clight_change);
-    if (r >= 0) {
-        fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    }
-    INIT_MOD(fd, &upower_cb);
+    /* Add callbacks on prop signal emitted by interface module */
+    struct prop_cb dimmed_cb = { "Dimmed", dimmed_callback };
+    struct prop_cb time_cb = { "Time", time_callback };
+    add_prop_callback(&dimmed_cb);
+    add_prop_callback(&time_cb);
+    
+    /* Start module timer */
+    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    INIT_MOD(fd, &upower_cb, &interface_cb);
 }
 
 static int check(void) {
@@ -111,6 +116,7 @@ static double capture_frames_brightness(void) {
     return -1.0f;
 }
 
+/* Callback on upower ac state changed signal */
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
@@ -127,45 +133,47 @@ static void upower_callback(const void *ptr) {
     }
 }
 
-/* 
- * Callback on clight state changed (for properties that expose a PropertiesChanged signal)
- */
-static int on_clight_change(__attribute__((unused)) sd_bus_message *m, 
-                            __attribute__((unused)) void *userdata, 
-                            __attribute__((unused)) sd_bus_error *ret_error) {
-    static int old_elapsed = 0;
-    static enum states old_state = SIZE_STATES; // initial value
-
-    if (state.is_dimmed && old_elapsed == 0) {
-       /* We have just entered dimmed state, pause the module */
-       old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
-       set_timeout(0, 0, main_p[self.idx].fd, 0);
-    } else if (!state.is_dimmed) {
-        if (old_elapsed != 0) {
-            /* 
-             * We have just left dimmed state, reset old timeout 
-             * (checking if ac state changed in the meantime)
-             */
-            int timeout_nsec = 0;
-            int timeout_sec = 0;
-            if ((ac_force_capture % 2) == 1) {
-                timeout_nsec = 1;
-            } else {
-                timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
-                if (timeout_sec <= 0) {
-                    timeout_nsec = 1;
-                }
-            }
-            set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
-            old_elapsed = 0;
-            ac_force_capture = 0;
-        } else if (old_state != state.time) {
-            if (old_state != SIZE_STATES) {
-                /* A state.time change happened, react! */
-                reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
-            }
-            old_state = state.time;
-        }
+/* Callback on "Calibrate" bus interface method */
+static void interface_callback(const void *ptr) {
+    if (!state.is_dimmed) {
+        set_timeout(0, 1, main_p[self.idx].fd, 0);
     }
-    return 0;
+}
+
+/* Callback on state.is_dimmed changes */
+static void dimmed_callback(void) {
+    static int old_elapsed = 0;
+    
+    if (state.is_dimmed && old_elapsed == 0) {
+        old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
+        set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
+    } else {
+        /* 
+         * We have just left dimmed state, reset old timeout 
+         * (checking if ac state changed in the meantime)
+         */
+        int timeout_nsec = 0;
+        int timeout_sec = 0;
+        if ((ac_force_capture % 2) == 1) {
+            timeout_nsec = 1;
+        } else {
+            timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
+            if (timeout_sec <= 0) {
+                timeout_nsec = 1;
+            }
+        }
+        set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
+        old_elapsed = 0;
+        ac_force_capture = 0;
+    }
+}
+
+/* Callback on state.time changes */
+static void time_callback(void) {
+    static enum states old_state = DAY; // default initial value
+    if (!state.is_dimmed) {
+        /* A state.time change happened, react! */
+        reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+    }
+    old_state = state.time;
 }

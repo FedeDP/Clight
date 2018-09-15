@@ -24,7 +24,7 @@ MODULE(DIMMER);
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
-    struct bus_cb interface_cb = { INTERFACE, inhibit_callback };
+    struct bus_cb interface_cb = { INTERFACE, inhibit_callback, "inhibit" };
     
     timer_fd = DONT_POLL_W_ERR;
     inot_fd = inotify_init();

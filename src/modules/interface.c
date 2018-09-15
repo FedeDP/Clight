@@ -1,6 +1,7 @@
 #include <bus.h>
 #include <my_math.h>
 #include <stddef.h>
+#include <interface.h>
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
@@ -8,6 +9,12 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_update_curve(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+void run_prop_callbacks(const char *prop);
+
+struct prop_callback {
+    int num_callbacks;
+    struct prop_cb *callbacks;
+};
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
@@ -26,7 +33,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
-
+static struct prop_callback _cb;
 static struct dependency dependencies[] = { {SUBMODULE, USERBUS} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
@@ -68,6 +75,9 @@ static void callback(void) {
 static void destroy(void) {
     sd_bus **userbus = get_user_bus();
     sd_bus_release_name(*userbus, bus_interface);
+    if (_cb.callbacks) {
+        free(_cb.callbacks);
+    }
 }
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
@@ -78,11 +88,9 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int r = -EINVAL;
     
-    if (is_running(BRIGHTNESS) && !state.is_dimmed) {
-        set_timeout(0, 1, main_p[BRIGHTNESS].fd, 0);
+    if (is_running(BRIGHTNESS)) {
+        FILL_MATCH_DATA(state.current_br_pct); // useless data, unused
         r = sd_bus_reply_method_return(m, NULL);
-    } else if (!state.is_dimmed) {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Brightness module is not running.");
     } else {
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Screen is currently dimmed.");
     }
@@ -90,14 +98,15 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
 }
 
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    FILL_MATCH_DATA(state.pm_inhibited);
-
-    /* Read the parameters */
-    int r = sd_bus_message_read(m, "b", &state.pm_inhibited);
+    int inhibited;
+    int r = sd_bus_message_read(m, "b", &inhibited);
     if (r < 0) {
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
+    
+    FILL_MATCH_DATA(state.pm_inhibited);
+    state.pm_inhibited = inhibited;
     INFO("PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
     return sd_bus_reply_method_return(m, NULL);
 }
@@ -148,13 +157,14 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
             return r;
         }
     
-    if (target_state >= EVENT || gamma_val < 1000 || gamma_val > 10000) {
+        if (target_state >= EVENT || gamma_val < 1000 || gamma_val > 10000) {
             WARN("Wrong parameters.\n");
             sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         } else {
-
-            conf.temp[target_state] = gamma_val;
-            set_timeout(0, 1, main_p[GAMMA].fd, 0);
+            if (conf.temp[target_state] != gamma_val) {
+                FILL_MATCH_DATA(state.time);
+                conf.temp[target_state] = gamma_val;
+            }
             r = sd_bus_reply_method_return(m, NULL);
         }
     } else {
@@ -166,15 +176,29 @@ static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_
 int emit_prop(const char *signal) {
     if (is_running((self.idx))) {
         sd_bus **userbus = get_user_bus();
-        return sd_bus_emit_properties_changed(*userbus, object_path, bus_interface, signal, NULL);
+        sd_bus_emit_properties_changed(*userbus, object_path, bus_interface, signal, NULL);
+        run_prop_callbacks(signal);
+        return 0;
     }
     return -1;
 }
 
-int add_interface_match(sd_bus_slot **slot, sd_bus_message_handler_t cb) {
-    if (is_running((self.idx))) {
-        struct bus_args args = { bus_interface, object_path, "org.freedesktop.DBus.Properties", "PropertiesChanged", USER};
-        return add_match(&args, slot, cb);
+int add_prop_callback(struct prop_cb *cb) {
+    struct prop_cb *tmp = realloc(_cb.callbacks, sizeof(struct prop_cb) * (++_cb.num_callbacks));
+    if (tmp) {
+        _cb.callbacks = tmp;
+        _cb.callbacks[_cb.num_callbacks - 1] = *cb;
+    } else {
+        free(_cb.callbacks);
+        ERROR("%s\n", strerror(errno));
     }
-    return -1;
+    return 0;
+}
+
+void run_prop_callbacks(const char *prop) {
+    for (int i = 0; i < _cb.num_callbacks; i++) {
+        if (!strcmp(_cb.callbacks[i].name, prop)) {
+            _cb.callbacks[i].cb();
+        }
+    }
 }

@@ -76,6 +76,7 @@ struct location {
  */
 struct bus_match_data {
     int bus_mod_idx;
+    const char *bus_fn_name;
     void *ptr;
 };
 

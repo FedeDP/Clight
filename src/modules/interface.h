@@ -1,2 +1,7 @@
+struct prop_cb {
+    const char *name;
+    void (*cb)(void);
+};
+
 int emit_prop(const char *signal);
-int add_interface_match(sd_bus_slot **slot, sd_bus_message_handler_t cb);
+int add_prop_callback(struct prop_cb *cb);

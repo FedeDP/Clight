@@ -1,6 +1,6 @@
 #include <bus.h>
 
-static void run_callbacks(const enum modules mod, const void *payload);
+static void run_callbacks(struct bus_match_data *data);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
 
@@ -61,7 +61,7 @@ static void callback(void) {
              * some of these modules may hook a callback on this module
              * and that callback would be ran if poll_cb was before run_callbacks()
              */
-            run_callbacks(state.userdata.bus_mod_idx, state.userdata.ptr);
+            run_callbacks(&state.userdata);
             if (state.userdata.ptr) {
                 free(state.userdata.ptr);
                 state.userdata.ptr = NULL;
@@ -252,21 +252,22 @@ finish:
     return r;
 }
 
-void add_mod_callback(const struct bus_cb cb) {
+void add_mod_callback(const struct bus_cb *cb) {
     struct bus_cb *tmp = realloc(_cb.callbacks, sizeof(struct bus_cb) * (++_cb.num_callbacks));
     if (tmp) {
         _cb.callbacks = tmp;
-        _cb.callbacks[_cb.num_callbacks - 1] = cb;
+        _cb.callbacks[_cb.num_callbacks - 1] = *cb;
     } else {
         free(_cb.callbacks);
         ERROR("%s\n", strerror(errno));
     }
 }
 
-static void run_callbacks(const enum modules mod, const void *payload) {
+static void run_callbacks(struct bus_match_data *data) {
     for (int i = 0; i < _cb.num_callbacks; i++) {
-        if (_cb.callbacks[i].module == mod && is_running(mod)) {
-            _cb.callbacks[i].cb(payload);
+        if (_cb.callbacks[i].module == data->bus_mod_idx && is_running(data->bus_mod_idx)
+            && (!_cb.callbacks[i].filter || strcasestr(data->bus_fn_name, _cb.callbacks[i].filter))) {
+            _cb.callbacks[i].cb(data->ptr);
         }
     }
 }
