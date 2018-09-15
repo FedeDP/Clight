@@ -63,6 +63,8 @@ enum bus_type { SYSTEM, USER };
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
 
+enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON };
+
 /* Struct that holds data about a geographic location */
 struct location {
     double lat;
@@ -117,7 +119,7 @@ struct state {
     char *display;                          // display env variable, to be used in gamma calls
     double current_br_pct;                  // current backlight pct
     int is_dimmed;                          // whether we are currently in dimmed state
-    int pm_inhibited;                       // whether powermanagement is inhibited
+    enum pm_states pm_inhibited;            // whether powermanagement is inhibited
     jmp_buf quit_buf;                       // quit jump called by longjmp
     int needed_functional_modules;          // we need at least 1 functional module (BRIGHTNESS, GAMMA, DPMS, DIMMER) otherwise quit
     struct bus_match_data userdata;         // Data used by modules that own a match on bus

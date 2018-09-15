@@ -36,6 +36,8 @@
 
 - [x] Improve bus callback managing and modules bus callbacks -> eg: BRIGHTNESS module has a very chaotic implementation for its bus callbacks. Simplify it.
 
+- [x] Force PM inhibition ON when forced by bus interface
+
 ### TEST
 - [x] BRIGHTNESS MODULE callback on clight state changes
 
@@ -45,7 +47,7 @@
 - [x] Remove everything from readme
 
 ## 3.1
-- [ ] BRIGHTNESS module will add a match on clightd WebcamChanged signal if clightd >= 2.4 is found, and will react to it appropriately
+- [ ] BRIGHTNESS module will add a match on clightd WebcamChanged signal if clightd >= 2.4 is found, and will react to it appropriately(avoid requiring clightd >= 2.4 though)
 - [ ] Do not require both --sunrise and --sunset options!
 - [ ] Do not leave clight if --sunrise or --sunset are wrong, just disable gamma
 

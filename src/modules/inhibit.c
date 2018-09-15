@@ -25,7 +25,7 @@ static int check(void) {
     if (r < 0) {
         WARN("PowerManagement inhibition appears to be unsupported.\n");
     }
-    /* 
+    /*
      * Init INHIBIT module even if initial polling fails,
      * as interface may be later added.
      * We are allowed to add a match on non-existent bus interface.
@@ -53,13 +53,17 @@ static int inhibit_init(void) {
  * Callback on inhibit state changed: recheck new HasInhibit value
  */
 static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    FILL_MATCH_DATA(state.pm_inhibited);
+    if (state.pm_inhibited != PM_FORCED_ON) {
+        FILL_MATCH_DATA(state.pm_inhibited);
 
-    struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
-    int r = call(&state.pm_inhibited, "b", &args, NULL);
+        struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
+        int r = call(&state.pm_inhibited, "b", &args, NULL);
 
-    if (!r) {
-        INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
+        if (!r) {
+            INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
+        }
+    } else {
+        DEBUG("Pm Inhibition is currently forced ON by bus API.\n");
     }
     return 0;
 }

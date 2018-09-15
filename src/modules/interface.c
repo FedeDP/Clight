@@ -106,7 +106,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
     }
     
     FILL_MATCH_DATA(state.pm_inhibited);
-    state.pm_inhibited = inhibited;
+    state.pm_inhibited = inhibited ? PM_FORCED_ON : PM_OFF;
     INFO("PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
     return sd_bus_reply_method_return(m, NULL);
 }
