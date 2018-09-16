@@ -3,7 +3,7 @@
 #include <my_math.h>
 #include <interface.h>
 
-static void do_capture(void);
+static void do_capture(int reset_timer);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
@@ -64,7 +64,7 @@ static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     
-    do_capture();
+    do_capture(1);
 }
 
 /*
@@ -72,7 +72,7 @@ static void callback(void) {
  * otherwise start streaming on webcam and set BRIGHTNESS fd of pollfd struct to
  * webcam device fd. This way our main poll will get events (frames) from webcam device too.
  */
-static void do_capture(void) {
+static void do_capture(int reset_timer) {
     double val = capture_frames_brightness();
     /* 
      * if captureframes clightd method did not return any non-critical error (eg: eperm).
@@ -82,7 +82,10 @@ static void do_capture(void) {
     if (val >= 0.0) {
         set_brightness(val * 10);
     }
-    set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
+    
+    if (reset_timer) {
+        set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
+    }
 }
 
 static void set_brightness(const double perc) {
@@ -136,7 +139,7 @@ static void upower_callback(const void *ptr) {
 /* Callback on "Calibrate" bus interface method */
 static void interface_callback(const void *ptr) {
     if (!state.is_dimmed) {
-        set_timeout(0, 1, main_p[self.idx].fd, 0);
+        do_capture(0);
     }
 }
 
