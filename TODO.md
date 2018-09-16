@@ -50,6 +50,7 @@
 - [ ] BRIGHTNESS module will add a match on clightd WebcamChanged signal if clightd >= 2.4 is found, and will react to it appropriately(avoid requiring clightd >= 2.4 though)
 - [ ] Do not require both --sunrise and --sunset options!
 - [ ] Do not leave clight if --sunrise or --sunset are wrong, just disable gamma
+- [ ] Add support for new Clightd ALS interface
 
 ## Ideas
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 
