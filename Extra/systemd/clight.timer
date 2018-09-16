@@ -1,0 +1,8 @@
+[Unit]
+Description=Run clight with a small delay on startup
+
+[Timer]
+OnActiveSec=5
+
+[Install]
+WantedBy=default.target 

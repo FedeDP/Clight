@@ -2,6 +2,7 @@ BINDIR = /usr/bin
 BINNAME = clight
 SYSTEMDDIR = /usr/lib/systemd/user/
 SYSTEMDUNIT = clight.service
+SYSTEMDTIMER = clight.timer
 EXTRADIR = Extra
 CONFDIR = /etc/default
 CONFNAME = clight.conf
@@ -68,9 +69,10 @@ install:
 	@$(INSTALL_DIR) "$(DESTDIR)$(CONFDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/$(CONFNAME) "$(DESTDIR)$(CONFDIR)"
 
-	$(info installing systemd unit)
+	$(info installing systemd unit and timer)
 	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDTIMER) "$(DESTDIR)$(SYSTEMDDIR)"
 	
 	$(info installing icon.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(ICONSDIR)"
@@ -99,8 +101,9 @@ uninstall:
 	$(info uninstalling conf file.)
 	@$(RM) "$(DESTDIR)$(CONFDIR)/$(CONFNAME)"
 
-	$(info uninstalling systemd unit)
+	$(info uninstalling systemd unit and timer)
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"
+	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDTIMER)"
 	
 	$(info uninstalling icon.)
 	@$(RM) "$(DESTDIR)$(ICONSDIR)/$(ICONNAME)"
