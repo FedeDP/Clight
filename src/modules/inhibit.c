@@ -57,9 +57,11 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
         FILL_MATCH_DATA(state.pm_inhibited);
 
         struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
-        int r = call(&state.pm_inhibited, "b", &args, NULL);
+        int inhibited;
+        int r = call(&inhibited, "b", &args, NULL);
 
-        if (!r) {
+        if (!r && state.pm_inhibited != inhibited) {
+            state.pm_inhibited = inhibited;
             INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
         }
     } else {
