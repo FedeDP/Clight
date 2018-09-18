@@ -1,4 +1,4 @@
-## 3.0
+## 2.5
 - [x] Fix geoclue2 issues
 - [x] Install license file in /usr/share/licenses/clight/
 - [x] Drop support for /etc/xdg/autostart, and tell user to issue a "systemctl --user enable clight.timer" instead. This way even not-xdg-compliant DE will work out of the box
@@ -46,11 +46,13 @@
 - [x] Add gh wiki pages (?) for "How to build", "features", "Geoclue2 issues", "Bus API"...
 - [x] Remove everything from readme
 
-## 3.1
-- [ ] BRIGHTNESS module will add a match on clightd WebcamChanged signal if clightd >= 2.4 is found, and will react to it appropriately(avoid requiring clightd >= 2.4 though)
+## 3.0
+- [ ] BRIGHTNESS module will add a match on clightd WebcamChanged signal if clightd >= 2.4 is found, and will react to it appropriately (avoid requiring clightd >= 2.4 though)
 - [ ] Do not require both --sunrise and --sunset options!
 - [ ] Do not leave clight if --sunrise or --sunset are wrong, just disable gamma
 - [ ] Add support for new Clightd ALS interface
+- [ ] Add a module pause function that stores current timeout and pauses module + a resume fn to restore it (use it for backlight when going dimmed, and wherever needed)
+- [ ] Xorg module to wait on x11 socket before starting (/tmp/.X11-unix/X0 i guess) or something like that (inotify watcher on /tmp folder waiting for .X11-unix folder to appear?) and drop systemd timer unit
 
 ## Ideas
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 

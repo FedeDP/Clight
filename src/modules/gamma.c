@@ -218,5 +218,5 @@ static void location_callback(const void *ptr) {
 }
 
 static void interface_callback(const void *ptr) {
-    set_timeout(0, 1, main_p[self.idx].fd, 0);
+    set_temp(conf.temp[state.time]);
 }
