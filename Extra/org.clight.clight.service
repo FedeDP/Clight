@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.clight.clight
+Exec=/usr/bin/clight
+SystemdService=clight.service

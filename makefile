@@ -10,6 +10,11 @@ ICONSDIR = /usr/share/icons/hicolor/scalable/apps
 ICONNAME = clight.svg
 DESKTOPDIR = /usr/share/applications
 LICENSEDIR = /usr/share/licenses/clight
+COMPLNAME = clight
+COMPLDIR = $(shell pkg-config --variable=completionsdir bash-completion)
+BUSSERVICEDIR = /usr/share/dbus-1/services/
+BUSSERVICENAME = org.clight.clight.service
+
 RM = rm -f
 RMDIR = rm -rf
 INSTALL = install -p
@@ -18,7 +23,11 @@ INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
 LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl libconfig)
-CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c11
+CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
+
+FOLDERS = $(subst src,.,$(sort $(dir $(wildcard $(SRCDIR)*/))))
+SRCS = $(addsuffix *.c, $(FOLDERS))
+INCS = $(addprefix -I, $(FOLDERS))
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
@@ -28,7 +37,7 @@ endif
 
 endif
 
-CLIGHT_VERSION ?= $(shell git describe --abbrev=0 --always --tags)
+CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)
 SYSTEMD_VERSION = $(shell pkg-config --modversion systemd)
 CFLAGS+=-DVERSION=\"$(CLIGHT_VERSION)\" -DLIBSYSTEMD_VERSION=$(SYSTEMD_VERSION)
 
@@ -37,10 +46,10 @@ all: clight clean
 debug: clight-debug clean
 
 objects:
-	@cd $(SRCDIR); $(CC) -c *.c $(CFLAGS) -O3
+	@cd $(SRCDIR); $(CC) -c $(SRCS) $(CFLAGS) $(INCS) -Ofast
 
 objects-debug:
-	@cd $(SRCDIR); $(CC) -c *.c -Wall $(CFLAGS) -Wshadow -Wstrict-overflow -Wtype-limits -fno-strict-aliasing -Wformat -Wformat-security -g
+	@cd $(SRCDIR); $(CC) -c *.c -Wall $(SRCS) $(CFLAGS) $(INCS) -Wshadow -Wstrict-overflow -Wtype-limits -fno-strict-aliasing -Wformat -Wformat-security -g
 
 clight: objects
 	@cd $(SRCDIR); $(CC) -o ../$(BINNAME) *.o $(LIBS) 
@@ -60,7 +69,7 @@ install:
 	@$(INSTALL_DIR) "$(DESTDIR)$(CONFDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/$(CONFNAME) "$(DESTDIR)$(CONFDIR)"
 
-	$(info installing systemd unit and timer.)
+	$(info installing systemd unit and timer)
 	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDTIMER) "$(DESTDIR)$(SYSTEMDDIR)"
@@ -76,6 +85,14 @@ install:
 	$(info installing license file.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(LICENSEDIR)"
 	@$(INSTALL_DATA) COPYING "$(DESTDIR)$(LICENSEDIR)"
+	
+	$(info installing bash autocompletion.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(COMPLDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/$(COMPLNAME) "$(DESTDIR)$(COMPLDIR)/$(COMPLNAME)"
+	
+	$(info installing dbus service file.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(BUSSERVICEDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/$(BUSSERVICENAME) "$(DESTDIR)$(BUSSERVICEDIR)"
 
 uninstall:
 	$(info uninstalling bin.)
@@ -84,7 +101,7 @@ uninstall:
 	$(info uninstalling conf file.)
 	@$(RM) "$(DESTDIR)$(CONFDIR)/$(CONFNAME)"
 
-	$(info uninstalling systemd unit and timer.)
+	$(info uninstalling systemd unit and timer)
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDTIMER)"
 	
@@ -96,3 +113,9 @@ uninstall:
 	
 	$(info uninstalling license file.)
 	@$(RMDIR) "$(DESTDIR)$(LICENSEDIR)"
+	
+	$(info uninstalling bash autocompletion.)
+	@$(RM) "$(DESTDIR)$(COMPLDIR)/$(COMPLNAME)"
+	
+	$(info uninstalling dbus service file.)
+	@$(RM) "$(DESTDIR)$(BUSSERVICEDIR)/$(BUSSERVICENAME)"

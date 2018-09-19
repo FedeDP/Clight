@@ -1,5 +1,5 @@
-#include "../inc/modules.h"
-#include "../inc/bus.h"
+#include <modules.h>
+#include <bus.h>
 
 static void init_submodules(const enum modules module);
 static void started_cb(enum modules module);
@@ -18,7 +18,7 @@ void init_modules(const enum modules module) {
     /* if module is not disabled, try to start it */
     if (is_idle(module)) {
         if (modules[module].self->num_deps == modules[module].self->satisfied_deps) {
-            if ((conf.single_capture_mode && !modules[module].self->enabled_single_capture) || modules[module].check()) {
+            if (modules[module].check()) {
                 disable_module(module);
             } else {
                 modules[module].init();
@@ -55,7 +55,7 @@ void init_module(int fd, enum modules module, ...) {
      * eg: geoclue2 support is enabled but geoclue2 could not be found.
      */
     if (fd != DONT_POLL_W_ERR) {
-        modules[module].state = INITED;
+        modules[module].state = RUNNING;
         DEBUG("%s module started.\n", modules[module].self->name);
         
         /* foreach bus_cb passed in, call add_mod_callback on bus */
@@ -63,8 +63,8 @@ void init_module(int fd, enum modules module, ...) {
         va_start(args, module);
         struct bus_cb *cb = va_arg(args, struct bus_cb *);
         while (cb) {
-            if (is_inited(cb->module)) {
-                add_mod_callback(*cb);
+            if (is_running(cb->module)) {
+                add_mod_callback(cb);
                 DEBUG("Callback added for module %s on module %s bus match.\n", modules[module].self->name, modules[cb->module].self->name);
             }
             cb = va_arg(args, struct bus_cb *);
@@ -105,8 +105,8 @@ int is_disabled(const enum modules module) {
     return modules[module].state == DISABLED;
 }
 
-int is_inited(const enum modules module) {
-    return modules[module].state == INITED;
+int is_running(const enum modules module) {
+    return modules[module].state == RUNNING;
 }
 
 int is_started_disabled(const enum modules module) {
@@ -156,7 +156,7 @@ static void started_cb(enum modules module) {
  * try to start them calling started_cb.
  */
 void poll_cb(const enum modules module) {
-    if (is_inited(module)) {
+    if (is_running(module)) {
         if (modules[module].poll_cb) {
             modules[module].poll_cb();
         }
@@ -215,9 +215,9 @@ void disable_module(const enum modules module) {
             const enum modules m = modules[module].self->deps[i].dep;
             /* 
              * if there are no more dependent_m on this module, 
-             * and it is not a standalone module, disable it
+             * and it is not a standalone module neither a functional module, disable it
              */
-            if (--modules[m].num_dependent == 0 && !modules[m].self->standalone) {
+            if (--modules[m].num_dependent == 0 && !modules[m].self->standalone && !modules[m].self->functional_module) {
                 disable_module(m);
             }
         }

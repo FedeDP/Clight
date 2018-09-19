@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Clight
-Exec=clight -c
+Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight Calibrate
 Comment=Recalibrate your screen backlight!
 Icon=clight.svg
 Categories=System

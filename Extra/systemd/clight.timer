@@ -5,4 +5,4 @@ Description=Run clight with a small delay on startup
 OnActiveSec=5
 
 [Install]
-WantedBy=default.target
+WantedBy=default.target 
