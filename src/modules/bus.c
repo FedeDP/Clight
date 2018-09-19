@@ -1,5 +1,6 @@
 #include <bus.h>
 
+static void bus_callback(sd_bus *cb_bus);
 static void run_callbacks(struct bus_match_data *data);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err);
@@ -10,7 +11,7 @@ struct bus_callback {
 };
 
 static struct bus_callback _cb;
-static sd_bus *bus, *userbus;
+static sd_bus *sysbus, *userbus;
 static struct self_t self;
 
 MODULE(BUS);
@@ -19,12 +20,12 @@ MODULE(BUS);
  * Open system bus and start listening on its fd
  */
 static void init(void) {
-    int r = sd_bus_default_system(&bus);
+    int r = sd_bus_default_system(&sysbus);
     if (r < 0) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
     // let main poll listen on bus events
-    int bus_fd = sd_bus_get_fd(bus);
+    int bus_fd = sd_bus_get_fd(sysbus);
     INIT_MOD(bus_fd);
 }
 
@@ -36,23 +37,31 @@ static int check(void) {
  * Close bus
  */
 static void destroy(void) {
-    if (bus) {
-        sd_bus_flush_close_unref(bus);
+    if (sysbus) {
+        sd_bus_flush_close_unref(sysbus);
     }
     if (_cb.callbacks) {
         free(_cb.callbacks);
     }
 }
 
+static void callback(void) {
+    bus_callback(sysbus);
+}
+
+void userbus_callback(void) {
+    bus_callback(userbus);
+}
+
 /*
  * Callback for bus events
  */
-static void callback(void) {
+static void bus_callback(sd_bus *cb_bus) {
     int r;
     do {
         /* reset bus_cb_idx to impossible state */
         state.userdata.bus_mod_idx = MODULES_NUM;
-        r = sd_bus_process(bus, NULL);
+        r = sd_bus_process(cb_bus, NULL);
         /* check if any match changed bus_cb_idx, then call correct callback */
         if (state.userdata.bus_mod_idx != MODULES_NUM) {
             /* 
@@ -71,26 +80,13 @@ static void callback(void) {
     } while (r > 0);
 }
 
-/* 
- * Store systembus ptr in tmp var;
- * set userbus as new bus;
- * call callback() on the new bus;
- * restore systembus;
- */
-void bus_callback(void) {
-    sd_bus *tmp = bus;
-    bus = userbus;
-    callback();
-    bus = tmp;
-}
-
 /*
  * Call a method on bus and store its result of type userptr_type in userptr.
  */
 int call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
-    sd_bus *tmp = a->type == USER ? userbus : bus;
+    sd_bus *tmp = a->type == USER ? userbus : sysbus;
 
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
     if (check_err(r, &error)) {
@@ -188,7 +184,7 @@ finish:
  * Add a match on bus on certain signal for cb callback
  */
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
-    sd_bus *tmp = a->type == USER ? userbus : bus;
+    sd_bus *tmp = a->type == USER ? userbus : sysbus;
     
 #if LIBSYSTEMD_VERSION >= 237
     int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state);
@@ -204,7 +200,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
  * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
  */
 int set_property(const struct bus_args *a, const char type, const void *value) {
-    sd_bus *tmp = a->type == USER ? userbus : bus;
+    sd_bus *tmp = a->type == USER ? userbus : sysbus;
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
 
@@ -230,7 +226,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
 int get_property(const struct bus_args *a, const char *type, void *userptr) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
-    sd_bus *tmp = a->type == USER ? userbus : bus;
+    sd_bus *tmp = a->type == USER ? userbus : sysbus;
 
     int r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
     if (check_err(r, &error)) {

@@ -69,7 +69,7 @@ install:
 	@$(INSTALL_DIR) "$(DESTDIR)$(CONFDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/$(CONFNAME) "$(DESTDIR)$(CONFDIR)"
 
-	$(info installing systemd unit and timer)
+	$(info installing systemd unit and timer.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDTIMER) "$(DESTDIR)$(SYSTEMDDIR)"
@@ -101,7 +101,7 @@ uninstall:
 	$(info uninstalling conf file.)
 	@$(RM) "$(DESTDIR)$(CONFDIR)/$(CONFNAME)"
 
-	$(info uninstalling systemd unit and timer)
+	$(info uninstalling systemd unit and timer.)
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"
 	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDTIMER)"
 	

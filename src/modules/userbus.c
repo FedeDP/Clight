@@ -40,5 +40,5 @@ static void destroy(void) {
  * Callback for bus events
  */
 static void callback(void) {
-    bus_callback();
+    userbus_callback();
 }
