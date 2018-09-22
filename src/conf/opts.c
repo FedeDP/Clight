@@ -250,4 +250,11 @@ static void check_conf(void) {
                (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
                SIZE_POINTS * sizeof(double));
     }
+    
+    for (i = 0; i < SIZE_EVENTS; i++) {
+        struct tm timeinfo;
+        if (strlen(conf.events[i]) && !strptime(conf.events[i], "%R", &timeinfo)) {
+            memset(conf.events[i], 0, sizeof(conf.events[i]));
+        }
+    }
 }
