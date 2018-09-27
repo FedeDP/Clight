@@ -22,8 +22,8 @@ INSTALL_PROGRAM = $(INSTALL) -m755
 INSTALL_DATA = $(INSTALL) -m644
 INSTALL_DIR = $(INSTALL) -d
 SRCDIR = src/
-LIBS = -lm $(shell pkg-config --libs libsystemd popt gsl libconfig)
-CFLAGS = $(shell pkg-config --cflags libsystemd popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
+LIBS = -lm $(shell pkg-config --libs popt gsl libconfig)
+CFLAGS = $(shell pkg-config --cflags popt gsl libconfig) -DCONFDIR=\"$(CONFDIR)\" -D_GNU_SOURCE -std=c99
 
 FOLDERS = $(subst src,.,$(sort $(dir $(wildcard $(SRCDIR)*/))))
 SRCS = $(addsuffix *.c, $(FOLDERS))
@@ -31,15 +31,24 @@ INCS = $(addprefix -I, $(FOLDERS))
 
 ifeq (,$(findstring $(MAKECMDGOALS),"clean install uninstall"))
 
-ifneq ("$(shell pkg-config --atleast-version=221 systemd && echo yes)", "yes")
+ifeq ("$(shell pkg-config --exists libelogind && echo yes)", "yes")
+ELOGIND_VERSION = $(shell pkg-config --modversion libelogind | head -c 3)
+LIBS+=$(shell pkg-config --libs libelogind)
+CFLAGS+=$(shell pkg-config --cflags libelogind) -DLIBSYSTEMD_VERSION=$(ELOGIND_VERSION)
+else
+ifeq ("$(shell pkg-config --atleast-version=221 systemd && echo yes)", "yes")
+SYSTEMD_VERSION = $(shell pkg-config --modversion systemd)
+LIBS+=$(shell pkg-config --libs libsystemd)
+CFLAGS+=$(shell pkg-config --cflags libsystemd) -DLIBSYSTEMD_VERSION=$(SYSTEMD_VERSION)
+else
 $(error systemd minimum required version 221.)
+endif
 endif
 
 endif
 
 CLIGHT_VERSION = $(shell git describe --abbrev=0 --always --tags)
-SYSTEMD_VERSION = $(shell pkg-config --modversion systemd)
-CFLAGS+=-DVERSION=\"$(CLIGHT_VERSION)\" -DLIBSYSTEMD_VERSION=$(SYSTEMD_VERSION)
+CFLAGS+=-DVERSION=\"$(CLIGHT_VERSION)\"
 
 all: clight clean
 
