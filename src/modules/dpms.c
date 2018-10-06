@@ -53,7 +53,7 @@ static void destroy(void) {
  */
 static void set_dpms_timeouts(void) {
     if (!need_disable[state.ac_state]) {
-        struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setdpms_timeouts"};
+        struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpmsTimeouts"};
         call(NULL, NULL, &args_get, "ssiii", state.display, state.xauthority, 
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
     } else {
@@ -63,7 +63,7 @@ static void set_dpms_timeouts(void) {
 }
 
 static void set_dpms(int dpms_state) {
-    struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setdpms"};
+    struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpms"};
     call(NULL, NULL, &args_get, "ssi", state.display, state.xauthority, dpms_state);
 }
 

@@ -22,7 +22,7 @@ static void init_config_file(enum CONFIG file) {
 
 void read_config(enum CONFIG file) {
     config_t cfg;
-    const char *videodev, *screendev, *sunrise, *sunset;
+    const char *sensor_dev, *screendev, *sunrise, *sunset;
     
     init_config_file(file);
     if (access(config_file, F_OK) == -1) {
@@ -52,8 +52,8 @@ void read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "no_inhibit", (int *)&modules[INHIBIT].state);
         config_lookup_int(&cfg, "verbose", &conf.verbose);
         
-        if (config_lookup_string(&cfg, "video_devname", &videodev) == CONFIG_TRUE) {
-            strncpy(conf.dev_name, videodev, sizeof(conf.dev_name) - 1);
+        if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
+            strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
         }
         if (config_lookup_string(&cfg, "screen_sysname", &screendev) == CONFIG_TRUE) {
             strncpy(conf.screen_path, screendev, sizeof(conf.screen_path) - 1);

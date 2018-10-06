@@ -1,8 +1,9 @@
 ## 3.0
 
 ### New Clightd
-- [ ] BRIGHTNESS module will add a match on clightd WebcamChanged signal if clightd >= 3.0 is found, and will react to it appropriately
-- [ ] Add support for new Clightd ALS interface
+- [ ] BRIGHTNESS module will add a match on clightd SensorChanged signal and will react to it appropriately
+- [x] Add support for new Clightd interface
+- [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3 before release
 
 ### Fixes
 - [x] Do not require both --sunrise and --sunset options!
@@ -11,7 +12,7 @@
 
 ### Improvements/Features
 - [ ] Add a module pause function that stores current timeout and pauses module + a resume fn to restore it (use it for backlight when going dimmed, and wherever needed)
-- [ ] add bus interface methods to change timeouts
+- [ ] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
 
 ## Ideas
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 

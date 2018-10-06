@@ -10,6 +10,7 @@ static void upower_callback(const void *ptr);
 static void interface_callback(const void *ptr);
 static void dimmed_callback(void);
 static void time_callback(void);
+static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
@@ -22,9 +23,6 @@ static int ac_force_capture;
 
 MODULE(BRIGHTNESS);
 
-/*
- * Init brightness values (max and current)
- */
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb interface_cb = { INTERFACE, interface_callback, "calibrate" };
@@ -40,21 +38,25 @@ static void init(void) {
     add_prop_callback(&dimmed_cb);
     add_prop_callback(&time_cb);
     
+    /* We do not fail if this fails */
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SensorChanged"};
+    add_match(&args, &slot, on_sensor_change);
+    
     /* Start module timer */
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    
     INIT_MOD(fd, &upower_cb, &interface_cb);
 }
 
 static int check(void) {
     int webcam_available;
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "iswebcamavailable"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable"};
     
-    int r = call(&webcam_available, "b", &args, NULL);
+    int r = call(&webcam_available, "b", &args, "s", conf.dev_name);
     return r || !webcam_available;
 }
 
 static void destroy(void) {
-    /* Destroy this match slot */
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
@@ -98,7 +100,7 @@ static void set_brightness(const double perc) {
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setallbrightness"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetBrightness"};
     
     /* Set brightness on both internal monitor (in case of laptop) and external ones */
     int ok;
@@ -110,9 +112,14 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
 }
 
 static double capture_frames_brightness(void) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "CaptureSensor"};
     double intensity[conf.num_captures];
-    int r = call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
+    
+    memset(intensity, 0, sizeof(intensity));
+    int r = 0;
+    for (int i = 0; i < conf.num_captures && !r; i++) {
+        r = call(&intensity[i], "d", &args, "s", conf.dev_name);
+    }
     if (!r) {
         return compute_average(intensity, conf.num_captures);
     }
@@ -179,4 +186,10 @@ static void time_callback(void) {
         reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
     }
     old_state = state.time;
+}
+
+/* Callback on SensorChanged clightd signal */
+static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    // TODO: implement: restart/pause brightness module
+    return 0;
 }
