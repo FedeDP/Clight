@@ -36,8 +36,6 @@ struct module modules[MODULES_NUM];
 struct pollfd main_p[MODULES_NUM];
 
 int main(int argc, char *argv[]) {
-    /* Assume max backlight level on startup */
-    state.current_br_pct = 1.0;
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         init(argc, argv);

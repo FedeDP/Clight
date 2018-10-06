@@ -12,7 +12,12 @@ static void upower_callback(const void *ptr);
 static void inhibit_callback(const void * ptr);
 
 static int inot_wd, inot_fd, timer_fd;
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BRIGHTNESS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
+
+/*
+ * DIMMER needs BRIGHTNESS as it needs to be sure that state.current_br_pct is correctly setted.
+ * BRIGHTNESS will set state.current_br_pct at first capture (1ns after clight's startup)
+ */
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
