@@ -3,6 +3,7 @@
 #include <my_math.h>
 #include <interface.h>
 
+static int is_sensor_available(void);
 static void do_capture(int reset_timer);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
@@ -12,6 +13,7 @@ static void dimmed_callback(void);
 static void time_callback(void);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
+static int sensor_available;
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
 static struct self_t self = {
@@ -42,18 +44,15 @@ static void init(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SensorChanged"};
     add_match(&args, &slot, on_sensor_change);
     
-    /* Start module timer */
-    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    /* Start module timer: 1ns delay if sensor is available, else start it paused */
+    sensor_available = is_sensor_available();
+    int fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available);
     
     INIT_MOD(fd, &upower_cb, &interface_cb);
 }
 
 static int check(void) {
-    int webcam_available;
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable"};
-    
-    int r = call(&webcam_available, "b", &args, "s", conf.dev_name);
-    return r || !webcam_available;
+    return 0;
 }
 
 static void destroy(void) {
@@ -67,6 +66,14 @@ static void callback(void) {
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     
     do_capture(1);
+}
+
+static int is_sensor_available(void) {
+    int available = 0;
+    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable"};
+    
+    int r = call(&available, "b", &args, "s", conf.dev_name);
+    return r == 0 && available;
 }
 
 /*
@@ -190,6 +197,13 @@ static void time_callback(void) {
 
 /* Callback on SensorChanged clightd signal */
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int new_sensor_avail = is_sensor_available();
     // TODO: implement: restart/pause brightness module
+    if (!sensor_available && new_sensor_avail) {
+        //resume();
+    } else if (sensor_available && !new_sensor_avail) {
+        //pause();
+    }
+    sensor_available = new_sensor_avail;
     return 0;
 }
