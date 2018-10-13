@@ -218,7 +218,6 @@ static void location_callback(const void *ptr) {
 }
 
 static void interface_callback(const void *ptr) {
-    INFO("CALLEEEED\n");
     time_t t = time(NULL);
     check_state(&t); // update conf.temp in case we're during an EVENT
     set_temp(conf.temp[state.time]);
