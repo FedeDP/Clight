@@ -2,6 +2,7 @@
 #include <my_math.h>
 #include <stddef.h>
 #include <interface.h>
+#include <dpms.h>
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
@@ -14,12 +15,8 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
                     sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int get_location(sd_bus *bus, const char *path, const char *interface, const char *property, 
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
-static int set_capture_timeout(sd_bus *bus, const char *path, const char *interface, const char *property, 
+static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property, 
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_dimmer_timeout(sd_bus *bus, const char *path, const char *interface, const char *property, 
-                              sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_dpms_timeout(sd_bus *bus, const char *path, const char *interface, const char *property, 
-                            sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void run_prop_callbacks(const char *prop);
 
@@ -77,20 +74,20 @@ static const sd_bus_vtable conf_vtable[] = {
 
 static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("AcDayCapture", "i", NULL, set_capture_timeout, offsetof(struct config, timeout[ON_AC][DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcNightCapture", "i", NULL, set_capture_timeout, offsetof(struct config, timeout[ON_AC][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_capture_timeout, offsetof(struct config, timeout[ON_AC][EVENT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDayCapture", "i", NULL, set_capture_timeout, offsetof(struct config, timeout[ON_BATTERY][DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattNightCapture", "i", NULL, set_capture_timeout, offsetof(struct config, timeout[ON_BATTERY][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_capture_timeout, offsetof(struct config, timeout[ON_BATTERY][EVENT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDimmer", "i", NULL, set_dimmer_timeout, offsetof(struct config, dimmer_timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_dimmer_timeout, offsetof(struct config, dimmer_timeout[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDpmsStandby", "i", NULL, set_dpms_timeout, offsetof(struct config, dpms_timeouts[ON_AC][STANDBY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDpmsSuspend", "i", NULL, set_dpms_timeout, offsetof(struct config, dpms_timeouts[ON_AC][SUSPEND]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDpmsOff", "i", NULL, set_dpms_timeout, offsetof(struct config, dpms_timeouts[ON_AC][OFF]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDpmsStandby", "i", NULL, set_dpms_timeout, offsetof(struct config, dpms_timeouts[ON_BATTERY][STANDBY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDpmsSuspend", "i", NULL, set_dpms_timeout, offsetof(struct config, dpms_timeouts[ON_BATTERY][SUSPEND]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDpmsOff", "i", NULL, set_dpms_timeout, offsetof(struct config, dpms_timeouts[ON_BATTERY][OFF]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDayCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcNightCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][EVENT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDayCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattNightCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][EVENT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDpmsStandby", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_AC][STANDBY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDpmsSuspend", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_AC][SUSPEND]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDpmsOff", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_AC][OFF]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDpmsStandby", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_BATTERY][STANDBY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDpmsSuspend", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_BATTERY][SUSPEND]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDpmsOff", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_BATTERY][OFF]), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -222,10 +219,11 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
     } else {
         enum ac_states ac_state = ON_AC;
         
-        if (!strncmp(property, "Batt", strlen("Batt"))) {
+        if (userdata == conf.regression_points[ON_BATTERY]) {
             ac_state = ON_BATTERY;
         }
-        polynomialfit(ac_state, data);
+        memcpy(conf.regression_points[ac_state], data, length);
+        polynomialfit(ac_state);
     }
     return r;
 }
@@ -236,9 +234,10 @@ static int get_location(sd_bus *bus, const char *path, const char *interface, co
     return sd_bus_message_append(reply, "(dd)", l->lat, l->lon);
 }
 
-static int set_capture_timeout(sd_bus *bus, const char *path, const char *interface, const char *property, 
+static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property, 
                             sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    int old_val = conf.timeout[state.ac_state][state.time];
+    int *val = (int *)userdata;
+    int old_val = *val;
     
     int r = sd_bus_message_read(value, "i", userdata);
     if (r < 0) {
@@ -246,34 +245,17 @@ static int set_capture_timeout(sd_bus *bus, const char *path, const char *interf
         return r;
     }
     
-    /* We modified current timeout! */
-    if (old_val != conf.timeout[state.ac_state][state.time]) {
-        reset_timer(main_p[BRIGHTNESS].fd, old_val, conf.timeout[state.ac_state][state.time]);
+    /* Check if we modified currently used timeout! */
+    if (val == &conf.timeout[state.ac_state][state.time] && is_running(BRIGHTNESS)) {
+        reset_timer(main_p[BRIGHTNESS].fd, old_val, *val);
+    } else if (val == &conf.dimmer_timeout[state.ac_state] && is_running(DIMMER)) {
+        reset_timer(main_p[DIMMER].fd, old_val, *val);
+    } else if (val >= conf.dpms_timeouts[state.ac_state] && val <= &conf.dpms_timeouts[state.ac_state][SIZE_DPMS - 1] 
+        && is_running(DPMS)) {
+
+        set_dpms_timeouts();
     }
     return r;
-}
-
-static int set_dimmer_timeout(sd_bus *bus, const char *path, const char *interface, const char *property, 
-                               sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    int old_val = conf.dimmer_timeout[state.ac_state];
-    
-    int r = sd_bus_message_read(value, "i", userdata);
-    if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
-        return r;
-    }
-    
-    /* We modified current timeout! */
-    if (old_val != conf.dimmer_timeout[state.ac_state]) {
-        reset_timer(main_p[DIMMER].fd, old_val, conf.dimmer_timeout[state.ac_state]);
-    }
-    return r;
-}
-
-static int set_dpms_timeout(sd_bus *bus, const char *path, const char *interface, const char *property, 
-                              sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    // TODO: implement
-    return 1;
 }
 
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {

@@ -31,7 +31,7 @@ static void init(void) {
     
     /* Compute polynomial best-fit parameters */
     for (int i = 0; i < SIZE_AC; i++) {
-        polynomialfit(i, conf.regression_points[i]);
+        polynomialfit(i);
     }
 
     /* Add callbacks on prop signal emitted by interface module */
