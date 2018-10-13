@@ -68,7 +68,7 @@ static void check_gamma(void) {
      * the wrong day (it should compute "today" events). Thus, avoid this kind of issue.
      */
     enum states old_state = state.time;
-    get_gamma_events(&t, conf.loc.lat, conf.loc.lon, 0);
+    get_gamma_events(&t, state.current_loc.lat, state.current_loc.lon, 0);
 
     /*
      * Force set every time correct gamma
@@ -199,7 +199,7 @@ static void check_state(time_t *now) {
 
 static void set_temp(int temp) {
     int ok;
-    
+
     struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetGamma"};
     int r = call(&ok, "b", &args_set, "ssi(buu)", state.display, state.xauthority, temp, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     if (!r && ok) {
@@ -208,9 +208,9 @@ static void set_temp(int temp) {
 }
 
 static void location_callback(const void *ptr) {
-    struct location old_loc = *(struct location *)ptr;
+    struct location *old_loc = (struct location *)ptr;
     /* Check if new position is at least 20kms distant */
-    if (get_distance(old_loc, conf.loc) > LOC_DISTANCE_THRS) {
+    if (get_distance(old_loc, &state.current_loc) > LOC_DISTANCE_THRS) {
         /* Updated GAMMA module sunrise/sunset for new location */
         state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
         set_timeout(0, 1, main_p[self.idx].fd, 0);
@@ -218,5 +218,8 @@ static void location_callback(const void *ptr) {
 }
 
 static void interface_callback(const void *ptr) {
+    INFO("CALLEEEED\n");
+    time_t t = time(NULL);
+    check_state(&t); // update conf.temp in case we're during an EVENT
     set_temp(conf.temp[state.time]);
 }
