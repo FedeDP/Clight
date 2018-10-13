@@ -30,9 +30,8 @@ static void init(void) {
     struct bus_cb interface_cb = { INTERFACE, interface_callback, "calibrate" };
     
     /* Compute polynomial best-fit parameters */
-    for (int i = 0; i < SIZE_AC; i++) {
-        polynomialfit(i);
-    }
+    polynomialfit(ON_AC);
+    polynomialfit(ON_BATTERY);
 
     /* Add callbacks on prop signal emitted by interface module */
     struct prop_cb dimmed_cb = { "Dimmed", dimmed_callback };
