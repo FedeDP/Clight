@@ -4,7 +4,6 @@
 - [ ] BRIGHTNESS module will add a match on clightd SensorChanged signal and will react to it appropriately (leave pause state when sensor becomes available, enter paused state when sensor is not available)
 - [x] BRIGHTNESS module will start paused if no sensors are available; DIMMER module will then stay not-inited until a sensor becomes available (because until first capture is done, we do not knok current_br_pct)
 - [x] Add support for new Clightd interface
-- [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3 before release!!!
 
 ### Fixes
 - [x] Do not require both --sunrise and --sunset options!
@@ -24,8 +23,15 @@
 - [a] Add a "StoreConf" method that dumsp current config to user conf
 - [x] Remove struct location loc from conf, and put it in state
 - [x] FIX: properly account for state.time == EVENT in SetGamma bus call
-- [ ] FILL_MATCH_DATA() macro to forcefully use state.userdata instead of relying on casting void *userdata
-- [ ] use FILL_MATCH_DATA for exposed configurations too
+- [x] FILL_MATCH_DATA() macro to forcefully use state.userdata instead of relying on casting void *userdata
+- [x] use FILL_MATCH_DATA for exposed configurations too
+- [x] Remove ApplyGamma and automatically set new temperature when DailyTemp/NightTemp are changed
+
+
+### RELEASE
+
+- [ ] Updated API doc
+- [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3
 
 ## Ideas
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 

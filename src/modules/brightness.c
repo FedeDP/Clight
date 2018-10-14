@@ -8,7 +8,9 @@ static void do_capture(int reset_timer);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
-static void interface_callback(const void *ptr);
+static void interface_calibrate_callback(const void *ptr);
+static void interface_curve_callback(const void *ptr);
+static void interface_timeout_callback(const void *ptr);
 static void dimmed_callback(void);
 static void time_callback(void);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -27,7 +29,9 @@ MODULE(BRIGHTNESS);
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
-    struct bus_cb interface_cb = { INTERFACE, interface_callback, "calibrate" };
+    struct bus_cb interface_calibrate_cb = { INTERFACE, interface_calibrate_callback, "calibrate" };
+    struct bus_cb interface_curve_cb = { INTERFACE, interface_curve_callback, "curve" };
+    struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "brightness_timeout" };
     
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
@@ -47,7 +51,7 @@ static void init(void) {
     sensor_available = is_sensor_available();
     int fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available);
     
-    INIT_MOD(fd, &upower_cb, &interface_cb);
+    INIT_MOD(fd, &upower_cb, &interface_calibrate_cb, &interface_curve_cb, &interface_to_cb);
 }
 
 static int check(void) {
@@ -150,10 +154,20 @@ static void upower_callback(const void *ptr) {
 }
 
 /* Callback on "Calibrate" bus interface method */
-static void interface_callback(const void *ptr) {
+static void interface_calibrate_callback(const void *ptr) {
     if (!state.is_dimmed) {
         do_capture(0);
     }
+}
+
+static void interface_curve_callback(const void *ptr) {
+    enum ac_states s = *((int *)ptr);
+    polynomialfit(s);
+}
+
+static void interface_timeout_callback(const void *ptr) {
+    int old_val = *((int *)ptr);
+    reset_timer(main_p[self.idx].fd, old_val, conf.timeout[state.ac_state][state.time]);
 }
 
 /* Callback on state.is_dimmed changes */

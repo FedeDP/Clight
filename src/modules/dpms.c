@@ -5,6 +5,7 @@
 
 static void set_dpms(int dpms_state);
 static void upower_callback(const void *ptr);
+static void interface_timeout_callback(const void *ptr);
 
 static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, XORG}, {HARD, CLIGHTD} };
 static struct self_t self = {
@@ -17,8 +18,10 @@ MODULE(DPMS);
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
+    struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "dpms_timeout" };
+    
     set_dpms_timeouts();
-    INIT_MOD(DONT_POLL, &upower_cb);
+    INIT_MOD(DONT_POLL, &upower_cb, &interface_to_cb);
 }
 
 /* Check module is not disabled, we're on X and proper configs are set. */
@@ -72,4 +75,8 @@ static void upower_callback(const void *ptr) {
     if (old_ac_state != state.ac_state) {
         set_dpms_timeouts();
     }
+}
+
+static void interface_timeout_callback(const void *ptr) {
+    set_dpms_timeouts();
 }

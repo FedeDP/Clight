@@ -63,7 +63,7 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
      * .OnBattery                          property  b         false        emits-change
      */
     int r = get_property(&power_args, "b", &state.ac_state);
-    if (!r && (*(int *)(s->userdata.ptr) != state.ac_state)) {
+    if (!r && (*(int *)(state.userdata.ptr) != state.ac_state)) {
         INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
     }
     return 0;

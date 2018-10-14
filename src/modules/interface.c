@@ -1,14 +1,11 @@
 #include <bus.h>
-#include <my_math.h>
 #include <stddef.h>
 #include <interface.h>
-#include <dpms.h>
 #include <config.h>
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property, 
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
@@ -17,6 +14,8 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
 static int get_location(sd_bus *bus, const char *path, const char *interface, const char *property, 
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property, 
+                     sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property, 
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void run_prop_callbacks(const char *prop);
@@ -42,7 +41,6 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("CurrentBrPct", "d", NULL, offsetof(struct state, current_br_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct state, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_METHOD("ApplyGamma", NULL, NULL, method_setgamma, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
@@ -67,8 +65,8 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("BacklightTransDuration", "i", NULL, NULL, offsetof(struct config, backlight_trans_timeout), 0),
     SD_BUS_WRITABLE_PROPERTY("GammaTransDuration", "i", NULL, NULL, offsetof(struct config, gamma_trans_timeout), 0),
     SD_BUS_WRITABLE_PROPERTY("DimmerTransDuration", "i", NULL, NULL, offsetof(struct config, dimmer_trans_timeout), 0),
-    SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, NULL, offsetof(struct config, temp[DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, NULL, offsetof(struct config, temp[NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(struct config, temp[DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(struct config, temp[NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcCurvePoints", "ad", get_curve, set_curve, offsetof(struct config, regression_points[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattCurvePoints", "ad", get_curve, set_curve, offsetof(struct config, regression_points[ON_BATTERY]), 0),
     SD_BUS_METHOD("StoreConf", NULL, NULL, method_store_conf, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -175,18 +173,6 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
     return r;
 }
 
-static int method_setgamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int r = -EINVAL;
-    
-    if (is_running(GAMMA)) {
-        FILL_MATCH_DATA(state.time); // useless data, unused
-        r = sd_bus_reply_method_return(m, NULL);
-    } else {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Gamma module is not running.");
-    }
-    return r;
-}
-
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int inhibited;
     int r = sd_bus_message_read(m, "b", &inhibited);
@@ -226,7 +212,7 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
             ac_state = ON_BATTERY;
         }
         memcpy(conf.regression_points[ac_state], data, length);
-        polynomialfit(ac_state);
+        FILL_MATCH_DATA(ac_state);
     }
     return r;
 }
@@ -249,15 +235,20 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
     }
     
     /* Check if we modified currently used timeout! */
-    if (val == &conf.timeout[state.ac_state][state.time] && is_running(BRIGHTNESS)) {
-        reset_timer(main_p[BRIGHTNESS].fd, old_val, *val);
-    } else if (val == &conf.dimmer_timeout[state.ac_state] && is_running(DIMMER)) {
-        reset_timer(main_p[DIMMER].fd, old_val, *val);
-    } else if (val >= conf.dpms_timeouts[state.ac_state] && val <= &conf.dpms_timeouts[state.ac_state][SIZE_DPMS - 1] 
-        && is_running(DPMS)) {
-
-        set_dpms_timeouts();
+    if (val == &conf.timeout[state.ac_state][state.time]) {
+        FILL_MATCH_DATA_NAME(old_val, "brightness_timeout");
+    } else if (val == &conf.dimmer_timeout[state.ac_state]) {
+        FILL_MATCH_DATA_NAME(old_val, "dimmer_timeout");
+    } else if (val >= conf.dpms_timeouts[state.ac_state] && val <= &conf.dpms_timeouts[state.ac_state][SIZE_DPMS - 1]) {
+        FILL_MATCH_DATA_NAME(old_val, "dpms_timeout");
     }
+    return r;
+}
+
+static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property, 
+                     sd_bus_message *value, void *userdata, sd_bus_error *error) {    
+    int r = sd_bus_message_read(value, "i", userdata);
+    FILL_MATCH_DATA(state.time); // useless data, unused
     return r;
 }
 

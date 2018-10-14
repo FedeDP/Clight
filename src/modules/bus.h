@@ -2,12 +2,15 @@
 
 #include <modules.h>
 
-#define FILL_MATCH_DATA(data) \
-    struct state *s = (struct state *) userdata; \
-    s->userdata.bus_mod_idx = self.idx; \
-    s->userdata.bus_fn_name = __PRETTY_FUNCTION__; \
-    s->userdata.ptr = malloc(sizeof(data)); \
-    memcpy(s->userdata.ptr, &data, sizeof(data));
+/* Use this to specify a name as filter for the hooks to be called */
+#define FILL_MATCH_DATA_NAME(data, name) \
+    state.userdata.bus_mod_idx = self.idx; \
+    state.userdata.bus_fn_name = name; \
+    state.userdata.ptr = malloc(sizeof(data)); \
+    memcpy(state.userdata.ptr, &data, sizeof(data));
+
+/* Use this to use function name as filter for the hooks to be called */
+#define FILL_MATCH_DATA(data) FILL_MATCH_DATA_NAME(data, __PRETTY_FUNCTION__)
 
 struct bus_cb {
     enum modules module;
