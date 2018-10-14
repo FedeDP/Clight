@@ -5,6 +5,7 @@ Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight C
 Comment=Recalibrate your screen backlight!
 Icon=clight.svg
 Categories=System
+Actions=Inhibit;Uninhibit;
 
 [Desktop Action Inhibit]
 Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" true
