@@ -5,3 +5,11 @@ Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight C
 Comment=Recalibrate your screen backlight!
 Icon=clight.svg
 Categories=System
+
+[Desktop Action Inhibit]
+Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" true
+Name=Inhibit screen dimmer
+
+[Desktop Action Uninhibit]
+Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" false
+Name=Resume screen dimmer

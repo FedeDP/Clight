@@ -2,4 +2,5 @@
 
 enum CONFIG { GLOBAL, LOCAL };
 
-void read_config(enum CONFIG file);
+int read_config(enum CONFIG file);
+int store_config(enum CONFIG file);

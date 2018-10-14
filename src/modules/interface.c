@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <interface.h>
 #include <dpms.h>
+#include <config.h>
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
@@ -52,6 +53,8 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_PROPERTY("NoSmoothDimmer", "b", NULL, offsetof(struct config, no_smooth_dimmer), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NoSmoothGamma", "b", NULL, offsetof(struct config, no_smooth_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct config, loc), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("Sunrise", "s", NULL, offsetof(struct config, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("Sunset", "s", NULL, offsetof(struct config, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("NumCaptures", "i", NULL, NULL, offsetof(struct config, num_captures), 0),
     SD_BUS_WRITABLE_PROPERTY("SensorName", "s", NULL, NULL, offsetof(struct config, dev_name), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(struct config, screen_path), 0),
@@ -259,8 +262,13 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
 }
 
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    // TODO: implement StoreConf (to user conf file!)
-    return 0;
+    int r = -1;
+    if (store_config(LOCAL) == 0) {
+        r = sd_bus_reply_method_return(m, NULL);
+    } else {
+        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Failed to store conf.");
+    }
+    return r;
 }
 
 int emit_prop(const char *signal) {

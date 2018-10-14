@@ -15,14 +15,17 @@
 - [ ] Add a module pause function that stores current timeout and pauses module + a resume fn to restore it (use it for backlight when going dimmed, and wherever needed)
 - [ ] Every module has a void* where it can store its internal state data. It is malloc'd and free'd by module interface
 - [x] Change default num of captures to 1
+- [x] Add a secondary option to desktop file to Inhibit dimmer (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions)
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
 - [x] Add a bus interface method to change video interface and backlight sysname while running
 - [x] Expose all conf structure through interface in org/clight/clight/Conf
-- [ ] Add a "StoreConf" method that dumsp current config to user conf
+- [a] Add a "StoreConf" method that dumsp current config to user conf
 - [x] Remove struct location loc from conf, and put it in state
 - [x] FIX: properly account for state.time == EVENT in SetGamma bus call
+- [ ] FILL_MATCH_DATA() macro to forcefully use state.userdata instead of relying on casting void *userdata
+- [ ] use FILL_MATCH_DATA for exposed configurations too
 
 ## Ideas
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 
