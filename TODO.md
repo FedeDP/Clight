@@ -20,7 +20,7 @@
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
 - [x] Add a bus interface method to change video interface and backlight sysname while running
 - [x] Expose all conf structure through interface in org/clight/clight/Conf
-- [a] Add a "StoreConf" method that dumsp current config to user conf
+- [x] Add a "StoreConf" method that dumps current config to user conf
 - [x] Remove struct location loc from conf, and put it in state
 - [x] FIX: properly account for state.time == EVENT in SetGamma bus call
 - [x] FILL_MATCH_DATA() macro to forcefully use state.userdata instead of relying on casting void *userdata

@@ -1,9 +1,9 @@
 #include <bus.h>
-#include <dpms.h>
 
 #define DPMS_DISABLED -1
 
 static void set_dpms(int dpms_state);
+static void set_dpms_timeouts(void);
 static void upower_callback(const void *ptr);
 static void interface_timeout_callback(const void *ptr);
 
