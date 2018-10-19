@@ -12,7 +12,6 @@
 
 ### Improvements
 - [ ] Add a module pause function that stores current timeout and pauses module + a resume fn to restore it (use it for backlight when going dimmed, and wherever needed)
-- [ ] Every module has a void* where it can store its internal state data. It is malloc'd and free'd by module interface
 - [x] Change default num of captures to 1
 - [x] Add a secondary option to desktop file to Inhibit dimmer (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions)
 
@@ -30,7 +29,7 @@
 
 ### RELEASE
 
-- [ ] Updated API doc
+- [ ] Update API doc
 - [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3
 
 ## Ideas

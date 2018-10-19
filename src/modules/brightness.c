@@ -16,6 +16,7 @@ static void time_callback(void);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static int sensor_available;
+static int ac_force_capture;
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
 static struct self_t self = {
@@ -23,7 +24,6 @@ static struct self_t self = {
     .deps =  dependencies,
     .functional_module = 1
 };
-static int ac_force_capture;
 
 MODULE(BRIGHTNESS);
 
