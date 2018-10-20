@@ -4,6 +4,7 @@
 - [x] BRIGHTNESS module will add a match on clightd SensorChanged signal and will react to it appropriately (leave pause state when sensor becomes available, enter paused state when sensor is not available)
 - [x] BRIGHTNESS module will start paused if no sensors are available; DIMMER module will then stay not-inited until a sensor becomes available (because until first capture is done, we do not knok current_br_pct)
 - [x] Add support for new Clightd interface
+- [ ] Dimmer too should be paused when brightness is paused
 
 ### Fixes
 - [x] Do not require both --sunrise and --sunset options!
@@ -24,7 +25,7 @@
 - [x] FILL_MATCH_DATA() macro to forcefully use state.userdata instead of relying on casting void *userdata
 - [x] use FILL_MATCH_DATA for exposed configurations too
 - [x] Remove ApplyGamma and automatically set new temperature when DailyTemp/NightTemp are changed
-
+- [x] Rename "StoreConf" to only "Store" as it is already under /org/clight/clight/Conf path
 
 ### RELEASE
 
