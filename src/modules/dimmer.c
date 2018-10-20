@@ -160,6 +160,8 @@ static void inhibit_callback(const void *ptr) {
 }
 
 static void interface_timeout_callback(const void *ptr) {
-    int old_val = *((int *)ptr);
-    reset_timer(main_p[self.idx].fd, old_val, conf.dimmer_timeout[state.ac_state]);
+    if (!state.is_dimmed) {
+        int old_val = *((int *)ptr);
+        reset_timer(main_p[self.idx].fd, old_val, conf.dimmer_timeout[state.ac_state]);
+    }
 }

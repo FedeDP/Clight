@@ -140,7 +140,7 @@ static double capture_frames_brightness(void) {
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (old_ac_state != state.ac_state) {
+    if (old_ac_state != state.ac_state && sensor_available) {
         if (!state.is_dimmed) {
             /* 
             * do a capture right now as we have 2 different curves for 
@@ -148,60 +148,74 @@ static void upower_callback(const void *ptr) {
             */
             set_timeout(0, 1, main_p[self.idx].fd, 0);
         }  else {
-            ac_force_capture++; // if it is even, it means eg: we started on AC, then on Batt, then again on AC (so, ac state is not changed at all in the end while we where dimmed)
+            // if it is even, it means eg: we started on AC, then on Batt, then again on AC (so, ac state is not changed at all in the end while we where dimmed)
+            ac_force_capture++;
         }
     }
 }
 
 /* Callback on "Calibrate" bus interface method */
 static void interface_calibrate_callback(const void *ptr) {
-    if (!state.is_dimmed) {
+    if (!state.is_dimmed && sensor_available) {
         do_capture(0);
     }
 }
 
+/* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
 static void interface_curve_callback(const void *ptr) {
     enum ac_states s = *((int *)ptr);
     polynomialfit(s);
 }
 
+/* Callback on "Capture" timeouts bus exposed writable properties */
 static void interface_timeout_callback(const void *ptr) {
-    int old_val = *((int *)ptr);
-    reset_timer(main_p[self.idx].fd, old_val, conf.timeout[state.ac_state][state.time]);
+    if (!state.is_dimmed && sensor_available) {
+        int old_val = *((int *)ptr);
+        reset_timer(main_p[self.idx].fd, old_val, conf.timeout[state.ac_state][state.time]);
+    }
 }
 
 /* Callback on state.is_dimmed changes */
 static void dimmed_callback(void) {
     static int old_elapsed = 0;
+    static int old_sensor_available = 1;
     
-    if (state.is_dimmed && old_elapsed == 0) {
-        old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
-        set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
-    } else {
-        /* 
-         * We have just left dimmed state, reset old timeout 
-         * (checking if ac state changed in the meantime)
-         */
-        int timeout_nsec = 0;
-        int timeout_sec = 0;
-        if ((ac_force_capture % 2) == 1) {
-            timeout_nsec = 1;
+    if (sensor_available) {
+        if (state.is_dimmed && old_elapsed == 0) {
+            old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
+            set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
         } else {
-            timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
-            if (timeout_sec <= 0) {
+            /* 
+             * We have just left dimmed state, reset old timeout 
+             * (checking if ac state changed in the meantime)
+             */
+            int timeout_nsec = 0;
+            int timeout_sec = 0;
+            if ((ac_force_capture % 2) == 1) {
+                // Immediately force a capture if ac state changed while we were dimmed 
                 timeout_nsec = 1;
+            } else if (sensor_available != old_sensor_available) {
+                // Immediately force a capture if a sensor appeared while we were dimmed 
+                timeout_nsec = 1;
+            } else {
+                // Apply correct timeout for current ac state and day time
+                timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
+                if (timeout_sec <= 0) {
+                    timeout_nsec = 1;
+                }
             }
+            set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
+            old_elapsed = 0;
+            ac_force_capture = 0;
         }
-        set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
-        old_elapsed = 0;
-        ac_force_capture = 0;
     }
+    old_sensor_available = sensor_available;
 }
 
 /* Callback on state.time changes */
 static void time_callback(void) {
     static enum states old_state = DAY; // default initial value
-    if (!state.is_dimmed) {
+    if (!state.is_dimmed && sensor_available) {
         /* A state.time change happened, react! */
         reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
     }
@@ -211,12 +225,12 @@ static void time_callback(void) {
 /* Callback on SensorChanged clightd signal */
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int new_sensor_avail = is_sensor_available();
-    // TODO: implement: restart/pause brightness module
-    if (!sensor_available && new_sensor_avail) {
-        //resume();
-    } else if (sensor_available && !new_sensor_avail) {
-        //pause();
+    if (new_sensor_avail != sensor_available) {
+        if (!state.is_dimmed) {
+            // Resume module if sensor is now available. Pause it if it is not available
+            set_timeout(0, new_sensor_avail, main_p[self.idx].fd, 0);
+        }
+        sensor_available = new_sensor_avail;
     }
-    sensor_available = new_sensor_avail;
     return 0;
 }
