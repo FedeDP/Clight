@@ -167,7 +167,7 @@ static void interface_curve_callback(const void *ptr) {
     polynomialfit(s);
 }
 
-/* Callback on "Capture" timeouts bus exposed writable properties */
+/* Callback on "brightness_timeout" bus exposed writable properties */
 static void interface_timeout_callback(const void *ptr) {
     if (!state.is_dimmed && sensor_available) {
         int old_val = *((int *)ptr);

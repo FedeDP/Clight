@@ -18,7 +18,7 @@ static int inot_wd, inot_fd, timer_fd;
  * DIMMER needs BRIGHTNESS as it needs to be sure that state.current_br_pct is correctly setted.
  * BRIGHTNESS will set state.current_br_pct at first capture (1ns after clight's startup)
  */
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, BRIGHTNESS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BRIGHTNESS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
@@ -39,6 +39,16 @@ static void init(void) {
         timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
                                 0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited AND dimmer timeout > 0, else disarmed
     }
+    
+    /* 
+     * If dimmer is started and BRIGHTNESS module is disabled,
+     * we need to ensure to start from a well known backlight level.
+     * Force 100% backlight level.
+     */
+    if (!is_running(BRIGHTNESS)) {
+        set_backlight_level(1.0, 0, 0, 0);
+    }
+    
     INIT_MOD(timer_fd, &upower_cb, &inhibit_cb, &interface_inhibit_cb, &interface_to_cb);
 }
 
@@ -159,6 +169,9 @@ static void inhibit_callback(const void *ptr) {
     }
 }
 
+/*
+ * Interface callback to change timeout
+ */
 static void interface_timeout_callback(const void *ptr) {
     if (!state.is_dimmed) {
         int old_val = *((int *)ptr);
