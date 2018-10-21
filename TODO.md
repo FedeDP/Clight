@@ -4,6 +4,7 @@
 - [x] BRIGHTNESS module will add a match on clightd SensorChanged signal and will react to it appropriately (leave pause state when sensor becomes available, enter paused state when sensor is not available)
 - [x] BRIGHTNESS module will start paused if no sensors are available; DIMMER module will then stay not-inited until a sensor becomes available (because until first capture is done, we do not knok current_br_pct)
 - [x] Add support for new Clightd interface
+- [x] Update to new CaptureX, IsXAvailable clightd api
 
 ### Fixes
 - [x] Do not require both --sunrise and --sunset options!

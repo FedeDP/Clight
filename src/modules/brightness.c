@@ -75,7 +75,7 @@ static int is_sensor_available(void) {
     int available = 0;
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable"};
     
-    int r = call(&available, "b", &args, "s", conf.dev_name);
+    int r = call(&available, "sb", &args, "s", conf.dev_name);
     return r == 0 && available;
 }
 
@@ -88,8 +88,8 @@ static void do_capture(int reset_timer) {
     double val = capture_frames_brightness();
     /* 
      * if captureframes clightd method did not return any non-critical error (eg: eperm).
-     * I won't check setbrightness too because if captureframes did not return any error,
-     * it is very very unlikely that setbrightness would return some.
+     * I won't check SetBrightness too because if captureframes did not return any error,
+     * it is very very unlikely that SetBrightness would return some.
      */
     if (val >= 0.0) {
         set_brightness(val * 10);
@@ -128,7 +128,7 @@ static double capture_frames_brightness(void) {
     memset(intensity, 0, sizeof(intensity));
     int r = 0;
     for (int i = 0; i < conf.num_captures && !r; i++) {
-        r = call(&intensity[i], "d", &args, "s", conf.dev_name);
+        r = call(&intensity[i], "sd", &args, "s", conf.dev_name);
     }
     if (!r) {
         return compute_average(intensity, conf.num_captures);
