@@ -5,6 +5,8 @@
 - [x] BRIGHTNESS module will start paused if no sensors are available; DIMMER module will then stay not-inited until a sensor becomes available (because until first capture is done, we do not knok current_br_pct)
 - [x] Add support for new Clightd interface
 - [x] Update to new CaptureX, IsXAvailable clightd api
+- [x] Add back support for new CaptureSensor interface ("sad" return type instead of "sd")
+- [x] CaptureSensor already return values between 0 and 1.0. Avoid "/ 255" while computing mean value.
 
 ### Fixes
 - [x] Do not require both --sunrise and --sunset options!
@@ -12,8 +14,8 @@
 - [x] Dimmer should set backlight_level to 100% if brightness module is disabled
 
 ### Improvements
-- [x] Change default num of captures to 1
 - [x] Add a secondary option to desktop file to Inhibit dimmer (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions)
+- [ ] in bus.c functions, try to propagate caller FUNCNAME (with a macro?) to check_err() and log it
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)

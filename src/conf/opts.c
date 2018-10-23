@@ -13,7 +13,7 @@ static void check_conf(void);
  */
 void init_opts(int argc, char *argv[]) {
     /* default values */
-    conf.num_captures = 1;
+    conf.num_captures = 5;
     conf.timeout[ON_AC][DAY] = 10 * 60;
     conf.timeout[ON_AC][NIGHT] = 45 * 60;
     conf.timeout[ON_AC][EVENT] = 5 * 60;
@@ -173,9 +173,9 @@ static void check_conf(void) {
         WARN("Wrong event timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][EVENT] = 10 * 60;
     }
-    if (conf.num_captures <= 0 || conf.num_captures > 20) {
+    if (conf.num_captures < 1 || conf.num_captures > 20) {
         WARN("Wrong frames value. Resetting default value.\n");
-        conf.num_captures = 1;
+        conf.num_captures = 5;
     }
     if (conf.temp[DAY] < 1000 || conf.temp[DAY] > 10000) {
         WARN("Wrong daily temp value. Resetting default value.\n");

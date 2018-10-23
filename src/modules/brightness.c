@@ -124,12 +124,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
 static double capture_frames_brightness(void) {
     struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "CaptureSensor"};
     double intensity[conf.num_captures];
-    
-    memset(intensity, 0, sizeof(intensity));
-    int r = 0;
-    for (int i = 0; i < conf.num_captures && !r; i++) {
-        r = call(&intensity[i], "sd", &args, "s", conf.dev_name);
-    }
+    int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
         return compute_average(intensity, conf.num_captures);
     }

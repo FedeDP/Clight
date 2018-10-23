@@ -38,7 +38,7 @@ double radToDeg(double angleRad) {
  * Compute mean and normalize between 0-1
  */
 double compute_average(double *intensity, int num) {
-    double mean = gsl_stats_mean(intensity, 1, num) / 255;
+    double mean = gsl_stats_mean(intensity, 1, num);
     DEBUG("Average frames brightness: %lf.\n", mean);
     return mean;
 }

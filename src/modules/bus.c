@@ -158,6 +158,15 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
 
     /* Parse the response message */
     if (userptr != NULL) {
+        /*
+         * Fix for new Clightd interface for CaptureSensor and IsSensorAvailable:
+         * they will now return used interface too. We don't need it.
+         */
+        if (strlen(userptr_type) > 1 && !strcmp(a->service, "org.clightd.backlight")) {
+            const char *tmp = NULL;
+            sd_bus_message_read(reply, "s", &tmp);
+            userptr_type++;
+        }
         if (!strncmp(userptr_type, "o", 1)) {
             const char *obj = NULL;
             r = sd_bus_message_read(reply, userptr_type, &obj);
@@ -170,14 +179,6 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
             r = sd_bus_message_read_array(reply, userptr_type[1], &data, &length);
             memcpy(userptr, data, length);
         } else {
-            /*
-             * Fix for new Clightd interface for CaptureSensor and IsSensorAvailable:
-             * they will now return used interface too. We don't need it.
-             */
-            if (strlen(userptr_type) > 0) {
-                sd_bus_message_read(reply, "s", NULL);
-                userptr_type++;
-            }
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
         r = check_err(r, &error);
