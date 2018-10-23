@@ -163,8 +163,8 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
          * they will now return used interface too. We don't need it.
          */
         if (strlen(userptr_type) > 1 && !strcmp(a->service, "org.clightd.backlight")) {
-            const char *tmp = NULL;
-            sd_bus_message_read(reply, "s", &tmp);
+            const char *unused = NULL;
+            sd_bus_message_read(reply, "s", &unused);
             userptr_type++;
         }
         if (!strncmp(userptr_type, "o", 1)) {

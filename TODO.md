@@ -12,6 +12,7 @@
 - [x] Do not require both --sunrise and --sunset options!
 - [x] Do not leave clight if --sunrise or --sunset are wrong, start gamma and location instead
 - [x] Dimmer should set backlight_level to 100% if brightness module is disabled
+- [ ] Sometimes at start clight takes long time to start, waiting on clightd Version property
 
 ### Improvements
 - [x] Add a secondary option to desktop file to Inhibit dimmer (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions)
