@@ -200,8 +200,8 @@ static void check_state(time_t *now) {
 static void set_temp(int temp) {
     int ok;
 
-    struct bus_args args_set = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetGamma"};
-    int r = call(&ok, "b", &args_set, "ssi(buu)", state.display, state.xauthority, temp, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetGamma");
+    int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     if (!r && ok) {
         INFO("%d gamma temp set.\n", temp);
     }

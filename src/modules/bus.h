@@ -27,7 +27,12 @@ struct bus_args {
     const char *interface;
     const char *member;
     enum bus_type type;
+    const char *caller;
 };
+
+#define BUS_ARG(name, ...)      struct bus_args name = {__VA_ARGS__, __func__};
+#define USERBUS_ARG(name, ...)  BUS_ARG(name, __VA_ARGS__, USER);
+#define SYSBUS_ARG(name, ...)   BUS_ARG(name, __VA_ARGS__, SYSTEM);
 
 void userbus_callback(void);
 int call(void *userptr, const char *userptr_type, const struct bus_args *args, const char *signature, ...);

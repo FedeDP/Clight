@@ -20,8 +20,8 @@ static void init(void) {
 
 static int check(void) {
     /* check initial AC state */
-    struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
-    int r = get_property(&power_args, "b", &state.ac_state);
+    SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
+    int r = get_property(&args, "b", &state.ac_state);
     if (r < 0) {
         WARN("Upower appears to be unsupported.\n");
         return -1;   // disable this module
@@ -41,7 +41,7 @@ static void destroy(void) {
 }
 
 static int upower_init(void) {
-    struct bus_args args = {"org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged"};
+    SYSBUS_ARG(args, "org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Properties", "PropertiesChanged");
     return add_match(&args, &slot, on_upower_change);
 }
 
@@ -51,7 +51,7 @@ static int upower_init(void) {
 static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     FILL_MATCH_DATA(state.ac_state);
     
-    struct bus_args power_args = {"org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery"};
+    SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
     
     /* 
      * Store last ac_state in old struct to be matched against new one
@@ -62,7 +62,7 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
      * .LidIsPresent                       property  b         true         emits-change
      * .OnBattery                          property  b         false        emits-change
      */
-    int r = get_property(&power_args, "b", &state.ac_state);
+    int r = get_property(&args, "b", &state.ac_state);
     if (!r && (*(int *)(state.userdata.ptr) != state.ac_state)) {
         INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
     }

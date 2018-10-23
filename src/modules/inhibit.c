@@ -20,8 +20,8 @@ static void init(void) {
 
 static int check(void) {
     /* check initial inhibit state (if interface is found) */
-    struct bus_args inhibit_args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
-    int r = call(&state.pm_inhibited, "b", &inhibit_args, NULL);
+    USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
+    int r = call(&state.pm_inhibited, "b", &args, NULL);
     if (r < 0) {
         WARN("PowerManagement inhibition appears to be unsupported.\n");
     }
@@ -45,7 +45,7 @@ static void destroy(void) {
 }
 
 static int inhibit_init(void) {
-    struct bus_args args = {"org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibitChanged", USER};
+    USERBUS_ARG(args, "org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibitChanged");
     return add_match(&args, &slot, on_inhibit_change);
 }
 
@@ -56,7 +56,7 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
     if (state.pm_inhibited != PM_FORCED_ON) {
         FILL_MATCH_DATA(state.pm_inhibited);
 
-        struct bus_args args = {"org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit", USER};
+        USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
         int inhibited;
         int r = call(&inhibited, "b", &args, NULL);
 

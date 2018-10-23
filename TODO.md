@@ -15,7 +15,7 @@
 
 ### Improvements
 - [x] Add a secondary option to desktop file to Inhibit dimmer (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions)
-- [ ] in bus.c functions, try to propagate caller FUNCNAME (with a macro?) to check_err() and log it
+- [x] in bus.c functions, try to propagate caller FUNCNAME (with a macro?) to check_err() and log it
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
@@ -31,7 +31,7 @@
 
 ### RELEASE
 
-- [ ] Update API doc
+- [x] Update API doc
 - [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3
 
 ## Ideas

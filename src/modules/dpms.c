@@ -51,8 +51,8 @@ void set_dpms_timeouts(void) {
     }
     
     if (!need_disable) {
-        struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpmsTimeouts"};
-        call(NULL, NULL, &args_get, "ssiii", state.display, state.xauthority, 
+        SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpmsTimeouts");
+        call(NULL, NULL, &args, "ssiii", state.display, state.xauthority, 
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
         INFO("Setted DPMS timeouts: Standby -> %ds, Suspend -> %ds, Off -> %ds.\n", 
              conf.dpms_timeouts[state.ac_state][STANDBY], 
@@ -65,8 +65,8 @@ void set_dpms_timeouts(void) {
 }
 
 static void set_dpms(int dpms_state) {
-    struct bus_args args_get = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpms"};
-    call(NULL, NULL, &args_get, "ssi", state.display, state.xauthority, dpms_state);
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpms");
+    call(NULL, NULL, &args, "ssi", state.display, state.xauthority, dpms_state);
 }
 
 static void upower_callback(const void *ptr) {

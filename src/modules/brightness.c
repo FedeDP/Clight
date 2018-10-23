@@ -44,7 +44,7 @@ static void init(void) {
     add_prop_callback(&time_cb);
     
     /* We do not fail if this fails */
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SensorChanged"};
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SensorChanged");
     add_match(&args, &slot, on_sensor_change);
     
     /* Start module timer: 1ns delay if sensor is available, else start it paused */
@@ -73,7 +73,7 @@ static void callback(void) {
 
 static int is_sensor_available(void) {
     int available = 0;
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable"};
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable");
     
     int r = call(&available, "sb", &args, "s", conf.dev_name);
     return r == 0 && available;
@@ -110,7 +110,7 @@ static void set_brightness(const double perc) {
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetBrightness"};
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetBrightness");
     
     /* Set brightness on both internal monitor (in case of laptop) and external ones */
     int ok;
@@ -122,7 +122,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
 }
 
 static double capture_frames_brightness(void) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "CaptureSensor"};
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "CaptureSensor");
     double intensity[conf.num_captures];
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
