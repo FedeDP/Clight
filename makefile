@@ -1,14 +1,12 @@
 BINDIR = /usr/bin
 BINNAME = clight
-SYSTEMDDIR = /usr/lib/systemd/user/
-SYSTEMDUNIT = clight.service
-SYSTEMDTIMER = clight.timer
 EXTRADIR = Extra
 CONFDIR = /etc/default
 CONFNAME = clight.conf
 ICONSDIR = /usr/share/icons/hicolor/scalable/apps
 ICONNAME = clight.svg
 DESKTOPDIR = /usr/share/applications
+AUTOSTARTDIR = /etc/xdg/autostart
 LICENSEDIR = /usr/share/licenses/clight
 COMPLNAME = clight
 COMPLDIR = $(shell pkg-config --variable=completionsdir bash-completion)
@@ -77,11 +75,6 @@ install:
 	$(info installing conf file.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(CONFDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/$(CONFNAME) "$(DESTDIR)$(CONFDIR)"
-
-	$(info installing systemd unit and timer.)
-	@$(INSTALL_DIR) "$(DESTDIR)$(SYSTEMDDIR)"
-	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDUNIT) "$(DESTDIR)$(SYSTEMDDIR)"
-	@$(INSTALL_DATA) $(EXTRADIR)/systemd/$(SYSTEMDTIMER) "$(DESTDIR)$(SYSTEMDDIR)"
 	
 	$(info installing icon.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(ICONSDIR)"
@@ -90,6 +83,10 @@ install:
 	$(info installing desktop file.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(DESKTOPDIR)"
 	@$(INSTALL_DATA) $(EXTRADIR)/desktop/clightc.desktop "$(DESTDIR)$(DESKTOPDIR)"
+	
+	$(info installing xdg autostart desktop file.)
+	@$(INSTALL_DIR) "$(DESTDIR)$(AUTOSTARTDIR)"
+	@$(INSTALL_DATA) $(EXTRADIR)/desktop/clight.desktop "$(DESTDIR)$(AUTOSTARTDIR)"
 	
 	$(info installing license file.)
 	@$(INSTALL_DIR) "$(DESTDIR)$(LICENSEDIR)"
@@ -109,16 +106,15 @@ uninstall:
 	
 	$(info uninstalling conf file.)
 	@$(RM) "$(DESTDIR)$(CONFDIR)/$(CONFNAME)"
-
-	$(info uninstalling systemd unit and timer.)
-	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDUNIT)"
-	@$(RM) "$(DESTDIR)$(SYSTEMDDIR)/$(SYSTEMDTIMER)"
 	
 	$(info uninstalling icon.)
 	@$(RM) "$(DESTDIR)$(ICONSDIR)/$(ICONNAME)"
 	
 	$(info uninstalling desktop file.)
 	@$(RM) "$(DESTDIR)$(DESKTOPDIR)/clightc.desktop"
+	
+	$(info uninstalling xdg autostart desktop file.)
+	@$(RM) "$(DESTDIR)$(AUTOSTARTDIR)/clight.desktop"
 	
 	$(info uninstalling license file.)
 	@$(RMDIR) "$(DESTDIR)$(LICENSEDIR)"

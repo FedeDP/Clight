@@ -1,6 +1,5 @@
 #include <bus.h>
 
-static void bus_callback(sd_bus *cb_bus);
 static void run_callbacks(struct bus_match_data *data);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err, const char *caller);
@@ -27,6 +26,7 @@ static void init(void) {
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(sysbus);
     INIT_MOD(bus_fd);
+
 }
 
 static int check(void) {
@@ -46,17 +46,14 @@ static void destroy(void) {
 }
 
 static void callback(void) {
-    bus_callback(sysbus);
-}
-
-void userbus_callback(void) {
-    bus_callback(userbus);
+    bus_callback(SYSTEM);
 }
 
 /*
  * Callback for bus events
  */
-static void bus_callback(sd_bus *cb_bus) {
+void bus_callback(const enum bus_type type) {
+    sd_bus *cb_bus = type == USER ? userbus : sysbus;
     int r;
     do {
         /* reset bus_cb_idx to impossible state */
@@ -87,8 +84,13 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
     sd_bus *tmp = a->type == USER ? userbus : sysbus;
-
+    
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
+    if (check_err(r, &error, a->caller)) {
+        goto finish;
+    }
+
+    r = sd_bus_message_set_expect_reply(m, userptr != NULL);
     if (check_err(r, &error, a->caller)) {
         goto finish;
     }
@@ -150,14 +152,13 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
 #endif
         va_end(args);
     }
-
-    r = sd_bus_call(tmp, m, 0, &error, &reply);
-    if (check_err(r, &error, a->caller)) {
-        goto finish;
-    }
-
-    /* Parse the response message */
+    /* Check if we need to wait for a response message */
     if (userptr != NULL) {
+        r = sd_bus_call(tmp, m, 0, &error, &reply);
+        if (check_err(r, &error, a->caller)) {
+            goto finish;
+        }
+        
         /*
          * Fix for new Clightd interface for CaptureSensor and IsSensorAvailable:
          * they will now return used interface too. We don't need it.
@@ -167,9 +168,9 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
             sd_bus_message_read(reply, "s", &unused);
             userptr_type++;
         }
-        if (!strncmp(userptr_type, "o", 1)) {
+        if (userptr_type[0] == 'o') {
             const char *obj = NULL;
-            r = sd_bus_message_read(reply, userptr_type, &obj);
+            r = sd_bus_message_read(reply, "o", &obj);
             if (r >= 0) {
                 strncpy(userptr, obj, PATH_MAX);
             }
@@ -181,6 +182,9 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
+        r = check_err(r, &error, a->caller);
+    } else {
+        r = sd_bus_send(tmp, m, NULL);
         r = check_err(r, &error, a->caller);
     }
 
@@ -301,7 +305,7 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
  */
 static int check_err(int r, sd_bus_error *err, const char *caller) {
     if (r < 0) {
-        WARN("%s: %s\n", caller, err && err->message ? err->message : strerror(-r));
+        WARN("%s(): %s\n", caller, err && err->message ? err->message : strerror(-r));
     }
     /* -1 on error, 0 ok */
     return -(r < 0);

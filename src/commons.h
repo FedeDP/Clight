@@ -56,9 +56,6 @@ enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, DESTROYED };
 /* Module management operations */
 enum module_op { PAUSE, RESUME, OP_NUM };
 
-/* Bus types */
-enum bus_type { SYSTEM, USER };
-
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
 

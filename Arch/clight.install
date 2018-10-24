@@ -1,8 +1,7 @@
 post_install() {
-    echo '--> By default, first matching webcam and backlight interface are used.'
+    echo '--> By default, first matching webcam/als device and backlight interface are used.'
     echo '--> Therefore, it should work out of the box even without any setup in most cases.'
     echo '--> For any customization, take a look at settings file placed in /etc/default/clight.conf.'
-    echo '--> Remember to enable clight: systemctl --user enable clight.timer.'
-    echo '--> Timer is needed to add a small delay to let all needed bus interfaces boot up.'
+    echo '--> If you are not in a XDG compliant DE, remember to add clight to your autostart script.'
 }
 

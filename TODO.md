@@ -12,11 +12,18 @@
 - [x] Do not require both --sunrise and --sunset options!
 - [x] Do not leave clight if --sunrise or --sunset are wrong, start gamma and location instead
 - [x] Dimmer should set backlight_level to 100% if brightness module is disabled
-- [ ] Sometimes at start clight takes long time to start, waiting on clightd Version property
+- [ ] At start clight hangs 20s on first sd_bus_call, casued by geoclue2 GetClient:
+(D)[10:16:55]{./modules.c:148}  Trying to start LOCATION module as its BUS dependency was loaded...
+(D)[10:17:15]{./utils/timer.c:41}       Set timeout of 3s 0ns on fd 7.
+https://github.com/jonls/redshift/issues/645 AND https://gitlab.freedesktop.org/geoclue/geoclue/issues/84
+THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes insane amount of time too (20s)
 
 ### Improvements
 - [x] Add a secondary option to desktop file to Inhibit dimmer (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions)
 - [x] in bus.c functions, try to propagate caller FUNCNAME (with a macro?) to check_err() and log it
+- [x] Drop systemd timer and ask user to add "systemctl --user start clight" to their DE/WM/WaylandCompositor starting script and add back a desktop file for xdg autostart?
+- [x] Add new Wiki page on how to start clight
+- [x] Drop clight systemd service
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
@@ -30,10 +37,18 @@
 - [x] Remove ApplyGamma and automatically set new temperature when DailyTemp/NightTemp are changed
 - [x] Rename "StoreConf" to only "Store" as it is already under /org/clight/clight/Conf path
 
+### TEST
+- [x] Test SensorChanged signal
+
 ### RELEASE
 
 - [x] Update API doc
 - [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3
+
+### 3.1
+
+- [ ] Add loglevel conf instead of only --verbose option?
+- [ ] Write a plasma5-applet? Eg: start from plasma-redshift applet
 
 ## Ideas
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 

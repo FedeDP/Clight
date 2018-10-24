@@ -226,6 +226,11 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
             set_timeout(0, new_sensor_avail, main_p[self.idx].fd, 0);
         }
         sensor_available = new_sensor_avail;
+        if (sensor_available) {
+            INFO("%s module resumed as a sensor is available.\n", self.name);
+        } else {
+            INFO("%s module paused as no sensor is available.\n", self.name);
+        }
     }
     return 0;
 }

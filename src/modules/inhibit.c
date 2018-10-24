@@ -1,5 +1,6 @@
 #include <bus.h>
 
+static int inhibit_check(void);
 static int inhibit_init(void);
 static int on_inhibit_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
@@ -19,12 +20,7 @@ static void init(void) {
 }
 
 static int check(void) {
-    /* check initial inhibit state (if interface is found) */
-    USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
-    int r = call(&state.pm_inhibited, "b", &args, NULL);
-    if (r < 0) {
-        WARN("PowerManagement inhibition appears to be unsupported.\n");
-    }
+    inhibit_check();
     /*
      * Init INHIBIT module even if initial polling fails,
      * as interface may be later added.
@@ -42,6 +38,16 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
+}
+
+static int inhibit_check(void) {
+    /* check initial inhibit state (if interface is found) */
+    USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
+    int r = call(&state.pm_inhibited, "b", &args, NULL);
+    if (r < 0) {
+        WARN("PowerManagement inhibition appears to be unsupported.\n");
+    }
+    return -(r < 0);
 }
 
 static int inhibit_init(void) {

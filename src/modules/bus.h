@@ -12,6 +12,10 @@
 /* Use this to use function name as filter for the hooks to be called */
 #define FILL_MATCH_DATA(data) FILL_MATCH_DATA_NAME(data, __PRETTY_FUNCTION__)
 
+
+/* Bus types */
+enum bus_type { SYSTEM, USER };
+
 struct bus_cb {
     enum modules module;
     void (*cb)(const void *ptr);
@@ -34,7 +38,7 @@ struct bus_args {
 #define USERBUS_ARG(name, ...)  BUS_ARG(name, __VA_ARGS__, USER);
 #define SYSBUS_ARG(name, ...)   BUS_ARG(name, __VA_ARGS__, SYSTEM);
 
-void userbus_callback(void);
+void bus_callback(const enum bus_type type);
 int call(void *userptr, const char *userptr_type, const struct bus_args *args, const char *signature, ...);
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb);
 int set_property(const struct bus_args *a, const char type, const void *value);
