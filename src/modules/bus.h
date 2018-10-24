@@ -12,7 +12,6 @@
 /* Use this to use function name as filter for the hooks to be called */
 #define FILL_MATCH_DATA(data) FILL_MATCH_DATA_NAME(data, __PRETTY_FUNCTION__)
 
-
 /* Bus types */
 enum bus_type { SYSTEM, USER };
 

@@ -12,11 +12,11 @@
 - [x] Do not require both --sunrise and --sunset options!
 - [x] Do not leave clight if --sunrise or --sunset are wrong, start gamma and location instead
 - [x] Dimmer should set backlight_level to 100% if brightness module is disabled
-- [ ] At start clight hangs 20s on first sd_bus_call, casued by geoclue2 GetClient:
-(D)[10:16:55]{./modules.c:148}  Trying to start LOCATION module as its BUS dependency was loaded...
-(D)[10:17:15]{./utils/timer.c:41}       Set timeout of 3s 0ns on fd 7.
-https://github.com/jonls/redshift/issues/645 AND https://gitlab.freedesktop.org/geoclue/geoclue/issues/84
-THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes insane amount of time too (20s)
+- [ ] At start clight hangs 20s on first sd_bus_call, casued by geoclue2 GetClient:  
+(D)[10:16:55]{./modules.c:148}  Trying to start LOCATION module as its BUS dependency was loaded...  
+(D)[10:17:15]{./utils/timer.c:41}       Set timeout of 3s 0ns on fd 7.  
+https://github.com/jonls/redshift/issues/645 AND https://gitlab.freedesktop.org/geoclue/geoclue/issues/84  
+THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes insane amount of time too (20s)  
 
 ### Improvements
 - [x] Add a secondary option to desktop file to Inhibit dimmer (https://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions)
