@@ -47,12 +47,12 @@ static const sd_bus_vtable clight_vtable[] = {
 
 static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("NoSmoothBacklight", "b", NULL, offsetof(struct config, no_smooth_backlight), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoSmoothDimmer", "b", NULL, offsetof(struct config, no_smooth_dimmer), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoSmoothGamma", "b", NULL, offsetof(struct config, no_smooth_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct config, loc), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "s", NULL, offsetof(struct config, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunset", "s", NULL, offsetof(struct config, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothBacklight", "b", NULL, NULL, offsetof(struct config, no_smooth_backlight), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmer", "b", NULL, NULL, offsetof(struct config, no_smooth_dimmer), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothGamma", "b", NULL, NULL, offsetof(struct config, no_smooth_gamma), 0),
     SD_BUS_WRITABLE_PROPERTY("NumCaptures", "i", NULL, NULL, offsetof(struct config, num_captures), 0),
     SD_BUS_WRITABLE_PROPERTY("SensorName", "s", NULL, NULL, offsetof(struct config, dev_name), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(struct config, screen_path), 0),
