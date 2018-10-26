@@ -15,7 +15,7 @@ void open_log(void) {
     
     if (flock(fileno(log_file), LOCK_EX | LOCK_NB) == -1) {
         WARN("%s\n", strerror(errno));
-        ERROR("A lock is present on %s. Another clight instance running?%s\n", log_file);
+        ERROR("A lock is present on %s. Another clight instance running?\n", log_path);
     }
 }
 

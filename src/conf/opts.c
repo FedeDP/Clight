@@ -173,7 +173,7 @@ static void check_conf(void) {
         WARN("Wrong event timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][EVENT] = 10 * 60;
     }
-    if (conf.num_captures <= 0 || conf.num_captures > 20) {
+    if (conf.num_captures < 1 || conf.num_captures > 20) {
         WARN("Wrong frames value. Resetting default value.\n");
         conf.num_captures = 5;
     }

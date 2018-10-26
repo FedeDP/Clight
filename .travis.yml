@@ -1,5 +1,8 @@
 sudo: required
 
+services:
+  - docker
+
 notifications:
   email:
     recipients: nierro92@gmail.com

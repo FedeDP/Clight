@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Clight
+Exec=clight
+NoDisplay=true
+Comment=Start Clight user daemon to turn your webcam into a light sensor
+Categories=System

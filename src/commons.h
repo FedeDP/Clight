@@ -1,4 +1,3 @@
-#include <signal.h>
 #include <time.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -57,9 +56,6 @@ enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, DESTROYED };
 /* Module management operations */
 enum module_op { PAUSE, RESUME, OP_NUM };
 
-/* Bus types */
-enum bus_type { SYSTEM, USER };
-
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
 
@@ -89,7 +85,7 @@ struct config {
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
-    struct location loc;                    // user location
+    struct location loc;                    // user location as loaded by config
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
@@ -120,6 +116,7 @@ struct state {
     double current_br_pct;                  // current backlight pct
     int is_dimmed;                          // whether we are currently in dimmed state
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
+    struct location current_loc;            // current user location
     jmp_buf quit_buf;                       // quit jump called by longjmp
     int needed_functional_modules;          // we need at least 1 functional module (BRIGHTNESS, GAMMA, DPMS, DIMMER) otherwise quit
     struct bus_match_data userdata;         // Data used by modules that own a match on bus

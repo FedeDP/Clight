@@ -1,5 +1,6 @@
 #include <bus.h>
 #include <my_math.h>
+#include <interface.h>
 
 static int load_cache_location(void);
 static void init_cache_file(void);
@@ -66,8 +67,8 @@ static int load_cache_location(void) {
     int ret;
     FILE *f = fopen(cache_file, "r");
     if (f) {
-        fscanf(f, "%lf %lf", &conf.loc.lat, &conf.loc.lon);
-        INFO("Location %.2lf %.2lf loaded from cache file!\n", conf.loc.lat, conf.loc.lon);
+        fscanf(f, "%lf %lf", &state.current_loc.lat, &state.current_loc.lon);
+        INFO("Location %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
         fclose(f);
         ret = 0;
     } else {
@@ -126,6 +127,7 @@ static int check(void) {
      * If sunrise and sunset times, or lat and lon, are both passed,
      * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD)
      */
+    memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != 0.0 && conf.loc.lon != 0.0)) {
         change_dep_type(GAMMA, self.idx, SOFT);
         return 1;
@@ -137,7 +139,7 @@ static int check(void) {
  * Store Client object path in client (static) global var
  */
 static int geoclue_get_client(void) {
-    struct bus_args args = {"org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient"};
+    SYSBUS_ARG(args, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient");
     return call(client, "o", &args, NULL);
 }
 
@@ -145,7 +147,7 @@ static int geoclue_get_client(void) {
  * Hook our geoclue_new_location callback to PropertiesChanged dbus signals on GeoClue2 service.
  */
 static int geoclue_hook_update(void) {
-    struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "LocationUpdated" };
+    SYSBUS_ARG(args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "LocationUpdated");
     return add_match(&args, &slot, on_geoclue_new_location);
 }
 
@@ -154,17 +156,17 @@ static int geoclue_hook_update(void) {
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    FILL_MATCH_DATA(conf.loc);
+    FILL_MATCH_DATA(state.current_loc);
 
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);
 
-    struct bus_args lat_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude"};
-    struct bus_args lon_args = {"org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude"};
-
-    int r = get_property(&lat_args, "d", &conf.loc.lat) + get_property(&lon_args, "d", &conf.loc.lon);
+    SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
+    SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
+    int r = get_property(&lat_args, "d", &state.current_loc.lat) + get_property(&lon_args, "d", &state.current_loc.lon);
     if (!r) {
-        INFO("New location received: %.2lf, %.2lf\n", conf.loc.lat, conf.loc.lon);
+        INFO("New location received: %.2lf, %.2lf\n", state.current_loc.lat, state.current_loc.lon);
+        emit_prop("Location");
     }
     return 0;
 }
@@ -173,9 +175,9 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
  * Start our geoclue2 client after having correctly set needed properties.
  */
 static int geoclue_client_start(void) {
-    struct bus_args call_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Start"};
-    struct bus_args id_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId"};
-    struct bus_args thres_args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold"};
+    SYSBUS_ARG(call_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Start");
+    SYSBUS_ARG(id_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId");
+    SYSBUS_ARG(thres_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold");
 
     /* It now needs proper /usr/share/applications/clightc.desktop name */
     int r = set_property(&id_args, 's', "clightc");
@@ -193,15 +195,15 @@ static int geoclue_client_start(void) {
  * Stop geoclue2 client.
  */
 static void geoclue_client_stop(void) {
-    struct bus_args args = {"org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop"};
+    SYSBUS_ARG(args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop");
     call(NULL, "", &args, NULL);
 }
 
 static void cache_location(void) {
-    if (strlen(cache_file) && conf.loc.lat != 0.0 && conf.loc.lon != 0.0) {
+    if (strlen(cache_file) && state.current_loc.lat != 0.0 && state.current_loc.lon != 0.0) {
         FILE *f = fopen(cache_file, "w");
         if (f) {
-            fprintf(f, "%lf %lf\n", conf.loc.lat, conf.loc.lon);
+            fprintf(f, "%lf %lf\n", state.current_loc.lat, state.current_loc.lon);
             DEBUG("Latest location stored in cache file!\n");
             fclose(f);
         } else {

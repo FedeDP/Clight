@@ -2,12 +2,18 @@
 
 #include <modules.h>
 
-#define FILL_MATCH_DATA(data) \
-    struct state *s = (struct state *) userdata; \
-    s->userdata.bus_mod_idx = self.idx; \
-    s->userdata.bus_fn_name = __PRETTY_FUNCTION__; \
-    s->userdata.ptr = malloc(sizeof(data)); \
-    memcpy(s->userdata.ptr, &data, sizeof(data));
+/* Use this to specify a name as filter for the hooks to be called */
+#define FILL_MATCH_DATA_NAME(data, name) \
+    state.userdata.bus_mod_idx = self.idx; \
+    state.userdata.bus_fn_name = name; \
+    state.userdata.ptr = malloc(sizeof(data)); \
+    memcpy(state.userdata.ptr, &data, sizeof(data));
+
+/* Use this to use function name as filter for the hooks to be called */
+#define FILL_MATCH_DATA(data) FILL_MATCH_DATA_NAME(data, __PRETTY_FUNCTION__)
+
+/* Bus types */
+enum bus_type { SYSTEM, USER };
 
 struct bus_cb {
     enum modules module;
@@ -24,9 +30,14 @@ struct bus_args {
     const char *interface;
     const char *member;
     enum bus_type type;
+    const char *caller;
 };
 
-void userbus_callback(void);
+#define BUS_ARG(name, ...)      struct bus_args name = {__VA_ARGS__, __func__};
+#define USERBUS_ARG(name, ...)  BUS_ARG(name, __VA_ARGS__, USER);
+#define SYSBUS_ARG(name, ...)   BUS_ARG(name, __VA_ARGS__, SYSTEM);
+
+void bus_callback(const enum bus_type type);
 int call(void *userptr, const char *userptr_type, const struct bus_args *args, const char *signature, ...);
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb);
 int set_property(const struct bus_args *a, const char type, const void *value);

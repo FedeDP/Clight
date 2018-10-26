@@ -1,9 +1,8 @@
 #include <bus.h>
 
-static void bus_callback(sd_bus *cb_bus);
 static void run_callbacks(struct bus_match_data *data);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
-static int check_err(int r, sd_bus_error *err);
+static int check_err(int r, sd_bus_error *err, const char *caller);
 
 struct bus_callback {
     int num_callbacks;
@@ -27,6 +26,7 @@ static void init(void) {
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(sysbus);
     INIT_MOD(bus_fd);
+
 }
 
 static int check(void) {
@@ -46,17 +46,14 @@ static void destroy(void) {
 }
 
 static void callback(void) {
-    bus_callback(sysbus);
-}
-
-void userbus_callback(void) {
-    bus_callback(userbus);
+    bus_callback(SYSTEM);
 }
 
 /*
  * Callback for bus events
  */
-static void bus_callback(sd_bus *cb_bus) {
+void bus_callback(const enum bus_type type) {
+    sd_bus *cb_bus = type == USER ? userbus : sysbus;
     int r;
     do {
         /* reset bus_cb_idx to impossible state */
@@ -87,9 +84,14 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
     sd_bus *tmp = a->type == USER ? userbus : sysbus;
-
+    
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
-    if (check_err(r, &error)) {
+    if (check_err(r, &error, a->caller)) {
+        goto finish;
+    }
+
+    r = sd_bus_message_set_expect_reply(m, userptr != NULL);
+    if (check_err(r, &error, a->caller)) {
         goto finish;
     }
 
@@ -142,7 +144,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
                     break;
             }
 
-            if (check_err(r, &error)) {
+            if (check_err(r, &error, a->caller)) {
                 goto finish;
             }
             i++;
@@ -150,17 +152,25 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
 #endif
         va_end(args);
     }
-
-    r = sd_bus_call(tmp, m, 0, &error, &reply);
-    if (check_err(r, &error)) {
-        goto finish;
-    }
-
-    /* Parse the response message */
+    /* Check if we need to wait for a response message */
     if (userptr != NULL) {
-        if (!strncmp(userptr_type, "o", 1)) {
+        r = sd_bus_call(tmp, m, 0, &error, &reply);
+        if (check_err(r, &error, a->caller)) {
+            goto finish;
+        }
+        
+        /*
+         * Fix for new Clightd interface for CaptureSensor and IsSensorAvailable:
+         * they will now return used interface too. We don't need it.
+         */
+        if (strlen(userptr_type) > 1 && !strcmp(a->service, "org.clightd.backlight")) {
+            const char *unused = NULL;
+            sd_bus_message_read(reply, "s", &unused);
+            userptr_type++;
+        }
+        if (userptr_type[0] == 'o') {
             const char *obj = NULL;
-            r = sd_bus_message_read(reply, userptr_type, &obj);
+            r = sd_bus_message_read(reply, "o", &obj);
             if (r >= 0) {
                 strncpy(userptr, obj, PATH_MAX);
             }
@@ -172,7 +182,10 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
-        r = check_err(r, &error);
+        r = check_err(r, &error, a->caller);
+    } else {
+        r = sd_bus_send(tmp, m, NULL);
+        r = check_err(r, &error, a->caller);
     }
 
 finish:
@@ -193,7 +206,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
     int r = sd_bus_add_match(tmp, slot, match, cb, &state);
 #endif
-    return check_err(r, NULL);
+    return check_err(r, NULL, a->caller);
 }
 
 /*
@@ -215,7 +228,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
             WARN("Wrong signature in bus call: %c.\n", type);
             break;
     }
-    r = check_err(r, &error);
+    r = check_err(r, &error, a->caller);
     free_bus_structs(&error, NULL, NULL);
     return r;
 }
@@ -229,7 +242,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
     sd_bus *tmp = a->type == USER ? userbus : sysbus;
 
     int r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
-    if (check_err(r, &error)) {
+    if (check_err(r, &error, a->caller)) {
         goto finish;
     }
     if (!strcmp(type, "o") || !strcmp(type, "s")) {
@@ -241,7 +254,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
     } else {
         r = sd_bus_message_read(m, type, userptr);
     }
-    r = check_err(r, NULL);
+    r = check_err(r, NULL, a->caller);
 
 finish:
     free_bus_structs(&error, m, NULL);
@@ -290,9 +303,9 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
  * Note that this function will only return 1 if a not fatal error happened (ie: WARN has been called),
  * as ERROR() macro does a longjmp
  */
-static int check_err(int r, sd_bus_error *err) {
+static int check_err(int r, sd_bus_error *err, const char *caller) {
     if (r < 0) {
-        WARN("%s\n", err && err->message ? err->message : strerror(-r));
+        WARN("%s(): %s\n", caller, err && err->message ? err->message : strerror(-r));
     }
     /* -1 on error, 0 ok */
     return -(r < 0);

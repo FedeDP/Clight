@@ -3,14 +3,20 @@
 #include <my_math.h>
 #include <interface.h>
 
+static int is_sensor_available(void);
 static void do_capture(int reset_timer);
 static void set_brightness(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
-static void interface_callback(const void *ptr);
+static void interface_calibrate_callback(const void *ptr);
+static void interface_curve_callback(const void *ptr);
+static void interface_timeout_callback(const void *ptr);
 static void dimmed_callback(void);
 static void time_callback(void);
+static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
+static int sensor_available;
+static int ac_force_capture;
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
 static struct self_t self = {
@@ -18,21 +24,18 @@ static struct self_t self = {
     .deps =  dependencies,
     .functional_module = 1
 };
-static int ac_force_capture;
 
 MODULE(BRIGHTNESS);
 
-/*
- * Init brightness values (max and current)
- */
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
-    struct bus_cb interface_cb = { INTERFACE, interface_callback, "calibrate" };
+    struct bus_cb interface_calibrate_cb = { INTERFACE, interface_calibrate_callback, "calibrate" };
+    struct bus_cb interface_curve_cb = { INTERFACE, interface_curve_callback, "curve" };
+    struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "brightness_timeout" };
     
     /* Compute polynomial best-fit parameters */
-    for (int i = 0; i < SIZE_AC; i++) {
-        polynomialfit(i, conf.regression_points[i]);
-    }
+    polynomialfit(ON_AC);
+    polynomialfit(ON_BATTERY);
 
     /* Add callbacks on prop signal emitted by interface module */
     struct prop_cb dimmed_cb = { "Dimmed", dimmed_callback };
@@ -40,21 +43,22 @@ static void init(void) {
     add_prop_callback(&dimmed_cb);
     add_prop_callback(&time_cb);
     
-    /* Start module timer */
-    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    INIT_MOD(fd, &upower_cb, &interface_cb);
+    /* We do not fail if this fails */
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SensorChanged");
+    add_match(&args, &slot, on_sensor_change);
+    
+    /* Start module timer: 1ns delay if sensor is available, else start it paused */
+    sensor_available = is_sensor_available();
+    int fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available);
+    
+    INIT_MOD(fd, &upower_cb, &interface_calibrate_cb, &interface_curve_cb, &interface_to_cb);
 }
 
 static int check(void) {
-    int webcam_available;
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "iswebcamavailable"};
-    
-    int r = call(&webcam_available, "b", &args, NULL);
-    return r || !webcam_available;
+    return 0;
 }
 
 static void destroy(void) {
-    /* Destroy this match slot */
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
@@ -67,6 +71,14 @@ static void callback(void) {
     do_capture(1);
 }
 
+static int is_sensor_available(void) {
+    int available = 0;
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable");
+    
+    int r = call(&available, "sb", &args, "s", conf.dev_name);
+    return r == 0 && available;
+}
+
 /*
  * When timerfd timeout expires, check if we are in screen power_save mode,
  * otherwise start streaming on webcam and set BRIGHTNESS fd of pollfd struct to
@@ -76,8 +88,8 @@ static void do_capture(int reset_timer) {
     double val = capture_frames_brightness();
     /* 
      * if captureframes clightd method did not return any non-critical error (eg: eperm).
-     * I won't check setbrightness too because if captureframes did not return any error,
-     * it is very very unlikely that setbrightness would return some.
+     * I won't check SetBrightness too because if captureframes did not return any error,
+     * it is very very unlikely that SetBrightness would return some.
      */
     if (val >= 0.0) {
         set_brightness(val * 10);
@@ -98,7 +110,7 @@ static void set_brightness(const double perc) {
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "setallbrightness"};
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetBrightness");
     
     /* Set brightness on both internal monitor (in case of laptop) and external ones */
     int ok;
@@ -110,9 +122,9 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
 }
 
 static double capture_frames_brightness(void) {
-    struct bus_args args = {"org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "captureframes"};
+    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "CaptureSensor");
     double intensity[conf.num_captures];
-    int r = call(intensity, "ad", &args, "si", conf.dev_name, conf.num_captures);
+    int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
         return compute_average(intensity, conf.num_captures);
     }
@@ -123,7 +135,7 @@ static double capture_frames_brightness(void) {
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (old_ac_state != state.ac_state) {
+    if (old_ac_state != state.ac_state && sensor_available) {
         if (!state.is_dimmed) {
             /* 
             * do a capture right now as we have 2 different curves for 
@@ -131,52 +143,94 @@ static void upower_callback(const void *ptr) {
             */
             set_timeout(0, 1, main_p[self.idx].fd, 0);
         }  else {
-            ac_force_capture++; // if it is even, it means eg: we started on AC, then on Batt, then again on AC (so, ac state is not changed at all in the end while we where dimmed)
+            // if it is even, it means eg: we started on AC, then on Batt, then again on AC (so, ac state is not changed at all in the end while we where dimmed)
+            ac_force_capture++;
         }
     }
 }
 
 /* Callback on "Calibrate" bus interface method */
-static void interface_callback(const void *ptr) {
-    if (!state.is_dimmed) {
+static void interface_calibrate_callback(const void *ptr) {
+    if (!state.is_dimmed && sensor_available) {
         do_capture(0);
+    }
+}
+
+/* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
+static void interface_curve_callback(const void *ptr) {
+    enum ac_states s = *((int *)ptr);
+    polynomialfit(s);
+}
+
+/* Callback on "brightness_timeout" bus exposed writable properties */
+static void interface_timeout_callback(const void *ptr) {
+    if (!state.is_dimmed && sensor_available) {
+        int old_val = *((int *)ptr);
+        reset_timer(main_p[self.idx].fd, old_val, conf.timeout[state.ac_state][state.time]);
     }
 }
 
 /* Callback on state.is_dimmed changes */
 static void dimmed_callback(void) {
     static int old_elapsed = 0;
+    static int old_sensor_available = 1;
     
-    if (state.is_dimmed && old_elapsed == 0) {
-        old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
-        set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
-    } else {
-        /* 
-         * We have just left dimmed state, reset old timeout 
-         * (checking if ac state changed in the meantime)
-         */
-        int timeout_nsec = 0;
-        int timeout_sec = 0;
-        if ((ac_force_capture % 2) == 1) {
-            timeout_nsec = 1;
+    if (sensor_available) {
+        if (state.is_dimmed && old_elapsed == 0) {
+            old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
+            set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
         } else {
-            timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
-            if (timeout_sec <= 0) {
+            /* 
+             * We have just left dimmed state, reset old timeout 
+             * (checking if ac state changed in the meantime)
+             */
+            int timeout_nsec = 0;
+            int timeout_sec = 0;
+            if ((ac_force_capture % 2) == 1) {
+                // Immediately force a capture if ac state changed while we were dimmed 
                 timeout_nsec = 1;
+            } else if (sensor_available != old_sensor_available) {
+                // Immediately force a capture if a sensor appeared while we were dimmed 
+                timeout_nsec = 1;
+            } else {
+                // Apply correct timeout for current ac state and day time
+                timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
+                if (timeout_sec <= 0) {
+                    timeout_nsec = 1;
+                }
             }
+            set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
+            old_elapsed = 0;
+            ac_force_capture = 0;
         }
-        set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
-        old_elapsed = 0;
-        ac_force_capture = 0;
     }
+    old_sensor_available = sensor_available;
 }
 
 /* Callback on state.time changes */
 static void time_callback(void) {
     static enum states old_state = DAY; // default initial value
-    if (!state.is_dimmed) {
+    if (!state.is_dimmed && sensor_available) {
         /* A state.time change happened, react! */
         reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
     }
     old_state = state.time;
+}
+
+/* Callback on SensorChanged clightd signal */
+static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int new_sensor_avail = is_sensor_available();
+    if (new_sensor_avail != sensor_available) {
+        if (!state.is_dimmed) {
+            // Resume module if sensor is now available. Pause it if it is not available
+            set_timeout(0, new_sensor_avail, main_p[self.idx].fd, 0);
+        }
+        sensor_available = new_sensor_avail;
+        if (sensor_available) {
+            INFO("%s module resumed as a sensor is available.\n", self.name);
+        } else {
+            INFO("%s module paused as no sensor is available.\n", self.name);
+        }
+    }
+    return 0;
 }

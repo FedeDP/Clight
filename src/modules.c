@@ -39,23 +39,24 @@ void init_module(int fd, enum modules module, ...) {
         .events = POLLIN,
     };
     
-    /* Increment sorted_modules size and store this module in its correct position */
-    enum modules *tmp = realloc(sorted_modules, (++started_modules) * sizeof(enum modules));
-    if (tmp) {
-        sorted_modules = tmp;
-        sorted_modules[started_modules - 1] = module;
-    } else {
-        free(sorted_modules);
-        ERROR("%s\n", strerror(errno));
-    }
-    
     /* 
      * if fd==DONT_POLL_W_ERR, it means a not-critical error happened
      * while module was setting itself up, before calling init_module.
      * eg: geoclue2 support is enabled but geoclue2 could not be found.
      */
     if (fd != DONT_POLL_W_ERR) {
+        /* Increment sorted_modules size and store this module in its correct position */
+        enum modules *tmp = realloc(sorted_modules, (++started_modules) * sizeof(enum modules));
+        if (tmp) {
+            sorted_modules = tmp;
+            sorted_modules[started_modules - 1] = module;
+        } else {
+            free(sorted_modules);
+            ERROR("%s\n", strerror(errno));
+        }
+        
         modules[module].state = RUNNING;
+        
         DEBUG("%s module started.\n", modules[module].self->name);
         
         /* foreach bus_cb passed in, call add_mod_callback on bus */
@@ -78,7 +79,7 @@ void init_module(int fd, enum modules module, ...) {
         if (fd == DONT_POLL) {
             started_cb(module);
         }
-        
+
         init_submodules(module);
         
     } else {
@@ -252,8 +253,8 @@ static void destroy_module(const enum modules module) {
             /* stop polling on this module! */
             main_p[module].fd = -1;
         }
-        DEBUG("%s module destroyed.\n", modules[module].self->name);
         modules[module].state = DESTROYED;
+        DEBUG("%s module destroyed.\n", modules[module].self->name);
     }
 }
 

@@ -10,10 +10,10 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
 /*
  * Get distance between 2 locations
  */
-double get_distance(struct location loc1, struct location loc2) {
+double get_distance(struct location *loc1, struct location *loc2) {
     double theta, dist;
-    theta = loc1.lon - loc2.lon;
-    dist = sin(degToRad(loc1.lat)) * sin(degToRad(loc2.lat)) + cos(degToRad(loc1.lat)) * cos(degToRad(loc2.lat)) * cos(degToRad(theta));
+    theta = loc1->lon - loc2->lon;
+    dist = sin(degToRad(loc1->lat)) * sin(degToRad(loc2->lat)) + cos(degToRad(loc1->lat)) * cos(degToRad(loc2->lat)) * cos(degToRad(theta));
     dist = acos(dist);
     dist = radToDeg(dist);
     dist = dist * 60 * 1.1515;
@@ -38,7 +38,7 @@ double radToDeg(double angleRad) {
  * Compute mean and normalize between 0-1
  */
 double compute_average(double *intensity, int num) {
-    double mean = gsl_stats_mean(intensity, 1, num) / 255;
+    double mean = gsl_stats_mean(intensity, 1, num);
     DEBUG("Average frames brightness: %lf.\n", mean);
     return mean;
 }
@@ -46,7 +46,7 @@ double compute_average(double *intensity, int num) {
 /*
  * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C 
  */
-void polynomialfit(enum ac_states s, const double *a) {
+void polynomialfit(enum ac_states s) {
     gsl_multifit_linear_workspace *ws;
     gsl_matrix *cov, *X;
     gsl_vector *y, *c;
@@ -62,7 +62,7 @@ void polynomialfit(enum ac_states s, const double *a) {
         for(j=0; j < DEGREE; j++) {
             gsl_matrix_set(X, i, j, pow(i, j));
         }
-        gsl_vector_set(y, i, a[i]);
+        gsl_vector_set(y, i, conf.regression_points[s][i]);
     }
 
     ws = gsl_multifit_linear_alloc(SIZE_POINTS, DEGREE);
