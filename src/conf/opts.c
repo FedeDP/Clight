@@ -96,7 +96,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"no-dimmer", 0, POPT_ARG_NONE, &modules[DIMMER].state, 100, "Disable dimmer tool", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &modules[DPMS].state, 100, "Disable dpms tool", NULL},
         {"no-inhibit", 0, POPT_ARG_NONE, &modules[INHIBIT].state, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
-        {"no-brightness", 0, POPT_ARG_NONE, &modules[BRIGHTNESS].state, 100, "Disable brightness module", NULL},
+        {"no-backlight", 0, POPT_ARG_NONE, &modules[BACKLIGHT].state, 100, "Disable backlight module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},

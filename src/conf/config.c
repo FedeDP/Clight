@@ -42,7 +42,7 @@ int read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "backlight_trans_timeout", &conf.backlight_trans_timeout);
         config_lookup_int(&cfg, "gamma_trans_timeout", &conf.gamma_trans_timeout);
         config_lookup_int(&cfg, "dimmer_trans_timeout", &conf.dimmer_trans_timeout);
-        config_lookup_bool(&cfg, "no_brightness", (int *)&modules[BRIGHTNESS].state);
+        config_lookup_bool(&cfg, "no_backlight", (int *)&modules[BACKLIGHT].state);
         config_lookup_bool(&cfg, "no_gamma", (int *)&modules[GAMMA].state);
         config_lookup_float(&cfg, "latitude", &conf.loc.lat);
         config_lookup_float(&cfg, "longitude", &conf.loc.lon);
@@ -69,25 +69,25 @@ int read_config(enum CONFIG file) {
         config_setting_t *points, *root, *timeouts, *gamma;
         root = config_root_setting(&cfg);
         
-        /* Load regression points for brightness curve */
-        if ((points = config_setting_get_member(root, "ac_brightness_regression_points"))) {
+        /* Load regression points for backlight curve */
+        if ((points = config_setting_get_member(root, "ac_backlight_regression_points"))) {
             if (config_setting_length(points) == SIZE_POINTS) {
                 for (int i = 0; i < SIZE_POINTS; i++) {
                     conf.regression_points[ON_AC][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of ac_brightness_regression_points array elements.\n");
+                WARN("Wrong number of ac_backlight_regression_points array elements.\n");
             }
         }
         
-        /* Load regression points for brightness curve */
-        if ((points = config_setting_get_member(root, "batt_brightness_regression_points"))) {
+        /* Load regression points for backlight curve */
+        if ((points = config_setting_get_member(root, "batt_backlight_regression_points"))) {
             if (config_setting_length(points) == SIZE_POINTS) {
                 for (int i = 0; i < SIZE_POINTS; i++) {
                     conf.regression_points[ON_BATTERY][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of batt_brightness_regression_points array elements.\n");
+                WARN("Wrong number of batt_backlight_regression_points array elements.\n");
             }
         }
         
@@ -237,12 +237,12 @@ int store_config(enum CONFIG file) {
     config_setting_set_string(setting, conf.events[SUNSET]);
     
     /* -1 here below means append to end of array */
-    setting = config_setting_add(root, "ac_brightness_regression_points", CONFIG_TYPE_ARRAY);
+    setting = config_setting_add(root, "ac_backlight_regression_points", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_POINTS; i++) {
         config_setting_set_float_elem(setting, -1, conf.regression_points[ON_AC][i]);
     }
     
-    setting = config_setting_add(root, "batt_brightness_regression_points", CONFIG_TYPE_ARRAY);
+    setting = config_setting_add(root, "batt_backlight_regression_points", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_POINTS; i++) {
         config_setting_set_float_elem(setting, -1, conf.regression_points[ON_BATTERY][i]);
     }

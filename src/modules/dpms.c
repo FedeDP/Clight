@@ -51,7 +51,7 @@ void set_dpms_timeouts(void) {
     }
     
     if (!need_disable) {
-        SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpmsTimeouts");
+        SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "SetTimeouts");
         call(NULL, NULL, &args, "ssiii", state.display, state.xauthority, 
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
         INFO("Setted DPMS timeouts: Standby -> %ds, Suspend -> %ds, Off -> %ds.\n", 
@@ -65,7 +65,7 @@ void set_dpms_timeouts(void) {
 }
 
 static void set_dpms(int dpms_state) {
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetDpms");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Set");
     call(NULL, NULL, &args, "ssi", state.display, state.xauthority, dpms_state);
 }
 

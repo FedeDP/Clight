@@ -7,6 +7,8 @@
 - [x] Update to new CaptureX, IsXAvailable clightd api
 - [x] Add back support for new CaptureSensor interface ("sad" return type instead of "sd")
 - [x] CaptureSensor already return values between 0 and 1.0. Avoid "/ 255" while computing mean value.
+- [x] Update to new Idle interface
+- [x] Dimmer -> properly fix for dimmer_timeouts <= 0
 
 ### Fixes
 - [x] Do not require both --sunrise and --sunset options!
@@ -24,6 +26,7 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Drop systemd timer and ask user to add "systemctl --user start clight" to their DE/WM/WaylandCompositor starting script and add back a desktop file for xdg autostart?
 - [x] Add new Wiki page on how to start clight
 - [x] Drop clight systemd service
+- [x] Rename BRIGHTNESS module to BACKLIGHT
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
@@ -54,3 +57,4 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 
 - [ ] GNOME: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html / https://askubuntu.com/questions/546402/how-to-change-gnome-shell-theme-in-ubuntu-14-10)
 - [ ] KDE: https://userbase.kde.org/KDE_Connect/Tutorials/Useful_commands#Change_look_and_feel
+- [ ] Add a calibration mode?

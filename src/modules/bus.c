@@ -163,7 +163,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
          * Fix for new Clightd interface for CaptureSensor and IsSensorAvailable:
          * they will now return used interface too. We don't need it.
          */
-        if (strlen(userptr_type) > 1 && !strcmp(a->service, "org.clightd.backlight")) {
+        if (strlen(userptr_type) > 1 && !strcmp(a->service, CLIGHTD_SERVICE)) {
             const char *unused = NULL;
             sd_bus_message_read(reply, "s", &unused);
             userptr_type++;

@@ -56,10 +56,12 @@ void log_conf(void) {
         );
             
         fprintf(log_file, "\n### Modules ###\n");
-        fprintf(log_file, "* Brightness correction:\t\t%s\n", is_started_disabled(BRIGHTNESS) ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Gamma correction:\t\t%s\n", is_started_disabled(GAMMA) ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Screen dpms tool:\t\t%s\n", is_started_disabled(DPMS) ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Screen dimmer tool:\t\t%s\n", is_started_disabled(DIMMER) ? "Disabled" : "Enabled");
+        for (int i = 0; i < MODULES_NUM; i++) {
+            const struct self_t *self = modules[i].self;
+            if (self->functional_module) {
+                fprintf(log_file, "* %s:\t\t%s\n", self->name, is_started_disabled(i) ? "Disabled" : "Enabled");
+            }
+        }
             
         fprintf(log_file, "\n### Smooth ###\n");
         fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");

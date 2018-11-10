@@ -164,7 +164,7 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int r = -EINVAL;
     
-    if (is_running(BRIGHTNESS)) {
+    if (is_running(BACKLIGHT)) {
         FILL_MATCH_DATA(state.current_br_pct); // useless data, unused
         r = sd_bus_reply_method_return(m, NULL);
     } else {
@@ -236,7 +236,7 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
     
     /* Check if we modified currently used timeout! */
     if (val == &conf.timeout[state.ac_state][state.time]) {
-        FILL_MATCH_DATA_NAME(old_val, "brightness_timeout");
+        FILL_MATCH_DATA_NAME(old_val, "backlight_timeout");
     } else if (val == &conf.dimmer_timeout[state.ac_state]) {
         FILL_MATCH_DATA_NAME(old_val, "dimmer_timeout");
     } else if (val >= conf.dpms_timeouts[state.ac_state] && val <= &conf.dpms_timeouts[state.ac_state][SIZE_DPMS - 1]) {

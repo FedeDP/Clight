@@ -1,24 +1,30 @@
-#include <brightness.h>
+#include <backlight.h>
 #include <bus.h>
-#include <sys/inotify.h>
 #include <interface.h>
 
-#define BUF_LEN (sizeof(struct inotify_event) + NAME_MAX + 1)
-
+static int idle_init(void);
+static int idle_get_client(void);
+static int idle_hook_update(void);
+static int idle_set_timeout(void);
+static int idle_set_const_properties(void);
+static int idle_client_start(void);
+static int idle_client_stop(void);
+static int idle_client_destroy(void);
+static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void dim_backlight(const double pct);
 static void restore_backlight(const double pct);
-static int get_idle_time(void);
 static void upower_callback(const void *ptr);
 static void inhibit_callback(const void * ptr);
 static void interface_timeout_callback(const void *ptr);
 
-static int inot_wd, inot_fd, timer_fd;
-
+static sd_bus_slot *slot;
+static int running;
+static char client[PATH_MAX + 1];
 /*
- * DIMMER needs BRIGHTNESS as it needs to be sure that state.current_br_pct is correctly setted.
- * BRIGHTNESS will set state.current_br_pct at first capture (1ns after clight's startup)
+ * DIMMER needs BACKLIGHT as it needs to be sure that state.current_br_pct is correctly setted.
+ * BACKLIGHT will set state.current_br_pct at first capture (1ns after clight's startup)
  */
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BRIGHTNESS}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
+static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BACKLIGHT}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
@@ -33,23 +39,19 @@ static void init(void) {
     struct bus_cb interface_inhibit_cb = { INTERFACE, inhibit_callback, "inhibit" };
     struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "dimmer_timeout" };
     
-    timer_fd = DONT_POLL_W_ERR;
-    inot_fd = inotify_init();
-    if (inot_fd != -1) {
-        timer_fd = start_timer(CLOCK_MONOTONIC, state.pm_inhibited || conf.dimmer_timeout[state.ac_state] <= 0 ? 
-                                0 : conf.dimmer_timeout[state.ac_state], 0); // Normal timeout if !inhibited AND dimmer timeout > 0, else disarmed
-    }
+    
+    int r = idle_init();
     
     /* 
-     * If dimmer is started and BRIGHTNESS module is disabled,
+     * If dimmer is started and BACKLIGHT module is disabled,
      * we need to ensure to start from a well known backlight level.
      * Force 100% backlight level.
      */
-    if (!is_running(BRIGHTNESS)) {
+    if (!is_running(BACKLIGHT)) {
         set_backlight_level(1.0, 0, 0, 0);
     }
     
-    INIT_MOD(timer_fd, &upower_cb, &inhibit_cb, &interface_inhibit_cb, &interface_to_cb);
+    INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, &upower_cb, &inhibit_cb, &interface_inhibit_cb, &interface_to_cb);
 }
 
 static int check(void) {
@@ -57,70 +59,106 @@ static int check(void) {
 }
 
 static void destroy(void) {
-    if (state.is_dimmed) {
-        inotify_rm_watch(inot_fd, inot_wd);
-        if (timer_fd > 0) {
-            close(timer_fd);
-        }
-    } else if (inot_fd > 0) {
-        close(inot_fd);
+    if (slot) {
+        slot = sd_bus_slot_unref(slot);
     }
+    idle_client_stop();
+    idle_client_destroy();
 }
 
-/*
- * If is_dimmed is false, check how many seconds are passed since latest user activity.
- * If > of conf.dimmer_timeout, we're in dimmed state:
- *      add an inotify_watcher on /dev/input to be woken as soon as a new activity happens.
- *      Note the IN_ONESHOT flag, that is needed to just wait to capture a single inotify event.
- *      Then, stop listening on BRIGHTNESS module (as it is disabled while in dimmed state),
- *      and dim backlight.
- * Else set a timeout of conf.dimmer_timeout - elapsed time since latest user activity.
- *
- * Else, read single event from inotify, leave dimmed state,
- * resume BACKLIGHT module and reset latest backlight level. 
- */
 static void callback(void) {
-    static double old_pct;
-    
-    if (!state.is_dimmed) {
-        uint64_t t;
-        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-        
-        /* If interface is not enabled, avoid entering dimmed state */
-        int idle_t = get_idle_time();
-        if (idle_t > 0) {
-            state.is_dimmed = idle_t >= conf.dimmer_timeout[state.ac_state];
-            if (state.is_dimmed) {
-                DEBUG("Entering dimmed state...\n");
-                inot_wd = inotify_add_watch(inot_fd, "/dev/input/", IN_ACCESS | IN_ONESHOT);
-                if (inot_wd != -1) {
-                    main_p[self.idx].fd = inot_fd;
-                    old_pct = state.current_br_pct;
-                    dim_backlight(conf.dimmer_pct);
-                    emit_prop("Dimmed");
-                } else {
-                    // in case of error, reset is_dimmed state
-                    state.is_dimmed = 0;
-                }
-            } else {
-                /* Set a timeout of conf.dimmer_timeout - elapsed time since latest user activity */
-                set_timeout(conf.dimmer_timeout[state.ac_state] - idle_t, 0, main_p[self.idx].fd, 0);
-            }
-        } else {
-            set_timeout(conf.dimmer_timeout[state.ac_state], 0, main_p[self.idx].fd, 0);
-        }
-    } else {
-        char buffer[BUF_LEN];
-        int length = read(main_p[self.idx].fd, buffer, BUF_LEN);
-        if (length > 0) {
-            DEBUG("Leaving dimmed state...\n");
-            state.is_dimmed = 0;
-            main_p[self.idx].fd = timer_fd;
-            restore_backlight(old_pct);
-            emit_prop("Dimmed");
-            set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
-        }
+
+}
+
+static int idle_init(void) {
+    int r = idle_get_client();
+    if (r < 0) {
+        goto end;
     }
+    r = idle_hook_update();
+    if (r < 0) {
+        goto end;
+    }
+    r = idle_set_const_properties();
+    if (r < 0) {
+        goto end;
+    }
+    r = idle_set_timeout(); // set timeout automatically calls client start
+    
+end:
+    if (r < 0) {
+        WARN("Clight Idle error.\n");
+    }
+    return -(r < 0);  // - 1 on error
+}
+
+static int idle_get_client(void) {
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Idle", "org.clightd.clightd.Idle", "GetClient");
+    return call(client, "o", &args, NULL);
+}
+
+static int idle_hook_update(void) {
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Idle");
+    return add_match(&args, &slot, on_new_idle);
+}
+
+static int idle_set_timeout(void) {
+    int r = 0;
+    if (conf.dimmer_timeout[state.ac_state] > 0) {
+        SYSBUS_ARG(to_args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Timeout");
+        r = set_property(&to_args, 'u', &conf.dimmer_timeout[state.ac_state]);
+        r += idle_client_start();
+    } else {
+        r = idle_client_stop();
+    }
+    return r;
+}
+
+static int idle_set_const_properties(void) {
+    SYSBUS_ARG(display_args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Display");
+    SYSBUS_ARG(xauth_args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "AuthCookie");
+    int r = set_property(&display_args, 's', state.display);
+    r += set_property(&xauth_args, 's', state.xauthority);
+    return r;
+}
+
+static int idle_client_start(void) {
+    if (!running && conf.dimmer_timeout[state.ac_state] > 0 && !state.pm_inhibited) {
+        SYSBUS_ARG(args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Start");
+        running = 1;
+        return call(NULL, NULL, &args, NULL);
+    }
+    return 0;
+}
+
+static int idle_client_stop(void) {
+    if (running) {
+        SYSBUS_ARG(args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Stop");
+        running = 0;
+        return call(NULL, NULL, &args, NULL);
+    }
+    return 0;
+}
+
+static int idle_client_destroy(void) {
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Idle", "org.clightd.clightd.Idle", "DestroyClient");
+    return call(NULL, NULL, &args, "o", client);
+}
+
+static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+    static double old_pct = -1.0;
+    
+    sd_bus_message_read(m, "b", &state.is_dimmed);
+    if (state.is_dimmed) {
+        DEBUG("Entering dimmed state...\n");
+        old_pct = state.current_br_pct;
+        dim_backlight(conf.dimmer_pct);
+    } else if (old_pct >= 0.0) {
+        DEBUG("Leaving dimmed state...\n");
+        restore_backlight(old_pct);
+    }
+    emit_prop("Dimmed");
+    return 0;
 }
 
 static void dim_backlight(const double pct) {
@@ -137,35 +175,28 @@ static void restore_backlight(const double pct) {
     set_backlight_level(pct, !conf.no_smooth_backlight, conf.dimmer_trans_step, conf.dimmer_trans_timeout);
 }
 
-static int get_idle_time(void) {
-    int idle_time;
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "GetIdleTime");
-    int r = call(&idle_time, "i", &args, "ss", state.display, state.xauthority);
-    if (!r) {
-        /* clightd returns ms of inactivity. We need seconds */
-        return lround((double)idle_time / 1000);
-    }
-    return r;
-}
-
 /* Reset dimmer timeout */
 static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
-    if (!state.is_dimmed && old_ac_state != state.ac_state) {
-        reset_timer(main_p[self.idx].fd * !state.pm_inhibited, conf.dimmer_timeout[old_ac_state], conf.dimmer_timeout[state.ac_state]);
+    if (old_ac_state != state.ac_state) {
+        idle_set_timeout();
     }
 }
 
 /* 
- * If we're getting inhibited, disarm timer (pausing this module)
- * else restart module with its default timeout
+ * If we're getting inhibited, stop idle client.
+ * Else, restart it.
  */
 static void inhibit_callback(const void *ptr) {
     int old_pm_state = *(int *)ptr;
-    if (!state.is_dimmed && !!old_pm_state != !!state.pm_inhibited) {
+    if (!!old_pm_state != !!state.pm_inhibited) {
         DEBUG("%s module being %s.\n", self.name, state.pm_inhibited ? "paused" : "restarted");
-        set_timeout(conf.dimmer_timeout[state.ac_state] * !state.pm_inhibited, 0, main_p[self.idx].fd, 0);
+        if (!state.pm_inhibited) {
+            idle_client_start();
+        } else {
+            idle_client_stop();
+        }
     }
 }
 
@@ -173,8 +204,5 @@ static void inhibit_callback(const void *ptr) {
  * Interface callback to change timeout
  */
 static void interface_timeout_callback(const void *ptr) {
-    if (!state.is_dimmed) {
-        int old_val = *((int *)ptr);
-        reset_timer(main_p[self.idx].fd, old_val, conf.dimmer_timeout[state.ac_state]);
-    }
+    idle_set_timeout();
 }

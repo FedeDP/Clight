@@ -20,6 +20,8 @@
  */
 #define SIZE(a) sizeof(a) / sizeof(*a)
 
+#define CLIGHTD_SERVICE "org.clightd.clightd"
+
 #define DONT_POLL -2                        // avoid polling a module (used for modules that do not need to be polled)
 #define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used eg when no geoclue2 is found)
 #define SIZE_POINTS 11                      // number of points (from 0 to 10 included)
@@ -27,7 +29,7 @@
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 
 /* List of modules indexes */
-enum modules { BRIGHTNESS, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };
+enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -80,7 +82,7 @@ struct bus_match_data {
 
 /* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
-    int num_captures;                       // number of frame captured for each screen brightness compute
+    int num_captures;                       // number of frame captured for each screen backlight compute
     int timeout[SIZE_AC][SIZE_STATES];      // timeout between captures for each ac_state and time state (day/night/event)
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
@@ -90,16 +92,16 @@ struct config {
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
-    double dimmer_pct;                      // pct of max brightness to be used while dimming
+    double dimmer_pct;                      // pct of max backlight to be used while dimming
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
-    int no_smooth_backlight;                // disable smooth backlight changes for BRIGHTNESS module
+    int no_smooth_backlight;                // disable smooth backlight changes for BACKLIGHT module
     int no_smooth_dimmer;                   // disable smooth backlight changes for DIMMER module
     int no_smooth_gamma;                    // disable smooth gamma changes
-    double backlight_trans_step;            // every backlight transition step value (in pct), used when smooth BRIGHTNESS transitions are enabled
+    double backlight_trans_step;            // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
     int gamma_trans_step;                   // every gamma transition step value, used when smooth GAMMA transitions are enabled
     double dimmer_trans_step;               // every backlight transition step value (in pct), used when smooth DIMMER transitions are enabled
-    int backlight_trans_timeout;            // every backlight transition timeout value, used when smooth BRIGHTNESS transitions are enabled
+    int backlight_trans_timeout;            // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int gamma_trans_timeout;                // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
     int dimmer_trans_timeout;               // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
 };
@@ -118,7 +120,7 @@ struct state {
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
     struct location current_loc;            // current user location
     jmp_buf quit_buf;                       // quit jump called by longjmp
-    int needed_functional_modules;          // we need at least 1 functional module (BRIGHTNESS, GAMMA, DPMS, DIMMER) otherwise quit
+    int needed_functional_modules;          // we need at least 1 functional module (BACKLIGHT, GAMMA, DPMS, DIMMER) otherwise quit
     struct bus_match_data userdata;         // Data used by modules that own a match on bus
 };
 

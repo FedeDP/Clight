@@ -1,11 +1,11 @@
-#include <brightness.h>
+#include <backlight.h>
 #include <bus.h>
 #include <my_math.h>
 #include <interface.h>
 
 static int is_sensor_available(void);
 static void do_capture(int reset_timer);
-static void set_brightness(const double perc);
+static void set_new_backlight(const double perc);
 static double capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
 static void interface_calibrate_callback(const void *ptr);
@@ -25,13 +25,13 @@ static struct self_t self = {
     .functional_module = 1
 };
 
-MODULE(BRIGHTNESS);
+MODULE(BACKLIGHT);
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb interface_calibrate_cb = { INTERFACE, interface_calibrate_callback, "calibrate" };
     struct bus_cb interface_curve_cb = { INTERFACE, interface_curve_callback, "curve" };
-    struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "brightness_timeout" };
+    struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "backlight_timeout" };
     
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
@@ -44,7 +44,7 @@ static void init(void) {
     add_prop_callback(&time_cb);
     
     /* We do not fail if this fails */
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SensorChanged");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
     add_match(&args, &slot, on_sensor_change);
     
     /* Start module timer: 1ns delay if sensor is available, else start it paused */
@@ -73,46 +73,36 @@ static void callback(void) {
 
 static int is_sensor_available(void) {
     int available = 0;
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "IsSensorAvailable");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "IsAvailable");
     
     int r = call(&available, "sb", &args, "s", conf.dev_name);
     return r == 0 && available;
 }
 
-/*
- * When timerfd timeout expires, check if we are in screen power_save mode,
- * otherwise start streaming on webcam and set BRIGHTNESS fd of pollfd struct to
- * webcam device fd. This way our main poll will get events (frames) from webcam device too.
- */
 static void do_capture(int reset_timer) {
     double val = capture_frames_brightness();
-    /* 
-     * if captureframes clightd method did not return any non-critical error (eg: eperm).
-     * I won't check SetBrightness too because if captureframes did not return any error,
-     * it is very very unlikely that SetBrightness would return some.
-     */
     if (val >= 0.0) {
-        set_brightness(val * 10);
+        set_new_backlight(val * 10);
     }
-    
+
     if (reset_timer) {
         set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
     }
 }
 
-static void set_brightness(const double perc) {
+static void set_new_backlight(const double perc) {
     /* y = a0 + a1x + a2x^2 */
     const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     const double new_br_pct =  clamp(b, 1, 0);
     
-    INFO("New brightness pct value: %f\n", new_br_pct);
+    INFO("New backlight pct value: %f\n", new_br_pct);
     set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetBrightness");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
     
-    /* Set brightness on both internal monitor (in case of laptop) and external ones */
+    /* Set backlight on both internal monitor (in case of laptop) and external ones */
     int ok;
     int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
     if (!r && ok) {
@@ -122,7 +112,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
 }
 
 static double capture_frames_brightness(void) {
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "CaptureSensor");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Capture");
     double intensity[conf.num_captures];
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
@@ -162,7 +152,7 @@ static void interface_curve_callback(const void *ptr) {
     polynomialfit(s);
 }
 
-/* Callback on "brightness_timeout" bus exposed writable properties */
+/* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(const void *ptr) {
     if (!state.is_dimmed && sensor_available) {
         int old_val = *((int *)ptr);

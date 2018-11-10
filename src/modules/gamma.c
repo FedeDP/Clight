@@ -45,17 +45,6 @@ static void callback(void) {
     check_gamma();
 }
 
-/*
- * checks next day events (or current day if clight has started right now).
- * Then, if needed (ie: first time this func is called or when state.time changed),
- * calls set_temp with correct temp, given current state(night or day).
- * It returns 0 if: smooth_transition is off or desired temp has finally been set (after transitioning).
- * If it returns 0, reset transitioning flag and set next event timeout.
- * Else, set a timeout for smooth transition and set transitioning flag to 1.
- * If ret == 0, it can also mean we haven't called set_temp, and this means an
- * "event" timeout elapsed. If old_state != state.time (ie: if we entered or left EVENT state),
- * set new BRIGHTNESS correct timeout according to new state.
- */
 static void check_gamma(void) {
     static int first_time = 1;
     
@@ -200,7 +189,7 @@ static void check_state(time_t *now) {
 static void set_temp(int temp) {
     int ok;
 
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "SetGamma");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Set");
     int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     if (!r && ok) {
         INFO("%d gamma temp set.\n", temp);

@@ -32,7 +32,7 @@ static void callback(void) {
 static int check_clightd_version(void) {
     int ret = -1;
     char clightd_version[PATH_MAX + 1] = {0};
-    SYSBUS_ARG(args, "org.clightd.backlight", "/org/clightd/backlight", "org.clightd.backlight", "Version");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
     int r = get_property(&args, "s", clightd_version);
 
     if (r < 0 || !strlen(clightd_version)) {
