@@ -162,10 +162,11 @@ static void interface_timeout_callback(const void *ptr) {
 
 /* Callback on state.is_dimmed changes */
 static void dimmed_callback(void) {
-    static int old_elapsed = 0;
     static int old_sensor_available = 1;
     
     if (sensor_available) {
+        static int old_elapsed = 0;
+
         if (state.is_dimmed && old_elapsed == 0) {
             old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
             set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
