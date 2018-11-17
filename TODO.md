@@ -29,7 +29,7 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Rename BRIGHTNESS module to BACKLIGHT
 - [ ] method_calibrate to avoid requiring that BACKLIGHT is running
 - [ ] Avoid leaving clight if no functional module is running (drop is_functional too) as it now offers a bus api, thus it is a bus service
-- [ ] Store and expose latest mean ambient brightness as captured by clightd
+- [x] Store and expose latest mean ambient brightness as captured by clightd
 - [ ] Port CI to sr.ht
 
 ### Bus API

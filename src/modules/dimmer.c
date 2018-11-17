@@ -154,7 +154,7 @@ static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)
     sd_bus_message_read(m, "b", &state.is_dimmed);
     if (state.is_dimmed) {
         DEBUG("Entering dimmed state...\n");
-        old_pct = state.current_br_pct;
+        old_pct = state.current_bl_pct;
         dim_backlight(conf.dimmer_pct);
     } else if (old_pct >= 0.0) {
         DEBUG("Leaving dimmed state...\n");
@@ -166,7 +166,7 @@ static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)
 
 static void dim_backlight(const double pct) {
     /* Don't touch backlight if a lower level is already set */
-    if (pct >= state.current_br_pct) {
+    if (pct >= state.current_bl_pct) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
         set_backlight_level(pct, !conf.no_smooth_dimmer, conf.dimmer_trans_step, conf.dimmer_trans_timeout);

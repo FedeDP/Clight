@@ -38,7 +38,8 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(struct state, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Time", "i", NULL, offsetof(struct state, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Dimmed", "b", NULL, offsetof(struct state, is_dimmed), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("CurrentBrPct", "d", NULL, offsetof(struct state, current_br_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentBlPct", "d", NULL, offsetof(struct state, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentAmbientBr", "d", NULL, offsetof(struct state, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct state, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -165,7 +166,7 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
     int r = -EINVAL;
     
     if (is_running(BACKLIGHT)) {
-        FILL_MATCH_DATA(state.current_br_pct); // useless data, unused
+        FILL_MATCH_DATA(state.current_bl_pct); // useless data, unused
         r = sd_bus_reply_method_return(m, NULL);
     } else {
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Backlight module is not running.");

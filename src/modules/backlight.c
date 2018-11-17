@@ -6,7 +6,7 @@
 static int is_sensor_available(void);
 static void do_capture(int reset_timer);
 static void set_new_backlight(const double perc);
-static double capture_frames_brightness(void);
+static int capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
 static void interface_calibrate_callback(const void *ptr);
 static void interface_curve_callback(const void *ptr);
@@ -80,9 +80,8 @@ static int is_sensor_available(void) {
 }
 
 static void do_capture(int reset_timer) {
-    double val = capture_frames_brightness();
-    if (val >= 0.0) {
-        set_new_backlight(val * 10);
+    if (!capture_frames_brightness()) {
+        set_new_backlight(state.ambient_br * 10);
     }
 
     if (reset_timer) {
@@ -95,7 +94,7 @@ static void set_new_backlight(const double perc) {
     const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     const double new_br_pct =  clamp(b, 1, 0);
     
-    INFO("New backlight pct value: %f\n", new_br_pct);
+    INFO("New backlight pct value: %lf\n", new_br_pct);
     set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
 }
 
@@ -106,19 +105,21 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     int ok;
     int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
     if (!r && ok) {
-        state.current_br_pct = pct;
-        emit_prop("CurrentBrPct");
+        state.current_bl_pct = pct;
+        emit_prop("CurrentBlPct");
     }
 }
 
-static double capture_frames_brightness(void) {
+static int capture_frames_brightness(void) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Capture");
     double intensity[conf.num_captures];
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
-        return compute_average(intensity, conf.num_captures);
+        state.ambient_br = compute_average(intensity, conf.num_captures);
+        INFO("Ambient brightness: %lf\n", state.ambient_br);
+        emit_prop("CurrentAmbientBr");
     }
-    return -1.0f;
+    return r;
 }
 
 /* Callback on upower ac state changed signal */

@@ -115,7 +115,8 @@ struct state {
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     char *xauthority;                       // xauthority env variable, to be used in gamma calls
     char *display;                          // display env variable, to be used in gamma calls
-    double current_br_pct;                  // current backlight pct
+    double current_bl_pct;                  // current backlight pct
+    double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
     int is_dimmed;                          // whether we are currently in dimmed state
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
     struct location current_loc;            // current user location
