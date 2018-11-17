@@ -27,6 +27,9 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Add new Wiki page on how to start clight
 - [x] Drop clight systemd service
 - [x] Rename BRIGHTNESS module to BACKLIGHT
+- [ ] method_calibrate to avoid requiring that BACKLIGHT is running
+- [ ] Avoid leaving clight if no functional module is running (drop is_functional too) as it now offers a bus api, thus it is a bus service
+- [ ] Store and expose latest mean ambient brightness as captured by clightd
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)

@@ -1,5 +1,6 @@
 #include <bus.h>
 
+static int upower_check(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
@@ -19,14 +20,7 @@ static void init(void) {
 }
 
 static int check(void) {
-    /* check initial AC state */
-    SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
-    int r = get_property(&args, "b", &state.ac_state);
-    if (r < 0) {
-        WARN("Upower appears to be unsupported.\n");
-        return -1;   // disable this module
-    }
-    return 0;
+    return upower_check();
 }
 
 static void callback(void) {
@@ -38,6 +32,16 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
+}
+
+static int upower_check(void) {
+    /* check initial AC state */
+    SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
+    int r = get_property(&args, "b", &state.ac_state);
+    if (r < 0) {
+        WARN("Upower appears to be unsupported.\n");
+    }
+    return -(r < 0);
 }
 
 static int upower_init(void) {

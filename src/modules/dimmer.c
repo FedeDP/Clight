@@ -141,8 +141,11 @@ static int idle_client_stop(void) {
 }
 
 static int idle_client_destroy(void) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Idle", "org.clightd.clightd.Idle", "DestroyClient");
-    return call(NULL, NULL, &args, "o", client);
+    if (strlen(client) > 0) {
+        SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Idle", "org.clightd.clightd.Idle", "DestroyClient");
+        return call(NULL, NULL, &args, "o", client);
+    }
+    return 0;
 }
 
 static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {

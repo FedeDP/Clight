@@ -168,7 +168,7 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
         FILL_MATCH_DATA(state.current_br_pct); // useless data, unused
         r = sd_bus_reply_method_return(m, NULL);
     } else {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Screen is currently dimmed.");
+        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Backlight module is not running.");
     }
     return r;
 }
