@@ -1,0 +1,13 @@
+image: archlinux
+packages:
+  - systemd
+  - popt
+  - libconfig
+  - gsl
+sources:
+  - https://github.com/FedeDP/Clight
+tasks:
+  - build: |
+      cd Clight
+      make debug
+
