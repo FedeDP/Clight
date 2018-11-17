@@ -27,10 +27,9 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Add new Wiki page on how to start clight
 - [x] Drop clight systemd service
 - [x] Rename BRIGHTNESS module to BACKLIGHT
-- [ ] method_calibrate to avoid requiring that BACKLIGHT is running
-- [ ] Avoid leaving clight if no functional module is running (drop is_functional too) as it now offers a bus api, thus it is a bus service
 - [x] Store and expose latest mean ambient brightness as captured by clightd
 - [ ] Port CI to sr.ht
+- [ ] Document each module's dependencies
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
@@ -43,6 +42,11 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] use FILL_MATCH_DATA for exposed configurations too
 - [x] Remove ApplyGamma and automatically set new temperature when DailyTemp/NightTemp are changed
 - [x] Rename "StoreConf" to only "Store" as it is already under /org/clight/clight/Conf path
+
+### Passive mode
+- [ ] Functional module can also be started in "passive" mode, ie: they are started but paused, and will remain paused. You can only trigger them through bus API. Issue -> dimmer won't start until first backlight capture is done...
+- [ ] method_calibrate to avoid requiring that BACKLIGHT is running (?) or (better) let user run BACKLIGHT with a "0" timeout, ie: paused. Something like a passive mode? Where all functional modules are started but are, and will remain, paused
+- [ ] Avoid leaving clight if no functional module is running (drop is_functional too) as it now offers a bus api, thus it is a bus service
 
 ### TEST
 - [x] Test SensorChanged signal

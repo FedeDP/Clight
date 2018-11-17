@@ -39,7 +39,6 @@ static void init(void) {
     struct bus_cb interface_inhibit_cb = { INTERFACE, inhibit_callback, "inhibit" };
     struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "dimmer_timeout" };
     
-    
     int r = idle_init();
     
     /* 

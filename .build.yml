@@ -10,4 +10,7 @@ tasks:
   - build: |
       cd Clight
       make debug
-
+triggers:
+  - action: email
+    condition: failure
+    to: "<nierro92@gmail.com>"
