@@ -44,9 +44,7 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Rename "StoreConf" to only "Store" as it is already under /org/clight/clight/Conf path
 
 ### Passive mode
-- [ ] Functional module can also be started in "passive" mode, ie: they are started but paused, and will remain paused. You can only trigger them through bus API. Issue -> dimmer won't start until first backlight capture is done...
-- [ ] method_calibrate to avoid requiring that BACKLIGHT is running (?) or (better) let user run BACKLIGHT with a "0" timeout, ie: paused. Something like a passive mode? Where all functional modules are started but are, and will remain, paused
-- [ ] Avoid leaving clight if no functional module is running (drop is_functional too) as it now offers a bus api, thus it is a bus service
+- [x] Functional module can also be started in "passive" mode, ie: they are started but paused, and will remain paused. You can only trigger them through bus API.
 
 ### TEST
 - [x] Test SensorChanged signal

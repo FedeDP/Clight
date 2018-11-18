@@ -42,14 +42,13 @@ static void init(void) {
     int r = idle_init();
     
     /* 
-     * If dimmer is started and BACKLIGHT module is disabled,
+     * If dimmer is started and BACKLIGHT module is disabled, or we're in passive mode,
      * we need to ensure to start from a well known backlight level.
      * Force 100% backlight level.
      */
-    if (!is_running(BACKLIGHT)) {
+    if (!is_running(BACKLIGHT) || conf.passive_mode) {
         set_backlight_level(1.0, 0, 0, 0);
     }
-    
     INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, &upower_cb, &inhibit_cb, &interface_inhibit_cb, &interface_to_cb);
 }
 

@@ -104,6 +104,7 @@ struct config {
     int backlight_trans_timeout;            // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int gamma_trans_timeout;                // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
     int dimmer_trans_timeout;               // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
+    int passive_mode;                       // whether clight is running in passive mode
 };
 
 /* Global state of program */

@@ -52,6 +52,7 @@ int read_config(enum CONFIG file) {
         config_lookup_bool(&cfg, "no_dpms", (int *)&modules[DPMS].state);
         config_lookup_bool(&cfg, "no_inhibit", (int *)&modules[INHIBIT].state);
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
+        config_lookup_bool(&cfg, "passive", &conf.passive_mode);
         
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
@@ -223,6 +224,9 @@ int store_config(enum CONFIG file) {
     
     setting = config_setting_add(root, "verbose", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.verbose);
+    
+    setting = config_setting_add(root, "passive", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.passive_mode);
     
     setting = config_setting_add(root, "sensor_devname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.dev_name);

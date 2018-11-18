@@ -54,6 +54,10 @@ long get_timeout_sec(int fd) {
 // }
 
 static long get_timeout(int fd, size_t member) {
+    if (fd == DONT_POLL) {
+        return 0;
+    }
+    
     struct itimerspec curr_value;
     timerfd_gettime(fd, &curr_value);
     
@@ -62,6 +66,10 @@ static long get_timeout(int fd, size_t member) {
 }
 
 void reset_timer(int fd, int old_timer, int new_timer) {
+    if (fd == DONT_POLL) {
+        return;
+    }
+    
     unsigned int elapsed_time = old_timer - get_timeout_sec(fd);
     /* if we still need to wait some seconds */
     if (new_timer > elapsed_time) {
