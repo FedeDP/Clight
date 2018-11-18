@@ -110,10 +110,7 @@ static void main_poll(void) {
     poll_cb(USERBUS);
     while (!state.quit) {
         int r = poll(main_p, MODULES_NUM, -1);
-        if (r == -1) {
-            if (errno == EINTR) {
-                continue;
-            }
+        if (r == -1 && errno != EINTR && errno != EAGAIN) {
             ERROR("%s\n", strerror(errno));
         }
 
