@@ -4,12 +4,17 @@ packages:
   - popt
   - libconfig
   - gsl
+  - cmake
 sources:
   - https://github.com/FedeDP/Clight
 tasks:
-  - build: |
+  - prepare: |
       cd Clight
-      make debug
+      mkdir build
+      (cd build && cmake -DCMAKE_BUILD_TYPE=Debug ..)
+  - build: |
+      cd Clightd
+      (cd build && make)
 triggers:
   - action: email
     condition: failure

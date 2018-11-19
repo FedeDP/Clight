@@ -7,9 +7,11 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 find_package(PkgConfig)
 
+
 # Options
 set(CLIGHT_CONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
     CACHE FILEPATH "Path for config file")
+
 
 # Create program target
 file(GLOB_RECURSE SOURCES src/*.c)
@@ -27,7 +29,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     -DCONFDIR="${CLIGHT_CONFDIR}"
 )
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
-
 
 
 # Required dependencies
@@ -58,9 +59,11 @@ set_target_properties(
     LINK_FLAGS "${COMBINED_LDFLAGS}"
 )
 
+
 # Installation of targets (must be before file configuration to work)
 install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
 
 # Configure files with install paths
 set(EXTRA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Extra")
@@ -68,10 +71,14 @@ set(EXTRA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Extra")
 configure_file(${EXTRA_DIR}/org.clight.clight.service
                org.clight.clight.service
                @ONLY)
+
+
 # Installation of files
+pkg_get_variable(COMPLETIONS_DIR bash-completion completionsdir)
+pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.clight.clight.service
-        DESTINATION /usr/share/dbus-1/services)
+        DESTINATION ${SESSION_BUS_DIR})
 install(FILES ${EXTRA_DIR}/clight.conf
         DESTINATION ${CLIGHT_CONFDIR})
 install(FILES ${EXTRA_DIR}/desktop/clight.desktop
@@ -79,7 +86,7 @@ install(FILES ${EXTRA_DIR}/desktop/clight.desktop
 install(FILES ${EXTRA_DIR}/desktop/clightc.desktop
         DESTINATION /usr/share/applications)
 install(FILES ${EXTRA_DIR}/clight
-        DESTINATION /usr/share/bash-completion/completions)
+        DESTINATION ${COMPLETIONS_DIR})
 install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
 
