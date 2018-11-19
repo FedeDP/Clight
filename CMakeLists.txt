@@ -49,6 +49,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 list(APPEND COMBINED_LDFLAGS ${REQ_LIBS_LDFLAGS})
 list(APPEND COMBINED_LDFLAGS ${LOGIN_LIBS_LDFLAGS})
 
+
 # Convert ld flag list from list to space separated string.
 string(REPLACE ";" " " COMBINED_LDFLAGS "${COMBINED_LDFLAGS}")
 
