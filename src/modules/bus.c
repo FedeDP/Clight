@@ -172,7 +172,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
             const char *obj = NULL;
             r = sd_bus_message_read(reply, "o", &obj);
             if (r >= 0) {
-                memcpy(userptr, obj, PATH_MAX);
+                strncpy(userptr, obj, PATH_MAX);
             }
         } else if (userptr_type[0] == 'a') {
             const void *data = NULL;
@@ -249,7 +249,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
         const char *obj = NULL;
         r = sd_bus_message_read(m, type, &obj);
         if (r >= 0) {
-            memcpy(userptr, obj, PATH_MAX);
+            strncpy(userptr, obj, PATH_MAX);
         }
     } else {
         r = sd_bus_message_read(m, type, userptr);
