@@ -82,6 +82,7 @@ static int is_sensor_available(void) {
 static void do_capture(int reset_timer) {
     if (!capture_frames_brightness()) {
         set_new_backlight(state.ambient_br * 10);
+        INFO("Ambient brightness: %lf. New Backlight pct: %lf\n", state.ambient_br, state.current_bl_pct);
     }
 
     if (reset_timer) {
@@ -94,7 +95,6 @@ static void set_new_backlight(const double perc) {
     const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     const double new_br_pct =  clamp(b, 1, 0);
     
-    INFO("New backlight pct value: %lf\n", new_br_pct);
     set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
 }
 
@@ -116,7 +116,6 @@ static int capture_frames_brightness(void) {
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
         state.ambient_br = compute_average(intensity, conf.num_captures);
-        INFO("Ambient brightness: %lf\n", state.ambient_br);
         emit_prop("CurrentAmbientBr");
     }
     return r;
