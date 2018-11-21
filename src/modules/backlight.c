@@ -3,6 +3,7 @@
 #include <my_math.h>
 #include <interface.h>
 
+static int init_kbd_backlight(void);
 static int is_sensor_available(void);
 static void do_capture(int reset_timer);
 static void set_new_backlight(const double perc);
@@ -17,6 +18,7 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
 
 static int sensor_available;
 static int ac_force_capture;
+static int max_kbd_backlight;
 static sd_bus_slot *slot;
 static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
 static struct self_t self = {
@@ -47,6 +49,10 @@ static void init(void) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
     add_match(&args, &slot, on_sensor_change);
     
+    if (!conf.no_keyboard_bl) {
+        init_kbd_backlight();
+    }
+    
     /* Start module timer: 1ns delay if sensor is available, else start it paused */
     sensor_available = is_sensor_available();
     int fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available);
@@ -71,6 +77,15 @@ static void callback(void) {
     do_capture(1);
 }
 
+static int init_kbd_backlight(void) {
+    SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
+    int r = call(&max_kbd_backlight, "i", &kbd_args, NULL);
+    if (r) {
+        INFO("Keyboard backlight calibration unsupported.\n");
+        conf.no_keyboard_bl = 1;
+    }
+}
+
 static int is_sensor_available(void) {
     int available = 0;
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "IsAvailable");
@@ -81,8 +96,12 @@ static int is_sensor_available(void) {
 
 static void do_capture(int reset_timer) {
     if (!capture_frames_brightness()) {
-        set_new_backlight(state.ambient_br * 10);
-        INFO("Ambient brightness: %lf. New Backlight pct: %lf\n", state.ambient_br, state.current_bl_pct);
+        if (state.ambient_br > conf.shutter_threshold) {
+            set_new_backlight(state.ambient_br * 10);
+            INFO("Ambient brightness: %.3lf -> Backlight pct: %.3lf\n", state.ambient_br, state.current_bl_pct);
+        } else {
+            INFO("Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
+        }
     }
 
     if (reset_timer) {
@@ -107,6 +126,13 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     if (!r && ok) {
         state.current_bl_pct = pct;
         emit_prop("CurrentBlPct");
+    }
+    
+    /* Set keyboard's backlight */
+    if (!conf.no_keyboard_bl) {
+        SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
+        int kbd_pct = pct * max_kbd_backlight;
+        call(NULL, NULL, &kbd_args, "i", kbd_pct);
     }
 }
 

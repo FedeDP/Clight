@@ -99,7 +99,9 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"no-backlight", 0, POPT_ARG_NONE, &modules[BACKLIGHT].state, 100, "Disable backlight module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
-        {"passive", 0, POPT_ARG_NONE, &conf.passive_mode, 100, "Enable passive mode", NULL},
+        {"no-auto-calib", 0, POPT_ARG_NONE, &conf.no_auto_calib, 100, "Disable screen backlight and gamma automatic calibration", NULL},
+        {"no-kbd-backlight", 0, POPT_ARG_NONE, &conf.no_keyboard_bl, 100, "Disable keyboard backlight calibration", NULL},
+        {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
@@ -225,6 +227,10 @@ static void check_conf(void) {
     if (conf.gamma_trans_timeout <= 0) {
         WARN("Wrong gamma_trans_timeout value. Resetting default value.\n");
         conf.gamma_trans_timeout = 300;
+    }
+    if (conf.shutter_threshold < 0 || conf.shutter_threshold >= 1) {
+        WARN("Wrong shutter_threshold value. Resetting default value.\n");
+        conf.shutter_threshold = 0.0;
     }
     
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;

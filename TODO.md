@@ -45,13 +45,21 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 
 ### Passive mode
 - [x] Functional module can also be started in "passive" mode, ie: they are started but paused, and will remain paused. You can only trigger them through bus API.
+- [x] Rename to "NoAutoCalibration"
+
+### KBD backlight
+- [x] Add support for kbd backlight calibration (through https://upower.freedesktop.org/docs/KbdBacklight.html)
+
+### Shutter threshold
+- [x] Add a shutter threshold: when detected ambient brightness is below this threshold, discard the capture.
+
 
 ### TEST
 - [x] Test SensorChanged signal
 
 ### RELEASE
 
-- [x] Update API doc
+- [ ] Update API doc (NoAutoCalib and NoKbdCalib)
 - [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3
 
 ### 3.1

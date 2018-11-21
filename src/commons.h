@@ -104,7 +104,9 @@ struct config {
     int backlight_trans_timeout;            // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int gamma_trans_timeout;                // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
     int dimmer_trans_timeout;               // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
-    int passive_mode;                       // whether clight is running in passive mode
+    int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
+    int no_keyboard_bl;                     // disable keyboard backlight automatic calibration (where supported)
+    double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
 };
 
 /* Global state of program */

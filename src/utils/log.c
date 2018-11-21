@@ -29,10 +29,12 @@ void log_conf(void) {
         fprintf(log_file, "Starting options:\n");
         fprintf(log_file, "\n### Generic ###\n");
         fprintf(log_file, "* Verbose (debugging):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
-        fprintf(log_file, "* Passive mode:\t\t%s\n", conf.passive_mode ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Automatic calibration:\t\t%s\n", conf.no_auto_calib ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Keyboard backlight:\t\t%s\n", conf.no_keyboard_bl ? "Disabled" : "Enabled");
         fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
         fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
+        fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
         
         if (conf.loc.lat != 0.0f || conf.loc.lon != 0.0f) {
             fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.loc.lat, conf.loc.lon);

@@ -30,12 +30,16 @@ _clight()
             COMPREPLY=( $( compgen -W "19:00" -- ${cur}) )
             return 0
             ;;
-        "----dimmer-pct")
+        "--dimmer-pct")
             COMPREPLY=( $( compgen -W "0.2" -- ${cur}) )
             return 0
             ;;
+        "--shutter-thres")
+            COMPREPLY=( $( compgen -W "0.1" -- ${cur}) )
+            return 0
+            ;;
     esac
-    opts="--device --backlight --frames --no-backlight-smooth --no-gamma-smooth --no-dimmer-smooth --day-temp --night-temp --lat --lon --sunrise --sunset --no-gamma --dimmer-pct --no-dimmer --no-dpms --no-inhibit --no-backlight --verbose --passive --version"
+    opts="--device --backlight --frames --no-backlight-smooth --no-gamma-smooth --no-dimmer-smooth --day-temp --night-temp --lat --lon --sunrise --sunset --no-gamma --dimmer-pct --no-dimmer --no-dpms --no-inhibit --no-backlight --verbose --no-auto-calib --version --no-kbd-backlight --shutter-thres"
     if [[ "$cur" == -* ]] || [[ -z "$cur" ]]; then
         COMPREPLY=( $( compgen -W "${opts}" -- ${cur}) )
     fi

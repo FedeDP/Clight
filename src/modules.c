@@ -34,8 +34,8 @@ void init_module(int fd, enum modules module, ...) {
         ERROR("%s\n", strerror(errno));
     }
     
-    /* In passive mode, functional modules are all started paused */
-    if (modules[module].self->functional_module && conf.passive_mode && fd >= 0) {
+    /* When no_auto_calib is true, functional modules are all started paused */
+    if (modules[module].self->functional_module && conf.no_auto_calib && fd >= 0) {
         close(fd);
         fd = DONT_POLL;
     }

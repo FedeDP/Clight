@@ -49,10 +49,12 @@ int read_config(enum CONFIG file) {
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
         config_lookup_bool(&cfg, "no_dimmer", (int *)&modules[DIMMER].state);
         config_lookup_float(&cfg, "dimmer_pct", &conf.dimmer_pct);
+        config_lookup_float(&cfg, "shutter_threshold", &conf.shutter_threshold);
         config_lookup_bool(&cfg, "no_dpms", (int *)&modules[DPMS].state);
         config_lookup_bool(&cfg, "no_inhibit", (int *)&modules[INHIBIT].state);
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
-        config_lookup_bool(&cfg, "passive", &conf.passive_mode);
+        config_lookup_bool(&cfg, "no_auto_calibration", &conf.no_auto_calib);
+        config_lookup_bool(&cfg, "no_kdb_backlight", &conf.no_keyboard_bl);
         
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
@@ -225,8 +227,11 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "verbose", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.verbose);
     
-    setting = config_setting_add(root, "passive", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, conf.passive_mode);
+    setting = config_setting_add(root, "no_auto_calibration", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.no_auto_calib);
+    
+    setting = config_setting_add(root, "no_kdb_backlight", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.no_keyboard_bl);
     
     setting = config_setting_add(root, "sensor_devname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.dev_name);
@@ -239,6 +244,9 @@ int store_config(enum CONFIG file) {
     
     setting = config_setting_add(root, "sunset", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.events[SUNSET]);
+    
+    setting = config_setting_add(root, "shutter_threshold", CONFIG_TYPE_FLOAT);
+    config_setting_set_float(setting, conf.shutter_threshold);
     
     /* -1 here below means append to end of array */
     setting = config_setting_add(root, "ac_backlight_regression_points", CONFIG_TYPE_ARRAY);
