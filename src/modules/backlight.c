@@ -3,7 +3,7 @@
 #include <my_math.h>
 #include <interface.h>
 
-static int init_kbd_backlight(void);
+static void init_kbd_backlight(void);
 static int is_sensor_available(void);
 static void do_capture(int reset_timer);
 static void set_new_backlight(const double perc);
@@ -77,12 +77,11 @@ static void callback(void) {
     do_capture(1);
 }
 
-static int init_kbd_backlight(void) {
+static void init_kbd_backlight(void) {
     SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
     int r = call(&max_kbd_backlight, "i", &kbd_args, NULL);
     if (r) {
         INFO("Keyboard backlight calibration unsupported.\n");
-        conf.no_keyboard_bl = 1;
     }
 }
 
@@ -129,7 +128,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     }
     
     /* Set keyboard's backlight */
-    if (!conf.no_keyboard_bl) {
+    if (max_kbd_backlight > 0) {
         SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
         int kbd_pct = pct * max_kbd_backlight;
         call(NULL, NULL, &kbd_args, "i", kbd_pct);
