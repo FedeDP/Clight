@@ -58,8 +58,7 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Test SensorChanged signal
 
 ### RELEASE
-
-- [ ] Update API doc (NoAutoCalib and NoKbdCalib)
+- [x] Update API doc (NoAutoCalib and NoKbdCalib)
 - [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3
 
 ### 3.1

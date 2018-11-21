@@ -72,6 +72,7 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(struct config, temp[NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcCurvePoints", "ad", get_curve, set_curve, offsetof(struct config, regression_points[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattCurvePoints", "ad", get_curve, set_curve, offsetof(struct config, regression_points[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("ShutterThreshold", "d", NULL, NULL, offsetof(struct config, shutter_threshold), 0),
     SD_BUS_METHOD("Store", NULL, NULL, method_store_conf, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
