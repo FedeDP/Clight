@@ -7,6 +7,7 @@ static void init_kbd_backlight(void);
 static int is_sensor_available(void);
 static void do_capture(int reset_timer);
 static void set_new_backlight(const double perc);
+static void set_keyboard_level(const double level);
 static int capture_frames_brightness(void);
 static void upower_callback(const void *ptr);
 static void interface_calibrate_callback(const void *ptr);
@@ -114,6 +115,20 @@ static void set_new_backlight(const double perc) {
     const double new_br_pct =  clamp(b, 1, 0);
     
     set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+    set_keyboard_level(new_br_pct);
+}
+
+static void set_keyboard_level(const double level) {
+    if (max_kbd_backlight > 0) {
+        SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
+        /* 
+         * keyboard backlight follows opposite curve: 
+         * on high ambient brightness, it must be very low (off)
+         * on low ambient brightness, it must be turned on
+         */
+        int kbd_pct = (1.0 - level) * max_kbd_backlight; 
+        call(NULL, NULL, &kbd_args, "i", kbd_pct);
+    }
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
@@ -125,13 +140,6 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     if (!r && ok) {
         state.current_bl_pct = pct;
         emit_prop("CurrentBlPct");
-    }
-    
-    /* Set keyboard's backlight */
-    if (max_kbd_backlight > 0) {
-        SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
-        int kbd_pct = pct * max_kbd_backlight;
-        call(NULL, NULL, &kbd_args, "i", kbd_pct);
     }
 }
 
