@@ -10,7 +10,12 @@ static void set_temp(int temp);
 static void location_callback(const void *ptr);
 static void interface_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {HARD, LOCATION}, {HARD, XORG}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
+static struct dependency dependencies[] = { 
+    {HARD, LOCATION},   // Needed for sunrise/sunset computation
+    {HARD, XORG},       // This module is xorg only
+    {HARD, CLIGHTD},    // We need clightd
+    {SOFT, INTERFACE}   // It adds a callback on INTERFACE
+};
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,

@@ -7,7 +7,11 @@ static void set_dpms_timeouts(void);
 static void upower_callback(const void *ptr);
 static void interface_timeout_callback(const void *ptr);
 
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {HARD, XORG}, {HARD, CLIGHTD} };
+static struct dependency dependencies[] = { 
+    {SOFT, UPOWER},     // Are we on AC or on BATT?
+    {HARD, XORG},       // This module is xorg only
+    {HARD, CLIGHTD}     // We need clightd
+};
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,

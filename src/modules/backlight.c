@@ -21,7 +21,12 @@ static int sensor_available;
 static int ac_force_capture;
 static int max_kbd_backlight;
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = { {SOFT, GAMMA}, {SOFT, UPOWER}, {HARD, CLIGHTD}, {HARD, INTERFACE} };
+static struct dependency dependencies[] = { 
+    {SOFT, GAMMA},      // Which time of day are we in?
+    {SOFT, UPOWER},     // Are we on AC or on BATT?
+    {HARD, CLIGHTD},    // methods to set screen backlight
+    {HARD, INTERFACE}   // We need INTERFACE module because we are subscribed to "Dimmed" and "Time" signals (thus HARD dep) + we add callbacks on INTERFACE
+}; 
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,

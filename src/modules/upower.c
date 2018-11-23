@@ -5,7 +5,9 @@ static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = { {HARD, BUS} };
+static struct dependency dependencies[] = { 
+    {HARD, BUS}     // we need a bus connection
+};
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies

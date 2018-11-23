@@ -20,11 +20,14 @@ static void interface_timeout_callback(const void *ptr);
 static sd_bus_slot *slot;
 static int running;
 static char client[PATH_MAX + 1];
-/*
- * DIMMER needs BACKLIGHT as it needs to be sure that state.current_br_pct is correctly setted.
- * BACKLIGHT will set state.current_br_pct at first capture (1ns after clight's startup)
- */
-static struct dependency dependencies[] = { {SOFT, UPOWER}, {SOFT, BACKLIGHT}, {HARD, XORG}, {SOFT, INHIBIT}, {HARD, CLIGHTD}, {SOFT, INTERFACE} };
+static struct dependency dependencies[] = { 
+    {SOFT, UPOWER},     // Are we on AC or BATT?
+    {SOFT, BACKLIGHT},  // We need BACKLIGHT as we have to be sure that state.current_br_pct is correctly setted
+    {HARD, XORG},       // This module is xorg only
+    {SOFT, INHIBIT},    // We may get inhibited by powersave
+    {HARD, CLIGHTD},    // We need clightd
+    {SOFT, INTERFACE}   // It adds callbacks on INTERFACE
+};
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,

@@ -28,8 +28,8 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Drop clight systemd service
 - [x] Rename BRIGHTNESS module to BACKLIGHT
 - [x] Store and expose latest mean ambient brightness as captured by clightd
-- [ ] Port CI to sr.ht
-- [ ] Document each module's dependencies
+- [x] Port CI to sr.ht
+- [x] Document each module's dependencies
 
 ### Bus API
 - [x] add bus interface methods to change timeouts (dimmer, dpms and brightness modules)
@@ -70,4 +70,3 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [ ] Use the Time PropertiesChanged signal to change KDE/GNOME theme at sunset/sunrise 
 - [ ] GNOME: http://www.fandigital.com/2012/06/change-theme-command-line-gnome.html / https://askubuntu.com/questions/546402/how-to-change-gnome-shell-theme-in-ubuntu-14-10)
 - [ ] KDE: https://userbase.kde.org/KDE_Connect/Tutorials/Useful_commands#Change_look_and_feel
-- [ ] Add a calibration mode?

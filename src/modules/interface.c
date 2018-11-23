@@ -97,7 +97,9 @@ static const sd_bus_vtable conf_to_vtable[] = {
 };
 
 static struct prop_callback _cb;
-static struct dependency dependencies[] = { {SUBMODULE, USERBUS} };
+static struct dependency dependencies[] = { 
+    {SUBMODULE, USERBUS}    // It must be started together with userbus
+};
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps = dependencies,
@@ -277,13 +279,15 @@ int emit_prop(const char *signal) {
 }
 
 int add_prop_callback(struct prop_cb *cb) {
-    struct prop_cb *tmp = realloc(_cb.callbacks, sizeof(struct prop_cb) * (++_cb.num_callbacks));
-    if (tmp) {
-        _cb.callbacks = tmp;
-        _cb.callbacks[_cb.num_callbacks - 1] = *cb;
-    } else {
-        free(_cb.callbacks);
-        ERROR("%s\n", strerror(errno));
+    if (is_running((self.idx))) {
+        struct prop_cb *tmp = realloc(_cb.callbacks, sizeof(struct prop_cb) * (++_cb.num_callbacks));
+        if (tmp) {
+            _cb.callbacks = tmp;
+            _cb.callbacks[_cb.num_callbacks - 1] = *cb;
+        } else {
+            free(_cb.callbacks);
+            ERROR("%s\n", strerror(errno));
+        }
     }
     return 0;
 }
