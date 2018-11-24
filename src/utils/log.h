@@ -2,13 +2,15 @@
 
 #include <commons.h>
 
-#define DEBUG(msg, ...) if (conf.verbose) log_message(__FILE__, __LINE__, 'D', msg, ##__VA_ARGS__)
-#define INFO(msg, ...) log_message(__FILE__, __LINE__, 'I', msg, ##__VA_ARGS__)
-#define WARN(msg, ...) log_message(__FILE__, __LINE__, 'W', msg, ##__VA_ARGS__)
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+
+#define DEBUG(msg, ...) if (conf.verbose) log_message(__FILENAME__, __LINE__, 'D', msg, ##__VA_ARGS__)
+#define INFO(msg, ...) log_message(__FILENAME__, __LINE__, 'I', msg, ##__VA_ARGS__)
+#define WARN(msg, ...) log_message(__FILENAME__, __LINE__, 'W', msg, ##__VA_ARGS__)
 /* ERROR macro will leave clight by calling longjmp */
 #define ERROR(msg, ...) \
 do { \
-    log_message(__FILE__, __LINE__, 'E', msg, ##__VA_ARGS__); \
+    log_message(__FILENAME__, __LINE__, 'E', msg, ##__VA_ARGS__); \
     longjmp(state.quit_buf, ERR_QUIT); \
 } while (0)
 
