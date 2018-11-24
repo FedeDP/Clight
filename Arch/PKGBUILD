@@ -2,7 +2,7 @@
 
 pkgname=clight-git
 _gitname=Clight
-pkgver=r78.daf725b
+pkgver=r484.0edbb8e
 pkgrel=1
 pkgdesc="A C daemon that turns your webcam into a light sensor. It can also change display gamma temperature, dim your screen and set your dpms."
 arch=('i686' 'x86_64')
@@ -29,8 +29,7 @@ prepare() {
 
 build() {
     cd "${srcdir}/${_gitname}/build"
-    cd build
-    cmake
+    cmake \
         -G "Unix Makefiles" \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
