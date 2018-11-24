@@ -92,4 +92,4 @@ install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
 
 install(FILES COPYING
-        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/${PROJECT_NAME}")
+        DESTINATION "${CMAKE_INSTALL_DOCDIR}")
