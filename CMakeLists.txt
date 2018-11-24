@@ -60,11 +60,9 @@ set_target_properties(
     LINK_FLAGS "${COMBINED_LDFLAGS}"
 )
 
-
 # Installation of targets (must be before file configuration to work)
 install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
-
 
 # Configure files with install paths
 set(EXTRA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Extra")
@@ -72,7 +70,6 @@ set(EXTRA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Extra")
 configure_file(${EXTRA_DIR}/org.clight.clight.service
                org.clight.clight.service
                @ONLY)
-
 
 # Installation of files
 pkg_get_variable(COMPLETIONS_DIR bash-completion completionsdir)
@@ -90,6 +87,3 @@ install(FILES ${EXTRA_DIR}/clight
         DESTINATION ${COMPLETIONS_DIR})
 install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
-
-install(FILES COPYING
-        DESTINATION "${CMAKE_INSTALL_DOCDIR}")
