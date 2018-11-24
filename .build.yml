@@ -11,10 +11,11 @@ tasks:
   - prepare: |
       cd Clight
       mkdir build
-      (cd build && cmake -DCMAKE_BUILD_TYPE=Debug ..)
+      cd build
+      cmake -DCMAKE_BUILD_TYPE=Debug ../
   - build: |
-      cd Clightd
-      (cd build && make)
+      cd Clight/build
+      make
 triggers:
   - action: email
     condition: failure
