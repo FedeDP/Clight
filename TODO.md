@@ -54,6 +54,9 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Add a shutter threshold: when detected ambient brightness is below this threshold, discard the capture.
 
 
+### Cmake
+- [x] Switch to cmake
+
 ### TEST
 - [x] Test SensorChanged signal
 
@@ -62,8 +65,6 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [ ] Improve MINIMUM_CLIGHTD_VERSION_MAJ to 3
 
 ### 3.1
-
-- [ ] Add loglevel conf instead of only --verbose option?
 - [ ] Write a plasma5-applet? Eg: start from plasma-redshift applet
 
 ## Ideas

@@ -55,7 +55,6 @@ string(REPLACE ";" " " COMBINED_LDFLAGS "${COMBINED_LDFLAGS}")
 # Set the LDFLAGS target property
 set_target_properties(
     ${PROJECT_NAME} PROPERTIES
-    VERSION ${PROJECT_VERSION}
     LINK_FLAGS "${COMBINED_LDFLAGS}"
 )
 
