@@ -1,5 +1,6 @@
 *.kdev4
-.kdev4/
-clight
 *.o
+.kdev4/
+build/
+clight
 Debian/
