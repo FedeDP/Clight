@@ -81,7 +81,10 @@ install(FILES ${EXTRA_DIR}/desktop/clight.desktop
         DESTINATION /etc/xdg/autostart)
 install(FILES ${EXTRA_DIR}/desktop/clightc.desktop
         DESTINATION /usr/share/applications)
-install(FILES ${EXTRA_DIR}/clight
-        DESTINATION ${COMPLETIONS_DIR})
+
+if (COMPLETIONS_DIR)
+    install(FILES ${EXTRA_DIR}/clight
+            DESTINATION ${COMPLETIONS_DIR})
+endif()
 install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
