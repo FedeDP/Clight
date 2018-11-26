@@ -43,6 +43,10 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Remove ApplyGamma and automatically set new temperature when DailyTemp/NightTemp are changed
 - [x] Rename "StoreConf" to only "Store" as it is already under /org/clight/clight/Conf path
 
+- [x] Expose each module state in /org/clight/clight/Modules
+- [ ] const? or emits-change?
+- [ ] add doc
+
 ### Passive mode
 - [x] Functional module can also be started in "passive" mode, ie: they are started but paused, and will remain paused. You can only trigger them through bus API.
 - [x] Rename to "NoAutoCalibration"

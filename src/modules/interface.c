@@ -3,6 +3,7 @@
 #include <interface.h>
 #include <config.h>
 
+static int build_modules_vtable(sd_bus *userbus);
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -26,10 +27,7 @@ struct prop_callback {
 };
 
 static const char object_path[] = "/org/clight/clight";
-static const char conf_path[] = "/org/clight/clight/Conf";
-static const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
 static const char bus_interface[] = "org.clight.clight";
-static const char conf_interface[] = "org.clight.clight.Conf";
 
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
@@ -96,6 +94,8 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
+static sd_bus_vtable module_vtable[MODULES_NUM + 2];
+
 static struct prop_callback _cb;
 static struct dependency dependencies[] = { 
     {SUBMODULE, USERBUS}    // It must be started together with userbus
@@ -109,6 +109,10 @@ static struct self_t self = {
 MODULE(INTERFACE);
 
 static void init(void) {
+    const char conf_path[] = "/org/clight/clight/Conf";
+    const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
+    const char conf_interface[] = "org.clight.clight.Conf";
+
     sd_bus **userbus = get_user_bus();
     /* Main interface */
     int r = sd_bus_add_object_vtable(*userbus,
@@ -133,6 +137,9 @@ static void init(void) {
                                   conf_interface,
                                   conf_to_vtable,
                                   &conf);
+    
+    /* Modules interface */
+    r += build_modules_vtable(*userbus);
     if (r < 0) {
         WARN("Could not create Bus Interface: %s\n", strerror(-r));
     } else {
@@ -160,6 +167,25 @@ static void destroy(void) {
     if (_cb.callbacks) {
         free(_cb.callbacks);
     }
+}
+
+static int build_modules_vtable(sd_bus *userbus) {
+    const char module_path[] = "/org/clight/clight/Modules";
+    const char module_interface[] = "org.clight.clight.Modules";
+    
+    int i = 0;
+    module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_START(0);
+    for (i = 1; i <= MODULES_NUM; i++) {
+        module_vtable[i] = (sd_bus_vtable) SD_BUS_PROPERTY(modules[i - 1].self->name, "u", NULL, 
+                                                           offsetof(struct module, state) + (sizeof(struct module) * (i - 1)), SD_BUS_VTABLE_PROPERTY_CONST);
+    }
+    module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_END;
+    return sd_bus_add_object_vtable(userbus,
+                                  NULL,
+                                  module_path,
+                                  module_interface,
+                                  module_vtable,
+                                  modules);
 }
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
