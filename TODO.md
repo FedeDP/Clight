@@ -44,7 +44,6 @@ THIS NEEDS TO BE SOLVED BY GEOCLUE. /usr/lib/geoclue-2.0/demos/where-am-i takes 
 - [x] Rename "StoreConf" to only "Store" as it is already under /org/clight/clight/Conf path
 
 - [x] Expose each module state in /org/clight/clight/Modules
-- [ ] const? or emits-change?
 - [ ] add doc
 
 ### Passive mode

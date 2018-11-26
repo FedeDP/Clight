@@ -297,9 +297,11 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
 int emit_prop(const char *signal) {
     if (is_running((self.idx))) {
         sd_bus **userbus = get_user_bus();
-        sd_bus_emit_properties_changed(*userbus, object_path, bus_interface, signal, NULL);
-        run_prop_callbacks(signal);
-        return 0;
+        if (*userbus) {
+            sd_bus_emit_properties_changed(*userbus, object_path, bus_interface, signal, NULL);
+            run_prop_callbacks(signal);
+            return 0;
+        }
     }
     return -1;
 }
