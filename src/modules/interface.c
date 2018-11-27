@@ -177,7 +177,7 @@ static int build_modules_vtable(sd_bus *userbus) {
     module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_START(0);
     for (i = 1; i <= MODULES_NUM; i++) {
         module_vtable[i] = (sd_bus_vtable) SD_BUS_PROPERTY(modules[i - 1].self->name, "u", NULL, 
-                                                           offsetof(struct module, state) + (sizeof(struct module) * (i - 1)), SD_BUS_VTABLE_PROPERTY_CONST);
+                                                           offsetof(struct module, state) + (sizeof(struct module) * (i - 1)), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE);
     }
     module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_END;
     return sd_bus_add_object_vtable(userbus,

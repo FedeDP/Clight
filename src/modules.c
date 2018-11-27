@@ -1,8 +1,10 @@
 #include <modules.h>
+#include <interface.h>
 #include <bus.h>
 
 static void init_submodules(const enum modules module);
 static void started_cb(enum modules module);
+static void set_state(struct module *mod, const enum module_states state);
 static void destroy_module(const enum modules module);
 static void disable_module(const enum modules module);
 
@@ -61,7 +63,7 @@ void init_module(int fd, enum modules module, ...) {
             ERROR("%s\n", strerror(errno));
         }
         
-        modules[module].state = RUNNING;
+        set_state(&modules[module], RUNNING);
         
         DEBUG("%s module started.\n", modules[module].self->name);
         
@@ -157,6 +159,11 @@ static void started_cb(enum modules module) {
     }
 }
 
+static void set_state(struct module *mod, const enum module_states state) {
+    mod->state = state;
+    emit_prop(mod->self->name);
+}
+
 /*
  * Calls correct poll cb function;
  * then, if there are modules depending on this module,
@@ -193,7 +200,7 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
  */
 void disable_module(const enum modules module) {
     if (!is_disabled(module) && !is_destroyed(module)) {
-        modules[module].state = DISABLED;
+        set_state(&modules[module], DISABLED);
         DEBUG("%s module disabled.\n", modules[module].self->name);
 
         /* Cycle to disable all modules dependent on "module", if dep is HARD */
@@ -259,7 +266,7 @@ static void destroy_module(const enum modules module) {
             /* stop polling on this module! */
             main_p[module].fd = -1;
         }
-        modules[module].state = DESTROYED;
+        set_state(&modules[module], DESTROYED);
         DEBUG("%s module destroyed.\n", modules[module].self->name);
     }
 }

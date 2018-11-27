@@ -24,7 +24,7 @@ static int check(void) {
 }
 
 static void destroy(void) {
-    state.quit = ERR_QUIT;
+    /* Skeleton function needed for modules interface */
 }
 
 static void callback(void) {

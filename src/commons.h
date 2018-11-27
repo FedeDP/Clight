@@ -55,9 +55,6 @@ enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
 /* Module states */
 enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, DESTROYED };
 
-/* Module management operations */
-enum module_op { PAUSE, RESUME, OP_NUM };
-
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
 
