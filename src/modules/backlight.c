@@ -137,7 +137,7 @@ static void set_keyboard_level(const double level) {
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
     
     /* Set backlight on both internal monitor (in case of laptop) and external ones */
     int ok;
