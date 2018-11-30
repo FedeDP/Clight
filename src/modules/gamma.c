@@ -31,7 +31,7 @@ static void init(void) {
     struct bus_cb loc_cb = { LOCATION, location_callback };
     struct bus_cb interface_cb = { INTERFACE, interface_callback, "gamma" };
 
-    int fd = start_timer(CLOCK_REALTIME, 0, 1);
+    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     INIT_MOD(fd, &loc_cb, &interface_cb);
 }
 
