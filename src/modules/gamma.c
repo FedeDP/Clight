@@ -74,9 +74,9 @@ static void check_gamma(void) {
     set_temp(conf.temp[state.time]);
 
     /* desired gamma temp has been set. Set new GAMMA timer and reset transitioning state. */
-    t = state.events[next_event] + event_time_range;
-    INFO("Next gamma alarm due to: %s", ctime(&t));
-    set_timeout(t, 0, main_p[self.idx].fd, TFD_TIMER_ABSTIME);
+    time_t next = state.events[next_event] + event_time_range;
+    INFO("Next gamma alarm due to: %s", ctime(&next));
+    set_timeout(next - t, 0, main_p[self.idx].fd, 0);
 
     /* 
      * if we entered/left an event, emit PropertiesChanged signal
