@@ -3,9 +3,9 @@
 #include <interface.h>
 
 static void check_gamma(void);
-static void get_gamma_events(time_t *now, const float lat, const float lon, int day);
-static void check_next_event(time_t *now);
-static void check_state(time_t *now);
+static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
+static void check_next_event(const time_t *now);
+static void check_state(const time_t *now);
 static void set_temp(int temp);
 static void location_callback(const void *ptr);
 static void interface_callback(const void *ptr);
@@ -53,7 +53,7 @@ static void callback(void) {
 static void check_gamma(void) {
     static int first_time = 1;
     
-    time_t t = time(NULL);
+    const time_t t = time(NULL);
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
      * (as it will normally only be needed to get new events for tomorrow, once clight is started)
@@ -101,7 +101,7 @@ static void check_gamma(void) {
  * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  * Probably it is just some ms in advance, but rounding it to seconds returns 1s in advance.
  */
-static void get_gamma_events(time_t *now, const float lat, const float lon, int day) {
+static void get_gamma_events(const time_t *now, const float lat, const float lon, int day) {
     time_t t;
 
     /* only every new day, after latest event of today finished */
@@ -154,7 +154,7 @@ static void get_gamma_events(time_t *now, const float lat, const float lon, int 
  * Updates state.next_event global var, according to now time_t value.
  * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  */
-static void check_next_event(time_t *now) {
+static void check_next_event(const time_t *now) {
     if (*now + 1 < state.events[SUNRISE] + conf.event_duration || state.events[SUNSET] == -1) {
         next_event = SUNRISE;
     } else {
@@ -171,7 +171,7 @@ static void check_next_event(time_t *now) {
  * 0 if we just entered an event (so next_event has to be exactly event time, to set new temp),
  * 30mins after event to remove EVENT state.
  */
-static void check_state(time_t *now) {
+static void check_state(const time_t *now) {
     if (labs(state.events[next_event] - (*now + 1)) <= conf.event_duration) {
         int event_t;
 
