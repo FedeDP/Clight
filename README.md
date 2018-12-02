@@ -14,7 +14,8 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 *For any other info, please feel free to open an issue.*  
 
 ## Arch AUR packages
-Clight is available on AUR: https://aur.archlinux.org/packages/clight-git/ .
+Clight is available on AUR as both stable or devel package: https://aur.archlinux.org/packages/?K=clight .  
+Note that devel package may break in some weird ways during development. Use it at your own risk.
 
 ## License
 This software is distributed with GPL license, see [COPYING](https://github.com/FedeDP/Clight/blob/master/COPYING) file for more informations.
