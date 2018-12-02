@@ -2,7 +2,7 @@
 
 static int check_clightd_version(void);
 
-#define MINIMUM_CLIGHTD_VERSION_MAJ 2
+#define MINIMUM_CLIGHTD_VERSION_MAJ 3
 #define MINIMUM_CLIGHTD_VERSION_MIN 0
 
 static struct dependency dependencies[] = { 
