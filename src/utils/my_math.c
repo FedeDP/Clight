@@ -34,7 +34,7 @@ double radToDeg(double angleRad) {
     return (180.0 * angleRad / M_PI);
 }
 
-/* 
+/*
  * Compute mean and normalize between 0-1
  */
 double compute_average(double *intensity, int num) {
@@ -44,7 +44,7 @@ double compute_average(double *intensity, int num) {
 }
 
 /*
- * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C 
+ * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C
  */
 void polynomialfit(enum ac_states s) {
     gsl_multifit_linear_workspace *ws;
@@ -72,7 +72,7 @@ void polynomialfit(enum ac_states s) {
     for(i = 0; i < DEGREE; i++) {
         state.fit_parameters[s][i] = gsl_vector_get(c, i);
     }
-    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == 0 ? "AC" : "BATT", state.fit_parameters[s][0], 
+    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == 0 ? "AC" : "BATT", state.fit_parameters[s][0],
           state.fit_parameters[s][1], state.fit_parameters[s][2]);
 
     gsl_multifit_linear_free(ws);
@@ -83,8 +83,8 @@ void polynomialfit(enum ac_states s) {
 }
 
 double clamp(double value, double max, double min) {
-    if (value > max) { 
-        return max; 
+    if (value > max) {
+        return max;
     }
     if (value < min) {
         return min;

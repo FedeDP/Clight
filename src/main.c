@@ -1,5 +1,5 @@
 /* BEGIN_COMMON_COPYRIGHT_HEADER
- * 
+ *
  * clight: C daemon utility to automagically adjust screen backlight to match ambient brightness.
  * https://github.com/FedeDP/Clight/tree/master/clight
  *
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 }
 
 /*
- * First of all loads options from both global and 
+ * First of all loads options from both global and
  * local config file, and from cmdline options.
  * Then init needed modules.
  */
@@ -74,8 +74,8 @@ static void sigsegv_handler(int signum) {
     kill(getpid(), signum);
 }
 
-/* 
- * Init every module 
+/*
+ * Init every module
  */
 static void init_all_modules(void) {
     for (int i = 0; i < MODULES_NUM; i++) {
@@ -88,7 +88,7 @@ static void init_all_modules(void) {
  */
 static void destroy(void) {
     /*
-     * Avoid continuously cyclying here if any error happens inside destroy_modules() 
+     * Avoid continuously cyclying here if any error happens inside destroy_modules()
      * (as ERROR macro would longjmp again here);
      * Only try once, otherwise avoid destroying modules and go on closing log
      */

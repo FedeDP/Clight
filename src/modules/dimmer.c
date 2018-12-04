@@ -20,7 +20,7 @@ static void interface_timeout_callback(const void *ptr);
 static sd_bus_slot *slot;
 static int running;
 static char client[PATH_MAX + 1];
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {SOFT, UPOWER},     // Are we on AC or BATT?
     {SOFT, BACKLIGHT},  // We need BACKLIGHT as we have to be sure that state.current_br_pct is correctly setted
     {HARD, XORG},       // This module is xorg only
@@ -44,7 +44,7 @@ static void init(void) {
 
     int r = idle_init();
 
-    /* 
+    /*
      * If dimmer is started and BACKLIGHT module is disabled, or automatic calibration is disabled,
      * we need to ensure to start from a well known backlight level.
      * Force 100% backlight level.
@@ -188,7 +188,7 @@ static void upower_callback(const void *ptr) {
     }
 }
 
-/* 
+/*
  * If we're getting inhibited, stop idle client.
  * Else, restart it.
  */

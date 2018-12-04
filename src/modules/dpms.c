@@ -7,7 +7,7 @@ static void set_dpms_timeouts(void);
 static void upower_callback(const void *ptr);
 static void interface_timeout_callback(const void *ptr);
 
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {SOFT, UPOWER},     // Are we on AC or on BATT?
     {HARD, XORG},       // This module is xorg only
     {HARD, CLIGHTD}     // We need clightd
@@ -41,8 +41,8 @@ static void destroy(void) {
     /* Skeleton function */
 }
 
-/* 
- * Set correct timeouts or disable dpms 
+/*
+ * Set correct timeouts or disable dpms
  * if any timeout for current AC state is <= 0.
  */
 void set_dpms_timeouts(void) {
@@ -56,11 +56,11 @@ void set_dpms_timeouts(void) {
 
     if (!need_disable) {
         SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "SetTimeouts");
-        call(NULL, NULL, &args, "ssiii", state.display, state.xauthority, 
+        call(NULL, NULL, &args, "ssiii", state.display, state.xauthority,
              conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
-        INFO("Setted DPMS timeouts: Standby -> %ds, Suspend -> %ds, Off -> %ds.\n", 
-             conf.dpms_timeouts[state.ac_state][STANDBY], 
-             conf.dpms_timeouts[state.ac_state][SUSPEND], 
+        INFO("Setted DPMS timeouts: Standby -> %ds, Suspend -> %ds, Off -> %ds.\n",
+             conf.dpms_timeouts[state.ac_state][STANDBY],
+             conf.dpms_timeouts[state.ac_state][SUSPEND],
              conf.dpms_timeouts[state.ac_state][OFF]);
     } else {
         INFO("Disabling DPMS as a timeout <= 0 has been found.\n");

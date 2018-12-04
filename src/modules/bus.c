@@ -61,7 +61,7 @@ void bus_callback(const enum bus_type type) {
         r = sd_bus_process(cb_bus, NULL);
         /* check if any match changed bus_cb_idx, then call correct callback */
         if (state.userdata.bus_mod_idx != MODULES_NUM) {
-            /* 
+            /*
              * Run callbacks before poll_cb, as poll_cb will call
              * started_cb, thus starting all of dependent modules;
              * some of these modules may hook a callback on this module

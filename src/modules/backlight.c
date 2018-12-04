@@ -21,12 +21,12 @@ static int sensor_available;
 static int ac_force_capture;
 static int max_kbd_backlight;
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {SOFT, GAMMA},      // Which time of day are we in?
     {SOFT, UPOWER},     // Are we on AC or on BATT?
     {HARD, CLIGHTD},    // methods to set screen backlight
     {HARD, INTERFACE}   // We need INTERFACE module because we are subscribed to "Dimmed" and "Time" signals (thus HARD dep) + we add callbacks on INTERFACE
-}; 
+};
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
@@ -126,12 +126,12 @@ static void set_new_backlight(const double perc) {
 static void set_keyboard_level(const double level) {
     if (max_kbd_backlight > 0) {
         SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
-        /* 
-         * keyboard backlight follows opposite curve: 
+        /*
+         * keyboard backlight follows opposite curve:
          * on high ambient brightness, it must be very low (off)
          * on low ambient brightness, it must be turned on
          */
-        int kbd_pct = (1.0 - level) * max_kbd_backlight; 
+        int kbd_pct = (1.0 - level) * max_kbd_backlight;
         call(NULL, NULL, &kbd_args, "i", kbd_pct);
     }
 }
@@ -165,8 +165,8 @@ static void upower_callback(const void *ptr) {
     /* Force check that we received an ac_state changed event for real */
     if (old_ac_state != state.ac_state && sensor_available) {
         if (!state.is_dimmed) {
-            /* 
-            * do a capture right now as we have 2 different curves for 
+            /*
+            * do a capture right now as we have 2 different curves for
             * different AC_STATES, so let's properly honor new curve
             */
             set_timeout(0, 1, main_p[self.idx].fd, 0);
@@ -209,17 +209,17 @@ static void dimmed_callback(void) {
             old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
             set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
         } else {
-            /* 
-             * We have just left dimmed state, reset old timeout 
+            /*
+             * We have just left dimmed state, reset old timeout
              * (checking if ac state changed in the meantime)
              */
             int timeout_nsec = 0;
             int timeout_sec = 0;
             if ((ac_force_capture % 2) == 1) {
-                // Immediately force a capture if ac state changed while we were dimmed 
+                // Immediately force a capture if ac state changed while we were dimmed
                 timeout_nsec = 1;
             } else if (sensor_available != old_sensor_available) {
-                // Immediately force a capture if a sensor appeared while we were dimmed 
+                // Immediately force a capture if a sensor appeared while we were dimmed
                 timeout_nsec = 1;
             } else {
                 // Apply correct timeout for current ac state and day time
