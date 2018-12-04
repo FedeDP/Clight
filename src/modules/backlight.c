@@ -21,12 +21,12 @@ static int sensor_available;
 static int ac_force_capture;
 static int max_kbd_backlight;
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {SOFT, GAMMA},      // Which time of day are we in?
     {SOFT, UPOWER},     // Are we on AC or on BATT?
     {HARD, CLIGHTD},    // methods to set screen backlight
     {HARD, INTERFACE}   // We need INTERFACE module because we are subscribed to "Dimmed" and "Time" signals (thus HARD dep) + we add callbacks on INTERFACE
-}; 
+};
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
     .deps =  dependencies,
@@ -40,7 +40,7 @@ static void init(void) {
     struct bus_cb interface_calibrate_cb = { INTERFACE, interface_calibrate_callback, "calibrate" };
     struct bus_cb interface_curve_cb = { INTERFACE, interface_curve_callback, "curve" };
     struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "backlight_timeout" };
-    
+
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
@@ -50,19 +50,19 @@ static void init(void) {
     struct prop_cb time_cb = { "Time", time_callback };
     add_prop_callback(&dimmed_cb);
     add_prop_callback(&time_cb);
-    
+
     /* We do not fail if this fails */
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
     add_match(&args, &slot, on_sensor_change);
-    
+
     if (!conf.no_keyboard_bl) {
         init_kbd_backlight();
     }
-    
+
     /* Start module timer: 1ns delay if sensor is available, else start it paused */
     sensor_available = is_sensor_available();
     int fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available);
-    
+
     INIT_MOD(fd, &upower_cb, &interface_calibrate_cb, &interface_curve_cb, &interface_to_cb);
 }
 
@@ -79,7 +79,7 @@ static void destroy(void) {
 static void callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-    
+
     do_capture(1);
 }
 
@@ -94,7 +94,7 @@ static void init_kbd_backlight(void) {
 static int is_sensor_available(void) {
     int available = 0;
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "IsAvailable");
-    
+
     int r = call(&available, "sb", &args, "s", conf.dev_name);
     return r == 0 && available;
 }
@@ -118,7 +118,7 @@ static void set_new_backlight(const double perc) {
     /* y = a0 + a1x + a2x^2 */
     const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     const double new_br_pct =  clamp(b, 1, 0);
-    
+
     set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
     set_keyboard_level(new_br_pct);
 }
@@ -126,19 +126,19 @@ static void set_new_backlight(const double perc) {
 static void set_keyboard_level(const double level) {
     if (max_kbd_backlight > 0) {
         SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
-        /* 
-         * keyboard backlight follows opposite curve: 
+        /*
+         * keyboard backlight follows opposite curve:
          * on high ambient brightness, it must be very low (off)
          * on low ambient brightness, it must be turned on
          */
-        int kbd_pct = (1.0 - level) * max_kbd_backlight; 
+        int kbd_pct = (1.0 - level) * max_kbd_backlight;
         call(NULL, NULL, &kbd_args, "i", kbd_pct);
     }
 }
 
 void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
-    
+
     /* Set backlight on both internal monitor (in case of laptop) and external ones */
     int ok;
     int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
@@ -165,8 +165,8 @@ static void upower_callback(const void *ptr) {
     /* Force check that we received an ac_state changed event for real */
     if (old_ac_state != state.ac_state && sensor_available) {
         if (!state.is_dimmed) {
-            /* 
-            * do a capture right now as we have 2 different curves for 
+            /*
+            * do a capture right now as we have 2 different curves for
             * different AC_STATES, so let's properly honor new curve
             */
             set_timeout(0, 1, main_p[self.idx].fd, 0);
@@ -201,7 +201,7 @@ static void interface_timeout_callback(const void *ptr) {
 /* Callback on state.is_dimmed changes */
 static void dimmed_callback(void) {
     static int old_sensor_available = 1;
-    
+
     if (sensor_available) {
         static int old_elapsed = 0;
 
@@ -209,17 +209,17 @@ static void dimmed_callback(void) {
             old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
             set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
         } else {
-            /* 
-             * We have just left dimmed state, reset old timeout 
+            /*
+             * We have just left dimmed state, reset old timeout
              * (checking if ac state changed in the meantime)
              */
             int timeout_nsec = 0;
             int timeout_sec = 0;
             if ((ac_force_capture % 2) == 1) {
-                // Immediately force a capture if ac state changed while we were dimmed 
+                // Immediately force a capture if ac state changed while we were dimmed
                 timeout_nsec = 1;
             } else if (sensor_available != old_sensor_available) {
-                // Immediately force a capture if a sensor appeared while we were dimmed 
+                // Immediately force a capture if a sensor appeared while we were dimmed
                 timeout_nsec = 1;
             } else {
                 // Apply correct timeout for current ac state and day time

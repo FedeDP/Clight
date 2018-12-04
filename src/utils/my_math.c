@@ -34,7 +34,7 @@ double radToDeg(double angleRad) {
     return (180.0 * angleRad / M_PI);
 }
 
-/* 
+/*
  * Compute mean and normalize between 0-1
  */
 double compute_average(double *intensity, int num) {
@@ -44,7 +44,7 @@ double compute_average(double *intensity, int num) {
 }
 
 /*
- * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C 
+ * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C
  */
 void polynomialfit(enum ac_states s) {
     gsl_multifit_linear_workspace *ws;
@@ -72,9 +72,9 @@ void polynomialfit(enum ac_states s) {
     for(i = 0; i < DEGREE; i++) {
         state.fit_parameters[s][i] = gsl_vector_get(c, i);
     }
-    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == 0 ? "AC" : "BATT", state.fit_parameters[s][0], 
+    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == 0 ? "AC" : "BATT", state.fit_parameters[s][0],
           state.fit_parameters[s][1], state.fit_parameters[s][2]);
-    
+
     gsl_multifit_linear_free(ws);
     gsl_matrix_free(X);
     gsl_matrix_free(cov);
@@ -83,8 +83,8 @@ void polynomialfit(enum ac_states s) {
 }
 
 double clamp(double value, double max, double min) {
-    if (value > max) { 
-        return max; 
+    if (value > max) {
+        return max;
     }
     if (value < min) {
         return min;
@@ -113,14 +113,14 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     timeinfo->tm_yday += tomorrow;
     timeinfo->tm_mday += tomorrow;
     timeinfo->tm_sec = 0;
-    
+
     /* If user provided a sunrise/sunset time, use them */
     if (strlen(conf.events[event]) > 0) {
         strptime(conf.events[event], "%R", timeinfo);
         *tt = mktime(timeinfo);
         return 0;
     }
-    
+
     // 2. convert the longitude to hour value and calculate an approximate time
     float lngHour = to_hours(lng);
     float t;
@@ -129,16 +129,16 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     } else {
         t = timeinfo->tm_yday + (18.0 - lngHour) / 24.0;
     }
-    
+
     // 3. calculate the Sun's mean anomaly
     float M = (0.9856 * t) - 3.289;
-    
+
     // 4. calculate the Sun's true longitude
     float L = fmod(M + 1.916 * sin(degToRad(M)) + 0.020 * sin(2 * degToRad(M)) + 282.634, 360.0);
-    
+
     // 5a. calculate the Sun's right ascension
     float RA = fmod(radToDeg(atan(0.91764 * tan(degToRad(L)))), 360.0);
-    
+
     // 5b. right ascension value needs to be in the same quadrant as L
     float Lquadrant = floor(L / 90) * 90;
     float RAquadrant = floor(RA / 90) * 90;
@@ -171,14 +171,14 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
 
     // 9. adjust back to UTC
     float UT = fmod(24 + fmod(T - lngHour, 24.0), 24.0);
-    
+
     double hours;
     double minutes = modf(UT, &hours) * 60;
-    
+
     // set correct values
     timeinfo->tm_hour = hours;
     timeinfo->tm_min = minutes;
-    
+
     // store in user provided ptr correct data
     *tt = timegm(timeinfo);
     if (*tt == (time_t) -1) {

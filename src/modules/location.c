@@ -14,7 +14,7 @@ static void cache_location(void);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {HARD, BUS}     // we need a bus connection
 };
 static struct self_t self = {

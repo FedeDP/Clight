@@ -5,7 +5,7 @@ static int inhibit_init(void);
 static int on_inhibit_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {HARD, USERBUS}     // It needs a connection to user bus to be opened
 };
 static struct self_t self = {

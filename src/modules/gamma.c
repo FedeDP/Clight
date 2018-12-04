@@ -10,7 +10,7 @@ static void set_temp(int temp);
 static void location_callback(const void *ptr);
 static void interface_callback(const void *ptr);
 
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {HARD, LOCATION},   // Needed for sunrise/sunset computation
     {HARD, XORG},       // This module is xorg only
     {HARD, CLIGHTD},    // We need clightd
@@ -52,7 +52,7 @@ static void callback(void) {
 
 static void check_gamma(void) {
     static int first_time = 1;
-    
+
     const time_t t = time(NULL);
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
@@ -78,7 +78,7 @@ static void check_gamma(void) {
     INFO("Next gamma alarm due to: %s", ctime(&next));
     set_timeout(next - t, 0, main_p[self.idx].fd, 0);
 
-    /* 
+    /*
      * if we entered/left an event, emit PropertiesChanged signal
      * Avoid spamming signal firt time we start (as we're computing current time)
      * eg: we start clight during the NIGHT but state.time defaults to 0 (ie: DAY).
@@ -124,7 +124,7 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
 
         if (calculate_sunrise(lat, lon, &t, day) == 0) {
             /*
-             * Force computation of today event if SUNRISE is 
+             * Force computation of today event if SUNRISE is
              * not today; eg: in local time it is at 6am, but utc time is 22,
              * so it counts as today while it is indeed tomorrow...
              */

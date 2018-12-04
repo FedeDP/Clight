@@ -33,39 +33,39 @@ void init_opts(int argc, char *argv[]) {
     conf.backlight_trans_timeout = 30;
     conf.dimmer_trans_timeout = 30;
     conf.gamma_trans_timeout = 300;
-    
+
     /*
      * Default polynomial regression points:
      * ON AC                ON BATTERY
      * X = 0  Y = 0.00      X = 0  Y = 0.00
-     *     1      0.15          1      0.15 
+     *     1      0.15          1      0.15
      *     2      0.29          2      0.23
      *     3      0.45          3      0.36
      *     4      0.61          4      0.52
-     *     5      0.74          5      0.59 
+     *     5      0.74          5      0.59
      *     6      0.81          6      0.65
      *     7      0.88          7      0.71
-     *     8      0.93          8      0.75 
+     *     8      0.93          8      0.75
      *     9      0.97          9      0.78
      *    10      1.00         10      0.80
      * Where X is ambient brightness and Y is backlight level.
      * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
      */
-    memcpy(conf.regression_points[ON_AC], 
-           (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
+    memcpy(conf.regression_points[ON_AC],
+           (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
            SIZE_POINTS * sizeof(double));
-    memcpy(conf.regression_points[ON_BATTERY], 
-           (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
+    memcpy(conf.regression_points[ON_BATTERY],
+           (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
            SIZE_POINTS * sizeof(double));
-    
+
     /* Default dpms timeouts ON AC */
-    memcpy(conf.dpms_timeouts[ON_AC], 
-           (int[]){ 900, 1200, 1800 }, 
+    memcpy(conf.dpms_timeouts[ON_AC],
+           (int[]){ 900, 1200, 1800 },
            SIZE_DPMS * sizeof(int));
-    
+
     /* Default dpms timeouts ON BATT */
-    memcpy(conf.dpms_timeouts[ON_BATTERY], 
-           (int[]){ 300, 420, 600 }, 
+    memcpy(conf.dpms_timeouts[ON_BATTERY],
+           (int[]){ 300, 420, 600 },
            SIZE_DPMS * sizeof(int));
 
     read_config(GLOBAL);
@@ -137,7 +137,7 @@ static void parse_cmd(int argc, char *const argv[]) {
             free(str);
         }
     }
-    /* 
+    /*
      * poptGetNextOpt returns -1 when the final argument has been parsed
      * otherwise an error occured
      */
@@ -147,7 +147,7 @@ static void parse_cmd(int argc, char *const argv[]) {
     poptFreeContext(pc);
 }
 
-/* 
+/*
  * It does all needed checks to correctly reset default values
  * in case of wrong options set.
  */
@@ -232,32 +232,32 @@ static void check_conf(void) {
         WARN("Wrong shutter_threshold value. Resetting default value.\n");
         conf.shutter_threshold = 0.0;
     }
-    
+
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */
     for (i = 0; i < SIZE_POINTS && !reg_points_batt_needed && !reg_points_ac_needed; i++) {
         if (!reg_points_ac_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
             reg_points_ac_needed = 1;
         }
-        
+
         if (!reg_points_batt_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
             reg_points_batt_needed = 1;
         }
-        
+
     }
     if (reg_points_ac_needed) {
         WARN("Wrong ac_regression points. Resetting default values.\n");
-        memcpy(conf.regression_points[ON_AC], 
-               (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 }, 
+        memcpy(conf.regression_points[ON_AC],
+               (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
                SIZE_POINTS * sizeof(double));
     }
     if (reg_points_batt_needed) {
         WARN("Wrong batt_regression points. Resetting default values.\n");
-        memcpy(conf.regression_points[ON_BATTERY], 
-               (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 }, 
+        memcpy(conf.regression_points[ON_BATTERY],
+               (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
                SIZE_POINTS * sizeof(double));
     }
-    
+
     for (i = 0; i < SIZE_EVENTS; i++) {
         struct tm timeinfo;
         if (strlen(conf.events[i]) && !strptime(conf.events[i], "%R", &timeinfo)) {

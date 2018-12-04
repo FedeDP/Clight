@@ -11,7 +11,7 @@ static void disable_module(const enum modules module);
 static enum modules *sorted_modules; // modules sorted by their starting place
 static int started_modules = 0; // number of started modules
 
-/* 
+/*
  * Start a module only if it is not disabled, it is not inited, and a proper init hook function has been set.
  * Check if all deps modules have been started too.
  * If module has not a poll_cb (it is not waiting on poll), call poll_cb right now as it is fully started already.
@@ -35,19 +35,19 @@ void init_module(int fd, enum modules module, ...) {
     if (fd == -1) {
         ERROR("%s\n", strerror(errno));
     }
-    
+
     /* When no_auto_calib is true, functional modules are all started paused */
     if (modules[module].self->functional_module && conf.no_auto_calib && fd >= 0) {
         close(fd);
         fd = DONT_POLL;
     }
-    
+
     main_p[module] = (struct pollfd) {
         .fd = fd,
         .events = POLLIN,
     };
-    
-    /* 
+
+    /*
      * if fd==DONT_POLL_W_ERR, it means a not-critical error happened
      * while module was setting itself up, before calling init_module.
      * eg: geoclue2 support is enabled but geoclue2 could not be found.
@@ -62,11 +62,11 @@ void init_module(int fd, enum modules module, ...) {
             free(sorted_modules);
             ERROR("%s\n", strerror(errno));
         }
-        
+
         set_state(&modules[module], RUNNING);
-        
+
         DEBUG("%s module started.\n", modules[module].self->name);
-        
+
         /* foreach bus_cb passed in, call add_mod_callback on bus */
         va_list args;
         va_start(args, module);
@@ -79,9 +79,9 @@ void init_module(int fd, enum modules module, ...) {
             cb = va_arg(args, struct bus_cb *);
         }
         va_end(args);
-        
-        /* 
-         * If module has not an fd (so, it is a oneshot module), 
+
+        /*
+         * If module has not an fd (so, it is a oneshot module),
          * consider this module as started right now.
          */
         if (fd == DONT_POLL) {
@@ -89,7 +89,7 @@ void init_module(int fd, enum modules module, ...) {
         }
 
         init_submodules(module);
-        
+
     } else {
         /* module should be disabled */
         WARN("Error while loading %s module.\n", modules[module].self->name);
@@ -186,14 +186,14 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
             break;
         }
     }
-    
+
     /* Update dep type in dependent_m too */
     modules[mod_dep].dependent_m[mod] = type;
 }
 
 /*
  * Recursively disable a module and all of modules that require it (HARD dep).
- * If a module had a SOFT dep on "module", increment its 
+ * If a module had a SOFT dep on "module", increment its
  * satisfied_deps counter and try to init it.
  * Moreover, if "module" is the only dependent module on another module X,
  * and X is not mandatory for clight, disable X too.
@@ -220,22 +220,22 @@ void disable_module(const enum modules module) {
                 }
             }
         }
-        
-        /* 
+
+        /*
          * Cycle to disable all module on which "module" has a dep,
-         * if "module" is the only module dependent on it 
+         * if "module" is the only module dependent on it
          */
         for (int i = 0; i < modules[module].self->num_deps; i++) {
             const enum modules m = modules[module].self->deps[i].dep;
-            /* 
-             * if there are no more dependent_m on this module, 
+            /*
+             * if there are no more dependent_m on this module,
              * and it is not a standalone module neither a functional module, disable it
              */
             if (--modules[m].num_dependent == 0 && !modules[m].self->standalone && !modules[m].self->functional_module) {
                 disable_module(m);
             }
         }
-        
+
         /* Update the list of active functional modules */
         state.needed_functional_modules -= modules[module].self->functional_module;
         if (state.needed_functional_modules == 0) {

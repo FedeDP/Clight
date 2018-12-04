@@ -1,6 +1,6 @@
 #include <bus.h>
 
-static struct dependency dependencies[] = { 
+static struct dependency dependencies[] = {
     {SUBMODULE, BUS}    // We must be started right after BUS
 };
 static struct self_t self = {
