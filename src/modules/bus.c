@@ -84,7 +84,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
     sd_bus *tmp = a->type == USER ? userbus : sysbus;
-    
+
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
     if (check_err(r, &error, a->caller)) {
         goto finish;
@@ -158,7 +158,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         if (check_err(r, &error, a->caller)) {
             goto finish;
         }
-        
+
         /*
          * Fix for new Clightd interface for CaptureSensor and IsSensorAvailable:
          * they will now return used interface too. We don't need it.
@@ -198,7 +198,7 @@ finish:
  */
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     sd_bus *tmp = a->type == USER ? userbus : sysbus;
-    
+
 #if LIBSYSTEMD_VERSION >= 237
     int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state);
 #else

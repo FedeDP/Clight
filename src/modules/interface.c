@@ -121,7 +121,7 @@ static void init(void) {
                                 bus_interface,
                                 clight_vtable,
                                 &state);
-    
+
     /* Conf interface */
     r += sd_bus_add_object_vtable(*userbus,
                                 NULL,
@@ -129,7 +129,7 @@ static void init(void) {
                                 conf_interface,
                                 conf_vtable,
                                 &conf);
-    
+
     /* Conf/Timeouts interface */
     r += sd_bus_add_object_vtable(*userbus,
                                   NULL,
@@ -137,7 +137,7 @@ static void init(void) {
                                   conf_interface,
                                   conf_to_vtable,
                                   &conf);
-    
+
     /* Modules interface */
     r += build_modules_vtable(*userbus);
     if (r < 0) {
@@ -172,7 +172,7 @@ static void destroy(void) {
 static int build_modules_vtable(sd_bus *userbus) {
     const char module_path[] = "/org/clight/clight/Modules";
     const char module_interface[] = "org.clight.clight.Modules";
-    
+
     int i = 0;
     module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_START(0);
     for (i = 1; i <= MODULES_NUM; i++) {
@@ -195,7 +195,7 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int r = -EINVAL;
-    
+
     if (is_running(BACKLIGHT)) {
         FILL_MATCH_DATA(state.current_bl_pct); // useless data, unused
         r = sd_bus_reply_method_return(m, NULL);
@@ -212,7 +212,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-    
+
     FILL_MATCH_DATA(state.pm_inhibited);
     state.pm_inhibited = inhibited ? PM_FORCED_ON : PM_OFF;
     INFO("PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
@@ -239,7 +239,7 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
         r = -EINVAL;
     } else {
         enum ac_states ac_state = ON_AC;
-        
+
         if (userdata == conf.regression_points[ON_BATTERY]) {
             ac_state = ON_BATTERY;
         }
@@ -259,13 +259,13 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
                             sd_bus_message *value, void *userdata, sd_bus_error *error) {
     int *val = (int *)userdata;
     int old_val = *val;
-    
+
     int r = sd_bus_message_read(value, "i", userdata);
     if (r < 0) {
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-    
+
     /* Check if we modified currently used timeout! */
     if (val == &conf.timeout[state.ac_state][state.time]) {
         FILL_MATCH_DATA_NAME(old_val, "backlight_timeout");

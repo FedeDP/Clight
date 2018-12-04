@@ -12,7 +12,7 @@ void open_log(void) {
     if (!log_file) {
         WARN("%s\n", strerror(errno));
     }
-    
+
     if (flock(fileno(log_file), LOCK_EX | LOCK_NB) == -1) {
         WARN("%s\n", strerror(errno));
         ERROR("A lock is present on %s. Another clight instance running?\n", log_path);
@@ -22,7 +22,7 @@ void open_log(void) {
 void log_conf(void) {
     if (log_file) {
         time_t t = time(NULL);
-        
+
         fprintf(log_file, "Clight\n");
         fprintf(log_file, "* Software version:\t\t%s\n", VERSION);
         fprintf(log_file, "* Starting time:\t\t%s\n", ctime(&t));
@@ -35,7 +35,7 @@ void log_conf(void) {
         fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
-        
+
         if (conf.loc.lat != 0.0f || conf.loc.lon != 0.0f) {
             fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.loc.lat, conf.loc.lon);
         } else {
@@ -47,7 +47,7 @@ void log_conf(void) {
         fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(conf.events[SUNSET]) ? conf.events[SUNSET] : "Unset");
         fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
         fprintf(log_file, "* Dimmer backlight pct:\t\t%.2lf\n", conf.dimmer_pct);
-            
+
         fprintf(log_file, "\n### Timeouts ###\n");
         fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
         fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
@@ -57,7 +57,7 @@ void log_conf(void) {
                 conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],
                 conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]
         );
-            
+
         fprintf(log_file, "\n### Modules ###\n");
         for (int i = 0; i < MODULES_NUM; i++) {
             const struct self_t *self = modules[i].self;
@@ -65,7 +65,7 @@ void log_conf(void) {
                 fprintf(log_file, "* %s:\t\t%s\n", self->name, is_started_disabled(i) ? "Disabled" : "Enabled");
             }
         }
-            
+
         fprintf(log_file, "\n### Smooth ###\n");
         fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");
         fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", conf.no_smooth_gamma ? "Disabled" : "Enabled");
@@ -93,13 +93,13 @@ void log_message(const char *filename, int lineno, const char type, const char *
         vfprintf(log_file, log_msg, file_args);
         fflush(log_file);
     }
-    
+
     /* In case of error, log to stdout too */
     FILE *out = stdout;
     if (type == 'E') {
         out = stderr;
     }
-    
+
     vfprintf(out, log_msg, args);
     va_end(args);
     va_end(file_args);

@@ -23,7 +23,7 @@ MODULE(DPMS);
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
     struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "dpms_timeout" };
-    
+
     set_dpms_timeouts();
     INIT_MOD(DONT_POLL, &upower_cb, &interface_to_cb);
 }
@@ -53,7 +53,7 @@ void set_dpms_timeouts(void) {
             need_disable = 1;
         }
     }
-    
+
     if (!need_disable) {
         SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "SetTimeouts");
         call(NULL, NULL, &args, "ssiii", state.display, state.xauthority, 

@@ -55,7 +55,7 @@ static void init(int argc, char *argv[]) {
     // call our sigsegv handler that just logs
     // a debug message before dying
     signal(SIGSEGV, sigsegv_handler);
-    
+
     init_opts(argc, argv);
     open_log();
     log_conf();

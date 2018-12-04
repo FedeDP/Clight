@@ -41,9 +41,9 @@ static void init(void) {
     struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
     struct bus_cb interface_inhibit_cb = { INTERFACE, inhibit_callback, "inhibit" };
     struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "dimmer_timeout" };
-    
+
     int r = idle_init();
-    
+
     /* 
      * If dimmer is started and BACKLIGHT module is disabled, or automatic calibration is disabled,
      * we need to ensure to start from a well known backlight level.
@@ -85,7 +85,7 @@ static int idle_init(void) {
         goto end;
     }
     r = idle_set_timeout(); // set timeout automatically calls client start
-    
+
 end:
     if (r < 0) {
         WARN("Clight Idle error.\n");
@@ -151,7 +151,7 @@ static int idle_client_destroy(void) {
 
 static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     static double old_pct = -1.0;
-    
+
     sd_bus_message_read(m, "b", &state.is_dimmed);
     if (state.is_dimmed) {
         DEBUG("Entering dimmed state...\n");

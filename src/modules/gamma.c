@@ -52,7 +52,7 @@ static void callback(void) {
 
 static void check_gamma(void) {
     static int first_time = 1;
-    
+
     const time_t t = time(NULL);
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
