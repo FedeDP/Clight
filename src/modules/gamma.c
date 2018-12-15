@@ -168,6 +168,7 @@ static void check_next_event(const time_t *now, int day) {
  * 30mins after event to remove EVENT state.
  */
 static void check_state(const time_t *now) {
+    int old_in_event = state.in_event;
     if (labs(state.events[next_event] - (*now + 1)) <= conf.event_duration) {
         if (state.events[next_event] > *now + 1) {
             event_time_range = 0; // next timer is on next_event
@@ -181,6 +182,9 @@ static void check_state(const time_t *now) {
         state.in_event = 0;
     }
     state.time = next_event == SUNRISE ? NIGHT : DAY;
+    if (old_in_event != state.in_event) {
+        emit_prop("InEvent");
+    }
 }
 
 static void set_temp(int temp) {

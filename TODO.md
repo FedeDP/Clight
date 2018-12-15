@@ -8,7 +8,7 @@
 - [x] Avoid zeroing log file when trying to start a second clight instance
 
 - [ ] Add wiki page with python script to hook on "Time" clight signal to change theme on kde
-- [ ] Updated bus api wiki page
+- [x] Updated bus api wiki page
 
 
 - [ ] Release 3.1!
