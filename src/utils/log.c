@@ -9,7 +9,7 @@ void open_log(void) {
 
     snprintf(log_path, PATH_MAX, "%s/.clight.log", getpwuid(getuid())->pw_dir);
     
-    int fd = open(log_path, O_CREAT);
+    int fd = open(log_path, O_CREAT | O_WRONLY, 0644);
     if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
         WARN("%s\n", strerror(errno));
         ERROR("A lock is present on %s. Another clight instance running?\n", log_path);
@@ -17,6 +17,8 @@ void open_log(void) {
         log_file = fdopen(fd, "w");
         if (!log_file) {
             WARN("%s\n", strerror(errno));
+        } else {
+            ftruncate(fd, 0);
         }
     }
 }
