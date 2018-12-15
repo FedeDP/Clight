@@ -1,18 +1,3 @@
-### 3.1
-- [x] Properly always emit "Time" signal
-- [x] Drop "EVENT" time state. Use a state.in_event boolean and expose it!
-- [x] Fix HIGH CPU usage at first start when no_gamma is true
-- [x] NoAutoCalib to only stop BACKLIGHT module
-- [x] Properly emit Modules' states signals in /org/clight/clight/Modules
-
-- [x] Avoid zeroing log file when trying to start a second clight instance
-
-- [x] Add wiki page with python script to hook on "Time" clight signal to change theme on kde
-- [x] Updated bus api wiki page
-
-
-- [ ] Release 3.1!
-
 ### 3.2
 - [ ] Port to libmodule
 
