@@ -35,10 +35,9 @@ enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XO
  * List of states clight can be through: 
  * day between sunrise and sunset
  * night between sunset and sunrise
- * EVENT from conf.event_time_range before until conf.event_time_range after an event
  * unknown if no sunrise/sunset could be found for today (can it happen?)
  */
-enum states { DAY, NIGHT, EVENT, SIZE_STATES };
+enum states { DAY, NIGHT, SIZE_STATES };
 
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
@@ -80,7 +79,7 @@ struct bus_match_data {
 /* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
     int num_captures;                       // number of frame captured for each screen backlight compute
-    int timeout[SIZE_AC][SIZE_STATES];      // timeout between captures for each ac_state and time state (day/night/event)
+    int timeout[SIZE_AC][SIZE_STATES + 1];  // timeout between captures for each ac_state and time state (day/night/event)
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
@@ -110,6 +109,7 @@ struct config {
 struct state {
     int quit;                               // should we quit?
     enum states time;                       // whether it is day or night time
+    int in_event;                           // Whether we are in a TIME event +- conf.event_duration
     time_t events[SIZE_EVENTS];             // today events (sunrise/sunset)
     enum ac_states ac_state;                // is laptop on battery?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters

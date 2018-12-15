@@ -4,7 +4,7 @@
 
 static void check_gamma(void);
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
-static void check_next_event(const time_t *now);
+static void check_next_event(const time_t *now, int day);
 static void check_state(const time_t *now);
 static void set_temp(int temp);
 static void location_callback(const void *ptr);
@@ -31,6 +31,9 @@ static void init(void) {
     struct bus_cb loc_cb = { LOCATION, location_callback };
     struct bus_cb interface_cb = { INTERFACE, interface_callback, "gamma" };
 
+    /* Initial value */
+    state.time = -1;
+    
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     INIT_MOD(fd, &loc_cb, &interface_cb);
 }
@@ -51,8 +54,6 @@ static void callback(void) {
 }
 
 static void check_gamma(void) {
-    static int first_time = 1;
-
     const time_t t = time(NULL);
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
@@ -80,15 +81,9 @@ static void check_gamma(void) {
 
     /*
      * if we entered/left an event, emit PropertiesChanged signal
-     * Avoid spamming signal firt time we start (as we're computing current time)
-     * eg: we start clight during the NIGHT but state.time defaults to 0 (ie: DAY).
      */
-    if (!first_time) {
-        if (old_state != state.time) {
-            emit_prop("Time");
-        }
-    } else {
-        first_time = 0;
+    if (old_state != state.time) {
+        emit_prop("Time");
     }
 }
 
@@ -104,10 +99,10 @@ static void check_gamma(void) {
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day) {
     time_t t;
 
-    /* only every new day, after latest event of today finished */
-    if (*now + 1 >= state.events[SUNSET] + conf.event_duration) {
+    /* only every new day, after today's sunset */
+    if (*now + 1 >= state.events[SUNSET]) {
         if (calculate_sunset(lat, lon, &t, day) == 0) {
-            if (*now + 1 >= t + conf.event_duration) {
+            if (*now + 1 >= t) {
                 /*
                  * we're between today's sunset and tomorrow sunrise.
                  * rerun function with tomorrow.
@@ -146,7 +141,7 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
             WARN("Failed to retrieve sunrise/sunset informations.\n");
         }
     }
-    check_next_event(now);
+    check_next_event(now, day);
     check_state(now);
 }
 
@@ -154,8 +149,9 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
  * Updates state.next_event global var, according to now time_t value.
  * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  */
-static void check_next_event(const time_t *now) {
-    if (*now + 1 < state.events[SUNRISE] + conf.event_duration || state.events[SUNSET] == -1) {
+static void check_next_event(const time_t *now, int day) {
+    // if we have compute tomorrow events, we are surely at night
+    if (day == 1 || *now + 1 < state.events[SUNRISE] || state.events[SUNSET] == -1) {
         next_event = SUNRISE;
     } else {
         next_event = SUNSET;
@@ -173,22 +169,18 @@ static void check_next_event(const time_t *now) {
  */
 static void check_state(const time_t *now) {
     if (labs(state.events[next_event] - (*now + 1)) <= conf.event_duration) {
-        int event_t;
-
         if (state.events[next_event] > *now + 1) {
-            event_t = next_event;
-            event_time_range = 0;
+            event_time_range = 0; // next timer is on next_event
         } else {
-            event_t = !next_event;
-            event_time_range = conf.event_duration;
+            event_time_range = conf.event_duration; // next timer is when leaving event
         }
-        conf.temp[EVENT] = event_t == SUNRISE ? conf.temp[NIGHT] : conf.temp[DAY];
-        state.time = EVENT;
+        state.in_event = 1;
         DEBUG("Currently inside an event.\n");
     } else {
-        state.time = next_event == SUNRISE ? NIGHT : DAY;
-        event_time_range = -conf.event_duration; // 30mins before event
+        event_time_range = -conf.event_duration; // next timer is entering next event
+        state.in_event = 0;
     }
+    state.time = next_event == SUNRISE ? NIGHT : DAY;
 }
 
 static void set_temp(int temp) {

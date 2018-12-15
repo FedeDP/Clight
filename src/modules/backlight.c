@@ -16,7 +16,9 @@ static void interface_timeout_callback(const void *ptr);
 static void dimmed_callback(void);
 static void time_callback(void);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int get_current_time(void);
 
+static enum states old_state;
 static int sensor_available;
 static int ac_force_capture;
 static int max_kbd_backlight;
@@ -55,13 +57,22 @@ static void init(void) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
     add_match(&args, &slot, on_sensor_change);
 
+    /* Initialize old state matching current state */
+    old_state = state.time + state.in_event;
+    
     if (!conf.no_keyboard_bl) {
         init_kbd_backlight();
     }
 
     /* Start module timer: 1ns delay if sensor is available, else start it paused */
     sensor_available = is_sensor_available();
-    int fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available);
+    int fd;
+    /* When no_auto_calib is true, start paused */
+    if (conf.no_auto_calib) {
+        fd = DONT_POLL;
+    } else {
+        fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available);
+    }
 
     INIT_MOD(fd, &upower_cb, &interface_calibrate_cb, &interface_curve_cb, &interface_to_cb);
 }
@@ -110,7 +121,7 @@ static void do_capture(int reset_timer) {
     }
 
     if (reset_timer) {
-        set_timeout(conf.timeout[state.ac_state][state.time], 0, main_p[self.idx].fd, 0);
+        set_timeout(get_current_time(), 0, main_p[self.idx].fd, 0);
     }
 }
 
@@ -194,7 +205,7 @@ static void interface_curve_callback(const void *ptr) {
 static void interface_timeout_callback(const void *ptr) {
     if (!state.is_dimmed && sensor_available) {
         int old_val = *((int *)ptr);
-        reset_timer(main_p[self.idx].fd, old_val, conf.timeout[state.ac_state][state.time]);
+        reset_timer(main_p[self.idx].fd, old_val, get_current_time());
     }
 }
 
@@ -206,7 +217,7 @@ static void dimmed_callback(void) {
         static int old_elapsed = 0;
 
         if (state.is_dimmed && old_elapsed == 0) {
-            old_elapsed = conf.timeout[state.ac_state][state.time] - get_timeout_sec(main_p[self.idx].fd);
+            old_elapsed = get_current_time() - get_timeout_sec(main_p[self.idx].fd);
             set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
         } else {
             /*
@@ -223,7 +234,7 @@ static void dimmed_callback(void) {
                 timeout_nsec = 1;
             } else {
                 // Apply correct timeout for current ac state and day time
-                timeout_sec = conf.timeout[state.ac_state][state.time] - old_elapsed;
+                timeout_sec = get_current_time() - old_elapsed;
                 if (timeout_sec <= 0) {
                     timeout_nsec = 1;
                 }
@@ -238,12 +249,11 @@ static void dimmed_callback(void) {
 
 /* Callback on state.time changes */
 static void time_callback(void) {
-    static enum states old_state = DAY; // default initial value
-    if (!state.is_dimmed && sensor_available) {
+    if (!state.is_dimmed && sensor_available && is_running(self.idx)) {
         /* A state.time change happened, react! */
-        reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], conf.timeout[state.ac_state][state.time]);
+        reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], get_current_time());
     }
-    old_state = state.time;
+    old_state = state.time + state.in_event;
 }
 
 /* Callback on SensorChanged clightd signal */
@@ -262,4 +272,8 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
         }
     }
     return 0;
+}
+
+static inline int get_current_time(void) {
+    return conf.timeout[state.ac_state][state.time + state.in_event];
 }

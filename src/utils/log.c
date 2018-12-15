@@ -8,14 +8,16 @@ void open_log(void) {
     char log_path[PATH_MAX + 1] = {0};
 
     snprintf(log_path, PATH_MAX, "%s/.clight.log", getpwuid(getuid())->pw_dir);
-    log_file = fopen(log_path, "w");
-    if (!log_file) {
-        WARN("%s\n", strerror(errno));
-    }
-
-    if (flock(fileno(log_file), LOCK_EX | LOCK_NB) == -1) {
+    
+    int fd = open(log_path, O_CREAT);
+    if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
         WARN("%s\n", strerror(errno));
         ERROR("A lock is present on %s. Another clight instance running?\n", log_path);
+    } else {
+        log_file = fdopen(fd, "w");
+        if (!log_file) {
+            WARN("%s\n", strerror(errno));
+        }
     }
 }
 
@@ -51,7 +53,7 @@ void log_conf(void) {
         fprintf(log_file, "\n### Timeouts ###\n");
         fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
         fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
-        fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][EVENT], conf.timeout[ON_BATTERY][EVENT]);
+        fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][SIZE_STATES], conf.timeout[ON_BATTERY][SIZE_STATES]);
         fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
         fprintf(log_file, "* Dpms timeouts:\t\tAC %d:%d:%d\tBATT %d:%d:%d\n",
                 conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],

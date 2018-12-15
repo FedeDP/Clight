@@ -4,4 +4,5 @@ struct prop_cb {
 };
 
 int emit_prop(const char *signal);
+int emit_mod_prop(const char *signal);
 int add_prop_callback(struct prop_cb *cb);

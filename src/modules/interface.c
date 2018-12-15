@@ -28,6 +28,8 @@ struct prop_callback {
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
+static const char module_path[] = "/org/clight/clight/Modules";
+static const char module_interface[] = "org.clight.clight.Modules";
 
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
@@ -35,6 +37,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(struct state, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(struct state, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Time", "i", NULL, offsetof(struct state, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(struct state, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Dimmed", "b", NULL, offsetof(struct state, is_dimmed), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentBlPct", "d", NULL, offsetof(struct state, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentAmbientBr", "d", NULL, offsetof(struct state, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -79,10 +82,10 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("AcDayCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcNightCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][EVENT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][SIZE_STATES]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattDayCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattNightCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][EVENT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][SIZE_STATES]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDpmsStandby", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_AC][STANDBY]), 0),
@@ -170,9 +173,6 @@ static void destroy(void) {
 }
 
 static int build_modules_vtable(sd_bus *userbus) {
-    const char module_path[] = "/org/clight/clight/Modules";
-    const char module_interface[] = "org.clight.clight.Modules";
-
     int i = 0;
     module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_START(0);
     for (i = 1; i <= MODULES_NUM; i++) {
@@ -299,6 +299,18 @@ int emit_prop(const char *signal) {
         sd_bus **userbus = get_user_bus();
         if (*userbus) {
             sd_bus_emit_properties_changed(*userbus, object_path, bus_interface, signal, NULL);
+            run_prop_callbacks(signal);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int emit_mod_prop(const char *signal) {
+    if (is_running((self.idx))) {
+        sd_bus **userbus = get_user_bus();
+        if (*userbus) {
+            sd_bus_emit_properties_changed(*userbus, module_path, module_interface, signal, NULL);
             run_prop_callbacks(signal);
             return 0;
         }

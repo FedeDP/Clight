@@ -36,12 +36,6 @@ void init_module(int fd, enum modules module, ...) {
         ERROR("%s\n", strerror(errno));
     }
 
-    /* When no_auto_calib is true, functional modules are all started paused */
-    if (modules[module].self->functional_module && conf.no_auto_calib && fd >= 0) {
-        close(fd);
-        fd = DONT_POLL;
-    }
-
     main_p[module] = (struct pollfd) {
         .fd = fd,
         .events = POLLIN,
@@ -161,7 +155,7 @@ static void started_cb(enum modules module) {
 
 static void set_state(struct module *mod, const enum module_states state) {
     mod->state = state;
-    emit_prop(mod->self->name);
+    emit_mod_prop(mod->self->name);
 }
 
 /*
@@ -263,9 +257,9 @@ static void destroy_module(const enum modules module) {
         /* If fd is being polled, close it. */
         if (main_p[module].fd > 0) {
             close(main_p[module].fd);
-            /* stop polling on this module! */
-            main_p[module].fd = -1;
         }
+        /* stop polling on this module! */
+        main_p[module].fd = DONT_POLL;
         set_state(&modules[module], DESTROYED);
         DEBUG("%s module destroyed.\n", modules[module].self->name);
     }

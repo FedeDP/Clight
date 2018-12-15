@@ -16,13 +16,12 @@ void init_opts(int argc, char *argv[]) {
     conf.num_captures = 5;
     conf.timeout[ON_AC][DAY] = 10 * 60;
     conf.timeout[ON_AC][NIGHT] = 45 * 60;
-    conf.timeout[ON_AC][EVENT] = 5 * 60;
+    conf.timeout[ON_AC][SIZE_STATES] = 5 * 60;
     conf.timeout[ON_BATTERY][DAY] = 2 * conf.timeout[ON_AC][DAY];
     conf.timeout[ON_BATTERY][NIGHT] = 2 * conf.timeout[ON_AC][NIGHT];
-    conf.timeout[ON_BATTERY][EVENT] = 2 * conf.timeout[ON_AC][EVENT];
+    conf.timeout[ON_BATTERY][SIZE_STATES] = 2 * conf.timeout[ON_AC][SIZE_STATES];
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
-    conf.temp[EVENT] = -1;
     conf.event_duration = 30 * 60;
     conf.dimmer_timeout[ON_AC] = 45;
     conf.dimmer_timeout[ON_BATTERY] = 20;
@@ -99,7 +98,7 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"no-backlight", 0, POPT_ARG_NONE, &modules[BACKLIGHT].state, 100, "Disable backlight module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
-        {"no-auto-calib", 0, POPT_ARG_NONE, &conf.no_auto_calib, 100, "Disable screen backlight and gamma automatic calibration", NULL},
+        {"no-auto-calib", 0, POPT_ARG_NONE, &conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
         {"no-kbd-backlight", 0, POPT_ARG_NONE, &conf.no_keyboard_bl, 100, "Disable keyboard backlight calibration", NULL},
         {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
@@ -160,9 +159,9 @@ static void check_conf(void) {
         WARN("Wrong night timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][NIGHT] = 45 * 60;
     }
-    if (conf.timeout[ON_AC][EVENT] <= 0) {
+    if (conf.timeout[ON_AC][SIZE_STATES] <= 0) {
         WARN("Wrong event timeout on AC value. Resetting default value.\n");
-        conf.timeout[ON_AC][EVENT] = 5 * 60;
+        conf.timeout[ON_AC][SIZE_STATES] = 5 * 60;
     }
     if (conf.timeout[ON_BATTERY][DAY] <= 0) {
         WARN("Wrong day timeout on BATT value. Resetting default value.\n");
@@ -172,9 +171,9 @@ static void check_conf(void) {
         WARN("Wrong night timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][NIGHT] = 90 * 60;
     }
-    if (conf.timeout[ON_BATTERY][EVENT] <= 0) {
+    if (conf.timeout[ON_BATTERY][SIZE_STATES] <= 0) {
         WARN("Wrong event timeout on BATT value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][EVENT] = 10 * 60;
+        conf.timeout[ON_BATTERY][SIZE_STATES] = 10 * 60;
     }
     if (conf.num_captures < 1 || conf.num_captures > 20) {
         WARN("Wrong frames value. Resetting default value.\n");
