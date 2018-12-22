@@ -116,10 +116,10 @@ int read_config(enum CONFIG file) {
             }
         }
 
-        /* Load capture timeouts while on battery */
+        /* Load capture timeouts while on battery -> +1 because EVENT is exposed too */
         if ((timeouts = config_setting_get_member(root, "ac_capture_timeouts"))) {
-            if (config_setting_length(timeouts) == SIZE_STATES) {
-                for (int i = 0; i < SIZE_STATES; i++) {
+            if (config_setting_length(timeouts) == SIZE_STATES + 1) {
+                for (int i = 0; i < SIZE_STATES + 1; i++) {
                     conf.timeout[ON_AC][i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
@@ -127,10 +127,10 @@ int read_config(enum CONFIG file) {
             }
         }
 
-        /* Load capture timeouts while on battery */
+        /* Load capture timeouts while on battery -> +1 because EVENT is exposed too */
         if ((timeouts = config_setting_get_member(root, "batt_capture_timeouts"))) {
-            if (config_setting_length(timeouts) == SIZE_STATES) {
-                for (int i = 0; i < SIZE_STATES; i++) {
+            if (config_setting_length(timeouts) == SIZE_STATES + 1) {
+                for (int i = 0; i < SIZE_STATES + 1; i++) {
                     conf.timeout[ON_BATTERY][i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
@@ -149,9 +149,9 @@ int read_config(enum CONFIG file) {
             }
         }
 
-        /* Load gamma temperatures -> SIZE_STATES - 1 because temp[EVENT] is not exposed */
+        /* Load gamma temperatures */
         if ((gamma = config_setting_get_member(root, "gamma_temp"))) {
-            if (config_setting_length(gamma) == SIZE_STATES - 1) {
+            if (config_setting_length(gamma) == SIZE_STATES) {
                 for (int i = 0; i < SIZE_STATES - 1; i++) {
                     conf.temp[i] = config_setting_get_int_elem(gamma, i);
                 }
