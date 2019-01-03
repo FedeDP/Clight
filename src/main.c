@@ -3,7 +3,7 @@
  * clight: C daemon utility to automagically adjust screen backlight to match ambient brightness.
  * https://github.com/FedeDP/Clight/tree/master/clight
  *
- * Copyright (C) 2018  Federico Di Pierro <nierro92@gmail.com>
+ * Copyright (C) 2019  Federico Di Pierro <nierro92@gmail.com>
  *
  * This file is part of clight.
  * clight is free software: you can redistribute it and/or modify
@@ -51,11 +51,12 @@ int main(int argc, char *argv[]) {
  * Then init needed modules.
  */
 static void init(int argc, char *argv[]) {
-    // when receiving segfault signal,
-    // call our sigsegv handler that just logs
-    // a debug message before dying
+    /* 
+     * When receiving segfault signal,
+     * call our sigsegv handler that just logs
+     * a debug message before dying
+     */
     signal(SIGSEGV, sigsegv_handler);
-
     init_opts(argc, argv);
     open_log();
     log_conf();
