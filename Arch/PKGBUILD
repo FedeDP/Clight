@@ -14,6 +14,8 @@ makedepends=('git' 'cmake' 'bash-completion')
 optdepends=('geoclue2: to retrieve user location through geoclue2.'
             'upower: to save energy by increasing timeouts between captures while on battery and to autocalibrate keyboard backlight.'
             'bash-completion: to add support for bash automatic completion.')
+provides=('clight')
+conflicts=('clight')
 source=("git://github.com/FedeDP/${_gitname}.git")
 install=clight.install
 sha256sums=("SKIP")
