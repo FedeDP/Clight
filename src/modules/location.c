@@ -66,18 +66,17 @@ static void callback(void) {
 }
 
 static int load_cache_location(void) {
-    int ret;
     FILE *f = fopen(cache_file, "r");
     if (f) {
-        fscanf(f, "%lf %lf", &state.current_loc.lat, &state.current_loc.lon);
-        INFO("Location %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
-        fclose(f);
-        ret = 0;
-    } else {
-        DEBUG("Loading loc from cache file: %s\n", strerror(errno));
-        ret = -1;
+        if (fscanf(f, "%lf %lf", &state.current_loc.lat, &state.current_loc.lon) == 2) {
+            emit_prop("Location");
+            INFO("Location %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
+            fclose(f);
+            return 0;
+        }
     }
-    return ret;
+    WARN("Loading loc from cache file: %s\n", strerror(errno));
+    return -1;
 }
 
 static void init_cache_file(void) {
@@ -209,7 +208,7 @@ static void cache_location(void) {
             DEBUG("Latest location stored in cache file!\n");
             fclose(f);
         } else {
-            DEBUG("Storing loc to cache file: %s\n", strerror(errno));
+            WARN("Caching location: %s\n", strerror(errno));
         }
     }
 }
