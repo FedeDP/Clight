@@ -69,7 +69,7 @@ static int load_cache_location(void) {
     int ret = -1;
     FILE *f = fopen(cache_file, "r");
     if (f) {
-        if (fscanf(f, "%lf %lf", &state.current_loc.lat, &state.current_loc.lon) == 2) {
+        if (fscanf(f, "%lf %lf\n", &state.current_loc.lat, &state.current_loc.lon) == 2) {
             emit_prop("Location");
             INFO("Location %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
             ret = 0;
@@ -77,7 +77,7 @@ static int load_cache_location(void) {
         fclose(f);
     }
     if (ret != 0) {
-        WARN("Loading loc from cache file: %s\n", strerror(errno));
+        WARN("Error loading location from cache file.\n");
     }
     return ret;
 }
@@ -204,7 +204,7 @@ static void geoclue_client_stop(void) {
 }
 
 static void cache_location(void) {
-    if (strlen(cache_file) && state.current_loc.lat != 0.0 && state.current_loc.lon != 0.0) {
+    if (state.current_loc.lat != 0.0 && state.current_loc.lon != 0.0) {
         FILE *f = fopen(cache_file, "w");
         if (f) {
             fprintf(f, "%lf %lf\n", state.current_loc.lat, state.current_loc.lon);
