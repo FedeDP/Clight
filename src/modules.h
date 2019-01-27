@@ -8,7 +8,7 @@
     static void init(void); \
     static int check(void); \
     static void destroy(void); \
-    static void callback(void); \
+    static int callback(void); \
     static void _ctor_ set_module_self(void) { \
         *(int *)&self.idx = module; \
         self.name = #module; \

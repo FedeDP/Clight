@@ -165,10 +165,16 @@ static void set_state(struct module *mod, const enum module_states state) {
  */
 void poll_cb(const enum modules module) {
     if (is_running(module)) {
+        int ret = 0;
         if (modules[module].poll_cb) {
-            modules[module].poll_cb();
+            ret = modules[module].poll_cb();
         }
-        started_cb(module);
+        
+        if (ret == 0) {
+            started_cb(module);
+        } else {
+            disable_module(module);
+        }
     }
 }
 
@@ -192,7 +198,7 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
  * Moreover, if "module" is the only dependent module on another module X,
  * and X is not mandatory for clight, disable X too.
  */
-void disable_module(const enum modules module) {
+static void disable_module(const enum modules module) {
     if (!is_disabled(module) && !is_destroyed(module)) {
         set_state(&modules[module], DISABLED);
         DEBUG("%s module disabled.\n", modules[module].self->name);

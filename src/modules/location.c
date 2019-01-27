@@ -53,16 +53,19 @@ static void init(void) {
     INIT_MOD(fd);
 }
 
-static void callback(void) {
+static int callback(void) {
     uint64_t t;
     if (read(main_p[self.idx].fd, &t, sizeof(uint64_t)) != -1) {
-        load_cache_location();
+        if (load_cache_location() != 0) {
+            return -1;
+        }
     } else {
         /* Disarm timerfd as we received a location before it triggered */
         set_timeout(0, 0, main_p[self.idx].fd, 0);
     }
     /* disable this poll_cb */
     modules[self.idx].poll_cb = NULL;
+    return 0;
 }
 
 static int load_cache_location(void) {

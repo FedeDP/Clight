@@ -45,8 +45,9 @@ static void destroy(void) {
     }
 }
 
-static void callback(void) {
+static int callback(void) {
     bus_callback(SYSTEM);
+    return 0;
 }
 
 /*

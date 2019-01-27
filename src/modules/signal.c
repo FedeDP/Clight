@@ -36,7 +36,7 @@ static void destroy(void) {
  * if received an external SIGINT or SIGTERM,
  * just switch the quit flag to 1 and print to stdout.
  */
-static void callback(void) {
+static int callback(void) {
     struct signalfd_siginfo fdsi;
     ssize_t s;
 
@@ -46,5 +46,6 @@ static void callback(void) {
     }
     INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
     state.quit = NORM_QUIT;
+    return 0;
 }
 

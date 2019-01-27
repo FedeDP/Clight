@@ -87,11 +87,12 @@ static void destroy(void) {
     }
 }
 
-static void callback(void) {
+static int callback(void) {
     uint64_t t;
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
 
     do_capture(1);
+    return 0;
 }
 
 static void init_kbd_backlight(void) {

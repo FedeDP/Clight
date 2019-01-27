@@ -67,8 +67,8 @@ static void destroy(void) {
     idle_client_destroy();
 }
 
-static void callback(void) {
-
+static int callback(void) {
+    return 0;
 }
 
 static int idle_init(void) {

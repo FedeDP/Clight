@@ -31,8 +31,9 @@ static int check(void) {
     return 0;
 }
 
-static void callback(void) {
+static int callback(void) {
     // Skeleton interface
+    return 0;
 }
 
 static void destroy(void) {

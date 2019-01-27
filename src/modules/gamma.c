@@ -46,11 +46,12 @@ static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static void callback(void) {
+static int callback(void) {
     uint64_t t;
 
     read(main_p[self.idx].fd, &t, sizeof(uint64_t));
     check_gamma();
+    return 0;
 }
 
 static void check_gamma(void) {

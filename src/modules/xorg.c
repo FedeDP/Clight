@@ -19,6 +19,7 @@ static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static void callback(void) {
+static int callback(void) {
     /* Skeleton function needed for modules interface */
+    return 0;
 }
