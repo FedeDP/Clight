@@ -152,7 +152,7 @@ int read_config(enum CONFIG file) {
         /* Load gamma temperatures */
         if ((gamma = config_setting_get_member(root, "gamma_temp"))) {
             if (config_setting_length(gamma) == SIZE_STATES) {
-                for (int i = 0; i < SIZE_STATES - 1; i++) {
+                for (int i = 0; i < SIZE_STATES; i++) {
                     conf.temp[i] = config_setting_get_int_elem(gamma, i);
                 }
             } else {
