@@ -35,7 +35,6 @@ enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XO
  * List of states clight can be through: 
  * day between sunrise and sunset
  * night between sunset and sunrise
- * unknown if no sunrise/sunset could be found for today (can it happen?)
  */
 enum states { DAY, NIGHT, SIZE_STATES };
 
@@ -79,10 +78,10 @@ struct bus_match_data {
 /* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
     int num_captures;                       // number of frame captured for each screen backlight compute
-    int timeout[SIZE_AC][SIZE_STATES + 1];  // timeout between captures for each ac_state and time state (day/night/event)
+    int timeout[SIZE_AC][SIZE_STATES + 1];  // timeout between captures for each ac_state and time state (day/night + during event)
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
-    int temp[SIZE_STATES];                  // screen temperature for each state (day/night only exposed through cmdline opts)
+    int temp[SIZE_STATES];                  // screen temperature for each state
     struct location loc;                    // user location as loaded by config
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)

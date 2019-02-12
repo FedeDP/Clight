@@ -270,12 +270,12 @@ int store_config(enum CONFIG file) {
     }
 
     setting = config_setting_add(root, "ac_capture_timeouts", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_STATES; i++) {
+    for (int i = 0; i < SIZE_STATES + 1; i++) {
         config_setting_set_int_elem(setting, -1, conf.timeout[ON_AC][i]);
     }
 
     setting = config_setting_add(root, "batt_capture_timeouts", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_STATES; i++) {
+    for (int i = 0; i < SIZE_STATES + 1; i++) {
         config_setting_set_int_elem(setting, -1, conf.timeout[ON_BATTERY][i]);
     }
 
@@ -285,7 +285,7 @@ int store_config(enum CONFIG file) {
     }
 
     setting = config_setting_add(root, "gamma_temp", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_STATES - 1; i++) {
+    for (int i = 0; i < SIZE_STATES; i++) {
         config_setting_set_int_elem(setting, -1, conf.temp[i]);
     }
 
