@@ -34,6 +34,12 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
 # Required dependencies
 pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig)
 pkg_search_module(LOGIN_LIBS REQUIRED libelogind libsystemd>=221)
+
+# Avoid float versioning for libsystemd/libelogind
+string(REPLACE "." ";" LOGIN_LIBS_VERSION_LIST ${LOGIN_LIBS_VERSION})
+list(GET LOGIN_LIBS_VERSION_LIST 0 LOGIN_LIBS_VERSION_MAJOR)
+message(STATUS "Found lib${LOGIN_LIBS_LIBRARIES} version ${LOGIN_LIBS_VERSION_MAJOR}")
+
 target_link_libraries(${PROJECT_NAME}
                       m
                       ${REQ_LIBS_LIBRARIES}
@@ -44,7 +50,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            "${LOGIN_LIBS_INCLUDE_DIRS}"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    -DLIBSYSTEMD_VERSION=${LOGIN_LIBS_VERSION}
+    -DLIBSYSTEMD_VERSION=${LOGIN_LIBS_VERSION_MAJOR}
 )
 list(APPEND COMBINED_LDFLAGS ${REQ_LIBS_LDFLAGS})
 list(APPEND COMBINED_LDFLAGS ${LOGIN_LIBS_LDFLAGS})
