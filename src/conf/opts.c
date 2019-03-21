@@ -2,7 +2,7 @@
 #include <opts.h>
 #include <popt.h>
 
-static void parse_cmd(int argc, char *const argv[]);
+static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
 static void check_conf(void);
 
 /*
@@ -67,24 +67,32 @@ void init_opts(int argc, char *argv[]) {
            (int[]){ 300, 420, 600 },
            SIZE_DPMS * sizeof(int));
 
-    read_config(GLOBAL);
-    read_config(LOCAL);
-    parse_cmd(argc, argv);
+    char conf_file[PATH_MAX + 1] = {0};
+    
+    read_config(GLOBAL, conf_file);
+    read_config(LOCAL, conf_file);
+    parse_cmd(argc, argv, conf_file, PATH_MAX);
+    
+    /* --conf-file option was passed! */
+    if (strlen(conf_file)) {
+        read_config(CUSTOM, conf_file);
+    }
+    
     check_conf();
 }
 
 /*
  * Parse cmdline to get cmd line options
  */
-static void parse_cmd(int argc, char *const argv[]) {
+static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size) {
     poptContext pc;
     const struct poptOption po[] = {
         {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 100, "Frames taken for each capture, Between 1 and 20", NULL},
-        {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. By default, first matching device is used", "video0"},
-        {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. By default, first matching device is used", "intel_backlight"},
-        {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.no_smooth_backlight, 100, "Disable smooth backlight transitions", NULL},
-        {"no-gamma-smooth", 0, POPT_ARG_NONE, &conf.no_smooth_gamma, 100, "Disable smooth gamma transitions", NULL},
-        {"no-dimmer-smooth", 0, POPT_ARG_NONE, &conf.no_smooth_dimmer, 100, "Disable smooth dimmer transitions", NULL},
+        {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. If empty, first matching device is used", "video0"},
+        {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. If empty, first matching device is used", "intel_backlight"},
+        {"no-backlight-smooth", 0, POPT_ARG_NONE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.no_smooth_backlight, 100, "Disable smooth backlight transitions", NULL},
+        {"no-gamma-smooth", 0, POPT_ARG_NONE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.no_smooth_gamma, 100, "Disable smooth gamma transitions", NULL},
+        {"no-dimmer-smooth", 0, POPT_ARG_NONE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.no_smooth_dimmer, 100, "Disable smooth dimmer transitions", NULL},
         {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
         {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
         {"lat", 0, POPT_ARG_DOUBLE, &conf.loc.lat, 100, "Your desired latitude", NULL},
@@ -97,11 +105,12 @@ static void parse_cmd(int argc, char *const argv[]) {
         {"no-inhibit", 0, POPT_ARG_NONE, &modules[INHIBIT].state, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
         {"no-backlight", 0, POPT_ARG_NONE, &modules[BACKLIGHT].state, 100, "Disable backlight module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
-        {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
+        {"verbose", 0, POPT_ARG_NONE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"no-auto-calib", 0, POPT_ARG_NONE, &conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
         {"no-kbd-backlight", 0, POPT_ARG_NONE, &conf.no_keyboard_bl, 100, "Disable keyboard backlight calibration", NULL},
         {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
+        {"conf-file", 'c', POPT_ARG_STRING, NULL, 6, "Specify a conf file to be parsed", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -127,8 +136,11 @@ static void parse_cmd(int argc, char *const argv[]) {
                 printf("%s: C daemon utility to automagically adjust screen backlight to match ambient brightness.\n"
                         "* Current version: %s\n"
                         "* https://github.com/FedeDP/Clight\n"
-                        "* Copyright (C) 2018  Federico Di Pierro <nierro92@gmail.com>\n", argv[0], VERSION);
+                        "* Copyright (C) 2019  Federico Di Pierro <nierro92@gmail.com>\n", argv[0], VERSION);
                 exit(EXIT_SUCCESS);
+            case 6:
+                strncpy(conf_file, str, size);
+                break;
             default:
                 break;
         }

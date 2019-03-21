@@ -7,24 +7,30 @@ static void init_config_file(enum CONFIG file, char *filename);
  * Use getpwuid to get user home dir
  */
 static void init_config_file(enum CONFIG file, char *filename) {
-    if (file == LOCAL) {
-        if (getenv("XDG_CONFIG_HOME")) {
-            snprintf(filename, PATH_MAX, "%s/clight.conf", getenv("XDG_CONFIG_HOME"));
-        } else {
-            snprintf(filename, PATH_MAX, "%s/.config/clight.conf", getpwuid(getuid())->pw_dir);
-        }
-    } else {
-        snprintf(filename, PATH_MAX, "%s/clight.conf", CONFDIR);
+    switch (file) {
+        case LOCAL:
+            if (getenv("XDG_CONFIG_HOME")) {
+                snprintf(filename, PATH_MAX, "%s/clight.conf", getenv("XDG_CONFIG_HOME"));
+            } else {
+                snprintf(filename, PATH_MAX, "%s/.config/clight.conf", getpwuid(getuid())->pw_dir);
+            }
+            break;
+        case GLOBAL:
+            snprintf(filename, PATH_MAX, "%s/clight.conf", CONFDIR);
+            break;
+        default:
+            break;
     }
 }
 
-int read_config(enum CONFIG file) {
+int read_config(enum CONFIG file, char *config_file) {
     int r = 0;
-    char config_file[PATH_MAX + 1] = {0};
     config_t cfg;
     const char *sensor_dev, *screendev, *sunrise, *sunset;
 
-    init_config_file(file, config_file);
+    if (!strlen(config_file)) {
+        init_config_file(file, config_file);
+    }
     if (access(config_file, F_OK) == -1) {
         WARN("Config file %s not found.\n", config_file);
         return -1;

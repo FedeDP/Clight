@@ -6,7 +6,7 @@ _clight()
     _init_completion || return
 
     case $prev in
-        "--device"|"-b"|"--backlight")
+        "--device"|"-d"|"-b"|"--backlight"|"--conf-file")
             _filedir
             return 0
             ;;
@@ -39,7 +39,7 @@ _clight()
             return 0
             ;;
     esac
-    opts="--device --backlight --frames --no-backlight-smooth --no-gamma-smooth --no-dimmer-smooth --day-temp --night-temp --lat --lon --sunrise --sunset --no-gamma --dimmer-pct --no-dimmer --no-dpms --no-inhibit --no-backlight --verbose --no-auto-calib --version --no-kbd-backlight --shutter-thres"
+    opts="--device --backlight --frames --no-backlight-smooth --no-gamma-smooth --no-dimmer-smooth --day-temp --night-temp --lat --lon --sunrise --sunset --no-gamma --dimmer-pct --no-dimmer --no-dpms --no-inhibit --no-backlight --verbose --no-auto-calib --version --no-kbd-backlight --shutter-thres --conf-file"
     if [[ "$cur" == -* ]] || [[ -z "$cur" ]]; then
         COMPREPLY=( $( compgen -W "${opts}" -- ${cur}) )
     fi

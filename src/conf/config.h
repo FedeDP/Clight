@@ -1,6 +1,6 @@
 #include <log.h>
 
-enum CONFIG { GLOBAL, LOCAL };
+enum CONFIG { GLOBAL, LOCAL, CUSTOM };
 
-int read_config(enum CONFIG file);
+int read_config(enum CONFIG file, char *config_file);
 int store_config(enum CONFIG file);
