@@ -1,6 +1,6 @@
 ### 3.2
 - [x] Fix build when LIBSYSTEMD_VERSION is a float (?), #70
-- [ ] Different timeout for dimmer leaving-dimmed fading transition
+- [x] Different timeout for dimmer leaving-dimmed fading transition
 - [x] New cmd line option to specify a conf file to be parsed (instead of default $HOME/.conf/clight.conf)
 
 ### 3.3

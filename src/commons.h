@@ -58,6 +58,8 @@ enum quit_values { NORM_QUIT = 1, ERR_QUIT };
 
 enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON };
 
+enum dim_trans { ENTER, EXIT, SIZE_DIM };
+
 /* Struct that holds data about a geographic location */
 struct location {
     double lat;
@@ -95,10 +97,10 @@ struct config {
     int no_smooth_gamma;                    // disable smooth gamma changes
     double backlight_trans_step;            // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
     int gamma_trans_step;                   // every gamma transition step value, used when smooth GAMMA transitions are enabled
-    double dimmer_trans_step;               // every backlight transition step value (in pct), used when smooth DIMMER transitions are enabled
+    double dimmer_trans_step[SIZE_DIM];     // every backlight transition step value (in pct), used when smooth DIMMER transitions are enabled
     int backlight_trans_timeout;            // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int gamma_trans_timeout;                // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
-    int dimmer_trans_timeout;               // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
+    int dimmer_trans_timeout[SIZE_DIM];     // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
     int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
     int no_keyboard_bl;                     // disable keyboard backlight automatic calibration (where supported)
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"

@@ -76,10 +76,10 @@ void log_conf(void) {
         fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", conf.no_smooth_dimmer ? "Disabled" : "Enabled");
         fprintf(log_file, "* Bright smooth steps:\t\t%.2lf\n", conf.backlight_trans_step);
         fprintf(log_file, "* Gamma smooth steps:\t\t%d\n", conf.gamma_trans_step);
-        fprintf(log_file, "* Dimmer smooth steps:\t\t%.2lf\n", conf.dimmer_trans_step);
+        fprintf(log_file, "* Dimmer smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", conf.dimmer_trans_step[ENTER], conf.dimmer_trans_step[EXIT]);
         fprintf(log_file, "* Bright smooth timeout:\t\t%d\n", conf.backlight_trans_timeout);
         fprintf(log_file, "* Gamma smooth timeout:\t\t%d\n", conf.gamma_trans_timeout);
-        fprintf(log_file, "* Dimmer smooth timeout:\t\t%d\n\n", conf.dimmer_trans_timeout);
+        fprintf(log_file, "* Dimmer smooth timeout:\t\tENTER: %d, EXIT: %d\n\n", conf.dimmer_trans_timeout[ENTER], conf.dimmer_trans_timeout[EXIT]);
 
         fflush(log_file);
     }

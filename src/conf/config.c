@@ -44,10 +44,8 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_bool(&cfg, "no_smooth_dimmer_transition", &conf.no_smooth_dimmer);
         config_lookup_float(&cfg, "backlight_trans_step", &conf.backlight_trans_step);
         config_lookup_int(&cfg, "gamma_trans_step", &conf.gamma_trans_step);
-        config_lookup_float(&cfg, "dimmer_trans_step", &conf.dimmer_trans_step);
         config_lookup_int(&cfg, "backlight_trans_timeout", &conf.backlight_trans_timeout);
         config_lookup_int(&cfg, "gamma_trans_timeout", &conf.gamma_trans_timeout);
-        config_lookup_int(&cfg, "dimmer_trans_timeout", &conf.dimmer_trans_timeout);
         config_lookup_bool(&cfg, "no_backlight", (int *)&modules[BACKLIGHT].state);
         config_lookup_bool(&cfg, "no_gamma", (int *)&modules[GAMMA].state);
         config_lookup_float(&cfg, "latitude", &conf.loc.lat);
@@ -78,6 +76,28 @@ int read_config(enum CONFIG file, char *config_file) {
         config_setting_t *points, *root, *timeouts, *gamma;
         root = config_root_setting(&cfg);
 
+        /* Load dimmer_trans_steps options */
+        if ((points = config_setting_get_member(root, "dimmer_trans_steps"))) {
+            if (config_setting_length(points) == SIZE_DIM) {
+                for (int i = 0; i < SIZE_DIM; i++) {
+                    conf.dimmer_trans_step[i] = config_setting_get_float_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of dimmer_trans_steps array elements.\n");
+            }
+        }
+        
+        /* Load dimmer_trans_timeouts options */
+        if ((points = config_setting_get_member(root, "dimmer_trans_timeouts"))) {
+            if (config_setting_length(points) == SIZE_DIM) {
+                for (int i = 0; i < SIZE_DIM; i++) {
+                    conf.dimmer_trans_timeout[i] = config_setting_get_int_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of dimmer_trans_timeouts array elements.\n");
+            }
+        }
+        
         /* Load regression points for backlight curve */
         if ((points = config_setting_get_member(root, "ac_backlight_regression_points"))) {
             if (config_setting_length(points) == SIZE_POINTS) {
@@ -206,8 +226,10 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "gamma_trans_step", CONFIG_TYPE_INT);
     config_setting_set_int(setting, conf.gamma_trans_step);
 
-    setting = config_setting_add(root, "dimmer_trans_step", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, conf.dimmer_trans_step);
+    setting = config_setting_add(root, "dimmer_trans_steps", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_DIM; i++) {
+        config_setting_set_float_elem(setting, -1, conf.dimmer_trans_step[i]);
+    }
 
     setting = config_setting_add(root, "backlight_trans_timeout", CONFIG_TYPE_INT);
     config_setting_set_int(setting, conf.backlight_trans_timeout);
@@ -215,8 +237,10 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "gamma_trans_timeout", CONFIG_TYPE_INT);
     config_setting_set_int(setting, conf.gamma_trans_timeout);
 
-    setting = config_setting_add(root, "dimmer_trans_timeout", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, conf.dimmer_trans_timeout);
+    setting = config_setting_add(root, "dimmer_trans_timeouts", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_DIM; i++) {
+        config_setting_set_int_elem(setting, -1, conf.dimmer_trans_timeout[i]);
+    }
 
     setting = config_setting_add(root, "latitude", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, conf.loc.lat);

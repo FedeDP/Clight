@@ -27,10 +27,12 @@ void init_opts(int argc, char *argv[]) {
     conf.dimmer_timeout[ON_BATTERY] = 20;
     conf.dimmer_pct = 0.2;
     conf.backlight_trans_step = 0.05;
-    conf.dimmer_trans_step = 0.05;
+    conf.dimmer_trans_step[ENTER] = 0.05;
+    conf.dimmer_trans_step[EXIT] = 0.05;
     conf.gamma_trans_step = 50;
     conf.backlight_trans_timeout = 30;
-    conf.dimmer_trans_timeout = 30;
+    conf.dimmer_trans_timeout[ENTER] = 30;
+    conf.dimmer_trans_timeout[EXIT] = 30;
     conf.gamma_trans_timeout = 300;
 
     /*
@@ -219,9 +221,13 @@ static void check_conf(void) {
         WARN("Wrong backlight_trans_step value. Resetting default value.\n");
         conf.backlight_trans_step = 0.05;
     }
-    if (conf.dimmer_trans_step <= 0.0f || conf.dimmer_trans_step >= 1.0f) {
-        WARN("Wrong dimmer_trans_step value. Resetting default value.\n");
-        conf.dimmer_trans_step = 0.05;
+    if (conf.dimmer_trans_step[ENTER] <= 0.0f || conf.dimmer_trans_step[ENTER] >= 1.0f) {
+        WARN("Wrong dimmer_trans_step[ENTER] value. Resetting default value.\n");
+        conf.dimmer_trans_step[ENTER] = 0.05;
+    }
+    if (conf.dimmer_trans_step[EXIT] <= 0.0f || conf.dimmer_trans_step[EXIT] >= 1.0f) {
+        WARN("Wrong dimmer_trans_step[EXIT] value. Resetting default value.\n");
+        conf.dimmer_trans_step[EXIT] = 0.05;
     }
     if (conf.gamma_trans_step <= 0) {
         WARN("Wrong gamma_trans_step value. Resetting default value.\n");
@@ -231,9 +237,13 @@ static void check_conf(void) {
         WARN("Wrong backlight_trans_timeout value. Resetting default value.\n");
         conf.backlight_trans_timeout = 30;
     }
-    if (conf.dimmer_trans_timeout <= 0) {
-        WARN("Wrong dimmer_trans_timeout value. Resetting default value.\n");
-        conf.dimmer_trans_timeout = 30;
+    if (conf.dimmer_trans_timeout[ENTER] <= 0) {
+        WARN("Wrong dimmer_trans_timeout[ENTER] value. Resetting default value.\n");
+        conf.dimmer_trans_timeout[ENTER] = 30;
+    }
+    if (conf.dimmer_trans_timeout[EXIT] <= 0) {
+        WARN("Wrong dimmer_trans_timeout[EXIT] value. Resetting default value.\n");
+        conf.dimmer_trans_timeout[EXIT] = 30;
     }
     if (conf.gamma_trans_timeout <= 0) {
         WARN("Wrong gamma_trans_timeout value. Resetting default value.\n");
