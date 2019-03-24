@@ -94,3 +94,42 @@ if (COMPLETIONS_DIR)
 endif()
 install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
+
+#
+# Packaging support
+#
+SET(CPACK_SET_DESTDIR "on")
+set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+
+#
+#  Metadata common to all packaging systems
+#
+set(CPACK_PACKAGE_CONTACT "Federico Di Pierro <nierro92@gmail.com>")
+set(CPACK_PACKAGE_DESCRIPTION "Clight is a tiny C utility that can turn your webcam into a light sensor; moreover it supports a redshift-like gamma control, a screen dimmer and dpms settings.")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A C user daemon utility that aims to fully manage your screens.")
+
+#
+#  RPM Specific configuration
+#
+set(CPACK_RPM_PACKAGE_LICENSE "GPL")
+set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
+set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
+set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
+set(CPACK_RPM_PACKAGE_REQUIRES "libsystemd0 libpopt0 libconfig9 libgsl23 clightd")
+set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+
+#
+#  DEB Specific configuration
+#
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/FedeDP/Clight")
+set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0 libpopt0 libconfig9 libgsl23 clightd")
+set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+
+include(CPack)
