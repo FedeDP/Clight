@@ -59,6 +59,7 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
         config_lookup_bool(&cfg, "no_auto_calibration", &conf.no_auto_calib);
         config_lookup_bool(&cfg, "no_kdb_backlight", &conf.no_keyboard_bl);
+        config_lookup_bool(&cfg, "gamma_long_transition", &conf.gamma_long_transition);
 
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
@@ -241,6 +242,9 @@ int store_config(enum CONFIG file) {
     for (int i = 0; i < SIZE_DIM; i++) {
         config_setting_set_int_elem(setting, -1, conf.dimmer_trans_timeout[i]);
     }
+    
+    setting = config_setting_add(root, "gamma_long_transition", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.gamma_long_transition);
 
     setting = config_setting_add(root, "latitude", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, conf.loc.lat);

@@ -15,10 +15,11 @@ static void interface_curve_callback(const void *ptr);
 static void interface_timeout_callback(const void *ptr);
 static void dimmed_callback(void);
 static void time_callback(void);
+static void in_event_callback(void);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_current_time(void);
 
-static enum states old_state;
+static int curr_timeout;
 static int sensor_available;
 static int ac_force_capture;
 static int max_kbd_backlight;
@@ -50,20 +51,21 @@ static void init(void) {
     /* Add callbacks on prop signal emitted by interface module */
     struct prop_cb dimmed_cb = { "Dimmed", dimmed_callback };
     struct prop_cb time_cb = { "Time", time_callback };
+    struct prop_cb event_cb = { "InEvent", in_event_callback };
     add_prop_callback(&dimmed_cb);
     add_prop_callback(&time_cb);
+    add_prop_callback(&event_cb);
 
     /* We do not fail if this fails */
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
     add_match(&args, &slot, on_sensor_change);
-
-    /* Initialize old state matching current state */
-    old_state = state.time + state.in_event;
     
     if (!conf.no_keyboard_bl) {
         init_kbd_backlight();
     }
 
+    curr_timeout = get_current_time();
+    
     /* Start module timer: 1ns delay if sensor is available, else start it paused */
     sensor_available = is_sensor_available();
     int fd;
@@ -122,7 +124,7 @@ static void do_capture(int reset_timer) {
     }
 
     if (reset_timer) {
-        set_timeout(get_current_time(), 0, main_p[self.idx].fd, 0);
+        set_timeout(curr_timeout, 0, main_p[self.idx].fd, 0);
     }
 }
 
@@ -206,7 +208,7 @@ static void interface_curve_callback(const void *ptr) {
 static void interface_timeout_callback(const void *ptr) {
     if (!state.is_dimmed && sensor_available) {
         int old_val = *((int *)ptr);
-        reset_timer(main_p[self.idx].fd, old_val, get_current_time());
+        reset_timer(main_p[self.idx].fd, old_val, curr_timeout);
     }
 }
 
@@ -218,7 +220,7 @@ static void dimmed_callback(void) {
         static int old_elapsed = 0;
 
         if (state.is_dimmed && old_elapsed == 0) {
-            old_elapsed = get_current_time() - get_timeout_sec(main_p[self.idx].fd);
+            old_elapsed = curr_timeout - get_timeout_sec(main_p[self.idx].fd);
             set_timeout(0, 0, main_p[self.idx].fd, 0); // pause ourself
         } else {
             /*
@@ -235,7 +237,7 @@ static void dimmed_callback(void) {
                 timeout_nsec = 1;
             } else {
                 // Apply correct timeout for current ac state and day time
-                timeout_sec = get_current_time() - old_elapsed;
+                timeout_sec = curr_timeout - old_elapsed;
                 if (timeout_sec <= 0) {
                     timeout_nsec = 1;
                 }
@@ -252,9 +254,17 @@ static void dimmed_callback(void) {
 static void time_callback(void) {
     if (!state.is_dimmed && sensor_available && is_running(self.idx)) {
         /* A state.time change happened, react! */
-        reset_timer(main_p[self.idx].fd, conf.timeout[state.ac_state][old_state], get_current_time());
+        reset_timer(main_p[self.idx].fd, curr_timeout, get_current_time());
     }
-    old_state = state.time + state.in_event;
+    curr_timeout = get_current_time();
+}
+
+static void in_event_callback(void) {
+    if (!state.is_dimmed && sensor_available && is_running(self.idx)) {
+        /* A state.time change happened, react! */
+        reset_timer(main_p[self.idx].fd, curr_timeout, get_current_time());
+    }
+    curr_timeout = get_current_time();
 }
 
 /* Callback on SensorChanged clightd signal */
@@ -276,5 +286,8 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
 }
 
 static inline int get_current_time(void) {
-    return conf.timeout[state.ac_state][state.time + state.in_event];
+    if (state.in_event) {
+        return conf.timeout[state.ac_state][IN_EVENT];
+    }
+    return conf.timeout[state.ac_state][state.time];
 }

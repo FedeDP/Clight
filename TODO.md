@@ -1,7 +1,24 @@
 ### 3.2
 - [x] Fix build when LIBSYSTEMD_VERSION is a float (?), #70
 - [x] Different timeout for dimmer leaving-dimmed fading transition
+
+#### Conf-file option
 - [x] New cmd line option to specify a conf file to be parsed (instead of default $HOME/.conf/clight.conf)
+- [x] Fix small conf reading bug
+
+#### Long gamma transitions
+- [x] Add a long_gamma_transition option, to change gamma in a way similar to redshift (very long fading trnasition)
+
+#### Gamma fixes
+- [x] Double check state.time + state.in_event usage in BACKLIGHT and user scripts
+- [x] Test BACKLIGHT timeouts with verbose option
+
+#### Generic
+
+- [ ] Update wiki with new bus api
+- [x] Update conf file/clight autocompletion script/interface.c with new options
+- [x] Add Cpack support to cmake
+- [ ] Add GAMMA and BACKLIGHT wiki pages with some explanations
 
 ### 3.3
 

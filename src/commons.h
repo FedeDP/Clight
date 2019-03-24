@@ -27,6 +27,8 @@
 #define SIZE_POINTS 11                      // number of points (from 0 to 10 included)
 #define DEGREE 3                            // number of parameters for polynomial regression
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
+#define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
+#define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
 
 /* List of modules indexes */
 enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };
@@ -104,6 +106,7 @@ struct config {
     int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
     int no_keyboard_bl;                     // disable keyboard backlight automatic calibration (where supported)
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
+    int gamma_long_transition;              // flag to enable a very long smooth transition for gamma (redshift-like)
 };
 
 /* Global state of program */

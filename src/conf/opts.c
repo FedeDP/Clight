@@ -16,10 +16,10 @@ void init_opts(int argc, char *argv[]) {
     conf.num_captures = 5;
     conf.timeout[ON_AC][DAY] = 10 * 60;
     conf.timeout[ON_AC][NIGHT] = 45 * 60;
-    conf.timeout[ON_AC][SIZE_STATES] = 5 * 60;
+    conf.timeout[ON_AC][IN_EVENT] = 5 * 60;
     conf.timeout[ON_BATTERY][DAY] = 2 * conf.timeout[ON_AC][DAY];
     conf.timeout[ON_BATTERY][NIGHT] = 2 * conf.timeout[ON_AC][NIGHT];
-    conf.timeout[ON_BATTERY][SIZE_STATES] = 2 * conf.timeout[ON_AC][SIZE_STATES];
+    conf.timeout[ON_BATTERY][IN_EVENT] = 2 * conf.timeout[ON_AC][IN_EVENT];
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
     conf.event_duration = 30 * 60;
@@ -72,7 +72,9 @@ void init_opts(int argc, char *argv[]) {
     char conf_file[PATH_MAX + 1] = {0};
     
     read_config(GLOBAL, conf_file);
+    conf_file[0] = 0;
     read_config(LOCAL, conf_file);
+    conf_file[0] = 0;
     parse_cmd(argc, argv, conf_file, PATH_MAX);
     
     /* --conf-file option was passed! */
@@ -113,6 +115,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         {"conf-file", 'c', POPT_ARG_STRING, NULL, 6, "Specify a conf file to be parsed", NULL},
+        {"gamma-long-transition", 0, POPT_ARG_NONE, &conf.gamma_long_transition, 100, "Enable a very long smooth transition for gamma (redshift-like)", NULL },
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -173,9 +176,9 @@ static void check_conf(void) {
         WARN("Wrong night timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][NIGHT] = 45 * 60;
     }
-    if (conf.timeout[ON_AC][SIZE_STATES] <= 0) {
+    if (conf.timeout[ON_AC][IN_EVENT] <= 0) {
         WARN("Wrong event timeout on AC value. Resetting default value.\n");
-        conf.timeout[ON_AC][SIZE_STATES] = 5 * 60;
+        conf.timeout[ON_AC][IN_EVENT] = 5 * 60;
     }
     if (conf.timeout[ON_BATTERY][DAY] <= 0) {
         WARN("Wrong day timeout on BATT value. Resetting default value.\n");
@@ -185,9 +188,9 @@ static void check_conf(void) {
         WARN("Wrong night timeout on BATT value. Resetting default value.\n");
         conf.timeout[ON_BATTERY][NIGHT] = 90 * 60;
     }
-    if (conf.timeout[ON_BATTERY][SIZE_STATES] <= 0) {
+    if (conf.timeout[ON_BATTERY][IN_EVENT] <= 0) {
         WARN("Wrong event timeout on BATT value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][SIZE_STATES] = 10 * 60;
+        conf.timeout[ON_BATTERY][IN_EVENT] = 10 * 60;
     }
     if (conf.num_captures < 1 || conf.num_captures > 20) {
         WARN("Wrong frames value. Resetting default value.\n");
