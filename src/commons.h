@@ -29,6 +29,8 @@
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 #define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
+#define LAT_UNDEFINED 91.0
+#define LON_UNDEFINED 181.0
 
 /* List of modules indexes */
 enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };

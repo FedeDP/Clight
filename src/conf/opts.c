@@ -34,6 +34,9 @@ void init_opts(int argc, char *argv[]) {
     conf.dimmer_trans_timeout[ENTER] = 30;
     conf.dimmer_trans_timeout[EXIT] = 30;
     conf.gamma_trans_timeout = 300;
+    
+    conf.loc.lat = LAT_UNDEFINED;
+    conf.loc.lon = LON_UNDEFINED;
 
     /*
      * Default polynomial regression points:
@@ -214,11 +217,11 @@ static void check_conf(void) {
     }
     if (fabs(conf.loc.lat) > 90.0f) {
         WARN("Wrong latitude value. Resetting default value.\n");
-        conf.loc.lat = 0.0f;
+        conf.loc.lat = LAT_UNDEFINED;
     }
     if (fabs(conf.loc.lon) > 180.0f) {
         WARN("Wrong longitude value. Resetting default value.\n");
-        conf.loc.lat = 0.0f;
+        conf.loc.lon = LON_UNDEFINED;
     }
     if (conf.backlight_trans_step <= 0.0f || conf.backlight_trans_step >= 1.0f) {
         WARN("Wrong backlight_trans_step value. Resetting default value.\n");

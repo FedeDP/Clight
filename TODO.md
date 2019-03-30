@@ -13,12 +13,20 @@
 - [x] Double check state.time + state.in_event usage in BACKLIGHT and user scripts
 - [x] Test BACKLIGHT timeouts with verbose option
 
+#### Location fixes
+- [x] 0.0:0.0 is actually a good location. Avoid using these values to filter away unsetted location
+
+#### Dpms
+- [ ] Drop dpms timeouts and only use one more Idle client and switch off screen after "dpms_timeout[state.ac_state]" has elapsed?
+
 #### Generic
 
 - [ ] Update wiki with new bus api
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add Cpack support to cmake
 - [ ] Add GAMMA and BACKLIGHT wiki pages with some explanations
+- [x] Add issue template
+- [ ] bump Clightd required version (release after clightd!)
 
 ### 3.3
 

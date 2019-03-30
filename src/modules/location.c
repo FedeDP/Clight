@@ -135,7 +135,7 @@ static int check(void) {
      * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD)
      */
     memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
-    if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != 0.0 && conf.loc.lon != 0.0)) {
+    if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED)) {
         change_dep_type(GAMMA, self.idx, SOFT);
         return 1;
     }
@@ -207,7 +207,7 @@ static void geoclue_client_stop(void) {
 }
 
 static void cache_location(void) {
-    if (state.current_loc.lat != 0.0 && state.current_loc.lon != 0.0) {
+    if (state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) {
         FILE *f = fopen(cache_file, "w");
         if (f) {
             fprintf(f, "%lf %lf\n", state.current_loc.lat, state.current_loc.lon);

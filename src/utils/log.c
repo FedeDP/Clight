@@ -40,7 +40,7 @@ void log_conf(void) {
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
 
-        if (conf.loc.lat != 0.0f || conf.loc.lon != 0.0f) {
+        if (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED) {
             fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.loc.lat, conf.loc.lon);
         } else {
             fprintf(log_file, "* User position:\t\tUnset\n");
@@ -80,6 +80,7 @@ void log_conf(void) {
         fprintf(log_file, "* Bright smooth timeout:\t\t%d\n", conf.backlight_trans_timeout);
         fprintf(log_file, "* Gamma smooth timeout:\t\t%d\n", conf.gamma_trans_timeout);
         fprintf(log_file, "* Dimmer smooth timeout:\t\tENTER: %d, EXIT: %d\n\n", conf.dimmer_trans_timeout[ENTER], conf.dimmer_trans_timeout[EXIT]);
+        fprintf(log_file, "* Gamma long transition:\t\t%s\n", conf.gamma_long_transition ? "Enabled" : "Disabled");
 
         fflush(log_file);
     }

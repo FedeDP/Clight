@@ -246,11 +246,13 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "gamma_long_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.gamma_long_transition);
 
-    setting = config_setting_add(root, "latitude", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, conf.loc.lat);
+    if (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED) {
+        setting = config_setting_add(root, "latitude", CONFIG_TYPE_FLOAT);
+        config_setting_set_float(setting, conf.loc.lat);
+        setting = config_setting_add(root, "longitude", CONFIG_TYPE_FLOAT);
+        config_setting_set_float(setting, conf.loc.lon);
+    }
 
-    setting = config_setting_add(root, "longitude", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, conf.loc.lon);
 
     setting = config_setting_add(root, "event_duration", CONFIG_TYPE_INT);
     config_setting_set_int(setting, conf.event_duration);
