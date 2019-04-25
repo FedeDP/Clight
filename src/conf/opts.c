@@ -215,11 +215,11 @@ static void check_conf(void) {
         WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
         conf.dimmer_pct = 0.2;
     }
-    if (fabs(conf.loc.lat) > 90.0f) {
+    if (fabs(conf.loc.lat) > 90.0f && conf.loc.lat != LAT_UNDEFINED) {
         WARN("Wrong latitude value. Resetting default value.\n");
         conf.loc.lat = LAT_UNDEFINED;
     }
-    if (fabs(conf.loc.lon) > 180.0f) {
+    if (fabs(conf.loc.lon) > 180.0f && conf.loc.lon != LON_UNDEFINED) {
         WARN("Wrong longitude value. Resetting default value.\n");
         conf.loc.lon = LON_UNDEFINED;
     }

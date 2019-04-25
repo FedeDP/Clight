@@ -13,25 +13,28 @@
 - [x] Double check state.time + state.in_event usage in BACKLIGHT and user scripts
 - [x] Test BACKLIGHT timeouts with verbose option
 
+- [x] FIX: next_event should point to next event as soon as current event is elapsed (eg: SUNRISE 7:00, at 6:59 next_event -> SUNRISE, at 7:00 next_event -> SUNSET)
+- [x] FIX gamma long transitions for long suspend cycles (eg: put laptop to sleep during NIGHT and awake it during DAY)
+
 #### Location fixes
 - [x] 0.0:0.0 is actually a good location. Avoid using these values to filter away unsetted location
-
-#### Dpms
-- [ ] Drop dpms timeouts and only use one more Idle client and switch off screen after "dpms_timeout[state.ac_state]" has elapsed?
+- [x] fix: ->  WARN("Wrong longitude value. Resetting default value.\n");
 
 #### Generic
-
-- [ ] Update wiki with new bus api
+- [x] Update wiki with new bus api
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add Cpack support to cmake
-- [ ] Add GAMMA and BACKLIGHT wiki pages with some explanations
 - [x] Add issue template
-- [ ] bump Clightd required version (release after clightd!)
+- [x] bump Clightd required version (release after clightd!)
+- [x] Reset conf.event_duration default value (changed for testing)
 
 ### 3.3
 
-#### GAMMA improvements
-- [ ] Add support for different curves for GAMMA (just like we do for BACKLIGHT) for DAY and NIGHT time. (#61)
+#### DPMS
+- [ ] Dpms should be a special case of screen dimming, ie: a Clightd.Idle client that waits on a timeout, and when IDLE signal is sent, it should switch off screen.
+It should work on wayland(wlroots) too.
+
+### 3.4
 
 #### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
