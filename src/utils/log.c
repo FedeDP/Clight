@@ -79,8 +79,8 @@ void log_conf(void) {
         fprintf(log_file, "* Dimmer smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", conf.dimmer_trans_step[ENTER], conf.dimmer_trans_step[EXIT]);
         fprintf(log_file, "* Bright smooth timeout:\t\t%d\n", conf.backlight_trans_timeout);
         fprintf(log_file, "* Gamma smooth timeout:\t\t%d\n", conf.gamma_trans_timeout);
-        fprintf(log_file, "* Dimmer smooth timeout:\t\tENTER: %d, EXIT: %d\n\n", conf.dimmer_trans_timeout[ENTER], conf.dimmer_trans_timeout[EXIT]);
-        fprintf(log_file, "* Gamma long transition:\t\t%s\n", conf.gamma_long_transition ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Dimmer smooth timeout:\t\tENTER: %d, EXIT: %d\n", conf.dimmer_trans_timeout[ENTER], conf.dimmer_trans_timeout[EXIT]);
+        fprintf(log_file, "* Gamma long transition:\t\t%s\n\n", conf.gamma_long_transition ? "Enabled" : "Disabled");
 
         fflush(log_file);
     }

@@ -83,9 +83,10 @@ static void check_gamma(void) {
      *      A) resumed with a different target_event
      *      B) resumed with same target_event but in a different day/year (well this is kinda overkill)
      */
-    if (old_target_event != target_event
+    if (long_transitioning &&
+        (old_target_event != target_event
         || tm_now.tm_yday != tm_old.tm_yday 
-        || tm_now.tm_year != tm_old.tm_year) {
+        || tm_now.tm_year != tm_old.tm_year)) {
 
         INFO("Long transition ended.\n");
         long_transitioning = 0;
