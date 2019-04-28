@@ -88,7 +88,7 @@ static void check_gamma(void) {
         || tm_now.tm_yday != tm_old.tm_yday 
         || tm_now.tm_year != tm_old.tm_year)) {
 
-        INFO("Long transition ended.\n");
+        INFO("Long gamma transition ended.\n");
         long_transitioning = 0;
     }
     
