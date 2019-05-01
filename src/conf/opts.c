@@ -1,6 +1,7 @@
 #include <config.h>
 #include <opts.h>
 #include <popt.h>
+#include "modules.h"
 
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
 static void check_conf(void);
@@ -259,6 +260,11 @@ static void check_conf(void) {
     if (conf.shutter_threshold < 0 || conf.shutter_threshold >= 1) {
         WARN("Wrong shutter_threshold value. Resetting default value.\n");
         conf.shutter_threshold = 0.0;
+    }
+    
+    /* Forcefully enable BACKLIGHT if ambient_gamma is enabled */
+    if (conf.ambient_gamma) {
+        change_dep_type(GAMMA, BACKLIGHT, HARD);
     }
 
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;

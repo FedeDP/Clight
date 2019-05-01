@@ -45,10 +45,6 @@ static void init(void) {
 }
 
 static int check(void) {
-    if (conf.ambient_gamma) {
-        /* We need backlight when ambient_gamma is enabled! */
-        change_dep_type(BACKLIGHT, self.idx, HARD);
-    }
     return 0;
 }
 
