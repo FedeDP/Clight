@@ -9,6 +9,9 @@
 #### Long gamma transitions
 - [x] Add a long_gamma_transition option, to change gamma in a way similar to redshift (very long fading trnasition)
 
+#### Ambient-brightness-based gamma
+- [x] Fix #61
+
 #### Gamma fixes
 - [x] Double check state.time + state.in_event usage in BACKLIGHT and user scripts
 - [x] Test BACKLIGHT timeouts with verbose option
@@ -27,6 +30,7 @@
 - [x] Add issue template
 - [x] bump Clightd required version (release after clightd!)
 - [x] Reset conf.event_duration default value (changed for testing)
+- [ ] Update wiki with new features
 
 ### 3.3
 

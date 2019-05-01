@@ -51,6 +51,7 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_PROPERTY("NoAutoCalib", "b", NULL, offsetof(struct config, no_auto_calib), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NoKbdCalib", "b", NULL, offsetof(struct config, no_keyboard_bl), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("AmbientGamma", "b", NULL, offsetof(struct config, ambient_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct config, loc), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "s", NULL, offsetof(struct config, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunset", "s", NULL, offsetof(struct config, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_CONST),

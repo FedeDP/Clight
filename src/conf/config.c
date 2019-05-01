@@ -60,6 +60,7 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_bool(&cfg, "no_auto_calibration", &conf.no_auto_calib);
         config_lookup_bool(&cfg, "no_kdb_backlight", &conf.no_keyboard_bl);
         config_lookup_bool(&cfg, "gamma_long_transition", &conf.gamma_long_transition);
+        config_lookup_bool(&cfg, "ambient_gamma", &conf.ambient_gamma);
 
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
@@ -245,6 +246,9 @@ int store_config(enum CONFIG file) {
     
     setting = config_setting_add(root, "gamma_long_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.gamma_long_transition);
+    
+    setting = config_setting_add(root, "ambient_gamma", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.ambient_gamma);
 
     if (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED) {
         setting = config_setting_add(root, "latitude", CONFIG_TYPE_FLOAT);
@@ -252,7 +256,6 @@ int store_config(enum CONFIG file) {
         setting = config_setting_add(root, "longitude", CONFIG_TYPE_FLOAT);
         config_setting_set_float(setting, conf.loc.lon);
     }
-
 
     setting = config_setting_add(root, "event_duration", CONFIG_TYPE_INT);
     config_setting_set_int(setting, conf.event_duration);

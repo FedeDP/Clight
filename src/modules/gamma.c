@@ -7,6 +7,7 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
 static void check_next_event(const time_t *now, int day);
 static void check_state(const time_t *now);
 static void set_temp(int temp, const time_t *now);
+static void ambient_callback(void);
 static void location_callback(const void *ptr);
 static void interface_callback(const void *ptr);
 
@@ -32,6 +33,9 @@ MODULE(GAMMA);
 static void init(void) {
     struct bus_cb loc_cb = { LOCATION, location_callback };
     struct bus_cb interface_cb = { INTERFACE, interface_callback, "gamma" };
+    
+    struct prop_cb amb_cb = { "CurrentBlPct", ambient_callback };
+    add_prop_callback(&amb_cb);
 
     /* Initial value */
     state.time = -1;
@@ -41,6 +45,10 @@ static void init(void) {
 }
 
 static int check(void) {
+    if (conf.ambient_gamma) {
+        /* We need backlight when ambient_gamma is enabled! */
+        change_dep_type(BACKLIGHT, self.idx, HARD);
+    }
     return 0;
 }
 
@@ -109,7 +117,7 @@ static void check_gamma(void) {
      * For long_transitioning, only call it when starting transition,
      * and at the end (to be sure to correctly set desired gamma and to avoid any sync issue)
      */
-    if (!long_transitioning) {
+    if (!long_transitioning && !conf.ambient_gamma) {
         set_temp(conf.temp[state.time], &t);
     }
     
@@ -266,6 +274,19 @@ static void set_temp(int temp, const time_t *now) {
     }
 }
 
+static void ambient_callback(void) {
+    if (conf.ambient_gamma) {
+        /* 
+         * Note that conf.temp is not constant (it can be changed through bus api),
+         * thus we have to always compute these ones.
+         */
+        const int diff = abs(conf.temp[DAY] - conf.temp[NIGHT]);
+        const int min_temp = conf.temp[NIGHT] < conf.temp[DAY] ? conf.temp[NIGHT] : conf.temp[DAY]; 
+        const int ambient_temp = (diff * state.current_bl_pct) + min_temp;
+        set_temp(ambient_temp, NULL); // force refresh
+    }
+}
+
 static void location_callback(const void *ptr) {
     struct location *old_loc = (struct location *)ptr;
     /* Check if new position is at least 20kms distant */
@@ -279,7 +300,7 @@ static void location_callback(const void *ptr) {
 }
 
 static void interface_callback(const void *ptr) {
-    time_t t = time(NULL);
-    check_state(&t); // update conf.temp in case we're during an EVENT
-    set_temp(conf.temp[state.time], NULL); // force a refresh (passing NULL time_t*)
+    if (!conf.ambient_gamma) {
+        set_temp(conf.temp[state.time], NULL); // force refresh (passing NULL time_t*)
+    }
 }

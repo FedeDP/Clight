@@ -109,6 +109,7 @@ struct config {
     int no_keyboard_bl;                     // disable keyboard backlight automatic calibration (where supported)
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
     int gamma_long_transition;              // flag to enable a very long smooth transition for gamma (redshift-like)
+    int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
 };
 
 /* Global state of program */

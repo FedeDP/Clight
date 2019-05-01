@@ -119,6 +119,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         {"conf-file", 'c', POPT_ARG_STRING, NULL, 6, "Specify a conf file to be parsed", NULL},
         {"gamma-long-transition", 0, POPT_ARG_NONE, &conf.gamma_long_transition, 100, "Enable a very long smooth transition for gamma (redshift-like)", NULL },
+        {"ambient-gamma", 0, POPT_ARG_NONE, &conf.ambient_gamma, 100, "Enable screen temperature matching ambient brightness instead of time based.", NULL },
         POPT_AUTOHELP
         POPT_TABLEEND
     };
