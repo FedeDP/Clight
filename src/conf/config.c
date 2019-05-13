@@ -41,7 +41,6 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_int(&cfg, "captures", &conf.num_captures);
         config_lookup_bool(&cfg, "no_smooth_backlight_transition", &conf.no_smooth_backlight);
         config_lookup_bool(&cfg, "no_smooth_gamma_transition", &conf.no_smooth_gamma);
-        config_lookup_bool(&cfg, "no_smooth_dimmer_transition", &conf.no_smooth_dimmer);
         config_lookup_float(&cfg, "backlight_trans_step", &conf.backlight_trans_step);
         config_lookup_int(&cfg, "gamma_trans_step", &conf.gamma_trans_step);
         config_lookup_int(&cfg, "backlight_trans_timeout", &conf.backlight_trans_timeout);
@@ -78,6 +77,17 @@ int read_config(enum CONFIG file, char *config_file) {
         config_setting_t *points, *root, *timeouts, *gamma;
         root = config_root_setting(&cfg);
 
+        /* Load no_smooth_dimmer options */
+        if ((points = config_setting_get_member(root, "no_smooth_dimmer_transition"))) {
+            if (config_setting_length(points) == SIZE_DIM) {
+                for (int i = 0; i < SIZE_DIM; i++) {
+                    conf.no_smooth_dimmer[i] = config_setting_get_float_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of no_smooth_dimmer_transition array elements.\n");
+            }
+        }
+        
         /* Load dimmer_trans_steps options */
         if ((points = config_setting_get_member(root, "dimmer_trans_steps"))) {
             if (config_setting_length(points) == SIZE_DIM) {
@@ -219,8 +229,10 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "no_smooth_gamma_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.no_smooth_gamma);
 
-    setting = config_setting_add(root, "no_smooth_dimmer_transition", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, conf.no_smooth_dimmer);
+    setting = config_setting_add(root, "no_smooth_dimmer_transition", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_DIM; i++) {
+        config_setting_set_bool_elem(setting, -1, conf.no_smooth_dimmer[i]);
+    }
 
     setting = config_setting_add(root, "backlight_trans_step", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, conf.backlight_trans_step);

@@ -3,6 +3,7 @@
 
 #### Dimmer
 - [x] Different timeout for dimmer leaving-dimmed fading transition
+- [x] No_smooth_dimmer_transition for enter/leave transitions
 
 #### Conf-file option
 - [x] New cmd line option to specify a conf file to be parsed (instead of default $HOME/.conf/clight.conf)
@@ -32,7 +33,7 @@
 - [ ] If it has "org.mpris.MediaPlayer2.CanSetFullscreen" property -> it is a video!
 
 #### Generic
-- [x] Update wiki with new bus api
+- [ ] Update wiki with new bus api!!
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add Cpack support to cmake
 - [x] Add issue template
@@ -40,7 +41,6 @@
 - [x] Update wiki with new features
 - [x] Expose CurrentKbdPct through bus api
 - [x] Expose CurrentTemp through bus api
-- [ ] Drop no_smooth_X_transition configurations (useless, they should be dropped in clightd too!)
 
 ### 3.3
 

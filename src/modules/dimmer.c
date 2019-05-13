@@ -175,13 +175,13 @@ static void dim_backlight(const double pct) {
     if (pct >= state.current_bl_pct) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
-        set_backlight_level(pct, !conf.no_smooth_dimmer, conf.dimmer_trans_step[ENTER], conf.dimmer_trans_timeout[ENTER]);
+        set_backlight_level(pct, !conf.no_smooth_dimmer[ENTER], conf.dimmer_trans_step[ENTER], conf.dimmer_trans_timeout[ENTER]);
     }
 }
 
 /* restore previous backlight level */
 static void restore_backlight(const double pct) {
-    set_backlight_level(pct, !conf.no_smooth_dimmer, conf.dimmer_trans_step[EXIT], conf.dimmer_trans_timeout[EXIT]);
+    set_backlight_level(pct, !conf.no_smooth_dimmer[EXIT], conf.dimmer_trans_step[EXIT], conf.dimmer_trans_timeout[EXIT]);
 }
 
 /* Reset dimmer timeout */

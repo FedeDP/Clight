@@ -100,7 +100,7 @@ struct config {
     int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
     int verbose;                            // whether we're in verbose mode
     int no_smooth_backlight;                // disable smooth backlight changes for BACKLIGHT module
-    int no_smooth_dimmer;                   // disable smooth backlight changes for DIMMER module
+    int no_smooth_dimmer[SIZE_DIM];         // disable smooth backlight changes for DIMMER module
     int no_smooth_gamma;                    // disable smooth gamma changes
     double backlight_trans_step;            // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
     int gamma_trans_step;                   // every gamma transition step value, used when smooth GAMMA transitions are enabled
