@@ -32,6 +32,12 @@
 - [ ] org.mpris.MediaPlayer2.Player.PlaybackStatus                     property  s         "Playing"                                emits-change
 - [ ] If it has "org.mpris.MediaPlayer2.CanSetFullscreen" property -> it is a video!
 
+https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html
+https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html
+
+#### Inhibit
+- [ ] Switch to monitor org.freedesktop.ScreenSaver interface instead of PowerManagement?
+
 #### Generic
 - [ ] Update wiki with new bus api!!
 - [x] Update conf file/clight autocompletion script/interface.c with new options
