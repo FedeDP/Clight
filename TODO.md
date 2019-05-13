@@ -39,7 +39,7 @@ https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html
 - [ ] Switch to monitor org.freedesktop.ScreenSaver interface instead of PowerManagement?
 
 #### Generic
-- [ ] Update wiki with new bus api!!
+- [x] Update wiki with new bus api!!
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add Cpack support to cmake
 - [x] Add issue template

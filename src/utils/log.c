@@ -39,6 +39,7 @@ void log_conf(void) {
         fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
+        fprintf(log_file, "* Ambient gamma:\t\t%s\n", conf.ambient_gamma ? "Enabled" : "Disabled");
 
         if (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED) {
             fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.loc.lat, conf.loc.lon);
@@ -73,7 +74,9 @@ void log_conf(void) {
         fprintf(log_file, "\n### Smooth ###\n");
         fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");
         fprintf(log_file, "* Gamma smooth trans:\t\t%s\n", conf.no_smooth_gamma ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Dimmer smooth trans:\t\t%s\n", conf.no_smooth_dimmer ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Dimmer smooth trans:\t\tENTER: %s, EXIT: %s\n", 
+                conf.no_smooth_dimmer[ENTER] ? "Disabled" : "Enabled",
+                conf.no_smooth_dimmer[EXIT] ? "Disabled" : "Enabled");
         fprintf(log_file, "* Bright smooth steps:\t\t%.2lf\n", conf.backlight_trans_step);
         fprintf(log_file, "* Gamma smooth steps:\t\t%d\n", conf.gamma_trans_step);
         fprintf(log_file, "* Dimmer smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", conf.dimmer_trans_step[ENTER], conf.dimmer_trans_step[EXIT]);
