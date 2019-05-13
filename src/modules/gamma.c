@@ -262,6 +262,8 @@ static void set_temp(int temp, const time_t *now) {
     
     int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);
     if (!r && ok) {
+        state.current_temp = temp;
+        emit_prop("CurrentTemp");
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);
         } else {
@@ -284,15 +286,9 @@ static void ambient_callback(void) {
 }
 
 static void location_callback(const void *ptr) {
-    struct location *old_loc = (struct location *)ptr;
-    /* Check if new position is at least 20kms distant */
-    if (get_distance(old_loc, &state.current_loc) > LOC_DISTANCE_THRS) {
-        /* Updated GAMMA module sunrise/sunset for new location */
-        state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-        set_timeout(0, 1, main_p[self.idx].fd, 0);
-    } else {
-        INFO("New location is close to old one. Skip updating sunrise/sunset times.\n");
-    }
+    /* Updated GAMMA module sunrise/sunset for new location */
+    state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+    set_timeout(0, 1, main_p[self.idx].fd, 0);
 }
 
 static void interface_callback(const void *ptr) {

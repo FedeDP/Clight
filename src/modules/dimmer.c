@@ -149,6 +149,11 @@ static int idle_client_destroy(void) {
     return 0;
 }
 
+/* 
+ * Dimming logic cannot be moved to BACKLIGHT module,
+ * even if BACKLIGHT module is hooked to "Dimmed" prop state,
+ * because dimming has to work even if BACKLIGHT module is disabled.
+ */
 static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     static double old_pct = -1.0;
 

@@ -185,14 +185,13 @@ static int geoclue_client_start(void) {
     SYSBUS_ARG(call_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Start");
     SYSBUS_ARG(id_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId");
     SYSBUS_ARG(thres_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold");
+    SYSBUS_ARG(time_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "TimeThreshold");
 
     /* It now needs proper /usr/share/applications/clightc.desktop name */
     int r = set_property(&id_args, 's', "clightc");
     if (!r) {
-        unsigned int loc_thrs = LOC_DISTANCE_THRS;
-        r = set_property(&thres_args, 'u', &loc_thrs); // 50kms
-    }
-    if (!r) {
+        set_property(&time_args, 'u', &(unsigned int) { LOC_TIME_THRS });
+        set_property(&thres_args, 'u', &(unsigned int) { LOC_DISTANCE_THRS });
         r = call(NULL, "", &call_args, NULL);
     }
     return r;

@@ -3,7 +3,7 @@
 static int check_clightd_version(void);
 
 #define MINIMUM_CLIGHTD_VERSION_MAJ 3
-#define MINIMUM_CLIGHTD_VERSION_MIN 5
+#define MINIMUM_CLIGHTD_VERSION_MIN 0
 
 static struct dependency dependencies[] = {
     {HARD, BUS}     // We need bus to be started before attempt to check for Clightd

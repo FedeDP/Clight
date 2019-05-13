@@ -8,19 +8,6 @@ static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow);
 
 /*
- * Get distance between 2 locations
- */
-double get_distance(struct location *loc1, struct location *loc2) {
-    double theta, dist;
-    theta = loc1->lon - loc2->lon;
-    dist = sin(degToRad(loc1->lat)) * sin(degToRad(loc2->lat)) + cos(degToRad(loc1->lat)) * cos(degToRad(loc2->lat)) * cos(degToRad(theta));
-    dist = acos(dist);
-    dist = radToDeg(dist);
-    dist = dist * 60 * 1.1515;
-    return (dist);
-}
-
-/*
  * Convert degrees to radians
  */
 double degToRad(double angleDeg) {

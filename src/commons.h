@@ -1,3 +1,5 @@
+#pragma once
+
 #include <time.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -26,6 +28,7 @@
 #define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used eg when no geoclue2 is found)
 #define SIZE_POINTS 11                      // number of points (from 0 to 10 included)
 #define DEGREE 3                            // number of parameters for polynomial regression
+#define LOC_TIME_THRS 600                   // time threshold (seconds) before triggering location changed events (10mins)
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 #define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
@@ -123,6 +126,8 @@ struct state {
     char *xauthority;                       // xauthority env variable, to be used in gamma calls
     char *display;                          // display env variable, to be used in gamma calls
     double current_bl_pct;                  // current backlight pct
+    double current_kbd_pct;                 // current keyboard backlight pct
+    int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
     int is_dimmed;                          // whether we are currently in dimmed state
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited

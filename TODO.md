@@ -1,5 +1,7 @@
 ### 3.2
 - [x] Fix build when LIBSYSTEMD_VERSION is a float (?), #70
+
+#### Dimmer
 - [x] Different timeout for dimmer leaving-dimmed fading transition
 
 #### Conf-file option
@@ -22,15 +24,23 @@
 #### Location fixes
 - [x] 0.0:0.0 is actually a good location. Avoid using these values to filter away unsetted location
 - [x] fix: ->  WARN("Wrong longitude value. Resetting default value.\n");
+- [x] Drop get_distance method, directly use Geoclue2 threshold. "TimeThreshold" was needed too: "When TimeThreshold is zero, it always emits the signal."
+
+#### MPRIS
+- [ ] New module that detects when a video is started (mpris interface?) and sets a certain backlight level (eg: 100%)
+- [ ] org.mpris.MediaPlayer2.Player.PlaybackStatus                     property  s         "Playing"                                emits-change
+- [ ] If it has "org.mpris.MediaPlayer2.CanSetFullscreen" property -> it is a video!
 
 #### Generic
 - [x] Update wiki with new bus api
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add Cpack support to cmake
 - [x] Add issue template
-- [x] bump Clightd required version (release after clightd!)
 - [x] Reset conf.event_duration default value (changed for testing)
-- [ ] Update wiki with new features
+- [x] Update wiki with new features
+- [x] Expose CurrentKbdPct through bus api
+- [x] Expose CurrentTemp through bus api
+- [ ] Drop no_smooth_X_transition configurations (useless, they should be dropped in clightd too!)
 
 ### 3.3
 
