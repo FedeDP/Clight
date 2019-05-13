@@ -47,6 +47,9 @@ https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html
 - [x] Update wiki with new features
 - [x] Expose CurrentKbdPct through bus api
 - [x] Expose CurrentTemp through bus api
+- [x] "NoAutoCalib", "NoKbdCalib", "AmbientGamma" should be writable bus properties (Fixes #50 -> NoAutoCalib)
+- [x] Check if module is running before calling its prop callbacks
+- [x] Add "pause calib" and "resume calib" actions to desktop file
 
 ### 3.3
 

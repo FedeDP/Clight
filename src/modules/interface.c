@@ -18,7 +18,10 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int emit_p(const char *path, const char *interface, const char *signal);
 static void run_prop_callbacks(const char *prop);
 
 struct prop_callback {
@@ -51,12 +54,12 @@ static const sd_bus_vtable clight_vtable[] = {
 
 static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("NoAutoCalib", "b", NULL, offsetof(struct config, no_auto_calib), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoKbdCalib", "b", NULL, offsetof(struct config, no_keyboard_bl), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("AmbientGamma", "b", NULL, offsetof(struct config, ambient_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct config, loc), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "s", NULL, offsetof(struct config, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunset", "s", NULL, offsetof(struct config, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(struct config, no_auto_calib), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(struct config, no_keyboard_bl), 0),
+    SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(struct config, ambient_gamma), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothBacklight", "b", NULL, NULL, offsetof(struct config, no_smooth_backlight), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerEnter", "b", NULL, NULL, offsetof(struct config, no_smooth_dimmer[ENTER]), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerExit", "b", NULL, NULL, offsetof(struct config, no_smooth_dimmer[EXIT]), 0),
@@ -292,6 +295,13 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
     return r;
 }
 
+static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                          sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    FILL_MATCH_DATA(conf.no_auto_calib); // old value
+    int r = sd_bus_message_read(value, "b", userdata);
+    return r;
+}
+
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int r = -1;
     if (store_config(LOCAL) == 0) {
@@ -303,22 +313,18 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
 }
 
 int emit_prop(const char *signal) {
-    if (is_running((self.idx))) {
-        sd_bus **userbus = get_user_bus();
-        if (*userbus) {
-            sd_bus_emit_properties_changed(*userbus, object_path, bus_interface, signal, NULL);
-            run_prop_callbacks(signal);
-            return 0;
-        }
-    }
-    return -1;
+    return emit_p(object_path, bus_interface, signal);
 }
 
 int emit_mod_prop(const char *signal) {
+    return emit_p(module_path, module_interface, signal);
+}
+
+static int emit_p(const char *path, const char *interface, const char *signal) {
     if (is_running((self.idx))) {
         sd_bus **userbus = get_user_bus();
         if (*userbus) {
-            sd_bus_emit_properties_changed(*userbus, module_path, module_interface, signal, NULL);
+            sd_bus_emit_properties_changed(*userbus, path, interface, signal, NULL);
             run_prop_callbacks(signal);
             return 0;
         }
@@ -342,7 +348,7 @@ int add_prop_callback(struct prop_cb *cb) {
 
 static void run_prop_callbacks(const char *prop) {
     for (int i = 0; i < _cb.num_callbacks; i++) {
-        if (!strcmp(_cb.callbacks[i].name, prop)) {
+        if (is_running(_cb.callbacks[i].dst) && !strcmp(_cb.callbacks[i].name, prop)) {
             _cb.callbacks[i].cb();
         }
     }

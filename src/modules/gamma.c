@@ -35,9 +35,9 @@ static void init(void) {
     struct bus_cb interface_cb = { INTERFACE, interface_callback, "gamma" };
     
     struct prop_cb amb_cb = { "CurrentBlPct", ambient_callback };
-    add_prop_callback(&amb_cb);
+    ADD_PROP_CB(&amb_cb);
 
-    /* Initial value */
+    /* Initial value -> undefined */
     state.time = -1;
     
     int fd = start_timer(CLOCK_BOOTTIME, 0, 1);

@@ -262,6 +262,10 @@ finish:
     return r;
 }
 
+/* 
+ * When adding a callback on a bus module (eg: LOCATION, or INTERFACE),
+ * remember to call FILL_MATCH_DATA in bus module match/interface callback!
+ */
 void add_mod_callback(const struct bus_cb *cb) {
     struct bus_cb *tmp = realloc(_cb.callbacks, sizeof(struct bus_cb) * (++_cb.num_callbacks));
     if (tmp) {
