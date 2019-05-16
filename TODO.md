@@ -26,6 +26,7 @@
 - [x] 0.0:0.0 is actually a good location. Avoid using these values to filter away unsetted location
 - [x] fix: ->  WARN("Wrong longitude value. Resetting default value.\n");
 - [x] Drop get_distance method, directly use Geoclue2 threshold. "TimeThreshold" was needed too: "When TimeThreshold is zero, it always emits the signal."
+- [x] Only cache location when leaving if any geoclue2 client was initialized
 
 #### MPRIS
 - [ ] New module that detects when a video is started (mpris interface?) and sets a certain backlight level (eg: 100%)

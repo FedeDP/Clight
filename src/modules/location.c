@@ -121,8 +121,8 @@ end:
 static void destroy(void) {
     if (strlen(client)) {
         geoclue_client_stop();
+        cache_location();
     }
-    cache_location();
     /* Destroy this match slot */
     if (slot) {
         slot = sd_bus_slot_unref(slot);
@@ -188,13 +188,10 @@ static int geoclue_client_start(void) {
     SYSBUS_ARG(time_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "TimeThreshold");
 
     /* It now needs proper /usr/share/applications/clightc.desktop name */
-    int r = set_property(&id_args, 's', "clightc");
-    if (!r) {
-        set_property(&time_args, 'u', &(unsigned int) { LOC_TIME_THRS });
-        set_property(&thres_args, 'u', &(unsigned int) { LOC_DISTANCE_THRS });
-        r = call(NULL, "", &call_args, NULL);
-    }
-    return r;
+    set_property(&id_args, 's', "clightc");
+    set_property(&time_args, 'u', &(unsigned int) { LOC_TIME_THRS });
+    set_property(&thres_args, 'u', &(unsigned int) { LOC_DISTANCE_THRS });
+    return call(NULL, "", &call_args, NULL);
 }
 
 /*
