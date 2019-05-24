@@ -4,6 +4,9 @@
 #### Dimmer
 - [x] Different timeout for dimmer leaving-dimmed fading transition
 - [x] No_smooth_dimmer_transition for enter/leave transitions
+- [x] dimmer does not require Xorg anymore. Update to new Clight API.
+- [x] Update doc
+- [x] require clightd 3.5
 
 #### Conf-file option
 - [x] New cmd line option to specify a conf file to be parsed (instead of default $HOME/.conf/clight.conf)
@@ -14,6 +17,10 @@
 
 #### Ambient-brightness-based gamma
 - [x] Fix #61
+
+#### DPMS
+- [ ] Dpms should be a special case of screen dimming, ie: a Clightd.Idle client that waits on a timeout, and when IDLE signal is sent, it should switch off screen.
+It should work on wayland(wlroots) too.
 
 #### Gamma fixes
 - [x] Double check state.time + state.in_event usage in BACKLIGHT and user scripts
@@ -28,18 +35,24 @@
 - [x] Drop get_distance method, directly use Geoclue2 threshold. "TimeThreshold" was needed too: "When TimeThreshold is zero, it always emits the signal."
 - [x] Only cache location when leaving if any geoclue2 client was initialized
 
-#### Generic
-- [x] Update wiki with new bus api!!
-- [x] Update conf file/clight autocompletion script/interface.c with new options
-- [x] Add Cpack support to cmake
-- [x] Add issue template
-- [x] Reset conf.event_duration default value (changed for testing)
-- [x] Update wiki with new features
+#### Bus api
 - [x] Expose CurrentKbdPct through bus api
 - [x] Expose CurrentTemp through bus api
 - [x] "NoAutoCalib", "NoKbdCalib", "AmbientGamma" should be writable bus properties (Fixes #50 -> NoAutoCalib)
 - [x] Check if module is running before calling its prop callbacks
+- [x] Update wiki with new bus api!!
+
+#### Cpack
+- [x] Add Cpack support to cmake
+- [x] Fix deb support
+
+#### Generic
+- [x] Update conf file/clight autocompletion script/interface.c with new options
+- [x] Add issue template
+- [x] Reset conf.event_duration default value (changed for testing)
+- [x] Update wiki with new features
 - [x] Add "pause calib" and "resume calib" actions to desktop file
+- [ ] Add a wallpaper script to wiki to change wallpaper at NIGHT/DAY
 
 ### 3.3
 
@@ -53,10 +66,6 @@ https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html
 
 #### Inhibit
 - [ ] Switch to monitor org.freedesktop.ScreenSaver interface instead of PowerManagement?
-
-#### DPMS
-- [ ] Dpms should be a special case of screen dimming, ie: a Clightd.Idle client that waits on a timeout, and when IDLE signal is sent, it should switch off screen.
-It should work on wayland(wlroots) too.
 
 ### 3.4
 

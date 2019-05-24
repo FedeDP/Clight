@@ -6,7 +6,6 @@ static int idle_init(void);
 static int idle_get_client(void);
 static int idle_hook_update(void);
 static int idle_set_timeout(void);
-static int idle_set_const_properties(void);
 static int idle_client_start(void);
 static int idle_client_stop(void);
 static int idle_client_destroy(void);
@@ -23,7 +22,6 @@ static char client[PATH_MAX + 1];
 static struct dependency dependencies[] = {
     {SOFT, UPOWER},     // Are we on AC or BATT?
     {SOFT, BACKLIGHT},  // We need BACKLIGHT as we have to be sure that state.current_br_pct is correctly setted
-    {HARD, XORG},       // This module is xorg only
     {SOFT, INHIBIT},    // We may get inhibited by powersave
     {HARD, CLIGHTD},    // We need clightd
     {SOFT, INTERFACE}   // It adds callbacks on INTERFACE
@@ -80,10 +78,6 @@ static int idle_init(void) {
     if (r < 0) {
         goto end;
     }
-    r = idle_set_const_properties();
-    if (r < 0) {
-        goto end;
-    }
     r = idle_set_timeout(); // set timeout automatically calls client start
 
 end:
@@ -112,14 +106,6 @@ static int idle_set_timeout(void) {
     } else {
         r = idle_client_stop();
     }
-    return r;
-}
-
-static int idle_set_const_properties(void) {
-    SYSBUS_ARG(display_args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Display");
-    SYSBUS_ARG(xauth_args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "AuthCookie");
-    int r = set_property(&display_args, 's', state.display);
-    r += set_property(&xauth_args, 's', state.xauthority);
     return r;
 }
 

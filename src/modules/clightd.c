@@ -3,7 +3,7 @@
 static int check_clightd_version(void);
 
 #define MINIMUM_CLIGHTD_VERSION_MAJ 3
-#define MINIMUM_CLIGHTD_VERSION_MIN 0
+#define MINIMUM_CLIGHTD_VERSION_MIN 5
 
 static struct dependency dependencies[] = {
     {HARD, BUS}     // We need bus to be started before attempt to check for Clightd
@@ -36,8 +36,8 @@ static int check_clightd_version(void) {
     int ret = -1;
     char clightd_version[PATH_MAX + 1] = {0};
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
+    
     int r = get_property(&args, "s", clightd_version);
-
     if (r < 0 || !strlen(clightd_version)) {
         WARN("No clightd found. Clightd is a mandatory dep.\n");
     } else {

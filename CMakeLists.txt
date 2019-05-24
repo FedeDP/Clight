@@ -30,7 +30,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
 
-
 # Required dependencies
 pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig)
 pkg_search_module(LOGIN_LIBS REQUIRED libelogind libsystemd>=221)
@@ -119,7 +118,7 @@ set(CPACK_RPM_PACKAGE_LICENSE "GPL")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
-set(CPACK_RPM_PACKAGE_REQUIRES "libsystemd0 libpopt0 libconfig9 libgsl23 clightd")
+set(CPACK_RPM_PACKAGE_REQUIRES "libsystemd0 libpopt0 libconfig9 libgsl23 clightd>=3.5")
 set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 
@@ -128,8 +127,8 @@ set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 #
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/FedeDP/Clight")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0 libpopt0 libconfig9 libgsl23 clightd")
-set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 3.5)")
+set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0, upower, bash-completion")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 
 include(CPack)
