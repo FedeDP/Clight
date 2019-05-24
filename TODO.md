@@ -52,7 +52,6 @@ It should work on wayland(wlroots) too.
 - [x] Reset conf.event_duration default value (changed for testing)
 - [x] Update wiki with new features
 - [x] Add "pause calib" and "resume calib" actions to desktop file
-- [ ] Add a wallpaper script to wiki to change wallpaper at NIGHT/DAY
 
 ### 3.3
 
