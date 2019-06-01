@@ -26,7 +26,7 @@
 - [x] Fix idle_set_timeout() -> we should not start a client when setting timeout if we are in pm_inhibited or timeout is < 0
 - [x] Properly validate client in idler.c interface
 - [x] Bump clightd required version to 4.0
-- [ ] Update doc
+- [x] Update doc
 
 #### Gamma fixes
 - [x] Double check state.time + state.in_event usage in BACKLIGHT and user scripts
