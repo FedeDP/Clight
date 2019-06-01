@@ -1,16 +1,19 @@
-#include <bus.h>
+#include "idler.h"
+#include <interface.h>
 
-#define DPMS_DISABLED -1
-
+static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error);
 static void set_dpms(int dpms_state);
-static void set_dpms_timeouts(void);
 static void upower_callback(const void *ptr);
+static void inhibit_callback(const void *ptr);
 static void interface_timeout_callback(const void *ptr);
 
+static sd_bus_slot *slot;
+static char client[PATH_MAX + 1];
 static struct dependency dependencies[] = {
     {SOFT, UPOWER},     // Are we on AC or on BATT?
-    {HARD, XORG},       // This module is xorg only
-    {HARD, CLIGHTD}     // We need clightd
+    {HARD, CLIGHTD},     // We need clightd
+    {SOFT, INHIBIT},    // We may get inhibited by powersave
+    {SOFT, INTERFACE}   // It adds callbacks on INTERFACE
 };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
@@ -22,15 +25,18 @@ MODULE(DPMS);
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
+    struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
+    struct bus_cb interface_inhibit_cb = { INTERFACE, inhibit_callback, "inhibit" };
     struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "dpms_timeout" };
 
-    set_dpms_timeouts();
-    INIT_MOD(DONT_POLL, &upower_cb, &interface_to_cb);
+    int r = idle_init(client, slot, conf.dpms_timeout[state.ac_state], on_new_idle);
+    
+    INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, &upower_cb, &inhibit_cb, &interface_inhibit_cb, &interface_to_cb);
 }
 
-/* Check module is not disabled, we're on X and proper configs are set. */
+/* Works everywhere except wayland */
 static int check(void) {
-    return 0;
+    return state.wl_display != NULL && strlen(state.wl_display);
 }
 
 static int callback(void) {
@@ -39,34 +45,26 @@ static int callback(void) {
 }
 
 static void destroy(void) {
-    /* Skeleton function */
+    if (slot) {
+        slot = sd_bus_slot_unref(slot);
+    }
+    idle_client_stop(client);
+    idle_client_destroy(client);
 }
 
-/*
- * Set correct timeouts or disable dpms
- * if any timeout for current AC state is <= 0.
- */
-void set_dpms_timeouts(void) {
-    int need_disable = 0;
-    /* Init need_disable array */
-    for (int i = 0; i < SIZE_DPMS && !need_disable; i++) {
-        if (conf.dpms_timeouts[state.ac_state][i] <= 0) {
-            need_disable = 1;
-        }
-    }
-
-    if (!need_disable) {
-        SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "SetTimeouts");
-        call(NULL, NULL, &args, "ssiii", state.display, state.xauthority,
-             conf.dpms_timeouts[state.ac_state][STANDBY], conf.dpms_timeouts[state.ac_state][SUSPEND], conf.dpms_timeouts[state.ac_state][OFF]);
-        INFO("Setted DPMS timeouts: Standby -> %ds, Suspend -> %ds, Off -> %ds.\n",
-             conf.dpms_timeouts[state.ac_state][STANDBY],
-             conf.dpms_timeouts[state.ac_state][SUSPEND],
-             conf.dpms_timeouts[state.ac_state][OFF]);
+static int on_new_idle(sd_bus_message *m,  __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {   
+    int is_dpms;
+    sd_bus_message_read(m, "b", &is_dpms);
+    if (is_dpms) {
+        state.display_state |= DISPLAY_OFF;
+        DEBUG("Entering dpms state...\n");
     } else {
-        INFO("Disabling DPMS as a timeout <= 0 has been found.\n");
-        set_dpms(DPMS_DISABLED);
+        state.display_state &= ~DISPLAY_OFF;
+        DEBUG("Leaving dpms state...\n");
     }
+    set_dpms(is_dpms);
+    emit_prop("DisplayState");
+    return 0;
 }
 
 static void set_dpms(int dpms_state) {
@@ -78,10 +76,26 @@ static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
     if (old_ac_state != state.ac_state) {
-        set_dpms_timeouts();
+        idle_set_timeout(client, conf.dpms_timeout[state.ac_state]);
+    }
+}
+
+/*
+ * If we're getting inhibited, stop idle client.
+ * Else, restart it.
+ */
+static void inhibit_callback(const void *ptr) {
+    int old_pm_state = *(int *)ptr;
+    if (!!old_pm_state != !!state.pm_inhibited) {
+        DEBUG("%s module being %s.\n", self.name, state.pm_inhibited ? "paused" : "restarted");
+        if (!state.pm_inhibited) {
+            idle_client_start(client);
+        } else {
+            idle_client_stop(client);
+        }
     }
 }
 
 static void interface_timeout_callback(const void *ptr) {
-    set_dpms_timeouts();
+    idle_set_timeout(client, conf.dpms_timeout[state.ac_state]);
 }

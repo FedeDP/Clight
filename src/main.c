@@ -36,6 +36,9 @@ struct module modules[MODULES_NUM];
 struct pollfd main_p[MODULES_NUM];
 
 int main(int argc, char *argv[]) {
+    state.display = getenv("DISPLAY");
+    state.wl_display = getenv("WAYLAND_DISPLAY");
+    state.xauthority = getenv("XAUTHORITY");
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         init(argc, argv);

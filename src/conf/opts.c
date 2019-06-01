@@ -26,6 +26,8 @@ void init_opts(int argc, char *argv[]) {
     conf.event_duration = 30 * 60;
     conf.dimmer_timeout[ON_AC] = 45;
     conf.dimmer_timeout[ON_BATTERY] = 20;
+    conf.dpms_timeout[ON_AC] = 900;
+    conf.dpms_timeout[ON_BATTERY] = 300;
     conf.dimmer_pct = 0.2;
     conf.backlight_trans_step = 0.05;
     conf.dimmer_trans_step[ENTER] = 0.05;
@@ -62,16 +64,6 @@ void init_opts(int argc, char *argv[]) {
     memcpy(conf.regression_points[ON_BATTERY],
            (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
            SIZE_POINTS * sizeof(double));
-
-    /* Default dpms timeouts ON AC */
-    memcpy(conf.dpms_timeouts[ON_AC],
-           (int[]){ 900, 1200, 1800 },
-           SIZE_DPMS * sizeof(int));
-
-    /* Default dpms timeouts ON BATT */
-    memcpy(conf.dpms_timeouts[ON_BATTERY],
-           (int[]){ 300, 420, 600 },
-           SIZE_DPMS * sizeof(int));
 
     char conf_file[PATH_MAX + 1] = {0};
     

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(clight VERSION 3.2 LANGUAGES C)
+project(clight VERSION 4.0 LANGUAGES C)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -118,7 +118,7 @@ set(CPACK_RPM_PACKAGE_LICENSE "GPL")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
-set(CPACK_RPM_PACKAGE_REQUIRES "libsystemd0 libpopt0 libconfig9 libgsl23 clightd>=3.5")
+set(CPACK_RPM_PACKAGE_REQUIRES "libsystemd0 libpopt0 libconfig9 libgsl23 clightd>=4.0")
 set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 
@@ -127,7 +127,7 @@ set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 #
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/FedeDP/Clight")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 3.5)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 4.0)")
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0, upower, bash-completion")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 

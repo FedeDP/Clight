@@ -132,25 +132,14 @@ int read_config(enum CONFIG file, char *config_file) {
             }
         }
 
-        /* Load dpms timeouts while on ac */
-        if ((timeouts = config_setting_get_member(root, "ac_dpms_timeouts"))) {
-            if (config_setting_length(timeouts) == SIZE_DPMS) {
-                for (int i = 0; i < SIZE_DPMS; i++) {
-                    conf.dpms_timeouts[ON_AC][i] = config_setting_get_int_elem(timeouts, i);
+        /* Load dpms timeouts */
+        if ((timeouts = config_setting_get_member(root, "dpms_timeouts"))) {
+            if (config_setting_length(timeouts) == SIZE_AC) {
+                for (int i = 0; i < SIZE_AC; i++) {
+                    conf.dpms_timeout[i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
-                WARN("Wrong number of ac_dpms_timeouts array elements.\n");
-            }
-        }
-
-        /* Load dpms timeouts while on battery */
-        if ((timeouts = config_setting_get_member(root, "batt_dpms_timeouts"))) {
-            if (config_setting_length(timeouts) == SIZE_DPMS) {
-                for (int i = 0; i < SIZE_DPMS; i++) {
-                    conf.dpms_timeouts[ON_BATTERY][i] = config_setting_get_int_elem(timeouts, i);
-                }
-            } else {
-                WARN("Wrong number of batt_dpms_timeouts array elements.\n");
+                WARN("Wrong number of dpms_timeouts array elements.\n");
             }
         }
 
@@ -310,14 +299,9 @@ int store_config(enum CONFIG file) {
         config_setting_set_float_elem(setting, -1, conf.regression_points[ON_BATTERY][i]);
     }
 
-    setting = config_setting_add(root, "ac_dpms_timeouts", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_DPMS; i++) {
-        config_setting_set_int_elem(setting, -1, conf.dpms_timeouts[ON_AC][i]);
-    }
-
-    setting = config_setting_add(root, "batt_dpms_timeouts", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_DPMS; i++) {
-        config_setting_set_int_elem(setting, -1, conf.dpms_timeouts[ON_BATTERY][i]);
+    setting = config_setting_add(root, "dpms_timeouts", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_AC; i++) {
+        config_setting_set_int_elem(setting, -1, conf.dpms_timeout[i]);
     }
 
     setting = config_setting_add(root, "ac_capture_timeouts", CONFIG_TYPE_ARRAY);

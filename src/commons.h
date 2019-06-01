@@ -36,7 +36,7 @@
 #define LON_UNDEFINED 181.0
 
 /* List of modules indexes */
-enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, XORG, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };
+enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -54,11 +54,11 @@ enum dep_type { NO_DEP, HARD, SOFT, SUBMODULE };
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 
-/* Dpms states */
-enum dpms_states { STANDBY, SUSPEND, OFF, SIZE_DPMS };
-
 /* Module states */
 enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, DESTROYED };
+
+/* Display states */
+enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
 
 /* Quit values */
 enum quit_values { NORM_QUIT = 1, ERR_QUIT };
@@ -97,7 +97,7 @@ struct config {
     double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
     double dimmer_pct;                      // pct of max backlight to be used while dimming
-    int dpms_timeouts[SIZE_AC][SIZE_DPMS];  // dpms timeouts
+    int dpms_timeout[SIZE_AC];              // dpms timeouts
     int verbose;                            // whether we're in verbose mode
     int no_smooth_backlight;                // disable smooth backlight changes for BACKLIGHT module
     int no_smooth_dimmer[SIZE_DIM];         // disable smooth backlight changes for DIMMER module
@@ -123,13 +123,14 @@ struct state {
     time_t events[SIZE_EVENTS];             // today events (sunrise/sunset)
     enum ac_states ac_state;                // is laptop on battery?
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
-    char *xauthority;                       // xauthority env variable, to be used in gamma calls
-    char *display;                          // display env variable, to be used in gamma calls
+    char *xauthority;                       // xauthority env variable
+    char *display;                          // DISPLAY env variable
+    char *wl_display;                       // WAYLAND_DISPLAY env variable
     double current_bl_pct;                  // current backlight pct
     double current_kbd_pct;                 // current keyboard backlight pct
     int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
-    int is_dimmed;                          // whether we are currently in dimmed state
+    enum display_states display_state;      // current display state
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
     struct location current_loc;            // current user location
     jmp_buf quit_buf;                       // quit jump called by longjmp

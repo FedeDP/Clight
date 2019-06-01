@@ -1,4 +1,5 @@
 #include <bus.h>
+#include <interface.h>
 
 static int inhibit_check(void);
 static int inhibit_init(void);
@@ -48,7 +49,7 @@ static int inhibit_check(void) {
     USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
     int r = call(&state.pm_inhibited, "b", &args, NULL);
     if (r < 0) {
-        WARN("PowerManagement inhibition appears to be unsupported.\n");
+        WARN("PowerManagement inhibition appears to be unsupported. Adding bus match anyway.\n");
     }
     return -(r < 0);
 }
@@ -62,19 +63,22 @@ static int inhibit_init(void) {
  * Callback on inhibit state changed: recheck new HasInhibit value
  */
 static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    if (state.pm_inhibited != PM_FORCED_ON) {
-        FILL_MATCH_DATA(state.pm_inhibited);
-
-        USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
-        int inhibited;
-        int r = call(&inhibited, "b", &args, NULL);
-
-        if (!r && state.pm_inhibited != inhibited) {
-            state.pm_inhibited = inhibited;
-            INFO("PowerManagement inhibition %s.\n", state.pm_inhibited ? "enabled" : "disabled");
+    USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
+    int inhibited;
+    int r = call(&inhibited, "b", &args, NULL);
+    if (!r) {
+        int old_inhibited = state.pm_inhibited;
+        if (inhibited) {
+            state.pm_inhibited |= PM_ON;
+            INFO("PowerManagement inhibition enabled by freedesktop.PowerManagement.\n");
+        } else {
+            state.pm_inhibited &= ~PM_ON;
+            INFO("PowerManagement inhibition disabled by freedesktop.PowerManagement.\n");
         }
-    } else {
-        DEBUG("Pm Inhibition is currently forced ON by bus API.\n");
+        if (old_inhibited != state.pm_inhibited) {
+            FILL_MATCH_DATA(old_inhibited); // old val
+            emit_prop("PmState");
+        }
     }
     return 0;
 }

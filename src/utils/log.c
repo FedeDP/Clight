@@ -58,10 +58,7 @@ void log_conf(void) {
         fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
         fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][SIZE_STATES], conf.timeout[ON_BATTERY][SIZE_STATES]);
         fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
-        fprintf(log_file, "* Dpms timeouts:\t\tAC %d:%d:%d\tBATT %d:%d:%d\n",
-                conf.dpms_timeouts[ON_AC][STANDBY], conf.dpms_timeouts[ON_AC][SUSPEND], conf.dpms_timeouts[ON_AC][OFF],
-                conf.dpms_timeouts[ON_BATTERY][STANDBY], conf.dpms_timeouts[ON_BATTERY][SUSPEND], conf.dpms_timeouts[ON_BATTERY][OFF]
-        );
+        fprintf(log_file, "* Dpms timeouts:\t\tAC %d\tBATT %d\n", conf.dpms_timeout[ON_AC], conf.dpms_timeout[ON_BATTERY]);
 
         fprintf(log_file, "\n### Modules ###\n");
         for (int i = 0; i < MODULES_NUM; i++) {

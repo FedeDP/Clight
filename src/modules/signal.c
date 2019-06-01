@@ -6,7 +6,6 @@ static struct self_t self = {
     .standalone = 1,
 };
 
-
 MODULE(SIGNAL);
 
 /*

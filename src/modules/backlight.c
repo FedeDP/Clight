@@ -33,7 +33,7 @@ static struct dependency dependencies[] = {
     {SOFT, GAMMA},      // Which time of day are we in?
     {SOFT, UPOWER},     // Are we on AC or on BATT?
     {HARD, CLIGHTD},    // methods to set screen backlight
-    {HARD, INTERFACE}   // We need INTERFACE module because we are subscribed to "Dimmed" and "Time" signals (thus HARD dep) + we add callbacks on INTERFACE
+    {HARD, INTERFACE}   // We need INTERFACE module because we are subscribed to "DisplayState" and "Time" signals (thus HARD dep) + we add callbacks on INTERFACE
 };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
@@ -55,7 +55,7 @@ static void init(void) {
     polynomialfit(ON_BATTERY);
 
     /* Add callbacks on prop signal emitted by interface module */
-    struct prop_cb dimmed_cb = { "Dimmed", dimmed_callback };
+    struct prop_cb dimmed_cb = { "DisplayState", dimmed_callback };
     struct prop_cb time_cb = { "Time", time_callback };
     struct prop_cb event_cb = { "InEvent", time_callback };
     ADD_PROP_CB(&dimmed_cb);
@@ -207,7 +207,7 @@ static void upower_callback(const void *ptr) {
     int old_ac_state = *(int *)ptr;
     /* Force check that we received an ac_state changed event for real */
     if (old_ac_state != state.ac_state && sensor_available) {
-        if (!state.is_dimmed && !conf.no_auto_calib) {
+        if (!state.display_state && !conf.no_auto_calib) {
             /*
             * do a capture right now as we have 2 different curves for
             * different AC_STATES, so let's properly honor new curve
@@ -225,7 +225,7 @@ static void upower_callback(const void *ptr) {
 
 /* Callback on "Calibrate" bus interface method */
 static void interface_calibrate_callback(const void *ptr) {
-    if (!state.is_dimmed && sensor_available) {
+    if (!state.display_state && sensor_available) {
         do_capture(0);
     }
 }
@@ -233,7 +233,7 @@ static void interface_calibrate_callback(const void *ptr) {
 /* Callback on "AutoCalib" bus exposed writable property */
 static void interface_autocalib_callback(const void *ptr) {
     int old_noautocalib = *(int *)ptr;
-    if (!state.is_dimmed && sensor_available && old_noautocalib != conf.no_auto_calib) {
+    if (!state.display_state && sensor_available && old_noautocalib != conf.no_auto_calib) {
         if (conf.no_auto_calib && old_elapsed == 0) {
             pause_capture();
         } else {
@@ -250,16 +250,16 @@ static void interface_curve_callback(const void *ptr) {
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(const void *ptr) {
-    if (!state.is_dimmed && sensor_available && !conf.no_auto_calib) {
+    if (!state.display_state && sensor_available && !conf.no_auto_calib) {
         int old_val = *((int *)ptr);
         reset_timer(main_p[self.idx].fd, old_val, curr_timeout);
     }
 }
 
-/* Callback on state.is_dimmed changes */
+/* Callback on state.display_state changes */
 static void dimmed_callback(void) {
     if (sensor_available && !conf.no_auto_calib) {
-        if (state.is_dimmed) {
+        if (state.display_state) {
             pause_capture();
         } else {
             resume_capture();
@@ -269,7 +269,7 @@ static void dimmed_callback(void) {
 
 /* Callback on state.time/state.in_event changes */
 static void time_callback(void) {
-    if (!state.is_dimmed && sensor_available && !conf.no_auto_calib) {
+    if (!state.display_state && sensor_available && !conf.no_auto_calib) {
         /* A state.time change happened, react! */
         reset_timer(main_p[self.idx].fd, curr_timeout, get_current_timeout());
     }
@@ -280,7 +280,7 @@ static void time_callback(void) {
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int new_sensor_avail = is_sensor_available();
     if (new_sensor_avail != sensor_available) {
-        if (!state.is_dimmed && !conf.no_auto_calib) {
+        if (!state.display_state && !conf.no_auto_calib) {
             // Resume module if sensor is now available. Pause it if it is not available
             set_timeout(0, new_sensor_avail, main_p[self.idx].fd, 0);
         }

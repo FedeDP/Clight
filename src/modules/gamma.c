@@ -4,7 +4,7 @@
 
 static void check_gamma(void);
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
-static void check_next_event(const time_t *now, int day);
+static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void set_temp(int temp, const time_t *now);
 static void ambient_callback(void);
@@ -13,7 +13,6 @@ static void interface_callback(const void *ptr);
 
 static struct dependency dependencies[] = {
     {HARD, LOCATION},   // Needed for sunrise/sunset computation
-    {HARD, XORG},       // This module is xorg only
     {HARD, CLIGHTD},    // We need clightd
     {SOFT, INTERFACE}   // It adds a callback on INTERFACE
 };
@@ -45,7 +44,7 @@ static void init(void) {
 }
 
 static int check(void) {
-    return 0;
+    return !state.display || !state.xauthority;
 }
 
 static void destroy(void) {
@@ -178,7 +177,7 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
             WARN("Failed to retrieve sunrise/sunset informations.\n");
         }
     }
-    check_next_event(now, day);
+    check_next_event(now);
     check_state(now);
 }
 
@@ -186,17 +185,13 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
  * Updates next_event global var, according to now time_t value.
  * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  */
-static void check_next_event(const time_t *now, int day) {
+static void check_next_event(const time_t *now) {
     /*
      * SUNRISE if:
-     * we have just computed tomorrow events
      * We're after state.events[SUNSET] (when clight is started between SUNSET)
      * We're before state.events[SUNRISE] (when clight is started before today's SUNRISE)
      */
-    if (day == 1 
-        || *now + 1 > state.events[SUNSET]
-        || *now + 1 < state.events[SUNRISE]) {
-        
+    if (*now + 1 > state.events[SUNSET] || *now + 1 < state.events[SUNRISE]) {
         state.time = NIGHT;
     } else {
         state.time = DAY;

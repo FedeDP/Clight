@@ -41,7 +41,8 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(struct state, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Time", "i", NULL, offsetof(struct state, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(struct state, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("Dimmed", "b", NULL, offsetof(struct state, is_dimmed), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(struct state, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("PmState", "i", NULL, offsetof(struct state, pm_inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentBlPct", "d", NULL, offsetof(struct state, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentKbdPct", "d", NULL, offsetof(struct state, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentAmbientBr", "d", NULL, offsetof(struct state, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -98,12 +99,8 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][SIZE_STATES]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDpmsStandby", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_AC][STANDBY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDpmsSuspend", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_AC][SUSPEND]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDpmsOff", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_AC][OFF]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDpmsStandby", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_BATTERY][STANDBY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDpmsSuspend", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_BATTERY][SUSPEND]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDpmsOff", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeouts[ON_BATTERY][OFF]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDpms", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDpms", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeout[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -224,9 +221,18 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         return r;
     }
 
-    FILL_MATCH_DATA(state.pm_inhibited);
-    state.pm_inhibited = inhibited ? PM_FORCED_ON : PM_OFF;
-    INFO("PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
+    int old_inhibited = state.pm_inhibited;
+    if (inhibited) {
+        state.pm_inhibited |= PM_FORCED_ON;
+        INFO("PowerManagement inhibition enabled by bus API.\n");
+    } else {
+        state.pm_inhibited &= ~PM_FORCED_ON;
+        INFO("PowerManagement inhibition disabled by bus API.\n");
+    }
+    if (old_inhibited != state.pm_inhibited) {
+        FILL_MATCH_DATA(old_inhibited); // old val
+        emit_prop("PmState");
+    }
     return sd_bus_reply_method_return(m, NULL);
 }
 
@@ -282,7 +288,7 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
         FILL_MATCH_DATA_NAME(old_val, "backlight_timeout");
     } else if (val == &conf.dimmer_timeout[state.ac_state]) {
         FILL_MATCH_DATA_NAME(old_val, "dimmer_timeout");
-    } else if (val >= conf.dpms_timeouts[state.ac_state] && val <= &conf.dpms_timeouts[state.ac_state][SIZE_DPMS - 1]) {
+    } else if (val == &conf.dpms_timeout[state.ac_state]) {
         FILL_MATCH_DATA_NAME(old_val, "dpms_timeout");
     }
     return r;
