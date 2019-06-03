@@ -2,24 +2,24 @@
 Type=Application
 Name=Clight
 GenericName=Quick screen backlight calibration
-Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight Calibrate
+Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Calibrate
 Comment=Recalibrate your screen backlight!
 Icon=clight.svg
 Categories=System
 Actions=Inhibit;Uninhibit;PauseCalib;ResumeCalib
 
 [Desktop Action Inhibit]
-Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" true
+Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" true
 Name=Pause screen dimmer
 
 [Desktop Action Uninhibit]
-Exec=busctl --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" false
+Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" false
 Name=Resume screen dimmer
 
 [Desktop Action PauseCalib]
-Exec=busctl --user set-property org.clight.clight /org/clight/clight/Conf org.clight.clight.Conf NoAutoCalib "b" true
+Exec=busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf org.clight.clight.Conf NoAutoCalib "b" true
 Name=Pause backlight calibration
 
 [Desktop Action ResumeCalib]
-Exec=busctl --user set-property org.clight.clight /org/clight/clight/Conf org.clight.clight.Conf NoAutoCalib "b" false
+Exec=busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf org.clight.clight.Conf NoAutoCalib "b" false
 Name=Resume backlight calibration

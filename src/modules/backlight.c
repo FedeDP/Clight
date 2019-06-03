@@ -105,6 +105,8 @@ static void init_kbd_backlight(void) {
     int r = call(&max_kbd_backlight, "i", &kbd_args, NULL);
     if (r) {
         INFO("Keyboard backlight calibration unsupported.\n");
+    } else {
+        INFO("Keyboard backlight calibration enabled.\n");
     }
 }
 

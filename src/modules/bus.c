@@ -310,7 +310,7 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
  */
 static int check_err(int r, sd_bus_error *err, const char *caller) {
     if (r < 0) {
-        WARN("%s(): %s\n", caller, err && err->message ? err->message : strerror(-r));
+        DEBUG("%s(): %s\n", caller, err && err->message ? err->message : strerror(-r));
     }
     /* -1 on error, 0 ok */
     return -(r < 0);
