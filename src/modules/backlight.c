@@ -206,9 +206,7 @@ static void resume_capture(void) {
 
 /* Callback on upower ac state changed signal */
 static void upower_callback(const void *ptr) {
-    int old_ac_state = *(int *)ptr;
-    /* Force check that we received an ac_state changed event for real */
-    if (old_ac_state != state.ac_state && sensor_available) {
+    if (sensor_available) {
         if (!state.display_state && !conf.no_auto_calib) {
             /*
             * do a capture right now as we have 2 different curves for
@@ -234,8 +232,7 @@ static void interface_calibrate_callback(const void *ptr) {
 
 /* Callback on "AutoCalib" bus exposed writable property */
 static void interface_autocalib_callback(const void *ptr) {
-    int old_noautocalib = *(int *)ptr;
-    if (!state.display_state && sensor_available && old_noautocalib != conf.no_auto_calib) {
+    if (!state.display_state && sensor_available) {
         if (conf.no_auto_calib && old_elapsed == 0) {
             pause_capture();
         } else {

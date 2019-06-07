@@ -76,7 +76,7 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
             INFO("PowerManagement inhibition disabled by freedesktop.PowerManagement.\n");
         }
         if (old_inhibited != state.pm_inhibited) {
-            FILL_MATCH_DATA(old_inhibited); // old val
+            FILL_MATCH_NONE();
             emit_prop("PmState");
         }
     }

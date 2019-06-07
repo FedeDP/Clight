@@ -101,11 +101,7 @@ static void restore_backlight(const double pct) {
 
 /* Reset dimmer timeout */
 static void upower_callback(const void *ptr) {
-    int old_ac_state = *(int *)ptr;
-    /* Force check that we received an ac_state changed event for real */
-    if (old_ac_state != state.ac_state) {
-        idle_set_timeout(client, conf.dimmer_timeout[state.ac_state]);
-    }
+    idle_set_timeout(client, conf.dimmer_timeout[state.ac_state]);
 }
 
 /*
@@ -113,14 +109,11 @@ static void upower_callback(const void *ptr) {
  * Else, restart it.
  */
 static void inhibit_callback(const void *ptr) {
-    int old_pm_state = *(int *)ptr;
-    if (!!old_pm_state != !!state.pm_inhibited) {
-        DEBUG("%s module being %s.\n", self.name, state.pm_inhibited ? "paused" : "restarted");
-        if (!state.pm_inhibited) {
-            idle_client_start(client);
-        } else {
-            idle_client_stop(client);
-        }
+    DEBUG("%s module being %s.\n", self.name, state.pm_inhibited ? "paused" : "restarted");
+    if (!state.pm_inhibited) {
+        idle_client_start(client);
+    } else {
+        idle_client_stop(client);
     }
 }
 

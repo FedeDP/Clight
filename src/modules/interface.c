@@ -205,7 +205,7 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
     int r = -EINVAL;
 
     if (is_running(BACKLIGHT)) {
-        FILL_MATCH_DATA(state.current_bl_pct); // useless data, unused
+        FILL_MATCH_NONE();
         r = sd_bus_reply_method_return(m, NULL);
     } else {
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Backlight module is not running.");
@@ -230,7 +230,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         INFO("PowerManagement inhibition disabled by bus API.\n");
     }
     if (old_inhibited != state.pm_inhibited) {
-        FILL_MATCH_DATA(old_inhibited); // old val
+        FILL_MATCH_NONE();
         emit_prop("PmState");
     }
     return sd_bus_reply_method_return(m, NULL);
@@ -296,15 +296,21 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
 
 static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    int old_val = *(int *)userdata;
     int r = sd_bus_message_read(value, "i", userdata);
-    FILL_MATCH_DATA(state.time); // useless data, unused
+    if (!r && old_val != *(int *)userdata) {
+        FILL_MATCH_NONE();
+    }
     return r;
 }
 
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                           sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    FILL_MATCH_DATA(conf.no_auto_calib); // old value
+    int old_val = conf.no_auto_calib;
     int r = sd_bus_message_read(value, "b", userdata);
+    if (!r && old_val != conf.no_auto_calib) {
+        FILL_MATCH_NONE();
+    }
     return r;
 }
 

@@ -63,9 +63,10 @@
 - [x] Update wiki with new features
 - [x] Add "pause calib" and "resume calib" actions to desktop file
 - [x] Bump to 4.0
-- [ ] Avoid fill_match_data with old value whenever possible (only when value really changed), and remove useless checks (eg: src/modules/dpms.c:    if (!!old_pm_state != !!state.pm_inhibited) ...)
+- [x] Avoid fill_match_data with old value whenever possible (only when value really changed), and remove useless checks (eg: src/modules/dpms.c:    if (!!old_pm_state != !!state.pm_inhibited) ...)
 - [x] Add "--expect-reply=false" to desktop file actions
 - [x] Log bus calls only in verbose mode
+- [ ] Log review (ie: what should be logged as is useful for user, and what should not)
 
 ### 4.1
 

@@ -163,8 +163,6 @@ static int geoclue_hook_update(void) {
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    FILL_MATCH_DATA(state.current_loc);
-
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);
 
@@ -172,6 +170,7 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
     int r = get_property(&lat_args, "d", &state.current_loc.lat) + get_property(&lon_args, "d", &state.current_loc.lon);
     if (!r) {
+        FILL_MATCH_NONE();
         INFO("New location received: %.2lf, %.2lf\n", state.current_loc.lat, state.current_loc.lon);
         emit_prop("Location");
     }

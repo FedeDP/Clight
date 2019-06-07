@@ -2,16 +2,23 @@
 
 #include <modules.h>
 
-/* Use this to specify a name as filter for the hooks to be called */
-#define FILL_MATCH_DATA_NAME(data, name) \
+#define FILL_MATCH(name) \
     state.userdata.bus_mod_idx = self.idx; \
     state.userdata.bus_fn_name = name; \
+    state.userdata.ptr = NULL;
+
+/* Use this to specify a name as filter for the hooks to be called */
+#define FILL_MATCH_DATA_NAME(data, name) \
+    FILL_MATCH(name) \
     state.userdata.ptr = malloc(sizeof(data)); \
-    memcpy(state.userdata.ptr, &data, sizeof(data));
+    memcpy(state.userdata.ptr, &data, sizeof(data)); \
 
-/* Use this to use function name as filter for the hooks to be called */
-#define FILL_MATCH_DATA(data) FILL_MATCH_DATA_NAME(data, __PRETTY_FUNCTION__)
+/* Use this to use function name as filter for the hooks to be called and pass additional data */
+#define FILL_MATCH_DATA(data)   FILL_MATCH_DATA_NAME(data, __PRETTY_FUNCTION__)
 
+/* Use this to use function name as filter for the hooks to be called without passing additional data */
+#define FILL_MATCH_NONE()   FILL_MATCH(__PRETTY_FUNCTION__)
+    
 /* Bus types */
 enum bus_type { SYSTEM, USER };
 
