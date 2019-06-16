@@ -15,6 +15,7 @@
 #include <pwd.h>
 #include <setjmp.h>
 #include <systemd/sd-bus.h>
+#include <module/module_cmn.h>
 
 /*
  * Useful macro to check size of global array.
@@ -36,7 +37,7 @@
 #define LON_UNDEFINED 181.0
 
 /* List of modules indexes */
-enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, INHIBIT, USERBUS, CLIGHTD, INTERFACE, MODULES_NUM };
+enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, INHIBIT, CLIGHTD, INTERFACE, MODULES_NUM };
 
 /*
  * List of states clight can be through: 
@@ -53,9 +54,6 @@ enum dep_type { NO_DEP, HARD, SOFT, SUBMODULE };
 
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
-
-/* Module states */
-enum module_states { IDLE, STARTED_DISABLED, DISABLED, RUNNING, DESTROYED };
 
 /* Display states */
 enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
@@ -171,3 +169,5 @@ extern struct state state;
 extern struct config conf;
 extern struct module modules[MODULES_NUM];
 extern struct pollfd main_p[MODULES_NUM];
+extern sd_bus *sysbus;
+extern sd_bus *userbus;

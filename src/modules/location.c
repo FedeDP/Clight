@@ -22,7 +22,7 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
-MODULE(LOCATION);
+MODULE("LOCATION");
 
 /*
  * init location:
@@ -53,19 +53,21 @@ static void init(void) {
     INIT_MOD(fd);
 }
 
-static int callback(void) {
-    uint64_t t;
-    if (read(main_p[self.idx].fd, &t, sizeof(uint64_t)) != -1) {
-        if (load_cache_location() != 0) {
-            return -1;
+// FIXME: full rewrite with libmodule
+static void receive(const msg_t *const msg, const void* userdata) {
+    if (!msg->is_pubsub) {
+        uint64_t t;
+        if (read(main_p[self.idx].fd, &t, sizeof(uint64_t)) != -1) {
+            if (load_cache_location() != 0) {
+//                 return -1;
+            }
+        } else {
+            /* Disarm timerfd as we received a location before it triggered */
+            set_timeout(0, 0, main_p[self.idx].fd, 0);
         }
-    } else {
-        /* Disarm timerfd as we received a location before it triggered */
-        set_timeout(0, 0, main_p[self.idx].fd, 0);
+        /* disable this poll_cb */
+        modules[self.idx].poll_cb = NULL;
     }
-    /* disable this poll_cb */
-    modules[self.idx].poll_cb = NULL;
-    return 0;
 }
 
 static int load_cache_location(void) {
@@ -115,6 +117,24 @@ end:
     return -(r < 0);  // - 1 on error
 }
 
+static bool check(void) {
+    return true;
+    /*
+     * If sunrise and sunset times, or lat and lon, are both passed,
+     * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD)
+     */
+    //     memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
+    //     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED)) {
+    //         change_dep_type(GAMMA, self.idx, SOFT);
+    //         return 1;
+    //     }
+    //     return 0;
+}
+
+static bool evaluate(void) {
+    return true;
+}
+
 /*
  * Stop geoclue2 client and store latest location to cache.
  */
@@ -127,19 +147,6 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
-}
-
-static int check(void) {
-    /*
-     * If sunrise and sunset times, or lat and lon, are both passed,
-     * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD)
-     */
-    memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
-    if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED)) {
-        change_dep_type(GAMMA, self.idx, SOFT);
-        return 1;
-    }
-    return 0;
 }
 
 /*

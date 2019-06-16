@@ -1,5 +1,6 @@
 #include <bus.h>
 
+static void bus_callback(const enum bus_type type);
 static void run_callbacks(struct bus_match_data *data);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err, const char *caller);
@@ -10,27 +11,38 @@ struct bus_callback {
 };
 
 static struct bus_callback _cb;
-static sd_bus *sysbus, *userbus;
-static struct self_t self;
+static const enum bus_type sysbus_t = SYSTEM_BUS;
+static const enum bus_type userbus_t = USER_BUS;
 
-MODULE(BUS);
+MODULE("BUS");
 
-/*
- * Open system bus and start listening on its fd
- */
 static void init(void) {
+    /* SysBus */
     int r = sd_bus_default_system(&sysbus);
     if (r < 0) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
     // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(sysbus);
-    INIT_MOD(bus_fd);
+    
+    /* UserBus */
+    r = sd_bus_default_user(&userbus);
+    if (r < 0) {
+        ERROR("Failed to connect to user bus: %s\n", strerror(-r));
+    }
+    // let main poll listen on bus events
+    int userbus_fd = sd_bus_get_fd(userbus);
 
+    m_register_fd(bus_fd, true, &sysbus_t);
+    m_register_fd(userbus_fd, true, &userbus_t);
 }
 
-static int check(void) {
-    return 0; /* Skeleton function needed for modules interface */
+static bool check(void) {
+    return true;
+}
+
+static bool evaluate(void) {
+    return true;
 }
 
 /*
@@ -40,21 +52,25 @@ static void destroy(void) {
     if (sysbus) {
         sd_bus_flush_close_unref(sysbus);
     }
+    if (userbus) {
+        sd_bus_flush_close_unref(userbus);
+    }
     if (_cb.callbacks) {
         free(_cb.callbacks);
     }
 }
 
-static int callback(void) {
-    bus_callback(SYSTEM);
-    return 0;
+static void receive(const msg_t *const msg, const void* userdata) {
+    if (!msg->is_pubsub) {
+        bus_callback(*(enum bus_type *)msg->fd_msg->userptr);
+    }
 }
 
 /*
  * Callback for bus events
  */
 void bus_callback(const enum bus_type type) {
-    sd_bus *cb_bus = type == USER ? userbus : sysbus;
+    sd_bus *cb_bus = type == USER_BUS ? userbus : sysbus;
     int r;
     do {
         /* reset bus_cb_idx to impossible state */
@@ -84,7 +100,7 @@ void bus_callback(const enum bus_type type) {
 int call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
-    sd_bus *tmp = a->type == USER ? userbus : sysbus;
+    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
 
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
     if (check_err(r, &error, a->caller)) {
@@ -198,7 +214,7 @@ finish:
  * Add a match on bus on certain signal for cb callback
  */
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
-    sd_bus *tmp = a->type == USER ? userbus : sysbus;
+    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
 
 #if LIBSYSTEMD_VERSION >= 237
     int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state);
@@ -214,7 +230,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
  * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
  */
 int set_property(const struct bus_args *a, const char type, const void *value) {
-    sd_bus *tmp = a->type == USER ? userbus : sysbus;
+    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
 
@@ -240,7 +256,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
 int get_property(const struct bus_args *a, const char *type, void *userptr) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
-    sd_bus *tmp = a->type == USER ? userbus : sysbus;
+    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
 
     int r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
     if (check_err(r, &error, a->caller)) {

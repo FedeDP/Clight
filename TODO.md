@@ -59,9 +59,22 @@
 
 #### Libmodule
 - [x] Require libmodule 4.2.0 in CMakeLists
+- [x] Initial port for each module to libmodule
+- [ ] Fix each modules using libmodule:
+- - [ ] BACKLIGHT
+- - [ ] BUS
+- - [ ] CIGHTD
+- - [ ] DIMMER
+- - [ ] DPMS
+- - [ ] GAMMA
+- - [ ] INHIBIT
+- - [ ] INTERFACE
+- - [ ] LOCATION
+- - [x] SIGNAL
+- - [ ] UPOWER
+- [x] Port main to use libmodule
+- [ ] Fix logger
 - [ ] Drop modules.{c/h}
-- [ ] Include libmodule headers
-- [ ] Fix build
 - [ ] Add support for libmodule features
 - [ ] Test test test
 

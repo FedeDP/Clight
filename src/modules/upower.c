@@ -13,7 +13,7 @@ static struct self_t self = {
     .deps =  dependencies
 };
 
-MODULE(UPOWER);
+MODULE("UPOWER");
 
 static void init(void) {
     int r = upower_init();
@@ -21,13 +21,16 @@ static void init(void) {
     INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR);
 }
 
-static int check(void) {
-    return upower_check();
+static bool check(void) {
+    return true;
 }
 
-static int callback(void) {
-    // Skeleton interface
-    return 0;
+static bool evaluate(void) {
+    return true;
+}
+
+static void receive(const msg_t *const msg, const void* userdata) {
+    
 }
 
 static void destroy(void) {

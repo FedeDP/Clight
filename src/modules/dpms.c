@@ -21,7 +21,7 @@ static struct self_t self = {
     .functional_module = 1
 };
 
-MODULE(DPMS);
+MODULE("DPMS");
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
@@ -35,13 +35,16 @@ static void init(void) {
 }
 
 /* Works everywhere except wayland */
-static int check(void) {
-    return state.wl_display != NULL && strlen(state.wl_display);
+static bool check(void) {
+    return state.wl_display == NULL || !strlen(state.wl_display);
+}
+static bool evaluate(void) {
+    // FIXME
+    return true;
 }
 
-static int callback(void) {
-    /* Skeleton interface */
-    return 0;
+static void receive(const msg_t *const msg, const void* userdata) {
+    
 }
 
 static void destroy(void) {

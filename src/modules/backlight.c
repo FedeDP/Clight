@@ -41,7 +41,7 @@ static struct self_t self = {
     .functional_module = 1
 };
 
-MODULE(BACKLIGHT);
+MODULE("BACKLIGHT");
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
@@ -82,8 +82,13 @@ static void init(void) {
     INIT_MOD(bl_fd, &upower_cb, &interface_calibrate_cb, &interface_curve_cb, &interface_to_cb, &interface_autocalib_cb);
 }
 
-static int check(void) {
-    return 0;
+static bool check(void) {
+    return true;
+}
+
+static bool evaluate(void) {
+    // FIXME
+    return true;
 }
 
 static void destroy(void) {
@@ -92,12 +97,12 @@ static void destroy(void) {
     }
 }
 
-static int callback(void) {
-    uint64_t t;
-    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-
-    do_capture(1);
-    return 0;
+static void receive(const msg_t *const msg, const void* userdata) {
+    if (!msg->is_pubsub) {
+        uint64_t t;
+        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+        do_capture(1);
+    }
 }
 
 static void init_kbd_backlight(void) {

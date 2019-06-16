@@ -108,7 +108,7 @@ static sd_bus_vtable module_vtable[MODULES_NUM + 2];
 
 static struct prop_callback _cb;
 static struct dependency dependencies[] = {
-    {SUBMODULE, USERBUS}    // It must be started together with userbus
+    {SUBMODULE, BUS}    // It must be started together with userbus
 };
 static struct self_t self = {
     .num_deps = SIZE(dependencies),
@@ -116,7 +116,7 @@ static struct self_t self = {
     .standalone = 1
 };
 
-MODULE(INTERFACE);
+MODULE("INTERFACE");
 
 static void init(void) {
     const char conf_path[] = "/org/clight/clight/Conf";
@@ -163,13 +163,16 @@ static void init(void) {
     INIT_MOD(r >= 0 ? DONT_POLL : DONT_POLL_W_ERR);
 }
 
-static int check(void) {
-    return 0;
+static bool check(void) {
+    return true;
 }
 
-static int callback(void) {
-    // Skeleton interface
-    return 0;
+static bool evaluate() {
+    return true;
+}
+
+static void receive(const msg_t *const msg, const void* userdata) {
+    
 }
 
 static void destroy(void) {

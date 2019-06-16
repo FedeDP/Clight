@@ -21,30 +21,36 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#include <modules.h>
+#include <module/modules_easy.h>
 #include <opts.h>
+#include <log.h>
 
 static void init(int argc, char *argv[]);
 static void sigsegv_handler(int signum);
-static void init_all_modules(void);
-static void destroy(void);
-static void main_poll(void);
 
 struct state state;
 struct config conf;
 struct module modules[MODULES_NUM];
 struct pollfd main_p[MODULES_NUM];
+sd_bus *sysbus, *userbus;
 
-int main(int argc, char *argv[]) {
+/* Every module needs these; let's init them before any module */
+void modules_pre_start(void) {
     state.display = getenv("DISPLAY");
     state.wl_display = getenv("WAYLAND_DISPLAY");
     state.xauthority = getenv("XAUTHORITY");
+    
+    sd_bus_default_system(&sysbus);
+    sd_bus_default_user(&userbus);
+} 
+
+int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         init(argc, argv);
-        main_poll();
+        modules_loop();
     }
-    destroy();
+    close_log();
     return state.quit == NORM_QUIT ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -63,7 +69,6 @@ static void init(int argc, char *argv[]) {
     init_opts(argc, argv);
     open_log();
     log_conf();
-    init_all_modules();
 }
 
 /*
@@ -76,53 +81,4 @@ static void sigsegv_handler(int signum) {
     close_log();
     signal(signum, SIG_DFL);
     kill(getpid(), signum);
-}
-
-/*
- * Init every module
- */
-static void init_all_modules(void) {
-    for (int i = 0; i < MODULES_NUM; i++) {
-        init_modules(i);
-    }
-}
-
-/*
- * Free every used resource
- */
-static void destroy(void) {
-    /*
-     * Avoid continuously cyclying here if any error happens inside destroy_modules()
-     * (as ERROR macro would longjmp again here);
-     * Only try once, otherwise avoid destroying modules and go on closing log
-     */
-    static int first_time = 1;
-
-    if (first_time) {
-        first_time = 0;
-        destroy_modules();
-    }
-    close_log();
-}
-
-/*
- * Listens on all fds and calls correct callback
- */
-static void main_poll(void) {
-    /* Force a sd_bus_process before entering loop */
-    poll_cb(BUS);
-    poll_cb(USERBUS);
-    while (!state.quit) {
-        int r = poll(main_p, MODULES_NUM, -1);
-        if (r == -1 && errno != EINTR && errno != EAGAIN) {
-            ERROR("%s\n", strerror(errno));
-        }
-
-        for (int i = 0; i < MODULES_NUM && !state.quit && r > 0; i++) {
-            if (main_p[i].revents & POLLIN) {
-                poll_cb(i);
-                r--;
-            }
-        }
-    }
 }

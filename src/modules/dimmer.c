@@ -24,7 +24,7 @@ static struct self_t self = {
     .functional_module = 1
 };
 
-MODULE(DIMMER);
+MODULE("DIMMER");
 
 static void init(void) {
     struct bus_cb upower_cb = { UPOWER, upower_callback };
@@ -45,12 +45,17 @@ static void init(void) {
     INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, &upower_cb, &inhibit_cb, &interface_inhibit_cb, &interface_to_cb);
 }
 
-static int check(void) {
-    return 0;
+static bool check(void) {
+    return true;
 }
 
-static int callback(void) {
-    return 0;
+static bool evaluate(void) {
+    // FIXME -> deps
+    return true;
+}
+
+static void receive(const msg_t *const msg, const void* userdata) {
+
 }
 
 static void destroy(void) {

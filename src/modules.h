@@ -1,25 +1,7 @@
 #pragma once
 
 #include <timer.h>
-
-#define _ctor_ __attribute__((constructor))
-
-#define MODULE(module) \
-    static void init(void); \
-    static int check(void); \
-    static void destroy(void); \
-    static int callback(void); \
-    static void _ctor_ set_module_self(void) { \
-        *(int *)&self.idx = module; \
-        self.name = #module; \
-        modules[self.idx].self = &self; \
-        modules[self.idx].init = init; \
-        modules[self.idx].check = check; \
-        modules[self.idx].poll_cb = callback; \
-        modules[self.idx].destroy = destroy; \
-        set_self_deps(&self); \
-        state.needed_functional_modules += self.functional_module; \
-    }
+#include <module/module_easy.h>
 
 #define INIT_MOD(fd, ...) init_module(fd, self.idx, ##__VA_ARGS__, (void *)0)
 

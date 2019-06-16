@@ -105,23 +105,23 @@ static void init_submodules(const enum modules module) {
 }
 
 int is_disabled(const enum modules module) {
-    return modules[module].state == DISABLED;
+//     return modules[module].state == DISABLED;
 }
 
 int is_running(const enum modules module) {
-    return modules[module].state == RUNNING;
+//     return modules[module].state == RUNNING;
 }
 
 int is_started_disabled(const enum modules module) {
-    return modules[module].state == STARTED_DISABLED;
+//     return modules[module].state == STARTED_DISABLED;
 }
 
 int is_idle(const enum modules module) {
-    return modules[module].state == IDLE;
+//     return modules[module].state == IDLE;
 }
 
 int is_destroyed(const enum modules module) {
-    return modules[module].state == DESTROYED;
+//     return modules[module].state == DESTROYED;
 }
 
 /*
@@ -200,7 +200,7 @@ void change_dep_type(const enum modules mod, const enum modules mod_dep, const e
  */
 static void disable_module(const enum modules module) {
     if (!is_disabled(module) && !is_destroyed(module)) {
-        set_state(&modules[module], DISABLED);
+//         set_state(&modules[module], DISABLED);
         DEBUG("%s module disabled.\n", modules[module].self->name);
 
         /* Cycle to disable all modules dependent on "module", if dep is HARD */
@@ -266,7 +266,7 @@ static void destroy_module(const enum modules module) {
         }
         /* stop polling on this module! */
         main_p[module].fd = DONT_POLL;
-        set_state(&modules[module], DESTROYED);
+//         set_state(&modules[module], DESTROYED);
         DEBUG("%s module destroyed.\n", modules[module].self->name);
     }
 }

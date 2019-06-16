@@ -20,7 +20,7 @@
 #define FILL_MATCH_NONE()   FILL_MATCH(__PRETTY_FUNCTION__)
     
 /* Bus types */
-enum bus_type { SYSTEM, USER };
+enum bus_type { SYSTEM_BUS, USER_BUS };
 
 struct bus_cb {
     enum modules module;
@@ -41,10 +41,9 @@ struct bus_args {
 };
 
 #define BUS_ARG(name, ...)      struct bus_args name = {__VA_ARGS__, __func__};
-#define USERBUS_ARG(name, ...)  BUS_ARG(name, __VA_ARGS__, USER);
-#define SYSBUS_ARG(name, ...)   BUS_ARG(name, __VA_ARGS__, SYSTEM);
+#define USERBUS_ARG(name, ...)  BUS_ARG(name, __VA_ARGS__, USER_BUS);
+#define SYSBUS_ARG(name, ...)   BUS_ARG(name, __VA_ARGS__, SYSTEM_BUS);
 
-void bus_callback(const enum bus_type type);
 int call(void *userptr, const char *userptr_type, const struct bus_args *args, const char *signature, ...);
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb);
 int set_property(const struct bus_args *a, const char type, const void *value);

@@ -27,7 +27,7 @@ static time_t last_t;                          // last time_t check_gamma() was 
 static int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
 static int long_transitioning;                 // are we inside a long transition?
 
-MODULE(GAMMA);
+MODULE("GAMMA");
 
 static void init(void) {
     struct bus_cb loc_cb = { LOCATION, location_callback };
@@ -43,20 +43,26 @@ static void init(void) {
     INIT_MOD(fd, &loc_cb, &interface_cb);
 }
 
-static int check(void) {
-    return !state.display || !state.xauthority;
+static bool check(void) {
+    return state.display && state.xauthority;
+}
+
+static bool evaluate(void) {
+    // FIXME
+    return true;
 }
 
 static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static int callback(void) {
-    uint64_t t;
+static void receive(const msg_t *const msg, const void* userdata) {
+    if (!msg->is_pubsub) {
+        uint64_t t;
 
-    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-    check_gamma();
-    return 0;
+        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+        check_gamma();
+    }
 }
 
 static void check_gamma(void) {

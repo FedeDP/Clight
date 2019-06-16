@@ -13,23 +13,29 @@ static struct self_t self = {
     .deps =  dependencies,
 };
 
-MODULE(CLIGHTD);
+MODULE("CLIGHTD");
 
 static void init(void) {
     INIT_MOD(DONT_POLL);
 }
 
-static int check(void) {
-    return check_clightd_version();
+static bool check(void) {
+    return true;
 }
+
+static bool evaluate(void) {
+//     return check_clightd_version();
+    // FIXME!
+    return true;
+}
+
 
 static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static int callback(void) {
-    /* Skeleton function needed for modules interface */
-    return 0;
+static void receive(const msg_t *const msg, const void* userdata) {
+    
 }
 
 static int check_clightd_version(void) {
