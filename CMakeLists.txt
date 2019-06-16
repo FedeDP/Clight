@@ -31,7 +31,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
 
 # Required dependencies
-pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig)
+pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig libmodule>=4.2.0)
 pkg_search_module(LOGIN_LIBS REQUIRED libelogind libsystemd>=221)
 
 # Avoid float versioning for libsystemd/libelogind
@@ -118,7 +118,8 @@ set(CPACK_RPM_PACKAGE_LICENSE "GPL")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
-set(CPACK_RPM_PACKAGE_REQUIRES "libsystemd0 libpopt0 libconfig9 libgsl23 clightd>=4.0")
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc/xdg" "/etc/xdg/autostart" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_BINDIR}" "/usr/share/applications" "${SESSION_BUS_DIR}" "/usr/share/icons" "/usr/share/icons/hicolor" "/usr/share/icons/hicolor/scalable" "/usr/share/icons/hicolor/scalable/apps")
+set(CPACK_RPM_PACKAGE_REQUIRES "systemd-libs popt libconfig gsl clightd >= 4.0 libmodule >= 4.2.0")
 set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 
@@ -127,7 +128,7 @@ set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 #
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/FedeDP/Clight")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 4.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 4.0), libmodule (>= 4.2.0)")
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0, upower, bash-completion")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 

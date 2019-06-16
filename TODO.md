@@ -55,9 +55,15 @@
 #### Cpack
 - [x] Add Cpack support to cmake
 - [x] Fix deb support
+- [x] FIx rpm support
 
 #### Libmodule
-- [ ] Port to libmodule 4.2.0
+- [x] Require libmodule 4.2.0 in CMakeLists
+- [ ] Drop modules.{c/h}
+- [ ] Include libmodule headers
+- [ ] Fix build
+- [ ] Add support for libmodule features
+- [ ] Test test test
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options
