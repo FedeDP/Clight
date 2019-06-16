@@ -56,6 +56,9 @@
 - [x] Add Cpack support to cmake
 - [x] Fix deb support
 
+#### Libmodule
+- [ ] Port to libmodule 4.2.0
+
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add issue template
@@ -66,7 +69,6 @@
 - [x] Avoid fill_match_data with old value whenever possible (only when value really changed), and remove useless checks (eg: src/modules/dpms.c:    if (!!old_pm_state != !!state.pm_inhibited) ...)
 - [x] Add "--expect-reply=false" to desktop file actions
 - [x] Log bus calls only in verbose mode
-- [ ] Log review (ie: what should be logged as is useful for user, and what should not)
 
 ### 4.1
 
@@ -79,6 +81,9 @@
 - [ ] Implement org.freedesktop.ScreenSaver bus API (Inhibit/UnInhibit methods)
 - [ ] If org.freedesktop.ScreenSaver is already present, avoid failing
 - [ ] Eventually drop power management api/configs ... (?)
+
+#### Screen-emitted brightness compensation
+- [ ] Fix #84
 
 ### 4.2
 
