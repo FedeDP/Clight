@@ -1,16 +1,9 @@
 #include <bus.h>
 
 static void bus_callback(const enum bus_type type);
-static void run_callbacks(struct bus_match_data *data);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err, const char *caller);
 
-struct bus_callback {
-    int num_callbacks;
-    struct bus_cb *callbacks;
-};
-
-static struct bus_callback _cb;
 static const enum bus_type sysbus_t = SYSTEM_BUS;
 static const enum bus_type userbus_t = USER_BUS;
 
@@ -22,7 +15,6 @@ static void init(void) {
     if (r < 0) {
         ERROR("Failed to connect to system bus: %s\n", strerror(-r));
     }
-    // let main poll listen on bus events
     int bus_fd = sd_bus_get_fd(sysbus);
     
     /* UserBus */
@@ -30,7 +22,6 @@ static void init(void) {
     if (r < 0) {
         ERROR("Failed to connect to user bus: %s\n", strerror(-r));
     }
-    // let main poll listen on bus events
     int userbus_fd = sd_bus_get_fd(userbus);
 
     m_register_fd(bus_fd, true, &sysbus_t);
@@ -45,18 +36,12 @@ static bool evaluate(void) {
     return true;
 }
 
-/*
- * Close bus
- */
 static void destroy(void) {
     if (sysbus) {
         sd_bus_flush_close_unref(sysbus);
     }
     if (userbus) {
         sd_bus_flush_close_unref(userbus);
-    }
-    if (_cb.callbacks) {
-        free(_cb.callbacks);
     }
 }
 
@@ -73,24 +58,7 @@ void bus_callback(const enum bus_type type) {
     sd_bus *cb_bus = type == USER_BUS ? userbus : sysbus;
     int r;
     do {
-        /* reset bus_cb_idx to impossible state */
-        state.userdata.bus_mod_idx = MODULES_NUM;
         r = sd_bus_process(cb_bus, NULL);
-        /* check if any match changed bus_cb_idx, then call correct callback */
-        if (state.userdata.bus_mod_idx != MODULES_NUM) {
-            /*
-             * Run callbacks before poll_cb, as poll_cb will call
-             * started_cb, thus starting all of dependent modules;
-             * some of these modules may hook a callback on this module
-             * and that callback would be ran if poll_cb was before run_callbacks()
-             */
-            run_callbacks(&state.userdata);
-            if (state.userdata.ptr) {
-                free(state.userdata.ptr);
-                state.userdata.ptr = NULL;
-            }
-            poll_cb(state.userdata.bus_mod_idx);
-        }
     } while (r > 0);
 }
 
@@ -283,23 +251,7 @@ finish:
  * remember to call FILL_MATCH_DATA in bus module match/interface callback!
  */
 void add_mod_callback(const struct bus_cb *cb) {
-    struct bus_cb *tmp = realloc(_cb.callbacks, sizeof(struct bus_cb) * (++_cb.num_callbacks));
-    if (tmp) {
-        _cb.callbacks = tmp;
-        _cb.callbacks[_cb.num_callbacks - 1] = *cb;
-    } else {
-        free(_cb.callbacks);
-        ERROR("%s\n", strerror(errno));
-    }
-}
-
-static void run_callbacks(struct bus_match_data *data) {
-    for (int i = 0; i < _cb.num_callbacks; i++) {
-        if (_cb.callbacks[i].module == data->bus_mod_idx && is_running(data->bus_mod_idx)
-            && (!_cb.callbacks[i].filter || strcasestr(data->bus_fn_name, _cb.callbacks[i].filter))) {
-            _cb.callbacks[i].cb(data->ptr);
-        }
-    }
+    // FIXME: remove
 }
 
 /*

@@ -2,23 +2,17 @@
 #include <interface.h>
 
 static int inhibit_init(void);
+static int inhibit_check(void);
 static int on_inhibit_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = {
-    {HARD, BUS}     // It needs a connection to user bus to be opened
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps = dependencies
-};
+static const char *topic = "Inhibit";
 
 MODULE("INHIBIT");
 
 static void init(void) {
-    int r = inhibit_init();
-    /* In case of errors, inhibit_init returns -1 -> disable inhibit. */
-    INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR);
+    inhibit_init();
+    m_register_topic(topic);
 }
 
 static bool check(void) {
@@ -26,7 +20,8 @@ static bool check(void) {
 }
 
 static bool evaluate() {
-    return true;
+    /* Start as soon as PowerManagement.Inhibit becomes available */
+    return inhibit_check() == 0;
 }
 
 static void receive(const msg_t *const msg, const void* userdata) {
@@ -43,6 +38,13 @@ static void destroy(void) {
 static int inhibit_init(void) {
     USERBUS_ARG(args, "org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibitChanged");
     return add_match(&args, &slot, on_inhibit_change);
+}
+
+static int inhibit_check(void) {
+    /* check initial inhibit state (if interface is found) */
+    USERBUS_ARG(args, "org.freedesktop.PowerManagement.Inhibit", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "HasInhibit");
+    int r = call(&state.pm_inhibited, "b", &args, NULL);
+    return -(r < 0);
 }
 
 /*
@@ -62,8 +64,8 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
             INFO("PowerManagement inhibition disabled by freedesktop.PowerManagement.\n");
         }
         if (old_inhibited != state.pm_inhibited) {
-            FILL_MATCH_NONE();
             emit_prop("PmState");
+            m_publish_str(topic, "Changed");
         }
     }
     return 0;

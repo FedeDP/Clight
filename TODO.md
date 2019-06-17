@@ -62,16 +62,15 @@
 - [x] Initial port for each module to libmodule
 - [ ] Fix each modules using libmodule:
 - - [ ] BACKLIGHT
-- - [ ] BUS
-- - [ ] CIGHTD
+- - [ ] BUS -> drop add_mod_callback() and we're done
 - - [ ] DIMMER
 - - [ ] DPMS
 - - [ ] GAMMA
-- - [ ] INHIBIT
+- - [x] INHIBIT
 - - [ ] INTERFACE
 - - [ ] LOCATION
 - - [x] SIGNAL
-- - [ ] UPOWER
+- - [x] UPOWER
 - [x] Port main to use libmodule
 - [ ] Fix logger
 - [ ] Drop modules.{c/h}

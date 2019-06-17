@@ -23,10 +23,11 @@
 
 #include <module/modules_easy.h>
 #include <opts.h>
-#include <log.h>
+#include <bus.h>
 
-static void init(int argc, char *argv[]);
+static int init(int argc, char *argv[]);
 static void sigsegv_handler(int signum);
+static int check_clightd_version(void);
 
 struct state state;
 struct config conf;
@@ -47,8 +48,9 @@ void modules_pre_start(void) {
 int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
-        init(argc, argv);
-        modules_loop();
+        if (init(argc, argv) == 0) {
+            modules_loop();
+        }
     }
     close_log();
     return state.quit == NORM_QUIT ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -59,16 +61,20 @@ int main(int argc, char *argv[]) {
  * local config file, and from cmdline options.
  * Then init needed modules.
  */
-static void init(int argc, char *argv[]) {
-    /* 
-     * When receiving segfault signal,
-     * call our sigsegv handler that just logs
-     * a debug message before dying
-     */
-    signal(SIGSEGV, sigsegv_handler);
-    init_opts(argc, argv);
-    open_log();
-    log_conf();
+static int init(int argc, char *argv[]) {
+    if (sysbus && userbus) {
+        /* 
+         * When receiving segfault signal,
+         * call our sigsegv handler that just logs
+         * a debug message before dying
+         */
+        signal(SIGSEGV, sigsegv_handler);
+        init_opts(argc, argv);
+        open_log();
+        log_conf();
+        return check_clightd_version();
+    }
+    return -1;
 }
 
 /*
@@ -81,4 +87,24 @@ static void sigsegv_handler(int signum) {
     close_log();
     signal(signum, SIG_DFL);
     kill(getpid(), signum);
+}
+
+static int check_clightd_version(void) {
+    int ret = -1;
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
+    
+    int r = get_property(&args, "s", state.clightd_version);
+    if (r < 0 || !strlen(state.clightd_version)) {
+        WARN("No clightd found. Clightd is a mandatory dep.\n");
+    } else {
+        int maj_val = atoi(state.clightd_version);
+        int min_val = atoi(strchr(state.clightd_version, '.') + 1);
+        if (maj_val < MINIMUM_CLIGHTD_VERSION_MAJ || (maj_val == MINIMUM_CLIGHTD_VERSION_MAJ && min_val < MINIMUM_CLIGHTD_VERSION_MIN)) {
+            WARN("Clightd must be updated. Required version: %d.%d.\n", MINIMUM_CLIGHTD_VERSION_MAJ, MINIMUM_CLIGHTD_VERSION_MIN);
+        } else {
+            INFO("Clightd found, version: %s.\n", state.clightd_version);
+            ret = 0;
+        }
+    }
+    return ret;
 }

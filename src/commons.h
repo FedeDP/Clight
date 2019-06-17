@@ -35,6 +35,8 @@
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
 #define LAT_UNDEFINED 91.0
 #define LON_UNDEFINED 181.0
+#define MINIMUM_CLIGHTD_VERSION_MAJ 4
+#define MINIMUM_CLIGHTD_VERSION_MIN 0
 
 /* List of modules indexes */
 enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, INHIBIT, CLIGHTD, INTERFACE, MODULES_NUM };
@@ -134,6 +136,7 @@ struct state {
     jmp_buf quit_buf;                       // quit jump called by longjmp
     int needed_functional_modules;          // we need at least 1 functional module (BACKLIGHT, GAMMA, DPMS, DIMMER) otherwise quit
     struct bus_match_data userdata;         // Data used by modules that own a match on bus
+    char clightd_version[PATH_MAX + 1];     // Clightd found version
 };
 
 /* Struct that holds info about an inter-modules dep */
