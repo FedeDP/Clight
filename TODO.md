@@ -80,9 +80,6 @@
 - [ ] Properly pause module/resume them when needed (or m_become(paused/running))
 - [ ] Test test test
 
-#### Libmodule 5.0.0
-- [ ] Port to new API
-
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add issue template

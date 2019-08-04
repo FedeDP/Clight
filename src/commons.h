@@ -175,34 +175,5 @@ struct state {
     char clightd_version[PATH_MAX + 1];     // Clightd found version
 };
 
-/* Struct that holds info about an inter-modules dep */
-// struct dependency {
-//     enum dep_type type;                    // soft or hard dependency
-//     enum modules dep;                      // dependency module
-// };
-
-// /* Struct that holds self module informations, static to each module */
-// struct self_t {
-//     const char *name;                     // name of module
-//     const enum modules idx;               // idx of a module in enum modules 
-//     int num_deps;                         // number of deps for a module
-//     int satisfied_deps;                   // number of satisfied deps
-//     struct dependency *deps;              // module on which there is a dep
-//     int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
-//     int functional_module;                // whether this module offers a high-level feature
-// };
-// 
-// /* Struct that holds data for each module */
-// struct module {
-//     void (*init)(void);                   // module init function
-//     int (*check)(void);                   // module check-before-init function
-//     void (*destroy)(void);                // module destroy function
-//     int (*poll_cb)(void);                 // module poll callback
-//     struct self_t *self;                  // pointer to self module informations
-//     enum dep_type dependent_m[MODULES_NUM];// pointer to every dependent module self
-//     int num_dependent;                    // number of dependent-on-this-module modules
-//     enum module_states state;             // state of a module
-// };
-
 extern struct state state;
 extern struct config conf;
