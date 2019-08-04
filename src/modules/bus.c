@@ -4,8 +4,6 @@ static void bus_callback(const enum bus_type type);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err, const char *caller);
 
-static const enum bus_type sysbus_t = SYSTEM_BUS;
-static const enum bus_type userbus_t = USER_BUS;
 static sd_bus *sysbus, *userbus;
 
 MODULE("BUS");
@@ -27,8 +25,8 @@ static void init(void) {
     int bus_fd = sd_bus_get_fd(sysbus);
     int userbus_fd = sd_bus_get_fd(userbus);
 
-    m_register_fd(bus_fd, true, &sysbus_t);
-    m_register_fd(userbus_fd, true, &userbus_t);
+    m_register_fd(bus_fd, true, sysbus);
+    m_register_fd(userbus_fd, true, userbus);
 }
 
 static bool check(void) {
@@ -50,7 +48,11 @@ static void destroy(void) {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
-        bus_callback(*(enum bus_type *)msg->fd_msg->userptr);
+        sd_bus *b = (sd_bus *)msg->fd_msg->userptr;
+        int r;
+        do {
+            r = sd_bus_process(b, NULL);
+        } while (r > 0);
     }
 }
 
@@ -58,11 +60,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
  * Callback for bus events
  */
 static void bus_callback(const enum bus_type type) {
-    sd_bus *cb_bus = type == USER_BUS ? userbus : sysbus;
-    int r;
-    do {
-        r = sd_bus_process(cb_bus, NULL);
-    } while (r > 0);
+
 }
 
 /*
