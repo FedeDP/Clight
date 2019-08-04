@@ -11,7 +11,7 @@ static void set_keyboard_level(const double level);
 static int capture_frames_brightness(void);
 static void pause_capture(void);
 static void resume_capture(void);
-static void upower_callback(const void *ptr);
+static void upower_callback(void);
 static void interface_calibrate_callback(const void *ptr);
 static void interface_autocalib_callback(const void *ptr);
 static void interface_curve_callback(const void *ptr);
@@ -29,38 +29,32 @@ static int bl_fd;
 static int old_elapsed;
 static int old_sensor_available ;
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = {
-    {SOFT, GAMMA},      // Which time of day are we in?
-    {SOFT, UPOWER},     // Are we on AC or on BATT?
-    {HARD, CLIGHTD},    // methods to set screen backlight
-    {HARD, INTERFACE}   // We need INTERFACE module because we are subscribed to "DisplayState" and "Time" signals (thus HARD dep) + we add callbacks on INTERFACE
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps =  dependencies,
-    .functional_module = 1
-};
+
+const char *current_bl_topic = "CurrentBlPct";
+const char *current_kbd_topic = "CurrentKbdPct";
+const char *current_ab_topic = "CurrentAmbientBr"; 
 
 MODULE("BACKLIGHT");
 
 static void init(void) {
-    struct bus_cb upower_cb = { UPOWER, upower_callback };
-    struct bus_cb interface_calibrate_cb = { INTERFACE, interface_calibrate_callback, "calibrate" };
-    struct bus_cb interface_curve_cb = { INTERFACE, interface_curve_callback, "curve" };
-    struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "backlight_timeout" };
-    struct bus_cb interface_autocalib_cb = { INTERFACE, interface_autocalib_callback, "auto_calib" };
+//     struct bus_cb upower_cb = { UPOWER, upower_callback };
+//     struct bus_cb interface_calibrate_cb = { INTERFACE, interface_calibrate_callback, "calibrate" };
+//     struct bus_cb interface_curve_cb = { INTERFACE, interface_curve_callback, "curve" };
+//     struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "backlight_timeout" };
+//     struct bus_cb interface_autocalib_cb = { INTERFACE, interface_autocalib_callback, "auto_calib" };
 
     /* Compute polynomial best-fit parameters */
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
 
-    /* Add callbacks on prop signal emitted by interface module */
-    struct prop_cb dimmed_cb = { "DisplayState", dimmed_callback };
-    struct prop_cb time_cb = { "Time", time_callback };
-    struct prop_cb event_cb = { "InEvent", time_callback };
-    ADD_PROP_CB(&dimmed_cb);
-    ADD_PROP_CB(&time_cb);
-    ADD_PROP_CB(&event_cb);
+    m_subscribe(up_topic);
+    m_subscribe(display_topic);
+    m_subscribe(time_topic);
+    m_subscribe(evt_topic);
+    
+//     struct prop_cb dimmed_cb = { "DisplayState", dimmed_callback };
+//     struct prop_cb time_cb = { "Time", time_callback };
+//     struct prop_cb event_cb = { "InEvent", time_callback };
 
     /* We do not fail if this fails */
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
@@ -78,8 +72,7 @@ static void init(void) {
     sensor_available = is_sensor_available();
     /* When no_auto_calib is true, start paused */
     bl_fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available && !conf.no_auto_calib);
-
-    INIT_MOD(bl_fd, &upower_cb, &interface_calibrate_cb, &interface_curve_cb, &interface_to_cb, &interface_autocalib_cb);
+    m_register_fd(bl_fd, true, NULL);
 }
 
 static bool check(void) {
@@ -87,8 +80,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    // FIXME
-    return true;
+    return conf.no_backlight == 0;
 }
 
 static void destroy(void) {
@@ -100,8 +92,17 @@ static void destroy(void) {
 static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
         uint64_t t;
-        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+        read(msg->fd_msg->fd, &t, sizeof(uint64_t));
         do_capture(1);
+    } else if (msg->ps_msg->type == USER) {
+        MSG_TYPE();
+        switch (type) {
+            case UPOWER_UPDATE:
+                upower_callback();
+                break;
+            default: // FIXME
+                break;
+        }
     }
 }
 
@@ -134,7 +135,7 @@ static void do_capture(int reset_timer) {
     }
 
     if (reset_timer) {
-        set_timeout(curr_timeout, 0, main_p[self.idx].fd, 0);
+        set_timeout(curr_timeout, 0, bl_fd, 0);
     }
 }
 
@@ -157,7 +158,7 @@ static void set_keyboard_level(const double level) {
          */
         state.current_kbd_pct = 1.0 - level;
         if (call(NULL, NULL, &kbd_args, "i", state.current_kbd_pct * max_kbd_backlight) == 0) {
-            emit_prop("CurrentKbdPct");
+            emit_prop(current_kbd_topic);
         }
     }
 }
@@ -170,7 +171,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
     if (!r && ok) {
         state.current_bl_pct = pct;
-        emit_prop("CurrentBlPct");
+        emit_prop(current_bl_topic);
     }
 }
 
@@ -180,15 +181,15 @@ static int capture_frames_brightness(void) {
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
         state.ambient_br = compute_average(intensity, conf.num_captures);
-        emit_prop("CurrentAmbientBr");
+        emit_prop(current_ab_topic);
     }
     return r;
 }
 
 static void pause_capture(void) {
     old_sensor_available = sensor_available;
-    old_elapsed = curr_timeout - get_timeout_sec(main_p[self.idx].fd);
-    set_timeout(0, 0, main_p[self.idx].fd, 0);
+    old_elapsed = curr_timeout - get_timeout_sec(bl_fd);
+    set_timeout(0, 0, bl_fd, 0);
 }
 
 static void resume_capture(void) {
@@ -205,19 +206,19 @@ static void resume_capture(void) {
             timeout_nsec = 1;
         }
     }
-    set_timeout(timeout_sec, timeout_nsec, main_p[self.idx].fd, 0);
+    set_timeout(timeout_sec, timeout_nsec, bl_fd, 0);
     ac_force_capture = 0;
 }
 
 /* Callback on upower ac state changed signal */
-static void upower_callback(const void *ptr) {
+static void upower_callback(void) {
     if (sensor_available) {
         if (!state.display_state && !conf.no_auto_calib) {
             /*
             * do a capture right now as we have 2 different curves for
             * different AC_STATES, so let's properly honor new curve
             */
-            set_timeout(0, 1, main_p[self.idx].fd, 0);
+            set_timeout(0, 1, bl_fd, 0);
         }  else {
             /*
              * if it is even, it means eg: we started on AC, then on Batt, then again on AC 
@@ -256,7 +257,7 @@ static void interface_curve_callback(const void *ptr) {
 static void interface_timeout_callback(const void *ptr) {
     if (!state.display_state && sensor_available && !conf.no_auto_calib) {
         int old_val = *((int *)ptr);
-        reset_timer(main_p[self.idx].fd, old_val, curr_timeout);
+        reset_timer(bl_fd, old_val, curr_timeout);
     }
 }
 
@@ -275,7 +276,7 @@ static void dimmed_callback(void) {
 static void time_callback(void) {
     if (!state.display_state && sensor_available && !conf.no_auto_calib) {
         /* A state.time change happened, react! */
-        reset_timer(main_p[self.idx].fd, curr_timeout, get_current_timeout());
+        reset_timer(bl_fd, curr_timeout, get_current_timeout());
     }
     curr_timeout = get_current_timeout();
 }
@@ -286,13 +287,13 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
     if (new_sensor_avail != sensor_available) {
         if (!state.display_state && !conf.no_auto_calib) {
             // Resume module if sensor is now available. Pause it if it is not available
-            set_timeout(0, new_sensor_avail, main_p[self.idx].fd, 0);
+            set_timeout(0, new_sensor_avail, bl_fd, 0);
         }
         sensor_available = new_sensor_avail;
         if (sensor_available) {
-            INFO("%s module resumed as a sensor is available.\n", self.name);
+//             INFO("%s module resumed as a sensor is available.\n", self.name);
         } else {
-            INFO("%s module paused as no sensor is available.\n", self.name);
+//             INFO("%s module paused as no sensor is available.\n", self.name);
         }
     }
     return 0;

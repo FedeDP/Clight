@@ -58,24 +58,30 @@
 - [x] FIx rpm support
 
 #### Libmodule
-- [x] Require libmodule 4.2.0 in CMakeLists
+- [x] Require libmodule 5.0.0 in CMakeLists
 - [x] Initial port for each module to libmodule
 - [ ] Fix each modules using libmodule:
 - - [ ] BACKLIGHT
-- - [ ] BUS -> drop add_mod_callback() and we're done
-- - [ ] DIMMER
-- - [ ] DPMS
-- - [ ] GAMMA
+- - [x] BUS
+- - [x] DIMMER
+- - [x] DPMS
+- - [x] GAMMA
 - - [x] INHIBIT
 - - [ ] INTERFACE
-- - [ ] LOCATION
+- - [x] LOCATION
 - - [x] SIGNAL
 - - [x] UPOWER
 - [x] Port main to use libmodule
+- [x] Port all "no-X" options to a conf.no_X
+- [x] Drop modules.{c/h}
 - [ ] Fix logger
-- [ ] Drop modules.{c/h}
-- [ ] Add support for libmodule features
+- [ ] Restore emit_prop that will publish a message with "self" and will emit dbus signal
+- [x] Drop org.clight.clight.Module interface
+- [ ] Properly pause module/resume them when needed (or m_become(paused/running))
 - [ ] Test test test
+
+#### Libmodule 5.0.0
+- [ ] Port to new API
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options

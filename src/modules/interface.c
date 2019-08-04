@@ -3,7 +3,6 @@
 #include <interface.h>
 #include <config.h>
 
-static int build_modules_vtable(sd_bus *userbus);
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -21,18 +20,9 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static int emit_p(const char *path, const char *interface, const char *signal);
-static void run_prop_callbacks(const char *prop);
-
-struct prop_callback {
-    int num_callbacks;
-    struct prop_cb *callbacks;
-};
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
-static const char module_path[] = "/org/clight/clight/Modules";
-static const char module_interface[] = "org.clight.clight.Modules";
 
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
@@ -104,17 +94,9 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
-static sd_bus_vtable module_vtable[MODULES_NUM + 2];
-
-static struct prop_callback _cb;
-static struct dependency dependencies[] = {
-    {SUBMODULE, BUS}    // It must be started together with userbus
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps = dependencies,
-    .standalone = 1
-};
+const char *interface_temp_topic = "InterfaceTemp";
+const char *interface_dimmer_to_topic = "InterfaceDimmerTo";
+const char *interface_dpms_to_topic = "InterfaceDPMSTo";
 
 MODULE("INTERFACE");
 
@@ -123,9 +105,9 @@ static void init(void) {
     const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
     const char conf_interface[] = "org.clight.clight.Conf";
 
-    sd_bus **userbus = get_user_bus();
+    sd_bus *userbus = get_user_bus();
     /* Main interface */
-    int r = sd_bus_add_object_vtable(*userbus,
+    int r = sd_bus_add_object_vtable(userbus,
                                 NULL,
                                 object_path,
                                 bus_interface,
@@ -133,7 +115,7 @@ static void init(void) {
                                 &state);
 
     /* Conf interface */
-    r += sd_bus_add_object_vtable(*userbus,
+    r += sd_bus_add_object_vtable(userbus,
                                 NULL,
                                 conf_path,
                                 conf_interface,
@@ -141,26 +123,12 @@ static void init(void) {
                                 &conf);
 
     /* Conf/Timeouts interface */
-    r += sd_bus_add_object_vtable(*userbus,
+    r += sd_bus_add_object_vtable(userbus,
                                   NULL,
                                   conf_to_path,
                                   conf_interface,
                                   conf_to_vtable,
                                   &conf);
-
-    /* Modules interface */
-    r += build_modules_vtable(*userbus);
-    if (r < 0) {
-        WARN("Could not create Bus Interface: %s\n", strerror(-r));
-    } else {
-        r = sd_bus_request_name(*userbus, bus_interface, 0);
-        if (r < 0) {
-            WARN("Failed to acquire Bus Interface name: %s\n", strerror(-r));
-        }
-    }
-
-    /* In case of errors, disable interface. */
-    INIT_MOD(r >= 0 ? DONT_POLL : DONT_POLL_W_ERR);
 }
 
 static bool check(void) {
@@ -176,27 +144,8 @@ static void receive(const msg_t *const msg, const void* userdata) {
 }
 
 static void destroy(void) {
-    sd_bus **userbus = get_user_bus();
-    sd_bus_release_name(*userbus, bus_interface);
-    if (_cb.callbacks) {
-        free(_cb.callbacks);
-    }
-}
-
-static int build_modules_vtable(sd_bus *userbus) {
-    int i = 0;
-    module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_START(0);
-    for (i = 1; i <= MODULES_NUM; i++) {
-        module_vtable[i] = (sd_bus_vtable) SD_BUS_PROPERTY(modules[i - 1].self->name, "u", NULL,
-                                                           offsetof(struct module, state) + (sizeof(struct module) * (i - 1)), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE);
-    }
-    module_vtable[i] = (sd_bus_vtable)SD_BUS_VTABLE_END;
-    return sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  module_path,
-                                  module_interface,
-                                  module_vtable,
-                                  modules);
+    sd_bus *userbus = get_user_bus();
+    sd_bus_release_name(userbus, bus_interface);
 }
 
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
@@ -207,12 +156,13 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int r = -EINVAL;
 
-    if (is_running(BACKLIGHT)) {
-        FILL_MATCH_NONE();
-        r = sd_bus_reply_method_return(m, NULL);
-    } else {
-        sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Backlight module is not running.");
-    }
+    // FIXME
+//     if (is_running(BACKLIGHT)) {
+//         FILL_MATCH_NONE();
+//         r = sd_bus_reply_method_return(m, NULL);
+//     } else {
+//         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Backlight module is not running.");
+//     }
     return r;
 }
 
@@ -328,43 +278,11 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
 }
 
 int emit_prop(const char *signal) {
-    return emit_p(object_path, bus_interface, signal);
-}
-
-int emit_mod_prop(const char *signal) {
-    return emit_p(module_path, module_interface, signal);
-}
-
-static int emit_p(const char *path, const char *interface, const char *signal) {
-    if (is_running((self.idx))) {
-        sd_bus **userbus = get_user_bus();
-        if (*userbus) {
-            sd_bus_emit_properties_changed(*userbus, path, interface, signal, NULL);
-            run_prop_callbacks(signal);
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int add_prop_callback(struct prop_cb *cb) {
-    if (is_running((self.idx))) {
-        struct prop_cb *tmp = realloc(_cb.callbacks, sizeof(struct prop_cb) * (++_cb.num_callbacks));
-        if (tmp) {
-            _cb.callbacks = tmp;
-            _cb.callbacks[_cb.num_callbacks - 1] = *cb;
-        } else {
-            free(_cb.callbacks);
-            ERROR("%s\n", strerror(errno));
-        }
-    }
-    return 0;
-}
-
-static void run_prop_callbacks(const char *prop) {
-    for (int i = 0; i < _cb.num_callbacks; i++) {
-        if (is_running(_cb.callbacks[i].dst) && !strcmp(_cb.callbacks[i].name, prop)) {
-            _cb.callbacks[i].cb();
-        }
-    }
+    //     if (is_running((self.idx))) {
+    //         sd_bus *userbus = get_user_bus();
+    //         if (userbus) {
+    //             sd_bus_emit_properties_changed(userbus, object_path, bus_interface, signal, NULL);
+    //             return 0;
+    //         }
+    //     }
 }

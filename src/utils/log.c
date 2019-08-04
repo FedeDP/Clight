@@ -1,5 +1,4 @@
 #include <log.h>
-#include <modules.h>
 #include <sys/file.h>
 
 static FILE *log_file;
@@ -61,12 +60,11 @@ void log_conf(void) {
         fprintf(log_file, "* Dpms timeouts:\t\tAC %d\tBATT %d\n", conf.dpms_timeout[ON_AC], conf.dpms_timeout[ON_BATTERY]);
 
         fprintf(log_file, "\n### Modules ###\n");
-        for (int i = 0; i < MODULES_NUM; i++) {
-            const struct self_t *self = modules[i].self;
-            if (self->functional_module) {
-                fprintf(log_file, "* %s:\t\t%s\n", self->name, is_started_disabled(i) ? "Disabled" : "Enabled");
-            }
-        }
+        fprintf(log_file, "* Backlight:\t\t%s\n", conf.no_backlight ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Gamma:\t\t%s\n", conf.no_gamma ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Dimmer:\t\t%s\n", conf.no_dimmer ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Dpms:\t\t%s\n", conf.no_dpms ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Inhibit:\t\t%s\n", conf.no_inhibit ? "Disabled" : "Enabled");
 
         fprintf(log_file, "\n### Smooth ###\n");
         fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");

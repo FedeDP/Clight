@@ -6,22 +6,25 @@ static int check_err(int r, sd_bus_error *err, const char *caller);
 
 static const enum bus_type sysbus_t = SYSTEM_BUS;
 static const enum bus_type userbus_t = USER_BUS;
+static sd_bus *sysbus, *userbus;
 
 MODULE("BUS");
 
+static void module_pre_start(void) {
+    sd_bus_default_system(&sysbus);
+    sd_bus_default_user(&userbus);
+}
+
 static void init(void) {
-    /* SysBus */
-    int r = sd_bus_default_system(&sysbus);
-    if (r < 0) {
-        ERROR("Failed to connect to system bus: %s\n", strerror(-r));
+    if (!sysbus) {
+        ERROR("Failed to connect to system bus.\n");
     }
-    int bus_fd = sd_bus_get_fd(sysbus);
     
-    /* UserBus */
-    r = sd_bus_default_user(&userbus);
-    if (r < 0) {
-        ERROR("Failed to connect to user bus: %s\n", strerror(-r));
+    if (!userbus) {
+        ERROR("Failed to connect to user bus\n");
     }
+    
+    int bus_fd = sd_bus_get_fd(sysbus);
     int userbus_fd = sd_bus_get_fd(userbus);
 
     m_register_fd(bus_fd, true, &sysbus_t);
@@ -54,7 +57,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
 /*
  * Callback for bus events
  */
-void bus_callback(const enum bus_type type) {
+static void bus_callback(const enum bus_type type) {
     sd_bus *cb_bus = type == USER_BUS ? userbus : sysbus;
     int r;
     do {
@@ -246,14 +249,6 @@ finish:
     return r;
 }
 
-/* 
- * When adding a callback on a bus module (eg: LOCATION, or INTERFACE),
- * remember to call FILL_MATCH_DATA in bus module match/interface callback!
- */
-void add_mod_callback(const struct bus_cb *cb) {
-    // FIXME: remove
-}
-
 /*
  * Free used resources.
  */
@@ -284,6 +279,6 @@ static int check_err(int r, sd_bus_error *err, const char *caller) {
     return -(r < 0);
 }
 
-sd_bus **get_user_bus(void) {
-    return &userbus;
+sd_bus *get_user_bus(void) {
+    return userbus;
 }

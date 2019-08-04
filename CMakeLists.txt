@@ -31,7 +31,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
 
 # Required dependencies
-pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig libmodule>=4.2.0)
+pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig libmodule>=5.0.0)
 pkg_search_module(LOGIN_LIBS REQUIRED libelogind libsystemd>=221)
 
 # Avoid float versioning for libsystemd/libelogind

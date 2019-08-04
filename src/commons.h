@@ -15,7 +15,10 @@
 #include <pwd.h>
 #include <setjmp.h>
 #include <systemd/sd-bus.h>
-#include <module/module_cmn.h>
+#include <module/module_easy.h>
+#include <module/modules_easy.h>
+
+#include "topics.h"
 
 /*
  * Useful macro to check size of global array.
@@ -37,6 +40,8 @@
 #define LON_UNDEFINED 181.0
 #define MINIMUM_CLIGHTD_VERSION_MAJ 4
 #define MINIMUM_CLIGHTD_VERSION_MIN 0
+
+#define MSG_TYPE()  const enum mod_msg_types type = *(enum mod_msg_types *)msg->ps_msg->message
 
 /* List of modules indexes */
 enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, INHIBIT, CLIGHTD, INTERFACE, MODULES_NUM };
@@ -67,11 +72,37 @@ enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON };
 
 enum dim_trans { ENTER, EXIT, SIZE_DIM };
 
+enum mod_msg_types { LOCATION_UPDATE, UPOWER_UPDATE, INHIBIT_UPDATE, CURRENT_BL , DISPLAY_UPDATE, INTERFACE_TEMP, BUS_TIMEOUT_UPDATE };
+
 /* Struct that holds data about a geographic location */
 struct location {
     double lat;
     double lon;
 };
+
+typedef struct {
+    enum mod_msg_types type;
+    struct location old;
+    struct location new;
+} loc_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    enum ac_states old;
+    enum ac_states new;
+} upower_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    enum pm_states old;
+    enum pm_states new;
+} inhibit_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    enum display_states old;
+    enum display_states new;
+} display_upd;
 
 /* 
  * bus_mod_idx: set in every module's match callback to their self.idx.
@@ -113,6 +144,11 @@ struct config {
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
     int gamma_long_transition;              // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
+    int no_gamma;
+    int no_backlight;
+    int no_dimmer;
+    int no_dpms;
+    int no_inhibit;
 };
 
 /* Global state of program */
@@ -140,37 +176,33 @@ struct state {
 };
 
 /* Struct that holds info about an inter-modules dep */
-struct dependency {
-    enum dep_type type;                    // soft or hard dependency
-    enum modules dep;                      // dependency module
-};
+// struct dependency {
+//     enum dep_type type;                    // soft or hard dependency
+//     enum modules dep;                      // dependency module
+// };
 
-/* Struct that holds self module informations, static to each module */
-struct self_t {
-    const char *name;                     // name of module
-    const enum modules idx;               // idx of a module in enum modules 
-    int num_deps;                         // number of deps for a module
-    int satisfied_deps;                   // number of satisfied deps
-    struct dependency *deps;              // module on which there is a dep
-    int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
-    int functional_module;                // whether this module offers a high-level feature
-};
-
-/* Struct that holds data for each module */
-struct module {
-    void (*init)(void);                   // module init function
-    int (*check)(void);                   // module check-before-init function
-    void (*destroy)(void);                // module destroy function
-    int (*poll_cb)(void);                 // module poll callback
-    struct self_t *self;                  // pointer to self module informations
-    enum dep_type dependent_m[MODULES_NUM];// pointer to every dependent module self
-    int num_dependent;                    // number of dependent-on-this-module modules
-    enum module_states state;             // state of a module
-};
+// /* Struct that holds self module informations, static to each module */
+// struct self_t {
+//     const char *name;                     // name of module
+//     const enum modules idx;               // idx of a module in enum modules 
+//     int num_deps;                         // number of deps for a module
+//     int satisfied_deps;                   // number of satisfied deps
+//     struct dependency *deps;              // module on which there is a dep
+//     int standalone;                       // whether this module is a standalone module, ie: it should stay enabled even if all of its dependent module gets disabled
+//     int functional_module;                // whether this module offers a high-level feature
+// };
+// 
+// /* Struct that holds data for each module */
+// struct module {
+//     void (*init)(void);                   // module init function
+//     int (*check)(void);                   // module check-before-init function
+//     void (*destroy)(void);                // module destroy function
+//     int (*poll_cb)(void);                 // module poll callback
+//     struct self_t *self;                  // pointer to self module informations
+//     enum dep_type dependent_m[MODULES_NUM];// pointer to every dependent module self
+//     int num_dependent;                    // number of dependent-on-this-module modules
+//     enum module_states state;             // state of a module
+// };
 
 extern struct state state;
 extern struct config conf;
-extern struct module modules[MODULES_NUM];
-extern struct pollfd main_p[MODULES_NUM];
-extern sd_bus *sysbus;
-extern sd_bus *userbus;

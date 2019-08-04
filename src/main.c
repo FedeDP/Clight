@@ -31,18 +31,12 @@ static int check_clightd_version(void);
 
 struct state state;
 struct config conf;
-struct module modules[MODULES_NUM];
-struct pollfd main_p[MODULES_NUM];
-sd_bus *sysbus, *userbus;
 
 /* Every module needs these; let's init them before any module */
 void modules_pre_start(void) {
     state.display = getenv("DISPLAY");
     state.wl_display = getenv("WAYLAND_DISPLAY");
     state.xauthority = getenv("XAUTHORITY");
-    
-    sd_bus_default_system(&sysbus);
-    sd_bus_default_user(&userbus);
 } 
 
 int main(int argc, char *argv[]) {
@@ -62,19 +56,16 @@ int main(int argc, char *argv[]) {
  * Then init needed modules.
  */
 static int init(int argc, char *argv[]) {
-    if (sysbus && userbus) {
-        /* 
-         * When receiving segfault signal,
-         * call our sigsegv handler that just logs
-         * a debug message before dying
-         */
-        signal(SIGSEGV, sigsegv_handler);
-        init_opts(argc, argv);
-        open_log();
-        log_conf();
-        return check_clightd_version();
-    }
-    return -1;
+    /* 
+     * When receiving segfault signal,
+     * call our sigsegv handler that just logs
+     * a debug message before dying
+     */
+    signal(SIGSEGV, sigsegv_handler);
+    init_opts(argc, argv);
+    open_log();
+    log_conf();
+    return check_clightd_version();
 }
 
 /*
@@ -86,7 +77,7 @@ static void sigsegv_handler(int signum) {
     WARN("Received sigsegv signal. Aborting.\n");
     close_log();
     signal(signum, SIG_DFL);
-    kill(getpid(), signum);
+    raise(signum);
 }
 
 static int check_clightd_version(void) {

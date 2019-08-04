@@ -8,39 +8,30 @@ static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void set_temp(int temp, const time_t *now);
 static void ambient_callback(void);
-static void location_callback(const void *ptr);
-static void interface_callback(const void *ptr);
-
-static struct dependency dependencies[] = {
-    {HARD, LOCATION},   // Needed for sunrise/sunset computation
-    {HARD, CLIGHTD},    // We need clightd
-    {SOFT, INTERFACE}   // It adds a callback on INTERFACE
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps =  dependencies,
-    .functional_module = 1
-};
+static void location_callback(void);
+static void interface_callback(void);
 
 static enum events target_event;               // which event are we targeting?
 static time_t last_t;                          // last time_t check_gamma() was called
 static int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
 static int long_transitioning;                 // are we inside a long transition?
+static int gamma_fd;
+
+const char *time_topic = "Time";
+const char *evt_topic = "InEvent";
 
 MODULE("GAMMA");
 
-static void init(void) {
-    struct bus_cb loc_cb = { LOCATION, location_callback };
-    struct bus_cb interface_cb = { INTERFACE, interface_callback, "gamma" };
+static void init(void) {    
+    m_subscribe(current_bl_topic);
+    m_subscribe(loc_topic);
+    m_subscribe(interface_temp_topic);
     
-    struct prop_cb amb_cb = { "CurrentBlPct", ambient_callback };
-    ADD_PROP_CB(&amb_cb);
-
     /* Initial value -> undefined */
     state.time = -1;
     
-    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    INIT_MOD(fd, &loc_cb, &interface_cb);
+    gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    m_register_fd(gamma_fd, true, NULL);
 }
 
 static bool check(void) {
@@ -48,8 +39,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    // FIXME
-    return true;
+    return conf.no_gamma == 0 && state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED;
 }
 
 static void destroy(void) {
@@ -59,9 +49,23 @@ static void destroy(void) {
 static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
         uint64_t t;
-
-        read(main_p[self.idx].fd, &t, sizeof(uint64_t));
+        read(msg->fd_msg->fd, &t, sizeof(uint64_t));
         check_gamma();
+    } else if (msg->ps_msg->type == USER) {
+        MSG_TYPE();
+        switch (type) {
+            case LOCATION_UPDATE:
+                location_callback();
+                break;
+            case CURRENT_BL:
+                ambient_callback();
+                break;
+            case INTERFACE_TEMP:
+                interface_callback();
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -125,7 +129,7 @@ static void check_gamma(void) {
     /* desired gamma temp has been set. Set new GAMMA timer */
     time_t next = state.events[target_event] + event_time_range;
     INFO("Next gamma alarm due to: %s", ctime(&next));
-    set_timeout(next - t, 0, main_p[self.idx].fd, 0);
+    set_timeout(next - t, 0, gamma_fd, 0);
     
     last_t = t;
 }
@@ -286,13 +290,13 @@ static void ambient_callback(void) {
     }
 }
 
-static void location_callback(const void *ptr) {
+static void location_callback(void) {
     /* Updated GAMMA module sunrise/sunset for new location */
     state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-    set_timeout(0, 1, main_p[self.idx].fd, 0);
+    set_timeout(0, 1, gamma_fd, 0);
 }
 
-static void interface_callback(const void *ptr) {
+static void interface_callback(void) {
     if (!conf.ambient_gamma) {
         set_temp(conf.temp[state.time], NULL); // force refresh (passing NULL time_t*)
     }

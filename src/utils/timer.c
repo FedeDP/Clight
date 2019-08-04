@@ -49,10 +49,6 @@ long get_timeout_sec(int fd) {
     return get_timeout(fd, offsetof(struct timespec, tv_sec));
 }
 
-// long get_timeout_nsec(int fd) {
-//     return get_timeout(fd, offsetof(struct timespec, tv_nsec));
-// }
-
 static long get_timeout(int fd, size_t member) {
     if (fd == DONT_POLL) {
         return 0;

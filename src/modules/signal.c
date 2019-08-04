@@ -1,12 +1,6 @@
 #include <sys/signalfd.h>
 #include <signal.h>
 #include <log.h>
-#include <module/module_easy.h>
-#include <module/modules_easy.h>
-
-static struct self_t self = {
-    .standalone = 1,
-};
 
 MODULE("SIGNAL");
 
@@ -47,7 +41,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
         struct signalfd_siginfo fdsi;
         ssize_t s;
 
-        s = read(main_p[self.idx].fd, &fdsi, sizeof(struct signalfd_siginfo));
+        s = read(msg->fd_msg->fd, &fdsi, sizeof(struct signalfd_siginfo));
         if (s != sizeof(struct signalfd_siginfo)) {
             ERROR("an error occurred while getting signalfd data.\n");
         }

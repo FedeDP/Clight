@@ -1,7 +1,7 @@
 #include <config.h>
 #include <opts.h>
 #include <popt.h>
-#include "modules.h"
+#include "commons.h"
 
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
 static void check_conf(void);
@@ -100,11 +100,11 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"lon", 0, POPT_ARG_DOUBLE, &conf.loc.lon, 100, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
-        {"no-gamma", 0, POPT_ARG_NONE, &modules[GAMMA].state, 100, "Disable gamma correction tool", NULL},
-        {"no-dimmer", 0, POPT_ARG_NONE, &modules[DIMMER].state, 100, "Disable dimmer tool", NULL},
-        {"no-dpms", 0, POPT_ARG_NONE, &modules[DPMS].state, 100, "Disable dpms tool", NULL},
-        {"no-inhibit", 0, POPT_ARG_NONE, &modules[INHIBIT].state, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
-        {"no-backlight", 0, POPT_ARG_NONE, &modules[BACKLIGHT].state, 100, "Disable backlight module", NULL},
+        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 100, "Disable gamma correction tool", NULL},
+        {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
+        {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
+        {"no-inhibit", 0, POPT_ARG_NONE, &conf.no_inhibit, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
+        {"no-backlight", 0, POPT_ARG_NONE, &conf.no_backlight, 100, "Disable backlight module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"no-auto-calib", 0, POPT_ARG_NONE, &conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
@@ -257,7 +257,7 @@ static void check_conf(void) {
     
     /* Forcefully enable BACKLIGHT if ambient_gamma is enabled */
     if (conf.ambient_gamma) {
-        change_dep_type(GAMMA, BACKLIGHT, HARD);
+        conf.no_backlight = 0;
     }
 
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
@@ -291,4 +291,6 @@ static void check_conf(void) {
             memset(conf.events[i], 0, sizeof(conf.events[i]));
         }
     }
+    
+    memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
 }

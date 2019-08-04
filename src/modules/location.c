@@ -11,62 +11,61 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_err
 static int geoclue_client_start(void);
 static void geoclue_client_stop(void);
 static void cache_location(void);
+static void publish_location(double old_lat, double old_lon);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
-static struct dependency dependencies[] = {
-    {HARD, BUS}     // we need a bus connection
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps =  dependencies
-};
+static loc_upd loc_msg;
+
+const char *loc_topic = "Location";
 
 MODULE("LOCATION");
 
-/*
- * init location:
- * init geoclue and set a match on bus on new location signal
- * if geoclue is not present, go ahead and try to load a location
- * from cache file. If it fails, DONT_POLL_W_ERR this module (ie: disable it),
- * else, DONT_POLL this module and consider it started.
- */
 static void init(void) {
-    int r = geoclue_init();
-    /*
-     * timeout after 3s to check if geoclue2 gave us
-     * any location. Otherwise, attempt to load it from cache
-     */
-    int fd;
+    loc_msg.type = LOCATION_UPDATE;
     init_cache_file();
+    int r = geoclue_init();
     if (r == 0) {
-        fd = start_timer(CLOCK_MONOTONIC, 3, 0);
+        /*
+         * timeout after 3s to check if geoclue2 gave us
+         * any location. Otherwise, attempt to load it from cache
+         */
+        int fd = start_timer(CLOCK_MONOTONIC, 3, 0);
+        m_register_fd(fd, true, NULL);
     } else {
-        int ret = load_cache_location();
-        if (ret == 0) {
-            /* We have a location, but no geoclue instance is running. */
-            change_dep_type(GAMMA, self.idx, SOFT);
-        }
-        fd = DONT_POLL_W_ERR;
+        WARN("Failed to init.\n");
+        load_cache_location();
+        m_poisonpill(self());
     }
-    /* In case of errors, geoclue_init returns -1 -> disable location. */
-    INIT_MOD(fd);
 }
 
-// FIXME: full rewrite with libmodule
+static bool check(void) {
+    return true;
+}
+
+static bool evaluate(void) {
+    return true;
+}
+
+/*
+ * Stop geoclue2 client and store latest location to cache.
+ */
+static void destroy(void) {
+    if (strlen(client)) {
+        geoclue_client_stop();
+        cache_location();
+    }
+    /* Destroy this match slot */
+    if (slot) {
+        slot = sd_bus_slot_unref(slot);
+    }
+}
+
 static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
         uint64_t t;
-        if (read(main_p[self.idx].fd, &t, sizeof(uint64_t)) != -1) {
-            if (load_cache_location() != 0) {
-//                 return -1;
-            }
-        } else {
-            /* Disarm timerfd as we received a location before it triggered */
-            set_timeout(0, 0, main_p[self.idx].fd, 0);
-        }
-        /* disable this poll_cb */
-        modules[self.idx].poll_cb = NULL;
+        read(msg->fd_msg->fd, &t, sizeof(uint64_t));
+        load_cache_location();
     }
 }
 
@@ -75,7 +74,7 @@ static int load_cache_location(void) {
     FILE *f = fopen(cache_file, "r");
     if (f) {
         if (fscanf(f, "%lf %lf\n", &state.current_loc.lat, &state.current_loc.lon) == 2) {
-            emit_prop("Location");
+            publish_location(LAT_UNDEFINED, LON_UNDEFINED);
             INFO("Location %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
             ret = 0;
         }
@@ -117,38 +116,6 @@ end:
     return -(r < 0);  // - 1 on error
 }
 
-static bool check(void) {
-    return true;
-    /*
-     * If sunrise and sunset times, or lat and lon, are both passed,
-     * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD)
-     */
-    //     memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
-    //     if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED)) {
-    //         change_dep_type(GAMMA, self.idx, SOFT);
-    //         return 1;
-    //     }
-    //     return 0;
-}
-
-static bool evaluate(void) {
-    return true;
-}
-
-/*
- * Stop geoclue2 client and store latest location to cache.
- */
-static void destroy(void) {
-    if (strlen(client)) {
-        geoclue_client_stop();
-        cache_location();
-    }
-    /* Destroy this match slot */
-    if (slot) {
-        slot = sd_bus_slot_unref(slot);
-    }
-}
-
 /*
  * Store Client object path in client (static) global var
  */
@@ -173,13 +140,15 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     const char *new_location, *old_location;
     sd_bus_message_read(m, "oo", &old_location, &new_location);
 
+    const double old_lat = state.current_loc.lat;
+    const double old_lon = state.current_loc.lon;
+    
     SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
     SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
     int r = get_property(&lat_args, "d", &state.current_loc.lat) + get_property(&lon_args, "d", &state.current_loc.lon);
     if (!r) {
-        FILL_MATCH_NONE();
         INFO("New location received: %.2lf, %.2lf\n", state.current_loc.lat, state.current_loc.lon);
-        emit_prop("Location");
+        publish_location(old_lat, old_lon);
     }
     return 0;
 }
@@ -219,4 +188,12 @@ static void cache_location(void) {
             WARN("Caching location: %s\n", strerror(errno));
         }
     }
+}
+
+static void publish_location(double old_lat, double old_lon) {
+    loc_msg.old.lat = old_lat;
+    loc_msg.old.lon = old_lon;
+    loc_msg.new.lat = state.current_loc.lat;
+    loc_msg.new.lon = state.current_loc.lon;
+    m_publish(loc_topic, &loc_msg, sizeof(loc_upd), false);
 }
