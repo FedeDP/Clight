@@ -60,25 +60,39 @@
 #### Libmodule
 - [x] Require libmodule 5.0.0 in CMakeLists
 - [x] Initial port for each module to libmodule
-- [ ] Fix each modules using libmodule:
-- - [ ] BACKLIGHT
+- [x] Fix each modules using libmodule:
+- - [x] BACKLIGHT
 - - [x] BUS
 - - [x] DIMMER
 - - [x] DPMS
 - - [x] GAMMA
 - - [x] INHIBIT
-- - [ ] INTERFACE
+- - [x] INTERFACE
 - - [x] LOCATION
 - - [x] SIGNAL
 - - [x] UPOWER
+
+- [ ] 100% port to libmodule API
+- - [ ] BACKLIGHT -> improve!!! (check FIXME)
+- - [x] BUS
+- - [x] DIMMER
+- - [x] DPMS
+- - [x] GAMMA -> improve? eg: m_become(xxx)
+- - [x] INHIBIT
+- - [x] INTERFACE
+- - [x] LOCATION
+- - [x] SIGNAL
+- - [x] UPOWER
+
 - [x] Port main to use libmodule
 - [x] Port all "no-X" options to a conf.no_X
 - [x] Drop modules.{c/h}
-- [ ] Fix logger
-- [ ] Restore emit_prop that will publish a message with "self" and will emit dbus signal
+- [x] Restore emit_prop that will publish a message with "self" and will emit dbus signal
 - [x] Drop org.clight.clight.Module interface
-- [ ] Properly pause module/resume them when needed (or m_become(paused/running))
-- [ ] Test test test
+- [x] Fix Assertion 'close_nointr(fd) != -EBADF' failed at ../systemd-stable/src/basic/fd-util.c:71, function safe_close(). Aborting.
+Annullato (core dump creato)
+- [x] GAMMA: emit "Sunrise" and "Sunset" props even on error!
+- [ ] Test test test test test teeeeest
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options

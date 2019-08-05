@@ -17,18 +17,23 @@ static int event_time_range;                   // variable that holds minutes in
 static int long_transitioning;                 // are we inside a long transition?
 static int gamma_fd;
 
+static time_upd time_msg = { TIME_UPDATE };
+static time_upd in_ev_msg = { TIME_UPDATE };
+static evt_upd evt_msg[SIZE_EVENTS] = { { EVENT_UPDATE }, { EVENT_UPDATE } };
+static temp_upd temp_msg = { TEMP_UPDATE };
+
 const char *time_topic = "Time";
 const char *evt_topic = "InEvent";
+const char *sunrise_topic = "Sunrise";
+const char *sunset_topic = "Sunset";
+const char *temp_topic = "CurrentTemp";
 
 MODULE("GAMMA");
 
-static void init(void) {    
+static void init(void) {
     m_subscribe(current_bl_topic);
     m_subscribe(loc_topic);
     m_subscribe(interface_temp_topic);
-    
-    /* Initial value -> undefined */
-    state.time = -1;
     
     gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     m_register_fd(gamma_fd, true, NULL);
@@ -107,12 +112,16 @@ static void check_gamma(void) {
     
     /* If we switched time, emit signal */
     if (old_state != state.time) {
-        emit_prop("Time");
+        time_msg.old = old_state;
+        time_msg.new = state.time;
+        emit_prop(time_topic, self(), &time_msg, sizeof(time_upd));
     }
     
     /* if we entered/left an event, emit signal */
     if (old_in_event != state.in_event) {
-        emit_prop("InEvent");
+        in_ev_msg.old = old_in_event;
+        in_ev_msg.new = state.in_event;
+        emit_prop(evt_topic, self(), &in_ev_msg, sizeof(time_upd));
     }
 
     /*
@@ -145,6 +154,10 @@ static void check_gamma(void) {
  */
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day) {
     time_t t;
+    
+    time_t old_events[2];
+    old_events[SUNRISE] = state.events[SUNRISE];
+    old_events[SUNSET] = state.events[SUNSET];
 
     /* only every new day, after today's last event (ie: sunset + event_duration) */
     if (*now + 1 >= state.events[SUNSET] + conf.event_duration) {
@@ -157,8 +170,8 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
                  */
                 return get_gamma_events(now, lat, lon, ++day);
             }
+            
             state.events[SUNSET] = t;
-            emit_prop("Sunset");
         } else {
             state.events[SUNSET] = -1;
         }
@@ -172,8 +185,8 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
             if (t > state.events[SUNSET]) {
                 calculate_sunrise(lat, lon, &t, day - 1);
             }
+            
             state.events[SUNRISE] = t;
-            emit_prop("Sunrise");
         } else {
             state.events[SUNRISE] = -1;
         }
@@ -186,6 +199,14 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
             state.events[SUNSET] = *now + 12 * 60 * 60;
             WARN("Failed to retrieve sunrise/sunset informations.\n");
         }
+        
+        evt_msg[SUNRISE].old = old_events[SUNRISE];
+        evt_msg[SUNRISE].new = state.events[SUNRISE];
+        emit_prop(sunrise_topic, self(), &evt_msg[SUNRISE], sizeof(evt_upd));
+        
+        evt_msg[SUNSET].old = old_events[SUNSET];
+        evt_msg[SUNSET].new = state.events[SUNSET];
+        emit_prop(sunset_topic, self(), &evt_msg[SUNSET], sizeof(evt_upd));
     }
     check_next_event(now);
     check_state(now);
@@ -267,8 +288,10 @@ static void set_temp(int temp, const time_t *now) {
     
     int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);
     if (!r && ok) {
+        temp_msg.old = state.current_temp;
         state.current_temp = temp;
-        emit_prop("CurrentTemp");
+        temp_msg.new = state.current_temp;
+        emit_prop(temp_topic, self(), &temp_msg, sizeof(temp_upd));
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);
         } else {
@@ -291,9 +314,15 @@ static void ambient_callback(void) {
 }
 
 static void location_callback(void) {
-    /* Updated GAMMA module sunrise/sunset for new location */
-    state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-    set_timeout(0, 1, gamma_fd, 0);
+    if (state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) {
+        /* Updated GAMMA module sunrise/sunset for new location */
+        state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+        set_timeout(0, 1, gamma_fd, 0);
+        DEBUG("New position received. Updating sunrise and sunset times.\n");
+    } else {
+        set_timeout(0, 0, gamma_fd, 0);
+        DEBUG("Position unset. Pausing.\n");
+    }
 }
 
 static void interface_callback(void) {

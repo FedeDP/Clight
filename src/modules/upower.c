@@ -3,17 +3,15 @@
 static int upower_check(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void publish_upower(enum ac_states old);
 
 static sd_bus_slot *slot;
-static upower_upd upower_msg;
+static upower_upd upower_msg = { UPOWER_UPDATE };
 
 const char *up_topic = "UPower";
 
 MODULE("UPOWER");
 
 static void init(void) {
-    upower_msg.type = UPOWER_UPDATE;
     if (upower_init() != 0) {
         WARN("Failed to init.\n");
         m_poisonpill(self());
@@ -71,13 +69,9 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
     int r = get_property(&args, "b", &state.ac_state);
     if (!r && old_ac_state != state.ac_state) {
         INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
-        publish_upower(old_ac_state);
+        upower_msg.old = old_ac_state;
+        upower_msg.new = state.ac_state;
+        m_publish(up_topic, &upower_msg, sizeof(upower_upd), false);
     }
     return 0;
-}
-
-static void publish_upower(enum ac_states old) {
-    upower_msg.old = old;
-    upower_msg.new = state.ac_state;
-    m_publish(up_topic, &upower_msg, sizeof(upower_upd), false);
 }

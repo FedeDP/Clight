@@ -29,8 +29,8 @@ static int init(int argc, char *argv[]);
 static void sigsegv_handler(int signum);
 static int check_clightd_version(void);
 
-struct state state;
-struct config conf;
+struct state state = {0};
+struct config conf = {0};
 
 /* Every module needs these; let's init them before any module */
 void modules_pre_start(void) {

@@ -94,13 +94,25 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
+static inhibit_upd inhibit_msg = { INHIBIT_UPDATE };
+static timeout_upd to_msg = { TIMEOUT_UPDATE };
+static temp_upd temp_msg = { TEMP_UPDATE };
+static capture_upd capture_msg = { DO_CAPTURE };
+static curve_upd curve_msg = { CURVE_UPDATE };
+static calib_upd calib_msg = { AUTOCALIB_UPD };
+static loc_upd loc_msg = { LOCATION_UPDATE };
+
 const char *interface_temp_topic = "InterfaceTemp";
 const char *interface_dimmer_to_topic = "InterfaceDimmerTo";
 const char *interface_dpms_to_topic = "InterfaceDPMSTo";
+const char *interface_bl_to_topic = "InterfaceBLTo";
+const char *interface_bl_capture = "InterfaceBLCapture";
+const char *interface_bl_curve = "InterfaceBLCurve";
+const char *interface_bl_autocalib = "InterfaceBLAuto";
 
 MODULE("INTERFACE");
 
-static void init(void) {
+static void init(void) {    
     const char conf_path[] = "/org/clight/clight/Conf";
     const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
     const char conf_interface[] = "org.clight.clight.Conf";
@@ -129,6 +141,20 @@ static void init(void) {
                                   conf_interface,
                                   conf_to_vtable,
                                   &conf);
+    
+    if (r < 0) {
+        WARN("Could not create Bus Interface: %s\n", strerror(-r));
+    } else {
+        r = sd_bus_request_name(userbus, bus_interface, 0);
+        if (r < 0) {
+            WARN("Failed to acquire Bus Interface name: %s\n", strerror(-r));
+        }
+    }
+    
+    if (r < 0) {
+        WARN("Failed to init.\n");
+        m_poisonpill(self());
+    }
 }
 
 static bool check(void) {
@@ -154,16 +180,8 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 }
 
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int r = -EINVAL;
-
-    // FIXME
-//     if (is_running(BACKLIGHT)) {
-//         FILL_MATCH_NONE();
-//         r = sd_bus_reply_method_return(m, NULL);
-//     } else {
-//         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Backlight module is not running.");
-//     }
-    return r;
+    m_publish(interface_bl_capture, &capture_msg, sizeof(capture_upd), false);
+    return sd_bus_reply_method_return(m, NULL);
 }
 
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
@@ -183,8 +201,9 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         INFO("PowerManagement inhibition disabled by bus API.\n");
     }
     if (old_inhibited != state.pm_inhibited) {
-        FILL_MATCH_NONE();
-        emit_prop("PmState");
+        inhibit_msg.old = old_inhibited;
+        inhibit_msg.new = state.pm_inhibited;
+        emit_prop(inh_topic, self(), &inhibit_msg, sizeof(inhibit_upd));
     }
     return sd_bus_reply_method_return(m, NULL);
 }
@@ -208,13 +227,13 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
         sd_bus_error_set_const(error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         r = -EINVAL;
     } else {
-        enum ac_states ac_state = ON_AC;
+        curve_msg.state = ON_AC;
 
         if (userdata == conf.regression_points[ON_BATTERY]) {
-            ac_state = ON_BATTERY;
+            curve_msg.state = ON_BATTERY;
         }
-        memcpy(conf.regression_points[ac_state], data, length);
-        FILL_MATCH_DATA(ac_state);
+        memcpy(conf.regression_points[curve_msg.state], data, length);
+        m_publish(interface_bl_curve, &curve_msg, sizeof(curve_upd), false);
     }
     return r;
 }
@@ -235,14 +254,21 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-
+    
     /* Check if we modified currently used timeout! */
+    const char *topic = NULL;
     if (val == &conf.timeout[state.ac_state][state.time]) {
-        FILL_MATCH_DATA_NAME(old_val, "backlight_timeout");
+        topic = interface_bl_to_topic;
     } else if (val == &conf.dimmer_timeout[state.ac_state]) {
-        FILL_MATCH_DATA_NAME(old_val, "dimmer_timeout");
+        topic = interface_dimmer_to_topic;
     } else if (val == &conf.dpms_timeout[state.ac_state]) {
-        FILL_MATCH_DATA_NAME(old_val, "dpms_timeout");
+        topic = interface_dpms_to_topic;
+    }
+    
+    if (topic) {
+        to_msg.old = old_val;
+        to_msg.new = *val;
+        m_publish(topic, &to_msg, sizeof(timeout_upd), false);
     }
     return r;
 }
@@ -251,8 +277,10 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
     int old_val = *(int *)userdata;
     int r = sd_bus_message_read(value, "i", userdata);
-    if (!r && old_val != *(int *)userdata) {
-        FILL_MATCH_NONE();
+    if (r >= 0 && old_val != *(int *)userdata) {
+        temp_msg.new = *(int *)userdata;
+        temp_msg.old = old_val;
+        m_publish(interface_temp_topic, &temp_msg, sizeof(temp_upd), false);
     }
     return r;
 }
@@ -260,9 +288,12 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                           sd_bus_message *value, void *userdata, sd_bus_error *error) {
     int old_val = conf.no_auto_calib;
-    int r = sd_bus_message_read(value, "b", userdata);
-    if (!r && old_val != conf.no_auto_calib) {
-        FILL_MATCH_NONE();
+    int r = sd_bus_message_read(value, "b", userdata);    
+    if (r >= 0 && old_val != conf.no_auto_calib) {
+        INFO("Backlight autocalibration %s by bus API.\n", conf.no_auto_calib ? "disabled" : "enabled");
+        calib_msg.old = old_val;
+        calib_msg.new = conf.no_auto_calib;
+        m_publish(interface_bl_autocalib, &calib_msg, sizeof(calib_upd), false);
     }
     return r;
 }
@@ -277,12 +308,12 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
     return r;
 }
 
-int emit_prop(const char *signal) {
-    //     if (is_running((self.idx))) {
-    //         sd_bus *userbus = get_user_bus();
-    //         if (userbus) {
-    //             sd_bus_emit_properties_changed(userbus, object_path, bus_interface, signal, NULL);
-    //             return 0;
-    //         }
-    //     }
+int emit_prop(const char *topic, const self_t *self, const void *ptr, const int size) {
+    sd_bus *userbus = get_user_bus();
+    if (userbus) {
+        sd_bus_emit_properties_changed(userbus, object_path, bus_interface, topic, NULL);
+    }
+    if (self && ptr) {
+        m_publish(topic, ptr, size, false);
+    }
 }

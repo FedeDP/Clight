@@ -293,4 +293,6 @@ static void check_conf(void) {
     }
     
     memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
+    /* Initial value -> undefined */
+    state.time = -1;
 }

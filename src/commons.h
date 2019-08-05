@@ -43,9 +43,6 @@
 
 #define MSG_TYPE()  const enum mod_msg_types type = *(enum mod_msg_types *)msg->ps_msg->message
 
-/* List of modules indexes */
-enum modules { BACKLIGHT, LOCATION, UPOWER, GAMMA, SIGNAL, BUS, DIMMER, DPMS, INHIBIT, CLIGHTD, INTERFACE, MODULES_NUM };
-
 /*
  * List of states clight can be through: 
  * day between sunrise and sunset
@@ -72,7 +69,13 @@ enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON };
 
 enum dim_trans { ENTER, EXIT, SIZE_DIM };
 
-enum mod_msg_types { LOCATION_UPDATE, UPOWER_UPDATE, INHIBIT_UPDATE, CURRENT_BL , DISPLAY_UPDATE, INTERFACE_TEMP, BUS_TIMEOUT_UPDATE };
+enum mod_msg_types { 
+    LOCATION_UPDATE, UPOWER_UPDATE, INHIBIT_UPDATE, CURRENT_BL, 
+    DISPLAY_UPDATE, INTERFACE_TEMP, TIMEOUT_UPDATE, 
+    TIME_UPDATE, EVENT_UPDATE, TEMP_UPDATE, DO_CAPTURE,
+    CURVE_UPDATE, AUTOCALIB_UPD, CURRENT_KBD_BL, AMBIENT_BR, 
+    PAUSE_UPD, RESUME_UPD
+};
 
 /* Struct that holds data about a geographic location */
 struct location {
@@ -103,6 +106,54 @@ typedef struct {
     enum display_states old;
     enum display_states new;
 } display_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    enum states old;
+    enum states new;
+} time_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    enum events old;
+    enum events new;
+} evt_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    int old;
+    int new;
+} temp_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    int old;
+    int new;
+} timeout_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+} capture_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    enum ac_states state;
+} curve_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    int old;
+    int new;
+} calib_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    double curr;
+} bl_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+} state_upd;
 
 /* 
  * bus_mod_idx: set in every module's match callback to their self.idx.

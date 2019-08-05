@@ -15,14 +15,13 @@ static void publish_location(double old_lat, double old_lon);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
-static loc_upd loc_msg;
+static loc_upd loc_msg = { LOCATION_UPDATE };
 
 const char *loc_topic = "Location";
 
 MODULE("LOCATION");
 
 static void init(void) {
-    loc_msg.type = LOCATION_UPDATE;
     init_cache_file();
     int r = geoclue_init();
     if (r == 0) {
@@ -65,7 +64,10 @@ static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
         uint64_t t;
         read(msg->fd_msg->fd, &t, sizeof(uint64_t));
-        load_cache_location();
+        
+        if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
+            load_cache_location();
+        }
     }
 }
 
@@ -195,5 +197,5 @@ static void publish_location(double old_lat, double old_lon) {
     loc_msg.old.lon = old_lon;
     loc_msg.new.lat = state.current_loc.lat;
     loc_msg.new.lon = state.current_loc.lon;
-    m_publish(loc_topic, &loc_msg, sizeof(loc_upd), false);
+    emit_prop(loc_topic, self(), &loc_msg, sizeof(loc_upd));
 }

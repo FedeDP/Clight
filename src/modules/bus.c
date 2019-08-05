@@ -1,6 +1,7 @@
 #include <bus.h>
 
-static void bus_callback(const enum bus_type type);
+#define GET_BUS(a)  sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus; if (!tmp) { return -1; }
+
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err, const char *caller);
 
@@ -25,8 +26,8 @@ static void init(void) {
     int bus_fd = sd_bus_get_fd(sysbus);
     int userbus_fd = sd_bus_get_fd(userbus);
 
-    m_register_fd(bus_fd, true, sysbus);
-    m_register_fd(userbus_fd, true, userbus);
+    m_register_fd(bus_fd, false, sysbus);
+    m_register_fd(userbus_fd, false, userbus);
 }
 
 static bool check(void) {
@@ -57,19 +58,12 @@ static void receive(const msg_t *const msg, const void* userdata) {
 }
 
 /*
- * Callback for bus events
- */
-static void bus_callback(const enum bus_type type) {
-
-}
-
-/*
  * Call a method on bus and store its result of type userptr_type in userptr.
  */
 int call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
-    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
+    GET_BUS(a);
 
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
     if (check_err(r, &error, a->caller)) {
@@ -183,7 +177,7 @@ finish:
  * Add a match on bus on certain signal for cb callback
  */
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
-    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
+    GET_BUS(a);
 
 #if LIBSYSTEMD_VERSION >= 237
     int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state);
@@ -199,7 +193,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
  * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
  */
 int set_property(const struct bus_args *a, const char type, const void *value) {
-    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
+    GET_BUS(a);
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
 
@@ -225,7 +219,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
 int get_property(const struct bus_args *a, const char *type, void *userptr) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
-    sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus;
+    GET_BUS(a);
 
     int r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
     if (check_err(r, &error, a->caller)) {

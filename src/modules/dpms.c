@@ -3,20 +3,18 @@
 
 static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error);
 static void set_dpms(int dpms_state);
-static void upower_callback(void);
+static void upower_timeout_callback(void);
 static void inhibit_callback(void);
-static void interface_timeout_callback(void);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
-static display_upd display_msg;
+static display_upd display_msg = { DISPLAY_UPDATE };
 
 const char *display_topic = "DisplayState";
 
 MODULE("DPMS");
 
 static void init(void) {
-    display_msg.type = DISPLAY_UPDATE;
     int r = idle_init(client, slot, conf.dpms_timeout[state.ac_state], on_new_idle);
     if (r == 0) {
         m_subscribe(up_topic);
@@ -41,13 +39,11 @@ static void receive(const msg_t *const msg, const void* userdata) {
         MSG_TYPE();
         switch (type) {
             case UPOWER_UPDATE:
-                upower_callback();
+            case TIMEOUT_UPDATE:
+                upower_timeout_callback();
                 break;
             case INHIBIT_UPDATE:
                 inhibit_callback();
-                break;
-            case BUS_TIMEOUT_UPDATE:
-                interface_timeout_callback();
                 break;
             default:
                 break;
@@ -78,7 +74,7 @@ static int on_new_idle(sd_bus_message *m,  __attribute__((unused)) void *userdat
     }
     display_msg.new = state.display_state;
     set_dpms(is_dpms);
-    m_publish(display_topic, &display_msg, sizeof(display_upd), false);
+    emit_prop(display_topic, self(), &display_msg, sizeof(display_upd));
     return 0;
 }
 
@@ -87,7 +83,7 @@ static void set_dpms(int dpms_state) {
     call(NULL, NULL, &args, "ssi", state.display, state.xauthority, dpms_state);
 }
 
-static void upower_callback(void) {
+static void upower_timeout_callback(void) {
     idle_set_timeout(client, conf.dpms_timeout[state.ac_state]);
 }
 
@@ -102,8 +98,4 @@ static void inhibit_callback(void) {
     } else {
         idle_client_stop(client);
     }
-}
-
-static void interface_timeout_callback(void) {
-    idle_set_timeout(client, conf.dpms_timeout[state.ac_state]);
 }

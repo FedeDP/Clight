@@ -4,17 +4,15 @@
 static int inhibit_init(void);
 static int inhibit_check(void);
 static int on_inhibit_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void publish_inh(enum pm_states old);
 
 static sd_bus_slot *slot;
-static inhibit_upd inh_msg;
+static inhibit_upd inh_msg = { INHIBIT_UPDATE };
 
-const char *inh_topic = "Inhibit";
+const char *inh_topic = "PmState";
 
 MODULE("INHIBIT");
 
 static void init(void) {
-    inh_msg.type = INHIBIT_UPDATE;
     if (inhibit_init() != 0) {
         WARN("Failed to init.\n");
         m_poisonpill(self());
@@ -70,14 +68,10 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
             INFO("PowerManagement inhibition disabled by freedesktop.PowerManagement.\n");
         }
         if (old_inhibited != state.pm_inhibited) {
-            publish_inh(old_inhibited);
+            inh_msg.old = old_inhibited;
+            inh_msg.new = state.pm_inhibited;
+            emit_prop(inh_topic, self(), &inh_msg, sizeof(inhibit_upd));
         }
     }
     return 0;
-}
-
-static void publish_inh(enum pm_states old) {
-    inh_msg.old = old;
-    inh_msg.new = state.pm_inhibited;
-    m_publish(inh_topic, &inh_msg, sizeof(inhibit_upd), false);
 }
