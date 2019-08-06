@@ -53,9 +53,6 @@ enum states { DAY, NIGHT, SIZE_STATES };
 /* List of events: sunrise and sunset */
 enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 
-/* Whether a module A on B dep is hard (mandatory), soft dep or it is its submodule */
-enum dep_type { NO_DEP, HARD, SOFT, SUBMODULE };
-
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 
@@ -155,17 +152,6 @@ typedef struct {
     enum mod_msg_types type;
 } state_upd;
 
-/* 
- * bus_mod_idx: set in every module's match callback to their self.idx.
- * It is the idx of the module on which bus should call callbacks
- * stored in struct bus_cb *callbacks
- */
-struct bus_match_data {
-    int bus_mod_idx;
-    const char *bus_fn_name;
-    void *ptr;
-};
-
 /* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
     int num_captures;                       // number of frame captured for each screen backlight compute
@@ -221,9 +207,8 @@ struct state {
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
     struct location current_loc;            // current user location
     jmp_buf quit_buf;                       // quit jump called by longjmp
-    int needed_functional_modules;          // we need at least 1 functional module (BACKLIGHT, GAMMA, DPMS, DIMMER) otherwise quit
-    struct bus_match_data userdata;         // Data used by modules that own a match on bus
     char clightd_version[PATH_MAX + 1];     // Clightd found version
+    char *version;                          // Clight version
 };
 
 extern struct state state;

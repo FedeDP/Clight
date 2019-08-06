@@ -291,8 +291,4 @@ static void check_conf(void) {
             memset(conf.events[i], 0, sizeof(conf.events[i]));
         }
     }
-    
-    memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
-    /* Initial value -> undefined */
-    state.time = -1;
 }

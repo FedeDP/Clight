@@ -16,11 +16,11 @@ static void module_pre_start(void) {
 
 static void init(void) {
     if (!sysbus) {
-        ERROR("Failed to connect to system bus.\n");
+        ERROR("BUS: Failed to connect to system bus.\n");
     }
     
     if (!userbus) {
-        ERROR("Failed to connect to user bus\n");
+        ERROR("BUS: Failed to connect to user bus\n");
     }
     
     int bus_fd = sd_bus_get_fd(sysbus);
@@ -120,7 +120,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
                     break;
 
                 default:
-                    WARN("Wrong signature in bus call: %c.\n", signature[i]);
+                    WARN("BUS: Wrong signature in bus call: %c.\n", signature[i]);
                     break;
             }
 
@@ -205,7 +205,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
             r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "s", value);
             break;
         default:
-            WARN("Wrong signature in bus call: %c.\n", type);
+            WARN("BUS: Wrong signature in bus call: %c.\n", type);
             break;
     }
     r = check_err(r, &error, a->caller);
@@ -265,7 +265,7 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
  */
 static int check_err(int r, sd_bus_error *err, const char *caller) {
     if (r < 0) {
-        DEBUG("%s(): %s\n", caller, err && err->message ? err->message : strerror(-r));
+        DEBUG("BUS: %s(): %s\n", caller, err && err->message ? err->message : strerror(-r));
     }
     /* -1 on error, 0 ok */
     return -(r < 0);

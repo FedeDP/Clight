@@ -21,6 +21,7 @@ static void init(void) {
         m_subscribe(inh_topic);
         m_subscribe(interface_dpms_to_topic);
     } else {
+        WARN("DPMS: Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -67,14 +68,14 @@ static int on_new_idle(sd_bus_message *m,  __attribute__((unused)) void *userdat
     
     if (is_dpms) {
         state.display_state |= DISPLAY_OFF;
-        DEBUG("Entering dpms state...\n");
+        DEBUG("DPMS: Entering dpms state...\n");
     } else {
         state.display_state &= ~DISPLAY_OFF;
-        DEBUG("Leaving dpms state...\n");
+        DEBUG("DPMS: Leaving dpms state...\n");
     }
     display_msg.new = state.display_state;
     set_dpms(is_dpms);
-    emit_prop(display_topic, self(), &display_msg, sizeof(display_upd));
+    EMIT_P(display_topic, &display_msg);
     return 0;
 }
 
@@ -92,10 +93,11 @@ static void upower_timeout_callback(void) {
  * Else, restart it.
  */
 static void inhibit_callback(void) {
-//     DEBUG("%s module being %s.\n", self.name, state.pm_inhibited ? "paused" : "restarted");
     if (!state.pm_inhibited) {
+        DEBUG("DPMS: Being resumed.\n");
         idle_client_start(client);
     } else {
+        DEBUG("DPMS: Being paused.\n");
         idle_client_stop(client);
     }
 }

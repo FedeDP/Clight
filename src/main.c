@@ -26,6 +26,7 @@
 #include <bus.h>
 
 static int init(int argc, char *argv[]);
+static void init_state(void);
 static void sigsegv_handler(int signum);
 static int check_clightd_version(void);
 
@@ -43,7 +44,11 @@ int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         if (init(argc, argv) == 0) {
-            modules_loop();
+            if (conf.no_backlight && conf.no_dimmer && conf.no_dpms && conf.no_gamma) {
+                WARN("No functional module running. Leaving...\n");
+            } else {
+                modules_loop();
+            }
         }
     }
     close_log();
@@ -63,9 +68,19 @@ static int init(int argc, char *argv[]) {
      */
     signal(SIGSEGV, sigsegv_handler);
     init_opts(argc, argv);
+    init_state();
     open_log();
     log_conf();
     return check_clightd_version();
+}
+
+static void init_state(void) {
+    state.version = VERSION;
+    memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
+    if (!conf.no_gamma) {
+        /* Initial value -> undefined; only if GAMMA is enabled */
+        state.time = -1;
+    }
 }
 
 /*

@@ -30,7 +30,7 @@ static void init(void) {
             set_backlight_level(1.0, 0, 0, 0);
         }
     } else {
-        WARN("Failed to init.\n");
+        WARN("DIMMER: Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -82,24 +82,24 @@ static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)
     sd_bus_message_read(m, "b", &dimmed);
     if (dimmed) {
         state.display_state |= DISPLAY_DIMMED;
-        DEBUG("Entering dimmed state...\n");
+        DEBUG("DIMMER: Entering dimmed state...\n");
         old_pct = state.current_bl_pct;
         dim_backlight(conf.dimmer_pct);
     } else if (old_pct >= 0.0) {
         state.display_state &= ~DISPLAY_DIMMED;
-        DEBUG("Leaving dimmed state...\n");
+        DEBUG("DIMMER: Leaving dimmed state...\n");
         restore_backlight(old_pct);
     }
     
     display_msg.new = state.display_state;
-    emit_prop(display_topic, self(), &display_msg, sizeof(display_upd));
+    EMIT_P(display_topic, &display_msg);
     return 0;
 }
 
 static void dim_backlight(const double pct) {
     /* Don't touch backlight if a lower level is already set */
     if (pct >= state.current_bl_pct) {
-        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
+        DEBUG("DIMMER: A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
         set_backlight_level(pct, !conf.no_smooth_dimmer[ENTER], conf.dimmer_trans_step[ENTER], conf.dimmer_trans_timeout[ENTER]);
     }
@@ -120,10 +120,11 @@ static void upower_timeout_callback(void) {
  * Else, restart it.
  */
 static void inhibit_callback(void) {
-    DEBUG("Being %s.\n", state.pm_inhibited ? "paused" : "restarted");
     if (!state.pm_inhibited) {
+        DEBUG("DIMMER: Being resumed.\n");
         idle_client_start(client);
     } else {
+        DEBUG("DIMMER: Being paused.\n");
         idle_client_stop(client);
     }
 }

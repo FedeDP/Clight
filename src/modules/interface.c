@@ -1,10 +1,7 @@
-#include <bus.h>
 #include <stddef.h>
 #include <interface.h>
 #include <config.h>
 
-static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
-                        sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -13,6 +10,8 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
                     sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int get_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
+static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
+                        sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -26,12 +25,14 @@ static const char bus_interface[] = "org.clight.clight";
 
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Version", "s", get_version, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("Version", "s", NULL, offsetof(struct state, version), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("ClightdVersion", "s", NULL, offsetof(struct state, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(struct state, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(struct state, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Time", "i", NULL, offsetof(struct state, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(struct state, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(struct state, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("AcState", "i", NULL, offsetof(struct state, ac_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("PmState", "i", NULL, offsetof(struct state, pm_inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentBlPct", "d", NULL, offsetof(struct state, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentKbdPct", "d", NULL, offsetof(struct state, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -45,9 +46,9 @@ static const sd_bus_vtable clight_vtable[] = {
 
 static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct config, loc), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "s", NULL, offsetof(struct config, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunset", "s", NULL, offsetof(struct config, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(struct config, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(struct config, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(struct config, no_keyboard_bl), 0),
     SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(struct config, ambient_gamma), 0),
@@ -143,16 +144,16 @@ static void init(void) {
                                   &conf);
     
     if (r < 0) {
-        WARN("Could not create Bus Interface: %s\n", strerror(-r));
+        WARN("INTERFACE: Could not create Bus Interface: %s\n", strerror(-r));
     } else {
         r = sd_bus_request_name(userbus, bus_interface, 0);
         if (r < 0) {
-            WARN("Failed to acquire Bus Interface name: %s\n", strerror(-r));
+            WARN("INTERFACE: Failed to acquire Bus Interface name: %s\n", strerror(-r));
         }
     }
     
     if (r < 0) {
-        WARN("Failed to init.\n");
+        WARN("INTERFACE: Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -174,11 +175,6 @@ static void destroy(void) {
     sd_bus_release_name(userbus, bus_interface);
 }
 
-static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
-                        sd_bus_message *reply, void *userdata, sd_bus_error *error) {
-    return sd_bus_message_append(reply, "s", VERSION);
-}
-
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     m_publish(interface_bl_capture, &capture_msg, sizeof(capture_upd), false);
     return sd_bus_reply_method_return(m, NULL);
@@ -188,22 +184,21 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
     int inhibited;
     int r = sd_bus_message_read(m, "b", &inhibited);
     if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
+        WARN("INTERFACE: Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
 
     int old_inhibited = state.pm_inhibited;
     if (inhibited) {
         state.pm_inhibited |= PM_FORCED_ON;
-        INFO("PowerManagement inhibition enabled by bus API.\n");
     } else {
         state.pm_inhibited &= ~PM_FORCED_ON;
-        INFO("PowerManagement inhibition disabled by bus API.\n");
     }
     if (old_inhibited != state.pm_inhibited) {
+        INFO("INTERFACE: PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
         inhibit_msg.old = old_inhibited;
         inhibit_msg.new = state.pm_inhibited;
-        emit_prop(inh_topic, self(), &inhibit_msg, sizeof(inhibit_upd));
+        EMIT_P(inh_topic, &inhibit_msg);
     }
     return sd_bus_reply_method_return(m, NULL);
 }
@@ -219,11 +214,11 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
     size_t length;
     int r = sd_bus_message_read_array(value, 'd', (const void**) &data, &length);
     if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
+        WARN("INTERFACE: Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
     if (length / sizeof(double) != SIZE_POINTS) {
-        WARN("Wrong parameters.\n");
+        WARN("INTERFACE: Wrong parameters.\n");
         sd_bus_error_set_const(error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         r = -EINVAL;
     } else {
@@ -244,6 +239,28 @@ static int get_location(sd_bus *bus, const char *path, const char *interface, co
     return sd_bus_message_append(reply, "(dd)", l->lat, l->lon);
 }
 
+static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
+                        sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    struct location *l = (struct location *)userdata;
+    loc_msg.old = *l;
+    sd_bus_message_read(value, "(dd)", &l->lat, &l->lon);
+    
+    if (fabs(l->lat) <  90.0f && fabs(l->lon) < 180.0f) {
+        INFO("INTERFACE: New location from BUS api: %.2lf %.2lf\n", l->lat, l->lon);
+        
+        /* Only if different from current one */
+        if (state.current_loc.lat != l->lat && state.current_loc.lon != l->lon) {
+            loc_msg.new = *l;
+            memcpy(&state.current_loc, l, sizeof(struct location));
+            EMIT_P(loc_topic, &loc_msg);
+        }
+        return 0;
+    }
+    *l = loc_msg.old;
+    INFO("INTERFACE: Wrong location set. Rejected.\n");
+    return -EINVAL;
+}
+
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
                             sd_bus_message *value, void *userdata, sd_bus_error *error) {
     int *val = (int *)userdata;
@@ -251,7 +268,7 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
 
     int r = sd_bus_message_read(value, "i", userdata);
     if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
+        WARN("INTERFACE: Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
     
@@ -290,7 +307,7 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
     int old_val = conf.no_auto_calib;
     int r = sd_bus_message_read(value, "b", userdata);    
     if (r >= 0 && old_val != conf.no_auto_calib) {
-        INFO("Backlight autocalibration %s by bus API.\n", conf.no_auto_calib ? "disabled" : "enabled");
+        INFO("INTERFACE: Backlight autocalibration %s by bus API.\n", conf.no_auto_calib ? "disabled" : "enabled");
         calib_msg.old = old_val;
         calib_msg.new = conf.no_auto_calib;
         m_publish(interface_bl_autocalib, &calib_msg, sizeof(calib_upd), false);

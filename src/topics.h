@@ -1,6 +1,5 @@
 #pragma once
 
-
 /* INHIBIT topics */
 extern const char *inh_topic;
 

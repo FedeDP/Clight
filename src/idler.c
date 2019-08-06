@@ -15,7 +15,7 @@ int idle_init(char *client, sd_bus_slot *slot, int timeout, sd_bus_message_handl
     
 end:
     if (r < 0) {
-        WARN("Clight Idle error.\n");
+        WARN("IDLER: Clightd idle error.\n");
     }
     return -(r < 0);  // - 1 on error
 }

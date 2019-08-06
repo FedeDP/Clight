@@ -1,4 +1,3 @@
-#include <bus.h>
 #include <interface.h>
 
 static int inhibit_init(void);
@@ -14,7 +13,7 @@ MODULE("INHIBIT");
 
 static void init(void) {
     if (inhibit_init() != 0) {
-        WARN("Failed to init.\n");
+        WARN("INHIBIT: Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -62,15 +61,14 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
         int old_inhibited = state.pm_inhibited;
         if (inhibited) {
             state.pm_inhibited |= PM_ON;
-            INFO("PowerManagement inhibition enabled by freedesktop.PowerManagement.\n");
         } else {
             state.pm_inhibited &= ~PM_ON;
-            INFO("PowerManagement inhibition disabled by freedesktop.PowerManagement.\n");
         }
         if (old_inhibited != state.pm_inhibited) {
+            INFO("INHIBIT: PowerManagement inhibition %s by freedesktop.PowerManagement.\n", state.pm_inhibited ? "enabled" : "disabled");
             inh_msg.old = old_inhibited;
             inh_msg.new = state.pm_inhibited;
-            emit_prop(inh_topic, self(), &inh_msg, sizeof(inhibit_upd));
+            EMIT_P(inh_topic, &inh_msg);
         }
     }
     return 0;

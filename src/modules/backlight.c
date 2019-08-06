@@ -1,5 +1,4 @@
 #include <backlight.h>
-#include <bus.h>
 #include <my_math.h>
 #include <interface.h>
 
@@ -16,13 +15,12 @@ static void interface_autocalib_callback(void);
 static void interface_curve_callback(enum ac_states s);
 static void interface_timeout_callback(int old_val);
 static void dimmed_callback(void);
-static void time_callback(void);
+static void time_callback(int old_val, int is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_current_timeout(void);
 static void pause_mod(void);
 static void resume_mod(void);
 
-static int curr_timeout;
 static int sensor_available;
 static int max_kbd_backlight;
 static int bl_fd;
@@ -39,13 +37,6 @@ const char *current_kbd_topic = "CurrentKbdPct";
 const char *current_ab_topic = "CurrentAmbientBr"; 
 
 MODULE("BACKLIGHT");
-
-/**
- * FIXME:
- * * FIX pause_mod()/resume_mod()
- * * Drop curr_timeout
- * * Drop sensor_available
- **/
 
 static void init(void) {
     /* Compute polynomial best-fit parameters */
@@ -71,13 +62,21 @@ static void init(void) {
      */
     init_kbd_backlight();
 
-    curr_timeout = get_current_timeout();
-    
-    /* Start module timer: 1ns delay if sensor is available and autocalib is enabled, else start it paused */
     sensor_available = is_sensor_available();
-    /* When no_auto_calib is true, start paused */
-    bl_fd = start_timer(CLOCK_BOOTTIME, 0, sensor_available && !conf.no_auto_calib);
-    m_register_fd(bl_fd, false, NULL);
+    
+    bl_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    
+    /* When no_auto_calib is true or no sensor is available, start paused */
+    if (sensor_available && !conf.no_auto_calib) {
+        m_register_fd(bl_fd, false, NULL);
+    } else {
+        if (!sensor_available) {
+            m_become(paused);
+        }
+        if (conf.no_auto_calib) {
+            m_become(paused);
+        }
+    }
 }
 
 static bool check(void) {
@@ -111,8 +110,10 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case DISPLAY_UPDATE:
                 dimmed_callback();
                 break;
-            case TIME_UPDATE:
-                time_callback();
+            case TIME_UPDATE: {
+                time_upd *up = (time_upd *)msg->ps_msg->message;
+                time_callback(up->old, !strcmp(msg->ps_msg->topic, evt_topic));
+                }
                 break;
             case TIMEOUT_UPDATE: {
                 timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
@@ -129,10 +130,6 @@ static void receive(const msg_t *const msg, const void* userdata) {
                 break;
             case AUTOCALIB_UPD:
                 interface_autocalib_callback();
-                break;
-            case PAUSE_UPD:                
-                /* Properly deregister our fd while paused */
-                m_deregister_fd(bl_fd);
                 break;
             case RESUME_UPD:
                 m_register_fd(bl_fd, false, NULL);
@@ -161,6 +158,10 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
             case AUTOCALIB_UPD:
                 interface_autocalib_callback();
                 break;
+            case PAUSE_UPD:                
+                /* Properly deregister our fd while paused */
+                m_deregister_fd(bl_fd);
+                break;
             default:
                 break;
         }
@@ -171,9 +172,9 @@ static void init_kbd_backlight(void) {
     SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
     int r = call(&max_kbd_backlight, "i", &kbd_args, NULL);
     if (r) {
-        INFO("Keyboard backlight calibration unsupported.\n");
+        INFO("BACKLIGHT: Keyboard backlight calibration unsupported.\n");
     } else {
-        INFO("Keyboard backlight calibration enabled.\n");
+        INFO("BACKLIGHT: Keyboard backlight calibration enabled.\n");
     }
 }
 
@@ -189,14 +190,14 @@ static void do_capture(int reset_timer) {
     if (!capture_frames_brightness()) {
         if (state.ambient_br > conf.shutter_threshold) {
             set_new_backlight(state.ambient_br * 10);
-            INFO("Ambient brightness: %.3lf -> Backlight pct: %.3lf\n", state.ambient_br, state.current_bl_pct);
+            INFO("BACKLIGHT: Ambient brightness: %.3lf -> Backlight pct: %.3lf\n", state.ambient_br, state.current_bl_pct);
         } else {
-            INFO("Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
+            INFO("BACKLIGHT: Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
         }
     }
 
     if (reset_timer) {
-        set_timeout(curr_timeout, 0, bl_fd, 0);
+        set_timeout(get_current_timeout(), 0, bl_fd, 0);
     }
 }
 
@@ -220,7 +221,7 @@ static void set_keyboard_level(const double level) {
         state.current_kbd_pct = 1.0 - level;
         if (call(NULL, NULL, &kbd_args, "i", state.current_kbd_pct * max_kbd_backlight) == 0) {
             kbd_msg.curr = state.current_kbd_pct;
-            emit_prop(current_kbd_topic, self(), &kbd_msg, sizeof(bl_upd));
+            EMIT_P(current_kbd_topic, &kbd_msg);
         }
     }
 }
@@ -234,7 +235,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     if (!r && ok) {
         state.current_bl_pct = pct;
         bl_msg.curr = pct;
-        emit_prop(current_bl_topic, self(), &bl_msg, sizeof(bl_upd));
+        EMIT_P(current_bl_topic, &bl_msg);
     }
 }
 
@@ -245,7 +246,7 @@ static int capture_frames_brightness(void) {
     if (!r) {
         state.ambient_br = compute_average(intensity, conf.num_captures);
         amb_msg.curr = state.ambient_br;
-        emit_prop(current_ab_topic, self(), &amb_msg, sizeof(bl_upd));
+        EMIT_P(current_ab_topic, &amb_msg);
     }
     return r;
 }
@@ -257,7 +258,8 @@ static void upower_callback(void) {
 
 /* Callback on "Calibrate" bus interface method */
 static void interface_calibrate_callback(void) {
-    if (!state.display_state && is_sensor_available()) {
+    /* As this is managed in paused state too, check that we're not dimmed/dpms and sensor is available */
+    if (!state.display_state && sensor_available) {
         do_capture(0);
     }
 }
@@ -278,7 +280,7 @@ static void interface_curve_callback(enum ac_states s) {
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(int old_val) {
-    reset_timer(bl_fd, old_val, curr_timeout);
+    reset_timer(bl_fd, old_val, get_current_timeout());
 }
 
 /* Callback on state.display_state changes */
@@ -291,10 +293,19 @@ static void dimmed_callback(void) {
 }
 
 /* Callback on state.time/state.in_event changes */
-static void time_callback(void) {
-    /* A state.time change happened, react! */
-    reset_timer(bl_fd, curr_timeout, get_current_timeout());
-    curr_timeout = get_current_timeout();
+static void time_callback(int old_val, int is_event) {
+    int old_timeout;
+    if (!is_event) {
+        /* A state.time change happened, react! */
+        old_timeout = conf.timeout[state.ac_state][old_val];
+    } else {
+        /* A state.in_event change happened, react!
+         * If state.in_event is now true, it means we were in state.time timeout.
+         * Else, an event ended, thus we were IN_EVENT.
+         */
+        old_timeout = conf.timeout[state.ac_state][state.in_event ? state.time : IN_EVENT];
+    }
+    reset_timer(bl_fd, old_timeout, get_current_timeout());
 }
 
 /* Callback on SensorChanged clightd signal */
@@ -303,10 +314,10 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
     if (new_sensor_avail != sensor_available) {
         sensor_available = new_sensor_avail;
         if (sensor_available) {
-            INFO("Resumed as a sensor is available.\n");
+            INFO("BACKLIGHT: Resumed as a sensor is now available.\n");
             resume_mod();
         } else {
-            INFO("Paused as no sensor is available.\n");
+            INFO("BACKLIGHT: Paused as no sensor is available.\n");
             pause_mod();
         }
     }
@@ -321,8 +332,8 @@ static inline int get_current_timeout(void) {
 }
 
 static void pause_mod(void) {
-    m_tell(self(), &pause_msg, sizeof(state_upd), false);
     m_become(paused);
+    m_tell(self(), &pause_msg, sizeof(state_upd), false);
 }
 
 static void resume_mod(void) {

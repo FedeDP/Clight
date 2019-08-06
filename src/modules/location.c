@@ -1,4 +1,3 @@
-#include <bus.h>
 #include <my_math.h>
 #include <interface.h>
 
@@ -32,7 +31,7 @@ static void init(void) {
         int fd = start_timer(CLOCK_MONOTONIC, 3, 0);
         m_register_fd(fd, true, NULL);
     } else {
-        WARN("Failed to init.\n");
+        WARN("LOCATION: Failed to init.\n");
         load_cache_location();
         m_poisonpill(self());
     }
@@ -43,7 +42,13 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return true;
+    /* 
+     * Only start when no location and no fixed times for both events are specified in conf
+     * AND GAMMA is enabled
+     */
+    return  !conf.no_gamma && 
+            (conf.loc.lat == LAT_UNDEFINED || conf.loc.lon == LON_UNDEFINED) && 
+            (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNSET]));
 }
 
 /*
@@ -77,13 +82,13 @@ static int load_cache_location(void) {
     if (f) {
         if (fscanf(f, "%lf %lf\n", &state.current_loc.lat, &state.current_loc.lon) == 2) {
             publish_location(LAT_UNDEFINED, LON_UNDEFINED);
-            INFO("Location %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
+            INFO("LOCATION: %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
             ret = 0;
         }
         fclose(f);
     }
     if (ret != 0) {
-        WARN("Error loading location from cache file.\n");
+        WARN("LOCATION: Error loading from cache file.\n");
     }
     return ret;
 }
@@ -112,7 +117,7 @@ static int geoclue_init(void) {
 
 end:
     if (r < 0) {
-        WARN("Geoclue2 appears to be unsupported.\n");
+        WARN("LOCATION: Geoclue2 appears to be unsupported.\n");
     }
     /* In case of geoclue2 error, do not leave. Just disable this module */
     return -(r < 0);  // - 1 on error
@@ -149,7 +154,7 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
     int r = get_property(&lat_args, "d", &state.current_loc.lat) + get_property(&lon_args, "d", &state.current_loc.lon);
     if (!r) {
-        INFO("New location received: %.2lf, %.2lf\n", state.current_loc.lat, state.current_loc.lon);
+        INFO("LOCATION: New location received: %.2lf, %.2lf\n", state.current_loc.lat, state.current_loc.lon);
         publish_location(old_lat, old_lon);
     }
     return 0;
@@ -184,10 +189,10 @@ static void cache_location(void) {
         FILE *f = fopen(cache_file, "w");
         if (f) {
             fprintf(f, "%lf %lf\n", state.current_loc.lat, state.current_loc.lon);
-            DEBUG("Latest location stored in cache file!\n");
+            DEBUG("LOCATION: Latest location stored in cache file!\n");
             fclose(f);
         } else {
-            WARN("Caching location: %s\n", strerror(errno));
+            WARN("LOCATION: Caching location failed: %s\n", strerror(errno));
         }
     }
 }
@@ -197,5 +202,5 @@ static void publish_location(double old_lat, double old_lon) {
     loc_msg.old.lon = old_lon;
     loc_msg.new.lat = state.current_loc.lat;
     loc_msg.new.lon = state.current_loc.lon;
-    emit_prop(loc_topic, self(), &loc_msg, sizeof(loc_upd));
+    EMIT_P(loc_topic, &loc_msg);
 }

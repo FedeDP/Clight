@@ -1,4 +1,4 @@
-#include <bus.h>
+#include <interface.h>
 
 static int upower_check(void);
 static int upower_init(void);
@@ -13,7 +13,7 @@ MODULE("UPOWER");
 
 static void init(void) {
     if (upower_init() != 0) {
-        WARN("Failed to init.\n");
+        WARN("UPOWER: Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -68,10 +68,10 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
     int old_ac_state = state.ac_state;
     int r = get_property(&args, "b", &state.ac_state);
     if (!r && old_ac_state != state.ac_state) {
-        INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
+        INFO(state.ac_state ? "UPOWER: Ac cable disconnected. Powersaving mode enabled.\n" : "UPOWER: Ac cable connected. Powersaving mode disabled.\n");
         upower_msg.old = old_ac_state;
         upower_msg.new = state.ac_state;
-        m_publish(up_topic, &upower_msg, sizeof(upower_upd), false);
+        EMIT_P(up_topic, &upower_msg);
     }
     return 0;
 }

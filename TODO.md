@@ -72,8 +72,8 @@
 - - [x] SIGNAL
 - - [x] UPOWER
 
-- [ ] 100% port to libmodule API
-- - [ ] BACKLIGHT -> improve!!! (check FIXME)
+- [x] 100% port to libmodule API
+- - [x] BACKLIGHT -> improve!!! (check FIXME)
 - - [x] BUS
 - - [x] DIMMER
 - - [x] DPMS
@@ -92,6 +92,9 @@
 - [x] Fix Assertion 'close_nointr(fd) != -EBADF' failed at ../systemd-stable/src/basic/fd-util.c:71, function safe_close(). Aborting.
 Annullato (core dump creato)
 - [x] GAMMA: emit "Sunrise" and "Sunset" props even on error!
+- [x] Add back module name in various logs
+- [x] FIX: gamma when fixed position is set from conf
+- [x] FIX: gamma when fixed sunrsie/sunset times are set from conf
 - [ ] Test test test test test teeeeest
 
 #### Generic
