@@ -1,4 +1,4 @@
-#include <interface.h>
+#include <bus.h>
 
 static int upower_check(void);
 static int upower_init(void);
@@ -7,7 +7,7 @@ static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
 static sd_bus_slot *slot;
 static upower_upd upower_msg = { UPOWER_UPDATE };
 
-const char *up_topic = "UPower";
+const char *up_topic = "AcState";
 
 MODULE("UPOWER");
 
@@ -71,7 +71,7 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
         INFO(state.ac_state ? "UPOWER: Ac cable disconnected. Powersaving mode enabled.\n" : "UPOWER: Ac cable connected. Powersaving mode disabled.\n");
         upower_msg.old = old_ac_state;
         upower_msg.new = state.ac_state;
-        EMIT_P(up_topic, &upower_msg);
+        M_PUB(up_topic, &upower_msg);
     }
     return 0;
 }

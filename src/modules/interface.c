@@ -1,5 +1,5 @@
 #include <stddef.h>
-#include <interface.h>
+#include <bus.h>
 #include <config.h>
 
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -18,6 +18,8 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+                        sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static const char object_path[] = "/org/clight/clight";
@@ -46,8 +48,13 @@ static const sd_bus_vtable clight_vtable[] = {
 
 static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Sunrise", "s", NULL, offsetof(struct config, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("Sunset", "s", NULL, offsetof(struct config, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoBacklight", "b", NULL, offsetof(struct config, no_backlight), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoGamma", "b", NULL, offsetof(struct config, no_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoDimmer", "b", NULL, offsetof(struct config, no_dimmer), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoDpms", "b", NULL, offsetof(struct config, no_dpms), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoInhibit", "b", NULL, offsetof(struct config, no_inhibit), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(struct config, events[SUNRISE]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(struct config, events[SUNSET]), 0),
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(struct config, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(struct config, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(struct config, no_keyboard_bl), 0),
@@ -111,6 +118,8 @@ const char *interface_bl_capture = "InterfaceBLCapture";
 const char *interface_bl_curve = "InterfaceBLCurve";
 const char *interface_bl_autocalib = "InterfaceBLAuto";
 
+static sd_bus *userbus;
+
 MODULE("INTERFACE");
 
 static void init(void) {    
@@ -118,7 +127,8 @@ static void init(void) {
     const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
     const char conf_interface[] = "org.clight.clight.Conf";
 
-    sd_bus *userbus = get_user_bus();
+    userbus = get_user_bus();
+    
     /* Main interface */
     int r = sd_bus_add_object_vtable(userbus,
                                 NULL,
@@ -149,6 +159,20 @@ static void init(void) {
         r = sd_bus_request_name(userbus, bus_interface, 0);
         if (r < 0) {
             WARN("INTERFACE: Failed to acquire Bus Interface name: %s\n", strerror(-r));
+        } else {
+            /* Subscribe to every topic */
+            m_subscribe(current_kbd_topic);
+            m_subscribe(current_bl_topic);
+            m_subscribe(current_ab_topic);
+            m_subscribe(display_topic);
+            m_subscribe(time_topic);
+            m_subscribe(evt_topic);
+            m_subscribe(sunrise_topic);
+            m_subscribe(sunset_topic);
+            m_subscribe(temp_topic);
+            m_subscribe(inh_topic);
+            m_subscribe(loc_topic);
+            m_subscribe(up_topic);
         }
     }
     
@@ -167,12 +191,18 @@ static bool evaluate() {
 }
 
 static void receive(const msg_t *const msg, const void* userdata) {
-    
+    if (msg->ps_msg->type == USER) {
+        if (userbus) {
+            sd_bus_emit_properties_changed(userbus, object_path, bus_interface, msg->ps_msg->topic, NULL);
+        }
+    }
 }
 
 static void destroy(void) {
-    sd_bus *userbus = get_user_bus();
     sd_bus_release_name(userbus, bus_interface);
+    if (userbus) {
+        userbus = sd_bus_flush_close_unref(userbus);
+    }
 }
 
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
@@ -198,7 +228,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         INFO("INTERFACE: PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
         inhibit_msg.old = old_inhibited;
         inhibit_msg.new = state.pm_inhibited;
-        EMIT_P(inh_topic, &inhibit_msg);
+        M_PUB(inh_topic, &inhibit_msg);
     }
     return sd_bus_reply_method_return(m, NULL);
 }
@@ -252,7 +282,7 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
         if (state.current_loc.lat != l->lat && state.current_loc.lon != l->lon) {
             loc_msg.new = *l;
             memcpy(&state.current_loc, l, sizeof(struct location));
-            EMIT_P(loc_topic, &loc_msg);
+            M_PUB(loc_topic, &loc_msg);
         }
         return 0;
     }
@@ -285,7 +315,7 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
     if (topic) {
         to_msg.old = old_val;
         to_msg.new = *val;
-        m_publish(topic, &to_msg, sizeof(timeout_upd), false);
+        M_PUB(topic, &to_msg);
     }
     return r;
 }
@@ -297,7 +327,7 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
     if (r >= 0 && old_val != *(int *)userdata) {
         temp_msg.new = *(int *)userdata;
         temp_msg.old = old_val;
-        m_publish(interface_temp_topic, &temp_msg, sizeof(temp_upd), false);
+        M_PUB(interface_temp_topic, &temp_msg);
     }
     return r;
 }
@@ -310,7 +340,26 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
         INFO("INTERFACE: Backlight autocalibration %s by bus API.\n", conf.no_auto_calib ? "disabled" : "enabled");
         calib_msg.old = old_val;
         calib_msg.new = conf.no_auto_calib;
-        m_publish(interface_bl_autocalib, &calib_msg, sizeof(calib_upd), false);
+        M_PUB(interface_bl_autocalib, &calib_msg);
+    }
+    return r;
+}
+
+static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    const char *event = NULL;
+    int r = sd_bus_message_read(value, "s", &event);
+    if (r >= 0 && strlen(event) <= 10) {
+        struct tm timeinfo;
+        if (strlen(event) && !strptime(event, "%R", &timeinfo)) {
+            /* Failed to convert datetime */
+            r = -EINVAL;
+        } else {
+            strncpy(userdata, event, 10);
+        }
+    } else {
+        /* Datetime too long*/
+        r = -EINVAL;
     }
     return r;
 }
@@ -323,14 +372,4 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Failed to store conf.");
     }
     return r;
-}
-
-int emit_prop(const char *topic, const self_t *self, const void *ptr, const int size) {
-    sd_bus *userbus = get_user_bus();
-    if (userbus) {
-        sd_bus_emit_properties_changed(userbus, object_path, bus_interface, topic, NULL);
-    }
-    if (self && ptr) {
-        m_publish(topic, ptr, size, false);
-    }
 }

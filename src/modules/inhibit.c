@@ -1,4 +1,4 @@
-#include <interface.h>
+#include <bus.h>
 
 static int inhibit_init(void);
 static int inhibit_check(void);
@@ -68,7 +68,7 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
             INFO("INHIBIT: PowerManagement inhibition %s by freedesktop.PowerManagement.\n", state.pm_inhibited ? "enabled" : "disabled");
             inh_msg.old = old_inhibited;
             inh_msg.new = state.pm_inhibited;
-            EMIT_P(inh_topic, &inh_msg);
+            M_PUB(inh_topic, &inh_msg);
         }
     }
     return 0;

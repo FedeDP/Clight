@@ -1,6 +1,5 @@
 #include <backlight.h>
 #include "idler.h"
-#include <interface.h>
 
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void dim_backlight(const double pct);
@@ -68,11 +67,6 @@ static void destroy(void) {
     idle_client_destroy(client);
 }
 
-/* 
- * Dimming logic cannot be moved to BACKLIGHT module,
- * even if BACKLIGHT module is hooked to "Dimmed" prop state,
- * because dimming has to work even if BACKLIGHT module is disabled.
- */
 static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
     static double old_pct = -1.0;
     int dimmed;
@@ -92,7 +86,7 @@ static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)
     }
     
     display_msg.new = state.display_state;
-    EMIT_P(display_topic, &display_msg);
+    M_PUB(display_topic, &display_msg);
     return 0;
 }
 

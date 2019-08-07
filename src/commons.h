@@ -41,7 +41,8 @@
 #define MINIMUM_CLIGHTD_VERSION_MAJ 4
 #define MINIMUM_CLIGHTD_VERSION_MIN 0
 
-#define MSG_TYPE()  const enum mod_msg_types type = *(enum mod_msg_types *)msg->ps_msg->message
+#define MSG_TYPE()              const enum mod_msg_types type = *(enum mod_msg_types *)msg->ps_msg->message
+#define M_PUB(topic, ptr)       m_publish(topic, ptr, sizeof(*ptr), false);
 
 /*
  * List of states clight can be through: 

@@ -95,6 +95,13 @@ Annullato (core dump creato)
 - [x] Add back module name in various logs
 - [x] FIX: gamma when fixed position is set from conf
 - [x] FIX: gamma when fixed sunrsie/sunset times are set from conf
+- [x] FIX: upower topic
+- [x] conf.sunrise/sunset writable from bus api
+- [x] move check outside of do_capture in backlight
+- [x] sd_bus_process both sysbus and userbus
+- [x] Let INTERFACE own sd_bus *userbus
+- [x] Add new conf options readonly
+- [x] Drop emit_prop and just let INTERFACE module subscribe to desired topics, and sd_bus_emit_properties_changed() on topic
 - [ ] Test test test test test teeeeest
 
 #### Generic

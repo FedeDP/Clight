@@ -1,5 +1,5 @@
 #include <my_math.h>
-#include <interface.h>
+#include <bus.h>
 
 static int load_cache_location(void);
 static void init_cache_file(void);
@@ -202,5 +202,5 @@ static void publish_location(double old_lat, double old_lon) {
     loc_msg.old.lon = old_lon;
     loc_msg.new.lat = state.current_loc.lat;
     loc_msg.new.lon = state.current_loc.lon;
-    EMIT_P(loc_topic, &loc_msg);
+    M_PUB(loc_topic, &loc_msg);
 }

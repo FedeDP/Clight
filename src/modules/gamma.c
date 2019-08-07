@@ -1,5 +1,5 @@
 #include <my_math.h>
-#include <interface.h>
+#include <bus.h>
 
 static void check_gamma(void);
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
@@ -115,14 +115,14 @@ static void check_gamma(void) {
     if (old_state != state.time) {
         time_msg.old = old_state;
         time_msg.new = state.time;
-        EMIT_P(time_topic, &time_msg);
+        M_PUB(time_topic, &time_msg);
     }
     
     /* if we entered/left an event, emit signal */
     if (old_in_event != state.in_event) {
         in_ev_msg.old = old_in_event;
         in_ev_msg.new = state.in_event;
-        EMIT_P(evt_topic, &in_ev_msg);
+        M_PUB(evt_topic, &in_ev_msg);
     }
 
     /*
@@ -203,11 +203,11 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
         
         evt_msg[SUNRISE].old = old_events[SUNRISE];
         evt_msg[SUNRISE].new = state.events[SUNRISE];
-        EMIT_P(sunrise_topic, &evt_msg[SUNRISE]);
+        M_PUB(sunrise_topic, &evt_msg[SUNRISE]);
         
         evt_msg[SUNSET].old = old_events[SUNSET];
         evt_msg[SUNSET].new = state.events[SUNSET];
-        EMIT_P(sunset_topic, &evt_msg[SUNSET]);
+        M_PUB(sunset_topic, &evt_msg[SUNSET]);
     }
     check_next_event(now);
     check_state(now);
@@ -292,7 +292,7 @@ static void set_temp(int temp, const time_t *now) {
         temp_msg.old = state.current_temp;
         state.current_temp = temp;
         temp_msg.new = state.current_temp;
-        EMIT_P(temp_topic, &temp_msg);
+        M_PUB(temp_topic, &temp_msg);
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("GAMMA: %d gamma temp set.\n", temp);
         } else {

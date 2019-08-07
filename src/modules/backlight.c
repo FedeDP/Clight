@@ -1,11 +1,10 @@
 #include <backlight.h>
 #include <my_math.h>
-#include <interface.h>
 
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static void init_kbd_backlight(void);
 static int is_sensor_available(void);
-static void do_capture(int reset_timer);
+static void do_capture(bool reset_timer);
 static void set_new_backlight(const double perc);
 static void set_keyboard_level(const double level);
 static int capture_frames_brightness(void);
@@ -100,7 +99,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
         uint64_t t;
         read(msg->fd_msg->fd, &t, sizeof(uint64_t));
-        do_capture(1);
+        do_capture(true);
     } else if (msg->ps_msg->type == USER) {
         MSG_TYPE();
         switch (type) {
@@ -153,7 +152,10 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
             }
             break;
             case DO_CAPTURE:
-                interface_calibrate_callback();
+                /* In paused state check that we're not dimmed/dpms and sensor is available */
+                if (!state.display_state && sensor_available) {
+                    interface_calibrate_callback();
+                }
                 break;
             case AUTOCALIB_UPD:
                 interface_autocalib_callback();
@@ -186,7 +188,7 @@ static int is_sensor_available(void) {
     return r == 0 && available;
 }
 
-static void do_capture(int reset_timer) {
+static void do_capture(bool reset_timer) {
     if (!capture_frames_brightness()) {
         if (state.ambient_br > conf.shutter_threshold) {
             set_new_backlight(state.ambient_br * 10);
@@ -221,7 +223,7 @@ static void set_keyboard_level(const double level) {
         state.current_kbd_pct = 1.0 - level;
         if (call(NULL, NULL, &kbd_args, "i", state.current_kbd_pct * max_kbd_backlight) == 0) {
             kbd_msg.curr = state.current_kbd_pct;
-            EMIT_P(current_kbd_topic, &kbd_msg);
+            M_PUB(current_kbd_topic, &kbd_msg);
         }
     }
 }
@@ -235,7 +237,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     if (!r && ok) {
         state.current_bl_pct = pct;
         bl_msg.curr = pct;
-        EMIT_P(current_bl_topic, &bl_msg);
+        M_PUB(current_bl_topic, &bl_msg);
     }
 }
 
@@ -246,7 +248,7 @@ static int capture_frames_brightness(void) {
     if (!r) {
         state.ambient_br = compute_average(intensity, conf.num_captures);
         amb_msg.curr = state.ambient_br;
-        EMIT_P(current_ab_topic, &amb_msg);
+        M_PUB(current_ab_topic, &amb_msg);
     }
     return r;
 }
@@ -258,10 +260,7 @@ static void upower_callback(void) {
 
 /* Callback on "Calibrate" bus interface method */
 static void interface_calibrate_callback(void) {
-    /* As this is managed in paused state too, check that we're not dimmed/dpms and sensor is available */
-    if (!state.display_state && sensor_available) {
-        do_capture(0);
-    }
+    do_capture(false);
 }
 
 /* Callback on "AutoCalib" bus exposed writable property */

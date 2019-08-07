@@ -1,5 +1,5 @@
 #include "idler.h"
-#include <interface.h>
+#include <bus.h>
 
 static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error);
 static void set_dpms(int dpms_state);
@@ -75,7 +75,7 @@ static int on_new_idle(sd_bus_message *m,  __attribute__((unused)) void *userdat
     }
     display_msg.new = state.display_state;
     set_dpms(is_dpms);
-    EMIT_P(display_topic, &display_msg);
+    M_PUB(display_topic, &display_msg);
     return 0;
 }
 

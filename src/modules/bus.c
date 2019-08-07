@@ -23,6 +23,9 @@ static void init(void) {
         ERROR("BUS: Failed to connect to user bus\n");
     }
     
+    sd_bus_process(sysbus, NULL);
+    sd_bus_process(userbus, NULL);
+    
     int bus_fd = sd_bus_get_fd(sysbus);
     int userbus_fd = sd_bus_get_fd(userbus);
 
@@ -41,9 +44,6 @@ static bool evaluate(void) {
 static void destroy(void) {
     if (sysbus) {
         sd_bus_flush_close_unref(sysbus);
-    }
-    if (userbus) {
-        sd_bus_flush_close_unref(userbus);
     }
 }
 
