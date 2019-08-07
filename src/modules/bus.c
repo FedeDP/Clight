@@ -43,7 +43,7 @@ static bool evaluate(void) {
 
 static void destroy(void) {
     if (sysbus) {
-        sd_bus_flush_close_unref(sysbus);
+        sysbus = sd_bus_flush_close_unref(sysbus);
     }
 }
 

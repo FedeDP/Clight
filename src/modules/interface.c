@@ -349,13 +349,14 @@ static int set_event(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
     const char *event = NULL;
     int r = sd_bus_message_read(value, "s", &event);
-    if (r >= 0 && strlen(event) <= 10) {
+    if (r >= 0 && strlen(event) <= sizeof(conf.events[SUNRISE])) {
         struct tm timeinfo;
         if (strlen(event) && !strptime(event, "%R", &timeinfo)) {
             /* Failed to convert datetime */
             r = -EINVAL;
         } else {
-            strncpy(userdata, event, 10);
+            strncpy(userdata, event, sizeof(conf.events[SUNRISE]));
+            M_PUB(loc_topic, &loc_msg); // only to let gamma know it should recompute state.events
         }
     } else {
         /* Datetime too long*/

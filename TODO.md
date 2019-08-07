@@ -102,6 +102,8 @@ Annullato (core dump creato)
 - [x] Let INTERFACE own sd_bus *userbus
 - [x] Add new conf options readonly
 - [x] Drop emit_prop and just let INTERFACE module subscribe to desired topics, and sd_bus_emit_properties_changed() on topic
+- [x] FIX: in INTERFACE set_event(), we should publish a message for GAMMA module to re-compute state.events
+- [x] FIX: in geoclue on_new_location, avoid overriding conf.location if it has been set by interface API
 - [ ] Test test test test test teeeeest
 
 #### Generic
