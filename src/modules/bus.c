@@ -1,4 +1,5 @@
 #include <bus.h>
+#include <unistd.h>
 
 #define GET_BUS(a)  sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus; if (!tmp) { return -1; }
 
@@ -29,8 +30,8 @@ static void init(void) {
     int bus_fd = sd_bus_get_fd(sysbus);
     int userbus_fd = sd_bus_get_fd(userbus);
 
-    m_register_fd(bus_fd, false, sysbus);
-    m_register_fd(userbus_fd, false, userbus);
+    m_register_fd(dup(bus_fd), true, sysbus);
+    m_register_fd(dup(userbus_fd), true, userbus);
 }
 
 static bool check(void) {
@@ -216,7 +217,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
 /*
  * Get a property of type "type" into userptr.
  */
-int get_property(const struct bus_args *a, const char *type, void *userptr) {
+int get_property(const struct bus_args *a, const char *type, void *userptr, int size) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
     GET_BUS(a);
@@ -229,7 +230,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr) {
         const char *obj = NULL;
         r = sd_bus_message_read(m, type, &obj);
         if (r >= 0) {
-            strncpy(userptr, obj, PATH_MAX);
+            strncpy(userptr, obj, size);
         }
     } else {
         r = sd_bus_message_read(m, type, userptr);

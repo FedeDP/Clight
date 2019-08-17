@@ -208,8 +208,8 @@ struct state {
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
     struct location current_loc;            // current user location
     jmp_buf quit_buf;                       // quit jump called by longjmp
-    char clightd_version[PATH_MAX + 1];     // Clightd found version
-    char *version;                          // Clight version
+    char clightd_version[32];               // Clightd found version
+    char version[32];                       // Clight version
 };
 
 extern struct state state;

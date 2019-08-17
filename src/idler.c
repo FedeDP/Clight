@@ -2,7 +2,7 @@
 
 #define VALIDATE_CLIENT(cl) do { if (!strlen(client)) return -1; } while (0);
 
-int idle_init(char *client, sd_bus_slot *slot, int timeout, sd_bus_message_handler_t handler) {
+int idle_init(char *client, sd_bus_slot **slot, int timeout, sd_bus_message_handler_t handler) {
     int r = idle_get_client(client);
     if (r < 0) {
         goto end;
@@ -25,11 +25,11 @@ int idle_get_client(char *client) {
     return call(client, "o", &args, NULL);
 }
 
-int idle_hook_update(char *client, sd_bus_slot *slot, sd_bus_message_handler_t handler) {
+int idle_hook_update(char *client, sd_bus_slot **slot, sd_bus_message_handler_t handler) {
     VALIDATE_CLIENT(client);
     
     SYSBUS_ARG(args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Idle");
-    return add_match(&args, &slot, handler);
+    return add_match(&args, slot, handler);
 }
 
 int idle_set_timeout(char *client, int timeout) {

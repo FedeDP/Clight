@@ -59,31 +59,7 @@
 
 #### Libmodule
 - [x] Require libmodule 5.0.0 in CMakeLists
-- [x] Initial port for each module to libmodule
-- [x] Fix each modules using libmodule:
-- - [x] BACKLIGHT
-- - [x] BUS
-- - [x] DIMMER
-- - [x] DPMS
-- - [x] GAMMA
-- - [x] INHIBIT
-- - [x] INTERFACE
-- - [x] LOCATION
-- - [x] SIGNAL
-- - [x] UPOWER
-
-- [x] 100% port to libmodule API
-- - [x] BACKLIGHT -> improve!!! (check FIXME)
-- - [x] BUS
-- - [x] DIMMER
-- - [x] DPMS
-- - [x] GAMMA -> improve? eg: m_become(xxx)
-- - [x] INHIBIT
-- - [x] INTERFACE
-- - [x] LOCATION
-- - [x] SIGNAL
-- - [x] UPOWER
-
+- [x] Port modules to libmodule 5.0.0
 - [x] Port main to use libmodule
 - [x] Port all "no-X" options to a conf.no_X
 - [x] Drop modules.{c/h}
@@ -104,6 +80,9 @@ Annullato (core dump creato)
 - [x] Drop emit_prop and just let INTERFACE module subscribe to desired topics, and sd_bus_emit_properties_changed() on topic
 - [x] FIX: in INTERFACE set_event(), we should publish a message for GAMMA module to re-compute state.events
 - [x] FIX: in geoclue on_new_location, avoid overriding conf.location if it has been set by interface API
+- [x] FIX: fix memleaks!
+- [x] FIX: interface Version and ClightdVersion properties
+- [x] FIX: state.ac_state should be -1 on start and various modules should wait on it (same as state.time) -> BACKLIGHT, DIMMER, DPMS
 - [ ] Test test test test test teeeeest
 
 #### Generic

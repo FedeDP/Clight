@@ -2,6 +2,8 @@
 #include <bus.h>
 #include <config.h>
 
+static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
+                       sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -27,8 +29,8 @@ static const char bus_interface[] = "org.clight.clight";
 
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Version", "s", NULL, offsetof(struct state, version), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("ClightdVersion", "s", NULL, offsetof(struct state, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("Version", "s", get_version, offsetof(struct state, version), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("ClightdVersion", "s", get_version, offsetof(struct state, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(struct state, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(struct state, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Time", "i", NULL, offsetof(struct state, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -199,10 +201,15 @@ static void receive(const msg_t *const msg, const void* userdata) {
 }
 
 static void destroy(void) {
-    sd_bus_release_name(userbus, bus_interface);
     if (userbus) {
+        sd_bus_release_name(userbus, bus_interface);
         userbus = sd_bus_flush_close_unref(userbus);
     }
+}
+
+static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
+                       sd_bus_message *reply, void *userdata, sd_bus_error *error) {
+    return sd_bus_message_append(reply, "s", userdata);
 }
 
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {

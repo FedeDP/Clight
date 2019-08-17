@@ -75,12 +75,20 @@ static int init(int argc, char *argv[]) {
 }
 
 static void init_state(void) {
-    state.version = VERSION;
+    strncpy(state.version, VERSION, sizeof(state.version));
     memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
     if (!conf.no_gamma) {
-        /* Initial value -> undefined; only if GAMMA is enabled */
+        /* Initial value -> undefined; only if GAMMA is enabled, else assume DAY */
         state.time = -1;
+    } else {
+        state.time = DAY;
     }
+    
+    /* 
+     * Initial state -> undefined; UPower will set this as soon as it is available, 
+     * or to ON_AC if UPower is not available 
+     */
+    state.ac_state = -1;
 }
 
 /*
@@ -99,7 +107,7 @@ static int check_clightd_version(void) {
     int ret = -1;
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
     
-    int r = get_property(&args, "s", state.clightd_version);
+    int r = get_property(&args, "s", state.clightd_version, sizeof(state.clightd_version));
     if (r < 0 || !strlen(state.clightd_version)) {
         WARN("No clightd found. Clightd is a mandatory dep.\n");
     } else {

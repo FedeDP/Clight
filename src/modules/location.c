@@ -154,9 +154,10 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
     
         SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
         SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
-        int r = get_property(&lat_args, "d", &state.current_loc.lat) + get_property(&lon_args, "d", &state.current_loc.lon);
+        int r = get_property(&lat_args, "d", &state.current_loc.lat, sizeof(state.current_loc.lat)) + 
+                get_property(&lon_args, "d", &state.current_loc.lon, sizeof(state.current_loc.lon));
         if (!r) {
-            INFO("LOCATION: New location received: %.2lf, %.2lf\n", state.current_loc.lat, state.current_loc.lon);
+            INFO("LOCATION: New location received: %.2lf, %.2lf.\n", state.current_loc.lat, state.current_loc.lon);
             publish_location(old_lat, old_lon);
         }
     }
@@ -195,7 +196,7 @@ static void cache_location(void) {
             DEBUG("LOCATION: Latest location stored in cache file!\n");
             fclose(f);
         } else {
-            WARN("LOCATION: Caching location failed: %s\n", strerror(errno));
+            WARN("LOCATION: Caching location failed: %s.\n", strerror(errno));
         }
     }
 }

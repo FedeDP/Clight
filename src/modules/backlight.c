@@ -83,7 +83,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return conf.no_backlight == 0 && (conf.no_gamma || state.time != -1);
+    return conf.no_backlight == 0 && (conf.no_gamma || state.time != -1) && state.ac_state != -1;
 }
 
 static void destroy(void) {
@@ -192,7 +192,7 @@ static void do_capture(bool reset_timer) {
     if (!capture_frames_brightness()) {
         if (state.ambient_br > conf.shutter_threshold) {
             set_new_backlight(state.ambient_br * 10);
-            INFO("BACKLIGHT: Ambient brightness: %.3lf -> Backlight pct: %.3lf\n", state.ambient_br, state.current_bl_pct);
+            INFO("BACKLIGHT: Ambient brightness: %.3lf -> Backlight pct: %.3lf.\n", state.ambient_br, state.current_bl_pct);
         } else {
             INFO("BACKLIGHT: Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
         }

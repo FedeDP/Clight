@@ -24,5 +24,5 @@ struct bus_args {
 int call(void *userptr, const char *userptr_type, const struct bus_args *args, const char *signature, ...);
 int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb);
 int set_property(const struct bus_args *a, const char type, const void *value);
-int get_property(const struct bus_args *a, const char *type, void *userptr);
+int get_property(const struct bus_args *a, const char *type, void *userptr, int size);
 sd_bus *get_user_bus(void);

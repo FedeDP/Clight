@@ -15,7 +15,7 @@ const char *display_topic = "DisplayState";
 MODULE("DPMS");
 
 static void init(void) {
-    int r = idle_init(client, slot, conf.dpms_timeout[state.ac_state], on_new_idle);
+    int r = idle_init(client, &slot, conf.dpms_timeout[state.ac_state], on_new_idle);
     if (r == 0) {
         m_subscribe(up_topic);
         m_subscribe(inh_topic);
@@ -32,7 +32,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return conf.no_dpms == 0;
+    return conf.no_dpms == 0 && state.ac_state != -1;
 }
 
 static void receive(const msg_t *const msg, const void* userdata) {

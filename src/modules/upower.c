@@ -41,7 +41,13 @@ static void destroy(void) {
 static int upower_check(void) {
     /* check initial AC state */
     SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
-    int r = get_property(&args, "b", &state.ac_state);
+    int r = get_property(&args, "b", &state.ac_state, sizeof(state.ac_state));
+    if (r < 0 && state.ac_state == -1) {
+        /* Upower not available, for now. Let's assume ON_AC! */
+        state.ac_state = ON_AC;
+    } else {
+        INFO("UPOWER: Initial AC state: %s.\n", state.ac_state == ON_AC ? "connected" : "disconnected");
+    }
     return -(r < 0);
 }
 
@@ -66,9 +72,9 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
      * .OnBattery                          property  b         false        emits-change
      */
     int old_ac_state = state.ac_state;
-    int r = get_property(&args, "b", &state.ac_state);
+    int r = get_property(&args, "b", &state.ac_state, sizeof(state.ac_state));
     if (!r && old_ac_state != state.ac_state) {
-        INFO(state.ac_state ? "UPOWER: Ac cable disconnected. Powersaving mode enabled.\n" : "UPOWER: Ac cable connected. Powersaving mode disabled.\n");
+        INFO(state.ac_state ? "UPOWER: AC cable disconnected. Powersaving mode enabled.\n" : "UPOWER: Ac cable connected. Powersaving mode disabled.\n");
         upower_msg.old = old_ac_state;
         upower_msg.new = state.ac_state;
         M_PUB(up_topic, &upower_msg);
