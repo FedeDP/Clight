@@ -151,7 +151,7 @@ static void set_keyboard_level(const double level) {
          * on low ambient brightness, it must be turned on
          */
         state.current_kbd_pct = 1.0 - level;
-        if (call(NULL, NULL, &kbd_args, "i", state.current_kbd_pct * max_kbd_backlight) == 0) {
+        if (call(NULL, NULL, &kbd_args, "i", (int)(round(state.current_kbd_pct * max_kbd_backlight))) == 0) {
             emit_prop("CurrentKbdPct");
         }
     }
