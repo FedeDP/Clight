@@ -162,19 +162,8 @@ static void init(void) {
         if (r < 0) {
             WARN("INTERFACE: Failed to acquire Bus Interface name: %s\n", strerror(-r));
         } else {
-            /* Subscribe to every topic */
-            m_subscribe(current_kbd_topic);
-            m_subscribe(current_bl_topic);
-            m_subscribe(current_ab_topic);
-            m_subscribe(display_topic);
-            m_subscribe(time_topic);
-            m_subscribe(evt_topic);
-            m_subscribe(sunrise_topic);
-            m_subscribe(sunset_topic);
-            m_subscribe(temp_topic);
-            m_subscribe(inh_topic);
-            m_subscribe(loc_topic);
-            m_subscribe(up_topic);
+            /* Subscribe to any topic expept ours own */
+            m_subscribe("^[^Interface].*");
         }
     }
     
@@ -195,6 +184,7 @@ static bool evaluate() {
 static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->ps_msg->type == USER) {
         if (userbus) {
+            DEBUG("INTERFACE: Emitting %s property\n", msg->ps_msg->topic);
             sd_bus_emit_properties_changed(userbus, object_path, bus_interface, msg->ps_msg->topic, NULL);
         }
     }

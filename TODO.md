@@ -1,6 +1,9 @@
 ### 4.0
 - [x] Fix build when LIBSYSTEMD_VERSION is a float (?), #70
 
+#### Backlight
+- [x] FIX issue with call() variadic argument for keyboard backlight #94
+
 #### Dimmer
 - [x] Different timeout for dimmer leaving-dimmed fading transition
 - [x] No_smooth_dimmer_transition for enter/leave transitions
