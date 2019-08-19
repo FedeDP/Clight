@@ -5,7 +5,7 @@
  * 
  * Build with: gcc -shared -fPIC myMod.c -o myMod -Wno-unused
  * 
- * Place myMod in: $HOME/.local/share/clight/
+ * Place myMod in: $HOME/.local/share/clight/modules.d/ OR, globally, in /usr/share/clight/modules.d/
  * 
  * Libmodule's doc: https://libmodule.readthedocs.io/en/latest/?badge=latest
  */

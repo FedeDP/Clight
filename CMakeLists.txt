@@ -7,13 +7,11 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 find_package(PkgConfig)
 
-
-# Options
+# Needed folders
 set(CLIGHT_CONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
-    CACHE FILEPATH "Path for config file")
-    
+    CACHE PATH "Path for config file")    
 set(CLIGHT_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/clight"
-    CACHE FILEPATH "Path for config file")
+    CACHE PATH "Path for data dir folder")
 
 # Create program target
 file(GLOB_RECURSE SOURCES src/*.c)
@@ -102,7 +100,6 @@ if (COMPLETIONS_DIR)
             DESTINATION ${COMPLETIONS_DIR})
 endif()
 
-
 #
 # Packaging support
 #
@@ -128,7 +125,7 @@ set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc/xdg" "/etc/xdg/autostart" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_BINDIR}" "/usr/share/applications" "${SESSION_BUS_DIR}" "/usr/share/icons" "/usr/share/icons/hicolor" "/usr/share/icons/hicolor/scalable" "/usr/share/icons/hicolor/scalable/apps")
-set(CPACK_RPM_PACKAGE_REQUIRES "systemd-libs popt libconfig gsl clightd >= 4.0 libmodule >= 4.2.0")
+set(CPACK_RPM_PACKAGE_REQUIRES "systemd-libs popt libconfig gsl clightd >= 4.0 libmodule >= 5.0.0")
 set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 
@@ -137,7 +134,7 @@ set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 #
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/FedeDP/Clight")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 4.0), libmodule (>= 4.2.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 4.0), libmodule (>= 5.0.0)")
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0, upower, bash-completion")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 
