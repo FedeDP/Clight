@@ -1,5 +1,6 @@
 #include <timer.h>
 #include <stddef.h>
+#include <sys/timerfd.h>
 
 static long get_timeout(int fd, size_t member);
 
@@ -21,10 +22,6 @@ int start_timer(int clockid, int initial_s, int initial_ns) {
  * Helper to set a new trigger on timerfd in sec seconds and n nsec
  */
 void set_timeout(int sec, int nsec, int fd, int flag) {
-    if (fd == DONT_POLL) {
-        return;
-    }
-
     struct itimerspec timerValue = {{0}};
 
     if (sec < 0) {
@@ -50,10 +47,6 @@ long get_timeout_sec(int fd) {
 }
 
 static long get_timeout(int fd, size_t member) {
-    if (fd == DONT_POLL) {
-        return 0;
-    }
-
     struct itimerspec curr_value;
     timerfd_gettime(fd, &curr_value);
 
@@ -62,10 +55,6 @@ static long get_timeout(int fd, size_t member) {
 }
 
 void reset_timer(int fd, int old_timer, int new_timer) {
-    if (fd == DONT_POLL) {
-        return;
-    }
-
     unsigned int elapsed_time = old_timer - get_timeout_sec(fd);
     /* if we still need to wait some seconds */
     if (new_timer > elapsed_time) {

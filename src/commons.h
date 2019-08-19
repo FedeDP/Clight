@@ -1,48 +1,46 @@
 #pragma once
 
-#include <time.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <linux/limits.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <linux/limits.h>
 #include <errno.h>
-#include <stdarg.h>
-#include <poll.h>
 #include <math.h>
 #include <pwd.h>
 #include <setjmp.h>
-#include <systemd/sd-bus.h>
 #include <module/module_easy.h>
 #include <module/modules_easy.h>
 
-#include "topics.h"
-
-/*
- * Useful macro to check size of global array.
- * Used in every module to automatically set self.num_deps
- */
-#define SIZE(a) sizeof(a) / sizeof(*a)
-
 #define CLIGHTD_SERVICE "org.clightd.clightd"
 
-#define DONT_POLL -2                        // avoid polling a module (used for modules that do not need to be polled)
-#define DONT_POLL_W_ERR -3                  // avoid polling a module because an error occurred (used eg when no geoclue2 is found)
 #define SIZE_POINTS 11                      // number of points (from 0 to 10 included)
 #define DEGREE 3                            // number of parameters for polynomial regression
-#define LOC_TIME_THRS 600                   // time threshold (seconds) before triggering location changed events (10mins)
-#define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
-#define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
-#define LAT_UNDEFINED 91.0
-#define LON_UNDEFINED 181.0
-#define MINIMUM_CLIGHTD_VERSION_MAJ 4
-#define MINIMUM_CLIGHTD_VERSION_MIN 0
+#define LAT_UNDEFINED 91.0                  // Undefined (ie: unset) value for latitude
+#define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
+#define MINIMUM_CLIGHTD_VERSION_MAJ 4       // Clightd minimum required maj version
+#define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version
+
+/** PubSub Macros **/
 
 #define MSG_TYPE()              const enum mod_msg_types type = *(enum mod_msg_types *)msg->ps_msg->message
 #define M_PUB(topic, ptr)       m_publish(topic, ptr, sizeof(*ptr), false);
+
+/** Log Macros **/
+
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+
+#define DEBUG(msg, ...) if (conf.verbose) log_message(__FILENAME__, __LINE__, 'D', msg, ##__VA_ARGS__)
+#define INFO(msg, ...) log_message(__FILENAME__, __LINE__, 'I', msg, ##__VA_ARGS__)
+#define WARN(msg, ...) log_message(__FILENAME__, __LINE__, 'W', msg, ##__VA_ARGS__)
+/* ERROR macro will leave clight by calling longjmp */
+#define ERROR(msg, ...) \
+do { \
+    log_message(__FILENAME__, __LINE__, 'E', msg, ##__VA_ARGS__); \
+    longjmp(state.quit_buf, ERR_QUIT); \
+} while (0)
+
+/** Generic Enums **/
 
 /*
  * List of states clight can be through: 
@@ -61,97 +59,104 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
 
 /* Quit values */
-enum quit_values { NORM_QUIT = 1, ERR_QUIT };
+enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };
 
+/* PowerManagement states */
 enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON };
 
+/* Dimming transition states */
 enum dim_trans { ENTER, EXIT, SIZE_DIM };
 
+/* Type of pubsub messages */
 enum mod_msg_types { 
-    LOCATION_UPDATE, UPOWER_UPDATE, INHIBIT_UPDATE, CURRENT_BL, 
-    DISPLAY_UPDATE, INTERFACE_TEMP, TIMEOUT_UPDATE, 
-    TIME_UPDATE, EVENT_UPDATE, TEMP_UPDATE, DO_CAPTURE,
-    CURVE_UPDATE, AUTOCALIB_UPD, CURRENT_KBD_BL, AMBIENT_BR, 
+    LOCATION_UPDATE, UPOWER_UPDATE, INHIBIT_UPDATE, 
+    DISPLAY_UPDATE, TIME_UPDATE, EVENT_UPDATE, 
+    TEMP_UPDATE, INTERFACE_TEMP, TIMEOUT_UPDATE,
+    DO_CAPTURE, CURVE_UPDATE, AUTOCALIB_UPD, 
+    AMBIENT_BR, CURRENT_BL, CURRENT_KBD_BL,
     PAUSE_UPD, RESUME_UPD
 };
 
-/* Struct that holds data about a geographic location */
 struct location {
     double lat;
     double lon;
 };
 
+/** PubSub messages **/
+
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* LOCATION_UPDATE */ 
     struct location old;
     struct location new;
 } loc_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* UPOWER_UPDATE */
     enum ac_states old;
     enum ac_states new;
 } upower_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* INHIBIT_UPDATE */
     enum pm_states old;
     enum pm_states new;
 } inhibit_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* DISPLAY_UPDATE */
     enum display_states old;
     enum display_states new;
 } display_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* TIME_UPDATE */
     enum states old;
     enum states new;
 } time_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* EVENT_UPDATE */
     enum events old;
     enum events new;
 } evt_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* TEMP_UPDATE/INTERFACE_TEMP */
     int old;
     int new;
 } temp_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* TIMEOUT_UPDATE */
     int old;
     int new;
 } timeout_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* DO_CAPTURE */
 } capture_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* CURVE_UPDATE */
     enum ac_states state;
 } curve_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* AUTOCALIB_UPD */
     int old;
     int new;
 } calib_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* AMBIENT_BR/CURRENT_BL/CURRENT_KBD_BL */
     double curr;
 } bl_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    enum mod_msg_types type; /* PAUSE_UPD/RESUME_UPD */
 } state_upd;
+
+/** Generic structs **/
 
 /* Struct that holds global config as passed through cmdline args/config file reading */
 struct config {
@@ -212,5 +217,46 @@ struct state {
     char version[32];                       // Clight version
 };
 
+/** Topics data **/
+
+/* INHIBIT topics */
+extern const char *inh_topic;                       // Topic emitted on new PM inhibit state
+
+/* UPOWER topics */
+extern const char *up_topic;                        // Topic emitted on UPower state change
+
+/* LOCATION topics */
+extern const char *loc_topic;                       // Topic emitted on new location received
+
+/* BACKLIGHT topics */
+extern const char *current_bl_topic;                // Topic emitted on current backlight level change
+extern const char *current_kbd_topic;               // Topic emitted on current keyboard backlight level change
+extern const char *current_ab_topic;                // Topic emitted on current ambient brightness change
+
+/* DIMMER/DPMS topics */
+extern const char *display_topic;                   // Topic emitted on display state changes
+
+/* INTERFACE topics */
+extern const char *interface_temp_topic;            // Topic emitted to change current GAMMA temperature
+extern const char *interface_dimmer_to_topic;       // Topic emitted to change current DIMMER timeouts
+extern const char *interface_dpms_to_topic;         // Topic emitted to change currentDPMS timeouts
+extern const char *interface_bl_to_topic;           // Topic emitted to change current BACKLIG HT timeouts
+extern const char *interface_bl_capture;            // Topic emitted to require an autocalib to BACKLIGHT
+extern const char *interface_bl_curve;              // Topic emitted to update BACKLIGHT curve for given ac state
+extern const char *interface_bl_autocalib;          // Topic emitted to pause/resume automatic calibratio for BACKLIGHT
+
+/* GAMMA topics */
+extern const char *time_topic;                      // Topic emitted on time changed, ie: DAY -> NIGHT or NIGHT -> DAY
+extern const char *evt_topic;                       // Topic emitted for InEvent changes
+extern const char *sunrise_topic;                   // Topic emitted on new sunrise time
+extern const char *sunset_topic;                    // Topic emitted on new sunset time
+extern const char *temp_topic;                      // Topic emitted on new temp set
+
+/** Global state and config data **/
+
 extern struct state state;
 extern struct config conf;
+
+/** Log function declaration **/
+
+void log_message(const char *filename, int lineno, const char type, const char *log_msg, ...);

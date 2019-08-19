@@ -1,6 +1,8 @@
 #include <my_math.h>
 #include <bus.h>
 
+#define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
+
 static void check_gamma(void);
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
 static void check_next_event(const time_t *now);

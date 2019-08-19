@@ -86,7 +86,17 @@ Annullato (core dump creato)
 - [x] FIX: fix memleaks!
 - [x] FIX: interface Version and ClightdVersion properties
 - [x] FIX: state.ac_state should be -1 on start and various modules should wait on it (same as state.time) -> BACKLIGHT, DIMMER, DPMS
+- [x] Cleanup includes
 - [ ] Test test test test test teeeeest
+
+#### Support user supplied modules runtime loading
+- [x] Load modules from XDG_DATA_HOME/clight/modules.d/
+- [x] Supply a skeleton module to be used as example
+- [x] Support global user modules (/usr/share/clight/modules.d ?)
+- [ ] Provide a working module in wiki pages to switch user theme on SUNRISE/SUNSET events
+- [x] Install commons.h in /usr/include/clight/
+- [x] move topics in commons.h
+- [x] Move log.h functions too, so users can log into clight's log
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options

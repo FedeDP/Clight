@@ -1,5 +1,6 @@
 #pragma once
 
+#include <systemd/sd-bus.h>
 #include <timer.h>
     
 /* Bus types */

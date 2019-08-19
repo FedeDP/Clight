@@ -3,9 +3,6 @@
 
 static void init_config_file(enum CONFIG file, char *filename);
 
-/*
- * Use getpwuid to get user home dir
- */
 static void init_config_file(enum CONFIG file, char *filename) {
     switch (file) {
         case LOCAL:

@@ -21,14 +21,17 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#include <module/modules_easy.h>
 #include <opts.h>
 #include <bus.h>
+#include <log.h>
+#include <glob.h>
 
 static int init(int argc, char *argv[]);
 static void init_state(void);
 static void sigsegv_handler(int signum);
 static int check_clightd_version(void);
+static void init_user_mod_path(enum CONFIG file, char *filename);
+static void load_user_modules(enum CONFIG file);
 
 struct state state = {0};
 struct config conf = {0};
@@ -67,10 +70,20 @@ static int init(int argc, char *argv[]) {
      * a debug message before dying
      */
     signal(SIGSEGV, sigsegv_handler);
+    
+    /* Load user custom modules */
+    load_user_modules(LOCAL); // local modules have higher priority
+    load_user_modules(GLOBAL);
+    
+    /* Init conf and state */
     init_opts(argc, argv);
     init_state();
+    
+    /* Init log file */
     open_log();
     log_conf();
+    
+    /* Check Clightd version */
     return check_clightd_version();
 }
 
@@ -121,4 +134,38 @@ static int check_clightd_version(void) {
         }
     }
     return ret;
+}
+
+static void init_user_mod_path(enum CONFIG file, char *filename) {
+    switch (file) {
+        case LOCAL:
+            if (getenv("XDG_DATA_HOME")) {
+                snprintf(filename, PATH_MAX, "%s/clight/modules.d/*", getenv("XDG_DATA_HOME"));
+            } else {
+                snprintf(filename, PATH_MAX, "%s/.local/share/clight/modules.d/*", getpwuid(getuid())->pw_dir);
+            }
+            break;
+        case GLOBAL:
+            snprintf(filename, PATH_MAX, "%s/modules.d/*", DATADIR);
+            break;
+        default:
+            break;
+    }    
+}
+
+static void load_user_modules(enum CONFIG file) {
+    char modules_path[PATH_MAX + 1];
+    init_user_mod_path(file, modules_path);
+    
+    glob_t gl = {0};
+    if (glob(modules_path, GLOB_NOSORT | GLOB_ERR, NULL, &gl) == 0) {
+        for (int i = 0; i < gl.gl_pathc; i++) {
+            if (m_load(gl.gl_pathv[i]) == MOD_OK) {
+                INFO("'%s' loaded.\n", gl.gl_pathv[i]);
+            } else {
+                WARN("'%s' failed to load.\n", gl.gl_pathv[i]);
+            }
+        }
+        globfree(&gl);
+    }
 }

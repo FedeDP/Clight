@@ -11,7 +11,9 @@ find_package(PkgConfig)
 # Options
 set(CLIGHT_CONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
     CACHE FILEPATH "Path for config file")
-
+    
+set(CLIGHT_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/clight"
+    CACHE FILEPATH "Path for config file")
 
 # Create program target
 file(GLOB_RECURSE SOURCES src/*.c)
@@ -27,6 +29,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     -D_GNU_SOURCE
     -DVERSION="${PROJECT_VERSION}"
     -DCONFDIR="${CLIGHT_CONFDIR}"
+    -DDATADIR="${CLIGHT_DATADIR}"
 )
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
 
@@ -57,15 +60,19 @@ list(APPEND COMBINED_LDFLAGS ${LOGIN_LIBS_LDFLAGS})
 # Convert ld flag list from list to space separated string.
 string(REPLACE ";" " " COMBINED_LDFLAGS "${COMBINED_LDFLAGS}")
 
+set(PUBLIC_H src/commons.h)
+
 # Set the LDFLAGS target property
 set_target_properties(
     ${PROJECT_NAME} PROPERTIES
-    LINK_FLAGS "${COMBINED_LDFLAGS}"
+    LINK_FLAGS "${COMBINED_LDFLAGS} -rdynamic"
+    PUBLIC_HEADER "${PUBLIC_H}"
 )
 
 # Installation of targets (must be before file configuration to work)
 install(TARGETS ${PROJECT_NAME}
-        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clight)
 
 # Configure files with install paths
 set(EXTRA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Extra")
@@ -86,13 +93,15 @@ install(FILES ${EXTRA_DIR}/desktop/clight.desktop
         DESTINATION /etc/xdg/autostart)
 install(FILES ${EXTRA_DIR}/desktop/clightc.desktop
         DESTINATION /usr/share/applications)
-
+install(FILES ${EXTRA_DIR}/icons/clight.svg
+        DESTINATION /usr/share/icons/hicolor/scalable/apps)
+install(FILES ${EXTRA_DIR}/module.skel
+        DESTINATION ${CLIGHT_DATADIR})
 if (COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/clight
             DESTINATION ${COMPLETIONS_DIR})
 endif()
-install(FILES ${EXTRA_DIR}/icons/clight.svg
-        DESTINATION /usr/share/icons/hicolor/scalable/apps)
+
 
 #
 # Packaging support

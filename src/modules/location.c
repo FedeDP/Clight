@@ -1,6 +1,9 @@
 #include <my_math.h>
 #include <bus.h>
 
+#define LOC_TIME_THRS 600                   // time threshold (seconds) before triggering location changed events (10mins)
+#define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
+
 static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);

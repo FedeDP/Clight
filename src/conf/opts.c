@@ -1,7 +1,5 @@
-#include <config.h>
 #include <opts.h>
 #include <popt.h>
-#include "commons.h"
 
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
 static void check_conf(void);

@@ -106,7 +106,7 @@ static const sd_bus_vtable conf_to_vtable[] = {
 
 static inhibit_upd inhibit_msg = { INHIBIT_UPDATE };
 static timeout_upd to_msg = { TIMEOUT_UPDATE };
-static temp_upd temp_msg = { TEMP_UPDATE };
+static temp_upd temp_msg = { INTERFACE_TEMP };
 static capture_upd capture_msg = { DO_CAPTURE };
 static curve_upd curve_msg = { CURVE_UPDATE };
 static calib_upd calib_msg = { AUTOCALIB_UPD };
