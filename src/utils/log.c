@@ -28,6 +28,8 @@ void log_conf(void) {
 
         fprintf(log_file, "Clight\n");
         fprintf(log_file, "* Software version:\t\t%s\n", VERSION);
+        fprintf(log_file, "* Global config dir:\t\t%s\n", CONFDIR);
+        fprintf(log_file, "* Global data dir:\t\t%s\n", DATADIR);
         fprintf(log_file, "* Starting time:\t\t%s\n", ctime(&t));
         fprintf(log_file, "Starting options:\n");
         fprintf(log_file, "\n### Generic ###\n");

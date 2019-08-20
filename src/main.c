@@ -71,10 +71,6 @@ static int init(int argc, char *argv[]) {
      */
     signal(SIGSEGV, sigsegv_handler);
     
-    /* Load user custom modules */
-    load_user_modules(LOCAL); // local modules have higher priority
-    load_user_modules(GLOBAL);
-    
     /* Init conf and state */
     init_opts(argc, argv);
     init_state();
@@ -82,6 +78,17 @@ static int init(int argc, char *argv[]) {
     /* Init log file */
     open_log();
     log_conf();
+    
+    /* 
+     * Load user custom modules after opening log (thus this information is logged).
+     * Note that local (ie: placed in $HOME) modules have higher priority,
+     * thus one can override a global module (placed in /usr/share/clight/modules.d/)
+     * by creating a module with same name in $HOME.
+     * 
+     * Clight internal modules cannot be overriden.
+     */
+    load_user_modules(LOCAL);
+    load_user_modules(GLOBAL);
     
     /* Check Clightd version */
     return check_clightd_version();
@@ -91,7 +98,7 @@ static void init_state(void) {
     strncpy(state.version, VERSION, sizeof(state.version));
     memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
     if (!conf.no_gamma) {
-        /* Initial value -> undefined; only if GAMMA is enabled, else assume DAY */
+        /* Initial value -> undefined; if GAMMA is disabled instead assume DAY */
         state.time = -1;
     } else {
         state.time = DAY;

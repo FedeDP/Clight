@@ -95,6 +95,7 @@ install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
 install(FILES ${EXTRA_DIR}/module.skel
         DESTINATION ${CLIGHT_DATADIR})
+install(DIRECTORY DESTINATION ${CLIGHT_DATADIR}/modules.d/)
 if (COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/clight
             DESTINATION ${COMPLETIONS_DIR})
