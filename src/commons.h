@@ -13,7 +13,8 @@
 
 #define CLIGHTD_SERVICE "org.clightd.clightd"
 
-#define SIZE_POINTS 11                      // number of points (from 0 to 10 included)
+#define MAX_SIZE_POINTS 50                  // max number of points used for polynomial regression
+#define DEF_SIZE_POINTS 11                  // default number of points used for polynomial regression
 #define DEGREE 3                            // number of parameters for polynomial regression
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
 #define LAT_UNDEFINED 91.0                  // Undefined (ie: unset) value for latitude
@@ -168,7 +169,8 @@ struct config {
     struct location loc;                    // user location as loaded by config
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
-    double regression_points[SIZE_AC][SIZE_POINTS];  // points used for regression through libgsl
+    double regression_points[SIZE_AC][MAX_SIZE_POINTS];  // points used for regression through libgsl
+    int num_points[SIZE_AC];                // number of points currently used for polynomial regression
     int dimmer_timeout[SIZE_AC];            // dimmer timeout
     double dimmer_pct;                      // pct of max backlight to be used while dimming
     int dpms_timeout[SIZE_AC];              // dpms timeouts

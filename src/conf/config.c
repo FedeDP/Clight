@@ -108,9 +108,12 @@ int read_config(enum CONFIG file, char *config_file) {
         }
         
         /* Load regression points for backlight curve */
+        int len;
         if ((points = config_setting_get_member(root, "ac_backlight_regression_points"))) {
-            if (config_setting_length(points) == SIZE_POINTS) {
-                for (int i = 0; i < SIZE_POINTS; i++) {
+            len = config_setting_length(points);
+            if (len <= MAX_SIZE_POINTS) {
+                conf.num_points[ON_AC] = len;
+                for (int i = 0; i < len; i++) {
                     conf.regression_points[ON_AC][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
@@ -120,8 +123,10 @@ int read_config(enum CONFIG file, char *config_file) {
 
         /* Load regression points for backlight curve */
         if ((points = config_setting_get_member(root, "batt_backlight_regression_points"))) {
-            if (config_setting_length(points) == SIZE_POINTS) {
-                for (int i = 0; i < SIZE_POINTS; i++) {
+            len = config_setting_length(points);
+            if (len <= MAX_SIZE_POINTS) {
+                conf.num_points[ON_BATTERY] = len;
+                for (int i = 0; i < len; i++) {
                     conf.regression_points[ON_BATTERY][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
@@ -287,12 +292,12 @@ int store_config(enum CONFIG file) {
 
     /* -1 here below means append to end of array */
     setting = config_setting_add(root, "ac_backlight_regression_points", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_POINTS; i++) {
+    for (int i = 0; i < conf.num_points[ON_AC]; i++) {
         config_setting_set_float_elem(setting, -1, conf.regression_points[ON_AC][i]);
     }
 
     setting = config_setting_add(root, "batt_backlight_regression_points", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_POINTS; i++) {
+    for (int i = 0; i < conf.num_points[ON_BATTERY]; i++) {
         config_setting_set_float_elem(setting, -1, conf.regression_points[ON_BATTERY][i]);
     }
 

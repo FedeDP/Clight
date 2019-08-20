@@ -21,6 +21,9 @@
 #### Ambient-brightness-based gamma
 - [x] Fix #61
 
+#### Increment points size for backlight curve
+- [x] Fix #95
+
 #### DPMS
 - [x] Dpms should be a special case of screen dimming, ie: a Clightd.Idle client that waits on a timeout, and when IDLE signal is sent, it should switch off screen.
 - [x] Modules should hook on "Dpms" prop and stop working? Just like "Dimmed" property!

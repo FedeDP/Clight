@@ -232,11 +232,17 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
 
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error) {
-    return sd_bus_message_append_array(reply, 'd', userdata, SIZE_POINTS * sizeof(double));
+    
+    enum ac_states st = ON_AC;
+    if (userdata == conf.regression_points[ON_BATTERY]) {
+        st = ON_BATTERY;
+    }
+    return sd_bus_message_append_array(reply, 'd', userdata, conf.num_points[st] * sizeof(double));
 }
 
 static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
+
     const double *data = NULL;
     size_t length;
     int r = sd_bus_message_read_array(value, 'd', (const void**) &data, &length);
@@ -244,7 +250,7 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
         WARN("INTERFACE: Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-    if (length / sizeof(double) != SIZE_POINTS) {
+    if (length / sizeof(double) > MAX_SIZE_POINTS) {
         WARN("INTERFACE: Wrong parameters.\n");
         sd_bus_error_set_const(error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         r = -EINVAL;
@@ -255,6 +261,7 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
             curve_msg.state = ON_BATTERY;
         }
         memcpy(conf.regression_points[curve_msg.state], data, length);
+        conf.num_points[curve_msg.state] = length / sizeof(double);
         m_publish(interface_bl_curve, &curve_msg, sizeof(curve_upd), false);
     }
     return r;

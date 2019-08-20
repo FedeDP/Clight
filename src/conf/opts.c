@@ -56,12 +56,14 @@ void init_opts(int argc, char *argv[]) {
      * Where X is ambient brightness and Y is backlight level.
      * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
      */
+    conf.num_points[ON_AC] = DEF_SIZE_POINTS;
+    conf.num_points[ON_BATTERY] = DEF_SIZE_POINTS;
     memcpy(conf.regression_points[ON_AC],
            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
-           SIZE_POINTS * sizeof(double));
+           DEF_SIZE_POINTS * sizeof(double));
     memcpy(conf.regression_points[ON_BATTERY],
            (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
-           SIZE_POINTS * sizeof(double));
+           DEF_SIZE_POINTS * sizeof(double));
 
     char conf_file[PATH_MAX + 1] = {0};
     
@@ -260,27 +262,30 @@ static void check_conf(void) {
 
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */
-    for (i = 0; i < SIZE_POINTS && !reg_points_batt_needed && !reg_points_ac_needed; i++) {
-        if (!reg_points_ac_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
+    for (i = 0; i < conf.num_points[ON_AC] && !reg_points_ac_needed; i++) {
+        if (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0) {
             reg_points_ac_needed = 1;
         }
-
-        if (!reg_points_batt_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
+    }
+    for (i = 0; i < conf.num_points[ON_BATTERY] && !reg_points_batt_needed; i++) {
+        if (conf.regression_points[ON_BATTERY][i] < 0.0 || conf.regression_points[ON_BATTERY][i] > 1.0) {
             reg_points_batt_needed = 1;
         }
-
     }
+    
     if (reg_points_ac_needed) {
         WARN("Wrong ac_regression points. Resetting default values.\n");
+        conf.num_points[ON_AC] = DEF_SIZE_POINTS;
         memcpy(conf.regression_points[ON_AC],
                (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
-               SIZE_POINTS * sizeof(double));
+               DEF_SIZE_POINTS * sizeof(double));
     }
     if (reg_points_batt_needed) {
         WARN("Wrong batt_regression points. Resetting default values.\n");
+        conf.num_points[ON_BATTERY] = DEF_SIZE_POINTS;
         memcpy(conf.regression_points[ON_BATTERY],
                (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
-               SIZE_POINTS * sizeof(double));
+               DEF_SIZE_POINTS * sizeof(double));
     }
 
     for (i = 0; i < SIZE_EVENTS; i++) {
