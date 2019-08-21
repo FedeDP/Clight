@@ -150,7 +150,7 @@ typedef struct {
 } calib_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* AMBIENT_BR/CURRENT_BL/CURRENT_KBD_BL */
+    enum mod_msg_types type; /* AMBIENT_BR/CURRENT_BL/CURRENT_KBD_BL/CURRENT_SCR_BL */
     double curr;
 } bl_upd;
 
@@ -251,15 +251,15 @@ extern const char *current_ab_topic;                // Topic emitted on current 
 extern const char *display_topic;                   // Topic emitted on display state changes (ON, DIMMED, OFF)
 
 /* INTERFACE topics */
-extern const char *interface_temp_topic;            // Topic emitted to trigger a change to current GAMMA temperature
-extern const char *interface_dimmer_to_topic;       // Topic emitted to trigger a change to current DIMMER timeouts
-extern const char *interface_dpms_to_topic;         // Topic emitted to trigger a change to current DPMS timeouts
-extern const char *interface_scr_to_topic;          // Topic emitted to trigger a change to current SCREEN timeouts
-extern const char *interface_bl_to_topic;           // Topic emitted to trigger a change to current BACKLIGHT timeouts
-extern const char *interface_bl_capture;            // Topic emitted to require a quick calibration to BACKLIGHT
-extern const char *interface_bl_curve;              // Topic emitted to trigger an update to BACKLIGHT curve for given ac state
-extern const char *interface_bl_autocalib;          // Topic emitted to pause/resume automatic calibration for BACKLIGHT
-extern const char *interface_scr_contrib;           // Topic emitted to set new SCREEN contrib value
+extern const char *interface_temp_topic;            // Topic emitted by INTERFACE to trigger a change to current GAMMA temperature
+extern const char *interface_dimmer_to_topic;       // Topic emitted by INTERFACE to trigger a change to current DIMMER timeouts
+extern const char *interface_dpms_to_topic;         // Topic emitted by INTERFACE to trigger a change to current DPMS timeouts
+extern const char *interface_scr_to_topic;          // Topic emitted by INTERFACE to trigger a change to current SCREEN timeouts
+extern const char *interface_bl_to_topic;           // Topic emitted by INTERFACE to trigger a change to current BACKLIGHT timeouts
+extern const char *interface_bl_capture;            // Topic emitted by INTERFACE to require a quick calibration to BACKLIGHT
+extern const char *interface_bl_curve;              // Topic emitted by INTERFACE to trigger an update to BACKLIGHT curve for given ac state
+extern const char *interface_bl_autocalib;          // Topic emitted by INTERFACE to pause/resume automatic calibration for BACKLIGHT
+extern const char *interface_scr_contrib;           // Topic emitted by INTERFACE to set new SCREEN contrib value
 
 /* GAMMA topics */
 extern const char *time_topic;                      // Topic emitted on time changed, ie: DAY -> NIGHT or NIGHT -> DAY
