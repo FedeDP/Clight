@@ -33,8 +33,8 @@ static int check_clightd_version(void);
 static void init_user_mod_path(enum CONFIG file, char *filename);
 static void load_user_modules(enum CONFIG file);
 
-struct state state = {0};
-struct config conf = {0};
+state_t state = {0};
+conf_t conf = {0};
 
 /* Every module needs these; let's init them before any module */
 void modules_pre_start(void) {
@@ -96,7 +96,7 @@ static int init(int argc, char *argv[]) {
 
 static void init_state(void) {
     strncpy(state.version, VERSION, sizeof(state.version));
-    memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
+    memcpy(&state.current_loc, &conf.loc, sizeof(loc_t));
     if (!conf.no_gamma) {
         /* Initial value -> undefined; if GAMMA is disabled instead assume DAY */
         state.time = -1;

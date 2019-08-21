@@ -75,21 +75,20 @@ enum mod_msg_types {
     TEMP_UPD, INTERFACE_TEMP, TIMEOUT_UPD,
     DO_CAPTURE, CURVE_UPD, AUTOCALIB_UPD, 
     AMBIENT_BR, CURRENT_BL, CURRENT_KBD_BL,
-    CURRENT_SCR_BL, PAUSE_UPD, RESUME_UPD,
-    CONTRIB_UPD
+    CURRENT_SCR_BL, CONTRIB_UPD
 };
 
-struct location {
+typedef struct {
     double lat;
     double lon;
-};
+} loc_t;
 
 /** PubSub Messages **/
 
 typedef struct {
     enum mod_msg_types type; /* LOCATION_UPD */ 
-    struct location old;
-    struct location new;
+    loc_t old;
+    loc_t new;
 } loc_upd;
 
 typedef struct {
@@ -155,10 +154,6 @@ typedef struct {
 } bl_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* PAUSE_UPD/RESUME_UPD, used internally by BACKLIGHT */
-} state_upd;
-
-typedef struct {
     enum mod_msg_types type; /* CONTRIB_UPD */
     double old;
     double new;
@@ -167,13 +162,13 @@ typedef struct {
 /** Generic structs **/
 
 /* Struct that holds global config as passed through cmdline args/config file reading */
-struct config {
+typedef struct {
     int num_captures;                       // number of frame captured for each screen backlight compute
     int timeout[SIZE_AC][SIZE_STATES + 1];  // timeout between captures for each ac_state and time state (day/night + during event)
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state
-    struct location loc;                    // user location as loaded by config
+    loc_t loc;                              // user location as loaded by config
     char events[SIZE_EVENTS][10];           // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     double regression_points[SIZE_AC][MAX_SIZE_POINTS];  // points used for regression through libgsl
@@ -205,10 +200,10 @@ struct config {
     int no_dpms;
     int no_inhibit;
     int no_screen;
-};
+} conf_t;
 
 /* Global state of program */
-struct state {
+typedef struct {
     int quit;                               // should we quit?
     enum states time;                       // whether it is day or night time
     int in_event;                           // Whether we are in a TIME event +- conf.event_duration
@@ -224,12 +219,12 @@ struct state {
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
     enum display_states display_state;      // current display state
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
-    struct location current_loc;            // current user location
+    loc_t current_loc;                      // current user location
     double screen_comp;                     // current screen-emitted brightness compensation
     jmp_buf quit_buf;                       // quit jump called by longjmp
     char clightd_version[32];               // Clightd found version
     char version[32];                       // Clight version
-};
+} state_t;
 
 /** PubSub Topics **/
 
@@ -273,8 +268,8 @@ extern const char *current_scr_topic;               // Topic emitted on screen-e
 
 /** Global state and config data **/
 
-extern struct state state;
-extern struct config conf;
+extern state_t state;
+extern conf_t conf;
 
 /** Log function declaration **/
 

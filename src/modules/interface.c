@@ -31,21 +31,21 @@ static const char bus_interface[] = "org.clight.clight";
 
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Version", "s", get_version, offsetof(struct state, version), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("ClightdVersion", "s", get_version, offsetof(struct state, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(struct state, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(struct state, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("Time", "i", NULL, offsetof(struct state, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(struct state, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(struct state, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("AcState", "i", NULL, offsetof(struct state, ac_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("PmState", "i", NULL, offsetof(struct state, pm_inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("CurrentBlPct", "d", NULL, offsetof(struct state, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("CurrentKbdPct", "d", NULL, offsetof(struct state, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("CurrentAmbientBr", "d", NULL, offsetof(struct state, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("CurrentTemp", "i", NULL, offsetof(struct state, current_temp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct state, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("CurrentScreenComp", "d", NULL, offsetof(struct state, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Version", "s", get_version, offsetof(state_t, version), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("ClightdVersion", "s", get_version, offsetof(state_t, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(state_t, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(state_t, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Time", "i", NULL, offsetof(state_t, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(state_t, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(state_t, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("AcState", "i", NULL, offsetof(state_t, ac_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("PmState", "i", NULL, offsetof(state_t, pm_inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentBlPct", "d", NULL, offsetof(state_t, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentKbdPct", "d", NULL, offsetof(state_t, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentAmbientBr", "d", NULL, offsetof(state_t, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentTemp", "i", NULL, offsetof(state_t, current_temp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(state_t, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentScreenComp", "d", NULL, offsetof(state_t, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
@@ -53,62 +53,62 @@ static const sd_bus_vtable clight_vtable[] = {
 
 static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("NoBacklight", "b", NULL, offsetof(struct config, no_backlight), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoGamma", "b", NULL, offsetof(struct config, no_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoDimmer", "b", NULL, offsetof(struct config, no_dimmer), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoDpms", "b", NULL, offsetof(struct config, no_dpms), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoInhibit", "b", NULL, offsetof(struct config, no_inhibit), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoScreen", "b", NULL, offsetof(struct config, no_screen), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("ScreenSamples", "i", NULL, offsetof(struct config, screen_samples), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_WRITABLE_PROPERTY("ScreenContrib", "d", NULL, set_screen_contrib, offsetof(struct config, screen_contrib), 0),
-    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(struct config, events[SUNRISE]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(struct config, events[SUNSET]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(struct config, loc), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(struct config, no_auto_calib), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(struct config, no_keyboard_bl), 0),
-    SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(struct config, ambient_gamma), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmoothBacklight", "b", NULL, NULL, offsetof(struct config, no_smooth_backlight), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerEnter", "b", NULL, NULL, offsetof(struct config, no_smooth_dimmer[ENTER]), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerExit", "b", NULL, NULL, offsetof(struct config, no_smooth_dimmer[EXIT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmoothGamma", "b", NULL, NULL, offsetof(struct config, no_smooth_gamma), 0),
-    SD_BUS_WRITABLE_PROPERTY("NumCaptures", "i", NULL, NULL, offsetof(struct config, num_captures), 0),
-    SD_BUS_WRITABLE_PROPERTY("SensorName", "s", NULL, NULL, offsetof(struct config, dev_name), 0),
-    SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(struct config, screen_path), 0),
-    SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(struct config, event_duration), 0),
-    SD_BUS_WRITABLE_PROPERTY("DimmerPct", "d", NULL, NULL, offsetof(struct config, dimmer_pct), 0),
-    SD_BUS_WRITABLE_PROPERTY("Verbose", "b", NULL, NULL, offsetof(struct config, verbose), 0),
-    SD_BUS_WRITABLE_PROPERTY("BacklightTransStep", "d", NULL, NULL, offsetof(struct config, backlight_trans_step), 0),
-    SD_BUS_WRITABLE_PROPERTY("DimmerTransStepEnter", "d", NULL, NULL, offsetof(struct config, dimmer_trans_step[ENTER]), 0),
-    SD_BUS_WRITABLE_PROPERTY("DimmerTransStepExit", "d", NULL, NULL, offsetof(struct config, dimmer_trans_step[EXIT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("GammaTransStep", "i", NULL, NULL, offsetof(struct config, gamma_trans_step), 0),
-    SD_BUS_WRITABLE_PROPERTY("BacklightTransDuration", "i", NULL, NULL, offsetof(struct config, backlight_trans_timeout), 0),
-    SD_BUS_WRITABLE_PROPERTY("GammaTransDuration", "i", NULL, NULL, offsetof(struct config, gamma_trans_timeout), 0),
-    SD_BUS_WRITABLE_PROPERTY("DimmerTransDurationEnter", "i", NULL, NULL, offsetof(struct config, dimmer_trans_timeout[ENTER]), 0),
-    SD_BUS_WRITABLE_PROPERTY("DimmerTransDurationExit", "i", NULL, NULL, offsetof(struct config, dimmer_trans_timeout[EXIT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(struct config, temp[DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(struct config, temp[NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcCurvePoints", "ad", get_curve, set_curve, offsetof(struct config, regression_points[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattCurvePoints", "ad", get_curve, set_curve, offsetof(struct config, regression_points[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("ShutterThreshold", "d", NULL, NULL, offsetof(struct config, shutter_threshold), 0),
-    SD_BUS_WRITABLE_PROPERTY("GammaLongTransition", "b", NULL, NULL, offsetof(struct config, gamma_long_transition), 0),
+    SD_BUS_PROPERTY("NoBacklight", "b", NULL, offsetof(conf_t, no_backlight), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoGamma", "b", NULL, offsetof(conf_t, no_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoDimmer", "b", NULL, offsetof(conf_t, no_dimmer), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoDpms", "b", NULL, offsetof(conf_t, no_dpms), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoInhibit", "b", NULL, offsetof(conf_t, no_inhibit), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoScreen", "b", NULL, offsetof(conf_t, no_screen), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("ScreenSamples", "i", NULL, offsetof(conf_t, screen_samples), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("ScreenContrib", "d", NULL, set_screen_contrib, offsetof(conf_t, screen_contrib), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(conf_t, events[SUNRISE]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(conf_t, events[SUNSET]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(conf_t, loc), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(conf_t, no_auto_calib), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(conf_t, no_keyboard_bl), 0),
+    SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(conf_t, ambient_gamma), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothBacklight", "b", NULL, NULL, offsetof(conf_t, no_smooth_backlight), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerEnter", "b", NULL, NULL, offsetof(conf_t, no_smooth_dimmer[ENTER]), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerExit", "b", NULL, NULL, offsetof(conf_t, no_smooth_dimmer[EXIT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothGamma", "b", NULL, NULL, offsetof(conf_t, no_smooth_gamma), 0),
+    SD_BUS_WRITABLE_PROPERTY("NumCaptures", "i", NULL, NULL, offsetof(conf_t, num_captures), 0),
+    SD_BUS_WRITABLE_PROPERTY("SensorName", "s", NULL, NULL, offsetof(conf_t, dev_name), 0),
+    SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(conf_t, screen_path), 0),
+    SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(conf_t, event_duration), 0),
+    SD_BUS_WRITABLE_PROPERTY("DimmerPct", "d", NULL, NULL, offsetof(conf_t, dimmer_pct), 0),
+    SD_BUS_WRITABLE_PROPERTY("Verbose", "b", NULL, NULL, offsetof(conf_t, verbose), 0),
+    SD_BUS_WRITABLE_PROPERTY("BacklightTransStep", "d", NULL, NULL, offsetof(conf_t, backlight_trans_step), 0),
+    SD_BUS_WRITABLE_PROPERTY("DimmerTransStepEnter", "d", NULL, NULL, offsetof(conf_t, dimmer_trans_step[ENTER]), 0),
+    SD_BUS_WRITABLE_PROPERTY("DimmerTransStepExit", "d", NULL, NULL, offsetof(conf_t, dimmer_trans_step[EXIT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("GammaTransStep", "i", NULL, NULL, offsetof(conf_t, gamma_trans_step), 0),
+    SD_BUS_WRITABLE_PROPERTY("BacklightTransDuration", "i", NULL, NULL, offsetof(conf_t, backlight_trans_timeout), 0),
+    SD_BUS_WRITABLE_PROPERTY("GammaTransDuration", "i", NULL, NULL, offsetof(conf_t, gamma_trans_timeout), 0),
+    SD_BUS_WRITABLE_PROPERTY("DimmerTransDurationEnter", "i", NULL, NULL, offsetof(conf_t, dimmer_trans_timeout[ENTER]), 0),
+    SD_BUS_WRITABLE_PROPERTY("DimmerTransDurationExit", "i", NULL, NULL, offsetof(conf_t, dimmer_trans_timeout[EXIT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(conf_t, temp[DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(conf_t, temp[NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcCurvePoints", "ad", get_curve, set_curve, offsetof(conf_t, regression_points[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattCurvePoints", "ad", get_curve, set_curve, offsetof(conf_t, regression_points[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("ShutterThreshold", "d", NULL, NULL, offsetof(conf_t, shutter_threshold), 0),
+    SD_BUS_WRITABLE_PROPERTY("GammaLongTransition", "b", NULL, NULL, offsetof(conf_t, gamma_long_transition), 0),
     SD_BUS_METHOD("Store", NULL, NULL, method_store_conf, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
 static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("AcDayCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcNightCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_AC][SIZE_STATES]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDayCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattNightCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(struct config, timeout[ON_BATTERY][SIZE_STATES]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDpms", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDpms", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeout[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcScreen", "i", NULL, set_timeouts, offsetof(struct config, screen_timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattScreen", "i", NULL, set_timeouts, offsetof(struct config, screen_timeout[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDayCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_AC][DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcNightCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_AC][NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_AC][SIZE_STATES]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDayCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_BATTERY][DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattNightCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_BATTERY][NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_BATTERY][SIZE_STATES]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDimmer", "i", NULL, set_timeouts, offsetof(conf_t, dimmer_timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_timeouts, offsetof(conf_t, dimmer_timeout[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDpms", "i", NULL, set_timeouts, offsetof(conf_t, dpms_timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDpms", "i", NULL, set_timeouts, offsetof(conf_t, dpms_timeout[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcScreen", "i", NULL, set_timeouts, offsetof(conf_t, screen_timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattScreen", "i", NULL, set_timeouts, offsetof(conf_t, screen_timeout[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -280,13 +280,13 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
 
 static int get_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error) {
-    struct location *l = (struct location *)userdata;
+    loc_t *l = (loc_t *)userdata;
     return sd_bus_message_append(reply, "(dd)", l->lat, l->lon);
 }
 
 static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    struct location *l = (struct location *)userdata;
+    loc_t *l = (loc_t *)userdata;
     loc_msg.old = *l;
     sd_bus_message_read(value, "(dd)", &l->lat, &l->lon);
     
@@ -296,7 +296,7 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
         /* Only if different from current one */
         if (state.current_loc.lat != l->lat && state.current_loc.lon != l->lon) {
             loc_msg.new = *l;
-            memcpy(&state.current_loc, l, sizeof(struct location));
+            memcpy(&state.current_loc, l, sizeof(loc_t));
             M_PUB(loc_topic, &loc_msg);
         }
         return 0;

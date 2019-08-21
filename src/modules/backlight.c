@@ -23,13 +23,12 @@ static void resume_mod(void);
 static int sensor_available;
 static int max_kbd_backlight;
 static int bl_fd;
+static int paused;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
 static sd_bus_slot *slot;
 
 static bl_upd bl_msg = { CURRENT_BL };
 static bl_upd kbd_msg = { CURRENT_KBD_BL };
 static bl_upd amb_msg = { AMBIENT_BR };
-static state_upd pause_msg = { PAUSE_UPD };
-static state_upd resume_msg = { RESUME_UPD };
 
 const char *current_bl_topic = "CurrentBlPct";
 const char *current_kbd_topic = "CurrentKbdPct";
@@ -64,17 +63,12 @@ static void init(void) {
     sensor_available = is_sensor_available();
     
     bl_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    
-    /* When no_auto_calib is true or no sensor is available, start paused */
-    if (sensor_available && !conf.no_auto_calib) {
-        m_register_fd(bl_fd, false, NULL);
-    } else {
-        if (!sensor_available) {
-            m_become(paused);
-        }
-        if (conf.no_auto_calib) {
-            m_become(paused);
-        }
+    m_register_fd(bl_fd, false, NULL);
+    if (!sensor_available) {
+        pause_mod();
+    }
+    if (conf.no_auto_calib) {
+        pause_mod();
     }
 }
 
@@ -129,9 +123,6 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case AUTOCALIB_UPD:
                 interface_autocalib_callback();
                 break;
-            case RESUME_UPD:
-                m_register_fd(bl_fd, false, NULL);
-                break;
             default:
                 break;
         }
@@ -139,6 +130,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
 }
 
 static void receive_paused(const msg_t *const msg, const void* userdata) {
+    /* In paused state we have deregistered our fd, thus we can only receive PubSub messages */
     if (msg->ps_msg->type == USER) {
         MSG_TYPE();
         switch (type) {
@@ -158,10 +150,6 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
                 break;
             case AUTOCALIB_UPD:
                 interface_autocalib_callback();
-                break;
-            case PAUSE_UPD:                
-                /* Properly deregister our fd while paused */
-                m_deregister_fd(bl_fd);
                 break;
             default:
                 break;
@@ -335,11 +323,16 @@ static inline int get_current_timeout(void) {
 }
 
 static void pause_mod(void) {
-    m_become(paused);
-    m_tell(self(), &pause_msg, sizeof(state_upd), false);
+    if (++paused == 1) {
+        m_become(paused);
+        /* Properly deregister our fd while paused */
+        m_deregister_fd(bl_fd);
+    }
 }
 
 static void resume_mod(void) {
-    m_unbecome();
-    m_tell(self(), &resume_msg, sizeof(state_upd), false);
+    if (--paused == 0) {
+        m_unbecome();
+        m_register_fd(bl_fd, false, NULL);
+    }
 }
