@@ -13,7 +13,7 @@ MODULE("UPOWER");
 
 static void init(void) {
     if (upower_init() != 0) {
-        WARN("UPOWER: Failed to init.\n");
+        WARN("Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -46,7 +46,7 @@ static int upower_check(void) {
         /* Upower not available, for now. Let's assume ON_AC! */
         state.ac_state = ON_AC;
     } else {
-        INFO("UPOWER: Initial AC state: %s.\n", state.ac_state == ON_AC ? "connected" : "disconnected");
+        INFO("Initial AC state: %s.\n", state.ac_state == ON_AC ? "connected" : "disconnected");
     }
     return -(r < 0);
 }
@@ -74,7 +74,7 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
     int old_ac_state = state.ac_state;
     int r = get_property(&args, "b", &state.ac_state, sizeof(state.ac_state));
     if (!r && old_ac_state != state.ac_state) {
-        INFO(state.ac_state ? "UPOWER: AC cable disconnected. Powersaving mode enabled.\n" : "UPOWER: Ac cable connected. Powersaving mode disabled.\n");
+        INFO(state.ac_state ? "AC cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
         upower_msg.old = old_ac_state;
         upower_msg.new = state.ac_state;
         M_PUB(up_topic, &upower_msg);

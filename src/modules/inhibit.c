@@ -13,7 +13,7 @@ MODULE("INHIBIT");
 
 static void init(void) {
     if (inhibit_init() != 0) {
-        WARN("INHIBIT: Failed to init.\n");
+        WARN("Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -65,7 +65,7 @@ static int on_inhibit_change(__attribute__((unused)) sd_bus_message *m, void *us
             state.pm_inhibited &= ~PM_ON;
         }
         if (old_inhibited != state.pm_inhibited) {
-            INFO("INHIBIT: PowerManagement inhibition %s by freedesktop.PowerManagement.\n", state.pm_inhibited ? "enabled" : "disabled");
+            INFO("PowerManagement inhibition %s by freedesktop.PowerManagement.\n", state.pm_inhibited ? "enabled" : "disabled");
             inh_msg.old = old_inhibited;
             inh_msg.new = state.pm_inhibited;
             M_PUB(inh_topic, &inh_msg);

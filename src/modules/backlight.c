@@ -173,9 +173,9 @@ static void init_kbd_backlight(void) {
     SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
     int r = call(&max_kbd_backlight, "i", &kbd_args, NULL);
     if (r) {
-        INFO("BACKLIGHT: Keyboard backlight calibration unsupported.\n");
+        INFO("Keyboard backlight calibration unsupported.\n");
     } else {
-        INFO("BACKLIGHT: Keyboard backlight calibration enabled.\n");
+        INFO("Keyboard backlight calibration enabled.\n");
     }
 }
 
@@ -193,9 +193,9 @@ static void do_capture(bool reset_timer) {
         state.ambient_br -= state.screen_comp;
         if (state.ambient_br > conf.shutter_threshold) {
             set_new_backlight(state.ambient_br * 10);
-            INFO("BACKLIGHT: Ambient brightness: %.3lf (%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
+            INFO("Ambient brightness: %.3lf (%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
         } else {
-            INFO("BACKLIGHT: Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
+            INFO("Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
         }
     }
 
@@ -250,7 +250,7 @@ static int capture_frames_brightness(void) {
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
         state.ambient_br = compute_average(intensity, conf.num_captures);
-        DEBUG("BACKLIGHT: Average frames brightness: %lf.\n", state.ambient_br);
+        DEBUG("Average frames brightness: %lf.\n", state.ambient_br);
         amb_msg.curr = state.ambient_br;
         M_PUB(current_ab_topic, &amb_msg);
     }
@@ -317,10 +317,10 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
     if (new_sensor_avail != sensor_available) {
         sensor_available = new_sensor_avail;
         if (sensor_available) {
-            INFO("BACKLIGHT: Resumed as a sensor is now available.\n");
+            DEBUG("Resumed as a sensor is now available.\n");
             resume_mod();
         } else {
-            INFO("BACKLIGHT: Paused as no sensor is available.\n");
+            DEBUG("Paused as no sensor is available.\n");
             pause_mod();
         }
     }

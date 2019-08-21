@@ -43,9 +43,9 @@ static void receive(const msg_t *const msg, const void* userdata) {
 
         s = read(msg->fd_msg->fd, &fdsi, sizeof(struct signalfd_siginfo));
         if (s != sizeof(struct signalfd_siginfo)) {
-            ERROR("SIGNAL: an error occurred while getting signalfd data.\n");
+            ERROR("An error occurred while getting signalfd data.\n");
         }
-        INFO("SIGNAL: received %d. Leaving.\n", fdsi.ssi_signo);
+        INFO("Received %d. Leaving.\n", fdsi.ssi_signo);
         modules_quit(NORM_QUIT);
     }
 }

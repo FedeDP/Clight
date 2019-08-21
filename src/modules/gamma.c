@@ -108,7 +108,7 @@ static void check_gamma(void) {
         || tm_now.tm_yday != tm_old.tm_yday 
         || tm_now.tm_year != tm_old.tm_year)) {
 
-        INFO("GAMMA: Long transition ended.\n");
+        INFO("Long transition ended.\n");
         long_transitioning = 0;
     }
     
@@ -139,7 +139,7 @@ static void check_gamma(void) {
     
     /* desired gamma temp has been set. Set new GAMMA timer */
     time_t next = state.events[target_event] + event_time_range;
-    INFO("GAMMA: Next alarm due to: %s", ctime(&next));
+    INFO("Next alarm due to: %s", ctime(&next));
     set_timeout(next - t, 0, gamma_fd, 0);
     
     last_t = t;
@@ -199,7 +199,7 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
              * Assume day and set sunset 12hrs from now
              */
             state.events[SUNSET] = *now + 12 * 60 * 60;
-            WARN("GAMMA: Failed to retrieve sunrise/sunset informations.\n");
+            WARN("Failed to retrieve sunrise/sunset informations.\n");
         }
         
         evt_msg[SUNRISE].old = old_events[SUNRISE];
@@ -249,7 +249,7 @@ static void check_state(const time_t *now) {
             event_time_range = conf.event_duration; // next timer is when leaving event
         }
         state.in_event = 1;
-        DEBUG("GAMMA: Currently inside an event.\n");
+        DEBUG("Currently inside an event.\n");
     } else {
         event_time_range = -conf.event_duration; // next timer is entering next event
         state.in_event = 0;
@@ -295,9 +295,9 @@ static void set_temp(int temp, const time_t *now) {
         temp_msg.new = state.current_temp;
         M_PUB(temp_topic, &temp_msg);
         if (!long_transitioning && conf.no_smooth_gamma) {
-            INFO("GAMMA: %d gamma temp set.\n", temp);
+            INFO("%d gamma temp set.\n", temp);
         } else {
-            INFO("GAMMA: %s transition to %d gamma temp started.\n", long_transitioning ? "Long" : "Normal", temp);
+            INFO("%s transition to %d gamma temp started.\n", long_transitioning ? "Long" : "Normal", temp);
         }
     }
 }
@@ -319,7 +319,7 @@ static void location_callback(void) {
     /* Updated GAMMA module sunrise/sunset for new location */
     state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
     set_timeout(0, 1, gamma_fd, 0);
-    DEBUG("GAMMA: New position received. Updating sunrise and sunset times.\n");
+    DEBUG("New position received. Updating sunrise and sunset times.\n");
 }
 
 static void interface_callback(void) {

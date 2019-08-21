@@ -234,13 +234,13 @@ struct state {
 /** Topics data **/
 
 /* INHIBIT topics */
-extern const char *inh_topic;                       // Topic emitted on new PM inhibit state
+extern const char *inh_topic;                       // Topic emitted on new PowerManagement inhibit state
 
 /* UPOWER topics */
 extern const char *up_topic;                        // Topic emitted on UPower state change
 
 /* LOCATION topics */
-extern const char *loc_topic;                       // Topic emitted on new location received
+extern const char *loc_topic;                       // Topic emitted on new location received (both by geoclue or user-setted through bus API)
 
 /* BACKLIGHT topics */
 extern const char *current_bl_topic;                // Topic emitted on current backlight level change
@@ -248,28 +248,28 @@ extern const char *current_kbd_topic;               // Topic emitted on current 
 extern const char *current_ab_topic;                // Topic emitted on current ambient brightness change
 
 /* DIMMER/DPMS topics */
-extern const char *display_topic;                   // Topic emitted on display state changes
+extern const char *display_topic;                   // Topic emitted on display state changes (ON, DIMMED, OFF)
 
 /* INTERFACE topics */
-extern const char *interface_temp_topic;            // Topic emitted to change current GAMMA temperature
-extern const char *interface_dimmer_to_topic;       // Topic emitted to change current DIMMER timeouts
-extern const char *interface_dpms_to_topic;         // Topic emitted to change current DPMS timeouts
-extern const char *interface_scr_to_topic;          // Topic emitted to change current SCREEN timeouts
-extern const char *interface_bl_to_topic;           // Topic emitted to change current BACKLIGHT timeouts
-extern const char *interface_bl_capture;            // Topic emitted to require an autocalib to BACKLIGHT
-extern const char *interface_bl_curve;              // Topic emitted to update BACKLIGHT curve for given ac state
-extern const char *interface_bl_autocalib;          // Topic emitted to pause/resume automatic calibratio for BACKLIGHT
+extern const char *interface_temp_topic;            // Topic emitted to trigger a change to current GAMMA temperature
+extern const char *interface_dimmer_to_topic;       // Topic emitted to trigger a change to current DIMMER timeouts
+extern const char *interface_dpms_to_topic;         // Topic emitted to trigger a change to current DPMS timeouts
+extern const char *interface_scr_to_topic;          // Topic emitted to trigger a change to current SCREEN timeouts
+extern const char *interface_bl_to_topic;           // Topic emitted to trigger a change to current BACKLIGHT timeouts
+extern const char *interface_bl_capture;            // Topic emitted to require a quick calibration to BACKLIGHT
+extern const char *interface_bl_curve;              // Topic emitted to trigger an update to BACKLIGHT curve for given ac state
+extern const char *interface_bl_autocalib;          // Topic emitted to pause/resume automatic calibration for BACKLIGHT
 extern const char *interface_scr_contrib;           // Topic emitted to set new SCREEN contrib value
 
 /* GAMMA topics */
 extern const char *time_topic;                      // Topic emitted on time changed, ie: DAY -> NIGHT or NIGHT -> DAY
 extern const char *evt_topic;                       // Topic emitted for InEvent changes
-extern const char *sunrise_topic;                   // Topic emitted on new sunrise time
-extern const char *sunset_topic;                    // Topic emitted on new sunset time
+extern const char *sunrise_topic;                   // Topic emitted on new sunrise time computed
+extern const char *sunset_topic;                    // Topic emitted on new sunset time computed
 extern const char *temp_topic;                      // Topic emitted on new temp set
 
 /* SCREEN topics */
-extern const char *current_scr_topic;               // Topic emitted on screen emitted brightness change
+extern const char *current_scr_topic;               // Topic emitted on screen-emitted brightness change
 
 /** Global state and config data **/
 

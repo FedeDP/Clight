@@ -167,11 +167,11 @@ static void init(void) {
                                   &conf);
     
     if (r < 0) {
-        WARN("INTERFACE: Could not create Bus Interface: %s\n", strerror(-r));
+        WARN("Could not create Bus Interface: %s\n", strerror(-r));
     } else {
         r = sd_bus_request_name(userbus, bus_interface, 0);
         if (r < 0) {
-            WARN("INTERFACE: Failed to acquire Bus Interface name: %s\n", strerror(-r));
+            WARN("Failed to acquire Bus Interface name: %s\n", strerror(-r));
         } else {
             /* Subscribe to any topic expept ours own */
             m_subscribe("^[^Interface].*");
@@ -179,7 +179,7 @@ static void init(void) {
     }
     
     if (r < 0) {
-        WARN("INTERFACE: Failed to init.\n");
+        WARN("Failed to init.\n");
         m_poisonpill(self());
     }
 }
@@ -195,7 +195,7 @@ static bool evaluate() {
 static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->ps_msg->type == USER) {
         if (userbus) {
-            DEBUG("INTERFACE: Emitting %s property\n", msg->ps_msg->topic);
+            DEBUG("Emitting %s property\n", msg->ps_msg->topic);
             sd_bus_emit_properties_changed(userbus, object_path, bus_interface, msg->ps_msg->topic, NULL);
         }
     }
@@ -222,7 +222,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
     int inhibited;
     int r = sd_bus_message_read(m, "b", &inhibited);
     if (r < 0) {
-        WARN("INTERFACE: Failed to parse parameters: %s\n", strerror(-r));
+        WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
 
@@ -233,7 +233,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         state.pm_inhibited &= ~PM_FORCED_ON;
     }
     if (old_inhibited != state.pm_inhibited) {
-        INFO("INTERFACE: PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
+        INFO("PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
         inhibit_msg.old = old_inhibited;
         inhibit_msg.new = state.pm_inhibited;
         M_PUB(inh_topic, &inhibit_msg);
@@ -258,11 +258,11 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
     size_t length;
     int r = sd_bus_message_read_array(value, 'd', (const void**) &data, &length);
     if (r < 0) {
-        WARN("INTERFACE: Failed to parse parameters: %s\n", strerror(-r));
+        WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
     if (length / sizeof(double) > MAX_SIZE_POINTS) {
-        WARN("INTERFACE: Wrong parameters.\n");
+        WARN("Wrong parameters.\n");
         sd_bus_error_set_const(error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         r = -EINVAL;
     } else {
@@ -291,7 +291,7 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
     sd_bus_message_read(value, "(dd)", &l->lat, &l->lon);
     
     if (fabs(l->lat) <  90.0f && fabs(l->lon) < 180.0f) {
-        INFO("INTERFACE: New location from BUS api: %.2lf %.2lf\n", l->lat, l->lon);
+        INFO("New location from BUS api: %.2lf %.2lf\n", l->lat, l->lon);
         
         /* Only if different from current one */
         if (state.current_loc.lat != l->lat && state.current_loc.lon != l->lon) {
@@ -302,7 +302,7 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
         return 0;
     }
     *l = loc_msg.old;
-    INFO("INTERFACE: Wrong location set. Rejected.\n");
+    INFO("Wrong location set. Rejected.\n");
     return -EINVAL;
 }
 
@@ -313,7 +313,7 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
 
     int r = sd_bus_message_read(value, "i", userdata);
     if (r < 0) {
-        WARN("INTERFACE: Failed to parse parameters: %s\n", strerror(-r));
+        WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
     
@@ -354,7 +354,7 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
     int old_val = *(int *)userdata;
     int r = sd_bus_message_read(value, "b", userdata);    
     if (r >= 0 && old_val != *(int *)userdata) {
-        INFO("INTERFACE: Backlight autocalibration %s by bus API.\n", *(int *)userdata ? "disabled" : "enabled");
+        INFO("Backlight autocalibration %s by bus API.\n", *(int *)userdata ? "disabled" : "enabled");
         calib_msg.old = old_val;
         calib_msg.new = *(int *)userdata;
         M_PUB(interface_bl_autocalib, &calib_msg);

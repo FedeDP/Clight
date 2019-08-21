@@ -34,7 +34,7 @@ static void init(void) {
         int fd = start_timer(CLOCK_MONOTONIC, 3, 0);
         m_register_fd(fd, true, NULL);
     } else {
-        WARN("LOCATION: Failed to init.\n");
+        WARN("Failed to init.\n");
         load_cache_location();
         m_poisonpill(self());
     }
@@ -83,13 +83,13 @@ static int load_cache_location(void) {
     if (f) {
         if (fscanf(f, "%lf %lf\n", &state.current_loc.lat, &state.current_loc.lon) == 2) {
             publish_location(LAT_UNDEFINED, LON_UNDEFINED);
-            INFO("LOCATION: %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
+            INFO("%.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
             ret = 0;
         }
         fclose(f);
     }
     if (ret != 0) {
-        WARN("LOCATION: Error loading from cache file.\n");
+        WARN("Error loading from cache file.\n");
     }
     return ret;
 }
@@ -118,7 +118,7 @@ static int geoclue_init(void) {
 
 end:
     if (r < 0) {
-        WARN("LOCATION: Geoclue2 appears to be unsupported.\n");
+        WARN("Geoclue2 appears to be unsupported.\n");
     }
     /* In case of geoclue2 error, do not leave. Just disable this module */
     return -(r < 0);  // - 1 on error
@@ -158,7 +158,7 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
         int r = get_property(&lat_args, "d", &state.current_loc.lat, sizeof(state.current_loc.lat)) + 
                 get_property(&lon_args, "d", &state.current_loc.lon, sizeof(state.current_loc.lon));
         if (!r) {
-            INFO("LOCATION: New location received: %.2lf, %.2lf.\n", state.current_loc.lat, state.current_loc.lon);
+            INFO("New location received: %.2lf, %.2lf.\n", state.current_loc.lat, state.current_loc.lon);
             publish_location(old_lat, old_lon);
         }
     }
@@ -194,10 +194,10 @@ static void cache_location(void) {
         FILE *f = fopen(cache_file, "w");
         if (f) {
             fprintf(f, "%lf %lf\n", state.current_loc.lat, state.current_loc.lon);
-            DEBUG("LOCATION: Latest location stored in cache file!\n");
+            DEBUG("Latest location stored in cache file!\n");
             fclose(f);
         } else {
-            WARN("LOCATION: Caching location failed: %s.\n", strerror(errno));
+            WARN("Caching location failed: %s.\n", strerror(errno));
         }
     }
 }

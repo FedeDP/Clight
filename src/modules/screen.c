@@ -52,7 +52,7 @@ static void receive(const msg_t *msg, const void *userdata) {
         screen_ctr = (screen_ctr + 1) % conf.screen_samples;
         if (screen_ctr + 1 == conf.screen_samples) {
             /* Bucket filled! Start computing! */
-            DEBUG("SCREEN: start compensating for screen-emitted brightness.\n");
+            DEBUG("Start compensating for screen-emitted brightness.\n");
             m_become(computing);
         }
         set_timeout(conf.screen_timeout[state.ac_state], 0, msg->fd_msg->fd, 0);
@@ -90,7 +90,7 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
         state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
         screen_msg.curr = state.screen_comp;
         M_PUB(current_scr_topic, &screen_msg);
-        DEBUG("SCREEN: Average screen-emitted brightness: %lf.\n", state.screen_comp);
+        DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
         set_timeout(conf.screen_timeout[state.ac_state], 0, msg->fd_msg->fd, 0);
     } else if (msg->ps_msg->type == USER) {
         MSG_TYPE();

@@ -59,10 +59,10 @@ static void receive(const msg_t *msg, const void *userdata) {
             time_upd *up = (time_upd *)msg->ps_msg->message;
             if (up->new == DAY) {
                 // system("lookandfeeltool -a org.kde.breeze.desktop");
-                INFO("TEST: We're now during the day!\n");
+                INFO("We're now during the day!\n");
             } else {
                 // system("lookandfeeltool -a org.kde.breezedark.desktop");
-                INFO("TEST: We're now during the night!\n");
+                INFO("We're now during the night!\n");
             }
             break;
         }
