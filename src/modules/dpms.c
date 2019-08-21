@@ -8,7 +8,7 @@ static void inhibit_callback(void);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
-static display_upd display_msg = { DISPLAY_UPDATE };
+static display_upd display_msg = { DISPLAY_UPD };
 
 const char *display_topic = "DisplayState";
 
@@ -39,11 +39,11 @@ static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->is_pubsub && msg->ps_msg->type == USER) {
         MSG_TYPE();
         switch (type) {
-            case UPOWER_UPDATE:
-            case TIMEOUT_UPDATE:
+            case UPOWER_UPD:
+            case TIMEOUT_UPD:
                 upower_timeout_callback();
                 break;
-            case INHIBIT_UPDATE:
+            case INHIBIT_UPD:
                 inhibit_callback();
                 break;
             default:

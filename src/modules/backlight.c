@@ -97,24 +97,23 @@ static void destroy(void) {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
-        uint64_t t;
-        read(msg->fd_msg->fd, &t, sizeof(uint64_t));
+        read_timer(msg->fd_msg->fd);
         do_capture(true);
     } else if (msg->ps_msg->type == USER) {
         MSG_TYPE();
         switch (type) {
-            case UPOWER_UPDATE:
+            case UPOWER_UPD:
                 upower_callback();
                 break;
-            case DISPLAY_UPDATE:
+            case DISPLAY_UPD:
                 dimmed_callback();
                 break;
-            case TIME_UPDATE: {
+            case TIME_UPD: {
                 time_upd *up = (time_upd *)msg->ps_msg->message;
                 time_callback(up->old, !strcmp(msg->ps_msg->topic, evt_topic));
                 }
                 break;
-            case TIMEOUT_UPDATE: {
+            case TIMEOUT_UPD: {
                 timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
                 interface_timeout_callback(up->old);
                 }
@@ -122,7 +121,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case DO_CAPTURE:
                 interface_calibrate_callback();
                 break;
-            case CURVE_UPDATE: {
+            case CURVE_UPD: {
                 curve_upd *up = (curve_upd *)msg->ps_msg->message;
                 interface_curve_callback(up->state);
                 }
@@ -143,10 +142,10 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
     if (msg->ps_msg->type == USER) {
         MSG_TYPE();
         switch (type) {
-            case DISPLAY_UPDATE:
+            case DISPLAY_UPD:
                 dimmed_callback();
                 break;
-            case CURVE_UPDATE: {
+            case CURVE_UPD: {
                 curve_upd *up = (curve_upd *)msg->ps_msg->message;
                 interface_curve_callback(up->state);
             }
@@ -190,9 +189,11 @@ static int is_sensor_available(void) {
 
 static void do_capture(bool reset_timer) {
     if (!capture_frames_brightness()) {
+        /* Account for screen-emitted brightness */
+        state.ambient_br -= state.screen_comp;
         if (state.ambient_br > conf.shutter_threshold) {
             set_new_backlight(state.ambient_br * 10);
-            INFO("BACKLIGHT: Ambient brightness: %.3lf -> Backlight pct: %.3lf.\n", state.ambient_br, state.current_bl_pct);
+            INFO("BACKLIGHT: Ambient brightness: %.3lf (%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
         } else {
             INFO("BACKLIGHT: Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
         }
@@ -249,6 +250,7 @@ static int capture_frames_brightness(void) {
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
         state.ambient_br = compute_average(intensity, conf.num_captures);
+        DEBUG("BACKLIGHT: Average frames brightness: %lf.\n", state.ambient_br);
         amb_msg.curr = state.ambient_br;
         M_PUB(current_ab_topic, &amb_msg);
     }

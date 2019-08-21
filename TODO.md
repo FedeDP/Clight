@@ -90,7 +90,6 @@ Annullato (core dump creato)
 - [x] FIX: interface Version and ClightdVersion properties
 - [x] FIX: state.ac_state should be -1 on start and various modules should wait on it (same as state.time) -> BACKLIGHT, DIMMER, DPMS
 - [x] Cleanup includes
-- [ ] Test test test test test teeeeest
 
 #### Support user supplied modules runtime loading
 - [x] Load modules from XDG_DATA_HOME/clight/modules.d/
@@ -100,6 +99,13 @@ Annullato (core dump creato)
 - [x] Install commons.h in /usr/include/clight/
 - [x] move topics in commons.h
 - [x] Move log.h functions too, so users can log into clight's log
+
+#### Screen compensation support
+- [x] Fix #84
+- [x] Expose through dbus API new conf options and react if they change
+- [x] Expose through dbus API new state value (screen_comp)
+- [ ] Update API wiki
+- [x] Fix crash!
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options

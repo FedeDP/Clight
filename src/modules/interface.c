@@ -22,6 +22,8 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                              sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static const char object_path[] = "/org/clight/clight";
@@ -43,6 +45,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("CurrentAmbientBr", "d", NULL, offsetof(struct state, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("CurrentTemp", "i", NULL, offsetof(struct state, current_temp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(struct state, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("CurrentScreenComp", "d", NULL, offsetof(struct state, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
@@ -55,6 +58,9 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_PROPERTY("NoDimmer", "b", NULL, offsetof(struct config, no_dimmer), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NoDpms", "b", NULL, offsetof(struct config, no_dpms), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NoInhibit", "b", NULL, offsetof(struct config, no_inhibit), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NoScreen", "b", NULL, offsetof(struct config, no_screen), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("ScreenSamples", "i", NULL, offsetof(struct config, screen_samples), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("ScreenContrib", "d", NULL, set_screen_contrib, offsetof(struct config, screen_contrib), 0),
     SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(struct config, events[SUNRISE]), 0),
     SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(struct config, events[SUNSET]), 0),
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(struct config, loc), 0),
@@ -101,24 +107,29 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_timeouts, offsetof(struct config, dimmer_timeout[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDpms", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattDpms", "i", NULL, set_timeouts, offsetof(struct config, dpms_timeout[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcScreen", "i", NULL, set_timeouts, offsetof(struct config, screen_timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattScreen", "i", NULL, set_timeouts, offsetof(struct config, screen_timeout[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END
 };
 
-static inhibit_upd inhibit_msg = { INHIBIT_UPDATE };
-static timeout_upd to_msg = { TIMEOUT_UPDATE };
+static inhibit_upd inhibit_msg = { INHIBIT_UPD };
+static timeout_upd to_msg = { TIMEOUT_UPD };
 static temp_upd temp_msg = { INTERFACE_TEMP };
 static capture_upd capture_msg = { DO_CAPTURE };
-static curve_upd curve_msg = { CURVE_UPDATE };
+static curve_upd curve_msg = { CURVE_UPD };
 static calib_upd calib_msg = { AUTOCALIB_UPD };
-static loc_upd loc_msg = { LOCATION_UPDATE };
+static loc_upd loc_msg = { LOCATION_UPD };
+static contrib_upd contrib_msg = { CONTRIB_UPD };
 
 const char *interface_temp_topic = "InterfaceTemp";
 const char *interface_dimmer_to_topic = "InterfaceDimmerTo";
 const char *interface_dpms_to_topic = "InterfaceDPMSTo";
+const char *interface_scr_to_topic = "InterfaceScreenTO";
 const char *interface_bl_to_topic = "InterfaceBLTo";
 const char *interface_bl_capture = "InterfaceBLCapture";
 const char *interface_bl_curve = "InterfaceBLCurve";
 const char *interface_bl_autocalib = "InterfaceBLAuto";
+const char *interface_scr_contrib = "InterfaceScrContrib";
 
 static sd_bus *userbus;
 
@@ -314,6 +325,8 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
         topic = interface_dimmer_to_topic;
     } else if (val == &conf.dpms_timeout[state.ac_state]) {
         topic = interface_dpms_to_topic;
+    } else if (val == &conf.screen_timeout[state.ac_state]) {
+        topic = interface_scr_to_topic;
     }
     
     if (topic) {
@@ -338,12 +351,12 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
 
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                           sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    int old_val = conf.no_auto_calib;
+    int old_val = *(int *)userdata;
     int r = sd_bus_message_read(value, "b", userdata);    
-    if (r >= 0 && old_val != conf.no_auto_calib) {
-        INFO("INTERFACE: Backlight autocalibration %s by bus API.\n", conf.no_auto_calib ? "disabled" : "enabled");
+    if (r >= 0 && old_val != *(int *)userdata) {
+        INFO("INTERFACE: Backlight autocalibration %s by bus API.\n", *(int *)userdata ? "disabled" : "enabled");
         calib_msg.old = old_val;
-        calib_msg.new = conf.no_auto_calib;
+        calib_msg.new = *(int *)userdata;
         M_PUB(interface_bl_autocalib, &calib_msg);
     }
     return r;
@@ -365,6 +378,18 @@ static int set_event(sd_bus *bus, const char *path, const char *interface, const
     } else {
         /* Datetime too long*/
         r = -EINVAL;
+    }
+    return r;
+}
+
+static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    const double old_val = *(double *)userdata;
+    int r = sd_bus_message_read(value, "d", userdata);
+    if (r >= 0 && old_val != *(double *)userdata) {
+        contrib_msg.old = old_val;
+        contrib_msg.new = *(double *)userdata;
+        M_PUB(interface_scr_contrib, &contrib_msg);
     }
     return r;
 }

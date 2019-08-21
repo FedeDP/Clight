@@ -17,7 +17,7 @@ static void publish_location(double old_lat, double old_lon);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
-static loc_upd loc_msg = { LOCATION_UPDATE };
+static loc_upd loc_msg = { LOCATION_UPD };
 
 const char *loc_topic = "Location";
 
@@ -70,9 +70,7 @@ static void destroy(void) {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
-        uint64_t t;
-        read(msg->fd_msg->fd, &t, sizeof(uint64_t));
-        
+        read_timer(msg->fd_msg->fd);
         if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
             load_cache_location();
         }

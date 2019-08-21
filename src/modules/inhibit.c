@@ -5,7 +5,7 @@ static int inhibit_check(void);
 static int on_inhibit_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
-static inhibit_upd inh_msg = { INHIBIT_UPDATE };
+static inhibit_upd inh_msg = { INHIBIT_UPD };
 
 const char *inh_topic = "PmState";
 

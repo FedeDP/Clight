@@ -10,8 +10,8 @@ static void check_conf(void);
  * and parse cmdline args through popt lib.
  * Finally, check configuration values and log it.
  */
-void init_opts(int argc, char *argv[]) {
-    /* default values */
+void init_opts(int argc, char *argv[]) {    
+    /* BACKLIGHT */
     conf.num_captures = 5;
     conf.timeout[ON_AC][DAY] = 10 * 60;
     conf.timeout[ON_AC][NIGHT] = 45 * 60;
@@ -19,23 +19,36 @@ void init_opts(int argc, char *argv[]) {
     conf.timeout[ON_BATTERY][DAY] = 2 * conf.timeout[ON_AC][DAY];
     conf.timeout[ON_BATTERY][NIGHT] = 2 * conf.timeout[ON_AC][NIGHT];
     conf.timeout[ON_BATTERY][IN_EVENT] = 2 * conf.timeout[ON_AC][IN_EVENT];
+    conf.backlight_trans_step = 0.05;
+    conf.backlight_trans_timeout = 30;
+    
+    /* GAMMA */
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
     conf.event_duration = 30 * 60;
-    conf.dimmer_timeout[ON_AC] = 45;
-    conf.dimmer_timeout[ON_BATTERY] = 20;
-    conf.dpms_timeout[ON_AC] = 900;
-    conf.dpms_timeout[ON_BATTERY] = 300;
-    conf.dimmer_pct = 0.2;
-    conf.backlight_trans_step = 0.05;
-    conf.dimmer_trans_step[ENTER] = 0.05;
-    conf.dimmer_trans_step[EXIT] = 0.05;
     conf.gamma_trans_step = 50;
-    conf.backlight_trans_timeout = 30;
-    conf.dimmer_trans_timeout[ENTER] = 30;
-    conf.dimmer_trans_timeout[EXIT] = 30;
     conf.gamma_trans_timeout = 300;
     
+    /* DIMMER */
+    conf.dimmer_timeout[ON_AC] = 45;
+    conf.dimmer_timeout[ON_BATTERY] = 20;
+    conf.dimmer_pct = 0.2;
+    conf.dimmer_trans_step[ENTER] = 0.05;
+    conf.dimmer_trans_step[EXIT] = 0.05;
+    conf.dimmer_trans_timeout[ENTER] = 30;
+    conf.dimmer_trans_timeout[EXIT] = 30;
+    
+    /* DPMS */
+    conf.dpms_timeout[ON_AC] = 900;
+    conf.dpms_timeout[ON_BATTERY] = 300;
+
+    /* SCREEN */
+    conf.screen_timeout[ON_AC] = 30;
+    conf.screen_timeout[ON_BATTERY] = -1; // disabled on battery by default
+    conf.screen_contrib = 0.1;
+    conf.screen_samples = 10;
+    
+    /* LOCATION */
     conf.loc.lat = LAT_UNDEFINED;
     conf.loc.lon = LON_UNDEFINED;
 
@@ -105,6 +118,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
         {"no-inhibit", 0, POPT_ARG_NONE, &conf.no_inhibit, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
         {"no-backlight", 0, POPT_ARG_NONE, &conf.no_backlight, 100, "Disable backlight module", NULL},
+        {"no-screen", 0, POPT_ARG_NONE, &conf.no_screen, 100, "Disable screen module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"no-auto-calib", 0, POPT_ARG_NONE, &conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
@@ -293,5 +307,15 @@ static void check_conf(void) {
         if (strlen(conf.events[i]) && !strptime(conf.events[i], "%R", &timeinfo)) {
             memset(conf.events[i], 0, sizeof(conf.events[i]));
         }
+    }
+    
+    if (conf.screen_contrib < 0 || conf.screen_contrib >= 1) {
+        WARN("Wrong screen_contrib value. Resetting default value.\n");
+        conf.screen_contrib = 0.1;
+    }
+    
+    if (conf.screen_samples < 0) {
+        WARN("Wrong screen_samples value. Resetting default value.\n");
+        conf.screen_samples = 10;
     }
 }

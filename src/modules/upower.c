@@ -5,7 +5,7 @@ static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_slot *slot;
-static upower_upd upower_msg = { UPOWER_UPDATE };
+static upower_upd upower_msg = { UPOWER_UPD };
 
 const char *up_topic = "AcState";
 

@@ -26,7 +26,6 @@ double radToDeg(double angleRad) {
  */
 double compute_average(double *intensity, int num) {
     double mean = gsl_stats_mean(intensity, 1, num);
-    DEBUG("Average frames brightness: %lf.\n", mean);
     return mean;
 }
 

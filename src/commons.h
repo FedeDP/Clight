@@ -70,12 +70,13 @@ enum dim_trans { ENTER, EXIT, SIZE_DIM };
 
 /* Type of pubsub messages */
 enum mod_msg_types { 
-    LOCATION_UPDATE, UPOWER_UPDATE, INHIBIT_UPDATE, 
-    DISPLAY_UPDATE, TIME_UPDATE, EVENT_UPDATE, 
-    TEMP_UPDATE, INTERFACE_TEMP, TIMEOUT_UPDATE,
-    DO_CAPTURE, CURVE_UPDATE, AUTOCALIB_UPD, 
+    LOCATION_UPD, UPOWER_UPD, INHIBIT_UPD, 
+    DISPLAY_UPD, TIME_UPD, EVENT_UPD, 
+    TEMP_UPD, INTERFACE_TEMP, TIMEOUT_UPD,
+    DO_CAPTURE, CURVE_UPD, AUTOCALIB_UPD, 
     AMBIENT_BR, CURRENT_BL, CURRENT_KBD_BL,
-    PAUSE_UPD, RESUME_UPD
+    CURRENT_SCR_BL, PAUSE_UPD, RESUME_UPD,
+    CONTRIB_UPD
 };
 
 struct location {
@@ -86,49 +87,49 @@ struct location {
 /** PubSub messages **/
 
 typedef struct {
-    enum mod_msg_types type; /* LOCATION_UPDATE */ 
+    enum mod_msg_types type; /* LOCATION_UPD */ 
     struct location old;
     struct location new;
 } loc_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* UPOWER_UPDATE */
+    enum mod_msg_types type; /* UPOWER_UPD */
     enum ac_states old;
     enum ac_states new;
 } upower_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* INHIBIT_UPDATE */
+    enum mod_msg_types type; /* INHIBIT_UPD */
     enum pm_states old;
     enum pm_states new;
 } inhibit_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* DISPLAY_UPDATE */
+    enum mod_msg_types type; /* DISPLAY_UPD */
     enum display_states old;
     enum display_states new;
 } display_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* TIME_UPDATE */
+    enum mod_msg_types type; /* TIME_UPD */
     enum states old;
     enum states new;
 } time_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* EVENT_UPDATE */
+    enum mod_msg_types type; /* EVENT_UPD */
     enum events old;
     enum events new;
 } evt_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* TEMP_UPDATE/INTERFACE_TEMP */
+    enum mod_msg_types type; /* TEMP_UPD/INTERFACE_TEMP */
     int old;
     int new;
 } temp_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* TIMEOUT_UPDATE */
+    enum mod_msg_types type; /* TIMEOUT_UPD */
     int old;
     int new;
 } timeout_upd;
@@ -156,6 +157,12 @@ typedef struct {
 typedef struct {
     enum mod_msg_types type; /* PAUSE_UPD/RESUME_UPD */
 } state_upd;
+
+typedef struct {
+    enum mod_msg_types type; /* CONTRIB_UPD */
+    double old;
+    double new;
+} contrib_upd;
 
 /** Generic structs **/
 
@@ -189,11 +196,15 @@ struct config {
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
     int gamma_long_transition;              // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
+    int screen_timeout[SIZE_AC];            // screen timeouts
+    double screen_contrib;                  // how much does screen-emitted brightness affect ambient brightness (eg 0.1)
+    int screen_samples;                     // number of samples used to compute average screen-emitted brightness
     int no_gamma;
     int no_backlight;
     int no_dimmer;
     int no_dpms;
     int no_inhibit;
+    int no_screen;
 };
 
 /* Global state of program */
@@ -214,6 +225,7 @@ struct state {
     enum display_states display_state;      // current display state
     enum pm_states pm_inhibited;            // whether powermanagement is inhibited
     struct location current_loc;            // current user location
+    double screen_comp;                     // current screen-emitted brightness compensation
     jmp_buf quit_buf;                       // quit jump called by longjmp
     char clightd_version[32];               // Clightd found version
     char version[32];                       // Clight version
@@ -241,11 +253,13 @@ extern const char *display_topic;                   // Topic emitted on display 
 /* INTERFACE topics */
 extern const char *interface_temp_topic;            // Topic emitted to change current GAMMA temperature
 extern const char *interface_dimmer_to_topic;       // Topic emitted to change current DIMMER timeouts
-extern const char *interface_dpms_to_topic;         // Topic emitted to change currentDPMS timeouts
-extern const char *interface_bl_to_topic;           // Topic emitted to change current BACKLIG HT timeouts
+extern const char *interface_dpms_to_topic;         // Topic emitted to change current DPMS timeouts
+extern const char *interface_scr_to_topic;          // Topic emitted to change current SCREEN timeouts
+extern const char *interface_bl_to_topic;           // Topic emitted to change current BACKLIGHT timeouts
 extern const char *interface_bl_capture;            // Topic emitted to require an autocalib to BACKLIGHT
 extern const char *interface_bl_curve;              // Topic emitted to update BACKLIGHT curve for given ac state
 extern const char *interface_bl_autocalib;          // Topic emitted to pause/resume automatic calibratio for BACKLIGHT
+extern const char *interface_scr_contrib;           // Topic emitted to set new SCREEN contrib value
 
 /* GAMMA topics */
 extern const char *time_topic;                      // Topic emitted on time changed, ie: DAY -> NIGHT or NIGHT -> DAY
@@ -253,6 +267,9 @@ extern const char *evt_topic;                       // Topic emitted for InEvent
 extern const char *sunrise_topic;                   // Topic emitted on new sunrise time
 extern const char *sunset_topic;                    // Topic emitted on new sunset time
 extern const char *temp_topic;                      // Topic emitted on new temp set
+
+/* SCREEN topics */
+extern const char *current_scr_topic;               // Topic emitted on screen emitted brightness change
 
 /** Global state and config data **/
 

@@ -57,6 +57,9 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_bool(&cfg, "no_kdb_backlight", &conf.no_keyboard_bl);
         config_lookup_bool(&cfg, "gamma_long_transition", &conf.gamma_long_transition);
         config_lookup_bool(&cfg, "ambient_gamma", &conf.ambient_gamma);
+        config_lookup_bool(&cfg, "no_screen", &conf.no_screen);
+        config_lookup_float(&cfg, "screen_contrib", &conf.screen_contrib);
+        config_lookup_int(&cfg, "screen_samples", &conf.screen_samples);
 
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
@@ -188,6 +191,16 @@ int read_config(enum CONFIG file, char *config_file) {
                 WARN("Wrong number of gamma_temp array elements.\n");
             }
         }
+        
+        if ((timeouts = config_setting_get_member(root, "screen_timeouts"))) {
+            if (config_setting_length(timeouts) == SIZE_AC) {
+                for (int i = 0; i < SIZE_AC; i++) {
+                    conf.screen_timeout[i] = config_setting_get_int_elem(timeouts, i);
+                }
+            } else {
+                WARN("Wrong number of screen_timeouts array elements.\n");
+            }
+        }
 
     } else {
         WARN("Config file: %s at line %d.\n",
@@ -289,6 +302,9 @@ int store_config(enum CONFIG file) {
 
     setting = config_setting_add(root, "shutter_threshold", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, conf.shutter_threshold);
+    
+    setting = config_setting_add(root, "screen_samples", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, conf.screen_samples);
 
     /* -1 here below means append to end of array */
     setting = config_setting_add(root, "ac_backlight_regression_points", CONFIG_TYPE_ARRAY);
@@ -324,6 +340,11 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "gamma_temp", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_STATES; i++) {
         config_setting_set_int_elem(setting, -1, conf.temp[i]);
+    }
+    
+    setting = config_setting_add(root, "screen_timeouts", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_AC; i++) {
+        config_setting_set_int_elem(setting, -1, conf.screen_timeout[i]);
     }
 
     if(config_write_file(&cfg, config_file) != CONFIG_TRUE) {

@@ -18,10 +18,10 @@ static int event_time_range;                   // variable that holds minutes in
 static int long_transitioning;                 // are we inside a long transition?
 static int gamma_fd;
 
-static time_upd time_msg = { TIME_UPDATE };
-static time_upd in_ev_msg = { TIME_UPDATE };
-static evt_upd evt_msg[SIZE_EVENTS] = { { EVENT_UPDATE }, { EVENT_UPDATE } };
-static temp_upd temp_msg = { TEMP_UPDATE };
+static time_upd time_msg = { TIME_UPD };
+static time_upd in_ev_msg = { TIME_UPD };
+static evt_upd evt_msg[SIZE_EVENTS] = { { EVENT_UPD }, { EVENT_UPD } };
+static temp_upd temp_msg = { TEMP_UPD };
 
 const char *time_topic = "Time";
 const char *evt_topic = "InEvent";
@@ -56,13 +56,12 @@ static void destroy(void) {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (!msg->is_pubsub) {
-        uint64_t t;
-        read(msg->fd_msg->fd, &t, sizeof(uint64_t));
+        read_timer(msg->fd_msg->fd);
         check_gamma();
     } else if (msg->ps_msg->type == USER) {
         MSG_TYPE();
         switch (type) {
-            case LOCATION_UPDATE:
+            case LOCATION_UPD:
                 location_callback();
                 break;
             case CURRENT_BL:

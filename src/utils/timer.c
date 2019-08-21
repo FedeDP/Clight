@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <sys/timerfd.h>
 
+static long get_timeout_sec(int fd);
 static long get_timeout(int fd, size_t member);
 
 /*
@@ -42,7 +43,7 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
-long get_timeout_sec(int fd) {
+static long get_timeout_sec(int fd) {
     return get_timeout(fd, offsetof(struct timespec, tv_sec));
 }
 
@@ -66,4 +67,9 @@ void reset_timer(int fd, int old_timer, int new_timer) {
         /* pause fd as a timeout <= 0 has been set */
         set_timeout(0, 0, fd, 0);
     }
+}
+
+void read_timer(int fd) {
+    uint64_t t;
+    read(fd, &t, sizeof(uint64_t));
 }
