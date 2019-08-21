@@ -84,7 +84,7 @@ struct location {
     double lon;
 };
 
-/** PubSub messages **/
+/** PubSub Messages **/
 
 typedef struct {
     enum mod_msg_types type; /* LOCATION_UPD */ 
@@ -155,7 +155,7 @@ typedef struct {
 } bl_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* PAUSE_UPD/RESUME_UPD */
+    enum mod_msg_types type; /* PAUSE_UPD/RESUME_UPD, used internally by BACKLIGHT */
 } state_upd;
 
 typedef struct {
@@ -231,7 +231,7 @@ struct state {
     char version[32];                       // Clight version
 };
 
-/** Topics data **/
+/** PubSub Topics **/
 
 /* INHIBIT topics */
 extern const char *inh_topic;                       // Topic emitted on new PowerManagement inhibit state
