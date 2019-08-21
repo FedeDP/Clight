@@ -305,6 +305,9 @@ int store_config(enum CONFIG file) {
     
     setting = config_setting_add(root, "screen_samples", CONFIG_TYPE_INT);
     config_setting_set_int(setting, conf.screen_samples);
+    
+    setting = config_setting_add(root, "screen_contrib", CONFIG_TYPE_FLOAT);
+    config_setting_set_float(setting, conf.screen_contrib);
 
     /* -1 here below means append to end of array */
     setting = config_setting_add(root, "ac_backlight_regression_points", CONFIG_TYPE_ARRAY);
