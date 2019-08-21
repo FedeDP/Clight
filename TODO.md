@@ -130,9 +130,6 @@ Annullato (core dump creato)
 - [ ] If org.freedesktop.ScreenSaver is already present, avoid failing
 - [ ] Eventually drop power management api/configs ... (?)
 
-#### Screen-emitted brightness compensation
-- [ ] Fix #84
-
 ### 4.2
 
 #### BACKLIGHT multiple-monitors curves
