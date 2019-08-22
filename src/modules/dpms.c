@@ -1,7 +1,7 @@
 #include "idler.h"
 #include <bus.h>
 
-static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error);
+static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void set_dpms(int dpms_state);
 static void upower_timeout_callback(void);
 static void inhibit_callback(void);
@@ -65,7 +65,7 @@ static void destroy(void) {
     idle_client_destroy(client);
 }
 
-static int on_new_idle(sd_bus_message *m,  __attribute__((unused)) void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {   
+static int on_new_idle(sd_bus_message *m,  UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {   
     int is_dpms;
     sd_bus_message_read(m, "b", &is_dpms);
     

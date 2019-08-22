@@ -74,7 +74,7 @@ static void destroy(void) {
     idle_client_destroy(client);
 }
 
-static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     static double old_pct = -1.0;
     int dimmed;
     

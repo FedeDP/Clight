@@ -159,7 +159,7 @@ static int geoclue_hook_update(void) {
  * On new location callback: retrieve new_location object,
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
-static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     /* Only if no conf location is set */
     if (conf.loc.lat == LAT_UNDEFINED && conf.loc.lon == LON_UNDEFINED) {
         const char *new_location, *old_location;
