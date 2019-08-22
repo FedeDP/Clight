@@ -1,3 +1,4 @@
+#include <module/modules_easy.h>
 #include <sys/signalfd.h>
 #include <signal.h>
 #include <log.h>

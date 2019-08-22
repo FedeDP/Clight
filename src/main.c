@@ -25,9 +25,12 @@
 #include <bus.h>
 #include <log.h>
 #include <glob.h>
+#include <assert.h>
+#include <module/modules_easy.h>
 
 static int init(int argc, char *argv[]);
 static void init_state(void);
+static void init_topics(void);
 static void sigsegv_handler(int signum);
 static int check_clightd_version(void);
 static void init_user_mod_path(enum CONFIG file, char *filename);
@@ -35,6 +38,7 @@ static void load_user_modules(enum CONFIG file);
 
 state_t state = {0};
 conf_t conf = {0};
+const char *topics[MSGS_SIZE] = { 0 };
 
 /* Every module needs these; let's init them before any module */
 void modules_pre_start(void) {
@@ -74,6 +78,7 @@ static int init(int argc, char *argv[]) {
     /* Init conf and state */
     init_opts(argc, argv);
     init_state();
+    init_topics();
     
     /* Init log file */
     open_log();
@@ -109,6 +114,57 @@ static void init_state(void) {
      * or to ON_AC if UPower is not available 
      */
     state.ac_state = -1;
+}
+
+static void init_topics(void) {
+    /* BACKLIGHT */
+    topics[AMBIENT_BR_UPD] = "CurrentAmbientBr";
+    topics[CURRENT_BL_UPD] = "CurrentBlPct";
+    topics[CURRENT_KBD_BL_UPD] = "CurrentKbdPct";
+    
+    /* DIMMER/DPMS */
+    topics[DISPLAY_UPD] = "DisplayState";
+    
+    /* GAMMA */
+    topics[TIME_UPD] = "Time";
+    topics[EVENT_UPD] = "InEvent";
+    topics[SUNRISE_UPD] = "Sunrise";
+    topics[SUNSET_UPD] = "Sunset";
+    topics[TEMP_UPD] = "CurrentTemp";
+    
+    /* INHIBIT */
+    topics[INHIBIT_UPD] = "PmState";
+    
+    /* INTERFACE */
+    topics[DIMMER_TO_REQ] = "InterfaceDimmerTo";
+    topics[DPMS_TO_REQ] = "InterfaceDPMSTo";
+    topics[SCR_TO_REQ] = "InterfaceScreenTO";
+    topics[BL_TO_REQ] = "InterfaceBLTo";
+    topics[TEMP_REQ] = "InterfaceTemp";
+    topics[CAPTURE_REQ] = "InterfaceBLCapture";
+    topics[CURVE_REQ] = "InterfaceBLCurve";
+    topics[AUTOCALIB_REQ] = "InterfaceBLAuto";
+    topics[CONTRIB_REQ] = "InterfaceScrContrib";
+    topics[LOCATION_REQ] = "InterfaceLocation";
+    /* Following are currently unused */
+    topics[UPOWER_REQ] = "InterfaceUpower";
+    topics[INHIBIT_REQ] = "InterfaceInhibit";
+    
+    /* LOCATION */
+    topics[LOCATION_UPD] = "Location";
+
+    /* SCREEN */
+    topics[CURRENT_SCR_BL_UPD] = "CurrentScreenComp";
+
+    /* UPOWER */
+    topics[UPOWER_UPD] = "AcState";
+    
+#ifndef NDEBUG
+    /* Runtime check that any topic has been inited; useful in devel */
+    for (int i = 0; i < MSGS_SIZE; i++) {
+        assert(strlen(topics[i]));
+    }
+#endif
 }
 
 /*

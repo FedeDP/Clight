@@ -13,13 +13,12 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_err
 static int geoclue_client_start(void);
 static void geoclue_client_stop(void);
 static void cache_location(void);
-static void publish_location(double old_lat, double old_lon);
+static void publish_location(double old_lat, double old_lon, double new_lat, double new_lon, loc_upd *l);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
 static loc_upd loc_msg = { LOCATION_UPD };
-
-const char *loc_topic = "Location";
+static loc_upd loc_req = { LOCATION_REQ };
 
 MODULE("LOCATION");
 
@@ -27,6 +26,8 @@ static void init(void) {
     init_cache_file();
     int r = geoclue_init();
     if (r == 0) {
+        M_SUB(LOCATION_REQ);
+        
         /*
          * timeout after 3s to check if geoclue2 gave us
          * any location. Otherwise, attempt to load it from cache
@@ -74,6 +75,19 @@ static void receive(const msg_t *const msg, const void* userdata) {
         if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
             load_cache_location();
         }
+    } else if (msg->ps_msg->type == USER) {
+        MSG_TYPE();
+        switch (type) {
+        case LOCATION_REQ: {
+            loc_upd *l = (loc_upd *)msg->ps_msg->message;
+            memcpy(&state.current_loc, &l->new, sizeof(loc_t));
+            INFO("New location received: %.2lf, %.2lf.\n", state.current_loc.lat, state.current_loc.lon);
+            publish_location(l->old.lat, l->old.lon, l->new.lat, l->new.lon, &loc_msg);
+            }
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -81,9 +95,10 @@ static int load_cache_location(void) {
     int ret = -1;
     FILE *f = fopen(cache_file, "r");
     if (f) {
-        if (fscanf(f, "%lf %lf\n", &state.current_loc.lat, &state.current_loc.lon) == 2) {
-            publish_location(LAT_UNDEFINED, LON_UNDEFINED);
-            INFO("%.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
+        double new_lat, new_lon;
+        if (fscanf(f, "%lf %lf\n", &new_lat, &new_lon) == 2) {
+            publish_location(LAT_UNDEFINED, LON_UNDEFINED, new_lat, new_lon, &loc_req);
+            INFO("%.2lf %.2lf loaded from cache file!\n", new_lat, new_lon);
             ret = 0;
         }
         fclose(f);
@@ -152,14 +167,14 @@ static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribut
 
         const double old_lat = state.current_loc.lat;
         const double old_lon = state.current_loc.lon;
+        double new_lat, new_lon;
     
         SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
         SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
-        int r = get_property(&lat_args, "d", &state.current_loc.lat, sizeof(state.current_loc.lat)) + 
-                get_property(&lon_args, "d", &state.current_loc.lon, sizeof(state.current_loc.lon));
+        int r = get_property(&lat_args, "d", &new_lat, sizeof(new_lat)) + 
+                get_property(&lon_args, "d", &new_lon, sizeof(new_lon));
         if (!r) {
-            INFO("New location received: %.2lf, %.2lf.\n", state.current_loc.lat, state.current_loc.lon);
-            publish_location(old_lat, old_lon);
+            publish_location(old_lat, old_lon, new_lat, new_lon, &loc_req);
         }
     }
     return 0;
@@ -202,10 +217,10 @@ static void cache_location(void) {
     }
 }
 
-static void publish_location(double old_lat, double old_lon) {
-    loc_msg.old.lat = old_lat;
-    loc_msg.old.lon = old_lon;
-    loc_msg.new.lat = state.current_loc.lat;
-    loc_msg.new.lon = state.current_loc.lon;
-    M_PUB(loc_topic, &loc_msg);
+static void publish_location(double old_lat, double old_lon, double new_lat, double new_lon, loc_upd *l) {
+    l->old.lat = old_lat;
+    l->old.lon = old_lon;
+    l->new.lat = new_lat;
+    l->new.lon = new_lon;
+    M_PUB(l);
 }

@@ -1,4 +1,4 @@
-#include <clight/commons.h>
+#include <clight/public.h>
 
 /*
  * Rename to: myMod.c
@@ -13,8 +13,8 @@
 MODULE("TEST");
 
 static void init(void) {
-    /* Topics on which you can subscribe can be found in clight/commons.h */
-    m_subscribe(time_topic);
+    /* Topics on which you can subscribe can be found in clight/public.h */
+    M_SUB(TIME_UPD);
 }
 
 /* 
@@ -34,7 +34,8 @@ static bool check(void) {
  * Should return not-0 value when module can be actually started (and thus polled).
  * Use this to check intra-modules dependencies or any other env variable.
  * 
- * Eg: state.time != -1 to start after current daytime has been computed
+ * You probably desire to leave this as "return true" unless you're injecting
+ * multiple modules and you eg: wish module A to be started after module B.
  */
 static bool evaluate(void) {
     return true;

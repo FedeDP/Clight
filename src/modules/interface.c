@@ -99,10 +99,10 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("AcDayCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_AC][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcNightCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_AC][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_AC][SIZE_STATES]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcEventCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_AC][IN_EVENT]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattDayCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_BATTERY][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattNightCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_BATTERY][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_BATTERY][SIZE_STATES]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattEventCapture", "i", NULL, set_timeouts, offsetof(conf_t, timeout[ON_BATTERY][IN_EVENT]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDimmer", "i", NULL, set_timeouts, offsetof(conf_t, dimmer_timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattDimmer", "i", NULL, set_timeouts, offsetof(conf_t, dimmer_timeout[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDpms", "i", NULL, set_timeouts, offsetof(conf_t, dpms_timeout[ON_AC]), 0),
@@ -112,25 +112,15 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
-static inhibit_upd inhibit_msg = { INHIBIT_UPD };
-static timeout_upd to_msg = { TIMEOUT_UPD };
-static temp_upd temp_msg = { INTERFACE_TEMP };
-static capture_upd capture_msg = { DO_CAPTURE };
-static curve_upd curve_msg = { CURVE_UPD };
-static calib_upd calib_msg = { AUTOCALIB_UPD };
+static timeout_upd to_req;
+static inhibit_upd inhibit_req = { INHIBIT_REQ };
+static temp_upd temp_req = { TEMP_REQ };
+static capture_upd capture_req = { CAPTURE_REQ };
+static curve_upd curve_req = { CURVE_REQ };
+static calib_upd calib_req = { AUTOCALIB_REQ };
+static loc_upd loc_req = { LOCATION_REQ };
 static loc_upd loc_msg = { LOCATION_UPD };
-static contrib_upd contrib_msg = { CONTRIB_UPD };
-
-const char *interface_temp_topic = "InterfaceTemp";
-const char *interface_dimmer_to_topic = "InterfaceDimmerTo";
-const char *interface_dpms_to_topic = "InterfaceDPMSTo";
-const char *interface_scr_to_topic = "InterfaceScreenTO";
-const char *interface_bl_to_topic = "InterfaceBLTo";
-const char *interface_bl_capture = "InterfaceBLCapture";
-const char *interface_bl_curve = "InterfaceBLCurve";
-const char *interface_bl_autocalib = "InterfaceBLAuto";
-const char *interface_scr_contrib = "InterfaceScrContrib";
-
+static contrib_upd contrib_req = { CONTRIB_REQ };
 static sd_bus *userbus;
 
 MODULE("INTERFACE");
@@ -214,29 +204,25 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 }
 
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    m_publish(interface_bl_capture, &capture_msg, sizeof(capture_upd), false);
+    M_PUB(&capture_req);
     return sd_bus_reply_method_return(m, NULL);
 }
 
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int inhibited;
-    int r = sd_bus_message_read(m, "b", &inhibited);
+    int r = sd_bus_message_read(m, "b", &inhibit_req.new);
     if (r < 0) {
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
 
-    int old_inhibited = state.pm_inhibited;
-    if (inhibited) {
-        state.pm_inhibited |= PM_FORCED_ON;
+    inhibit_req.old = state.pm_inhibited;
+    if (inhibit_req.new) {
+        inhibit_req.new = inhibit_req.new | PM_FORCED_ON;
     } else {
-        state.pm_inhibited &= ~PM_FORCED_ON;
+        inhibit_req.new = inhibit_req.new & ~PM_FORCED_ON;
     }
-    if (old_inhibited != state.pm_inhibited) {
-        INFO("PowerManagement inhibition %s by bus API.\n", state.pm_inhibited ? "enabled" : "disabled");
-        inhibit_msg.old = old_inhibited;
-        inhibit_msg.new = state.pm_inhibited;
-        M_PUB(inh_topic, &inhibit_msg);
+    if (inhibit_req.new != inhibit_req.old) {
+        M_PUB(&inhibit_req);
     }
     return sd_bus_reply_method_return(m, NULL);
 }
@@ -266,14 +252,13 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
         sd_bus_error_set_const(error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         r = -EINVAL;
     } else {
-        curve_msg.state = ON_AC;
-
+        curve_req.state = ON_AC;
         if (userdata == conf.regression_points[ON_BATTERY]) {
-            curve_msg.state = ON_BATTERY;
+            curve_req.state = ON_BATTERY;
         }
-        memcpy(conf.regression_points[curve_msg.state], data, length);
-        conf.num_points[curve_msg.state] = length / sizeof(double);
-        m_publish(interface_bl_curve, &curve_msg, sizeof(curve_upd), false);
+        memcpy(curve_req.regression_points, data, length);
+        curve_req.num_points = length / sizeof(double);
+        M_PUB(&curve_req);
     }
     return r;
 }
@@ -287,77 +272,99 @@ static int get_location(sd_bus *bus, const char *path, const char *interface, co
 static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error) {
     loc_t *l = (loc_t *)userdata;
-    loc_msg.old = *l;
-    sd_bus_message_read(value, "(dd)", &l->lat, &l->lon);
+    loc_req.old = *l;
+    sd_bus_message_read(value, "(dd)", &loc_req.new.lat, &loc_req.new.lon);
     
-    if (fabs(l->lat) <  90.0f && fabs(l->lon) < 180.0f) {
-        INFO("New location from BUS api: %.2lf %.2lf\n", l->lat, l->lon);
+    if (fabs(loc_req.new.lat) <  90.0f && fabs(loc_req.new.lon) < 180.0f) {
+        INFO("New location from BUS api: %.2lf %.2lf\n", loc_req.new.lat, loc_req.new.lat);
         
         /* Only if different from current one */
-        if (state.current_loc.lat != l->lat && state.current_loc.lon != l->lon) {
-            loc_msg.new = *l;
-            memcpy(&state.current_loc, l, sizeof(loc_t));
-            M_PUB(loc_topic, &loc_msg);
+        if (state.current_loc.lat != loc_req.new.lat && state.current_loc.lon != loc_req.new.lon) {
+            M_PUB(&loc_req);
         }
         return 0;
     }
-    *l = loc_msg.old;
     INFO("Wrong location set. Rejected.\n");
     return -EINVAL;
 }
 
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
                             sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    int *val = (int *)userdata;
-    int old_val = *val;
-
-    int r = sd_bus_message_read(value, "i", userdata);
+    to_req.old = *(int *)userdata;
+    int r = sd_bus_message_read(value, "i", &to_req.new);
     if (r < 0) {
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
     
     /* Check if we modified currently used timeout! */
-    const char *topic = NULL;
-    if (val == &conf.timeout[state.ac_state][state.time]) {
-        topic = interface_bl_to_topic;
-    } else if (val == &conf.dimmer_timeout[state.ac_state]) {
-        topic = interface_dimmer_to_topic;
-    } else if (val == &conf.dpms_timeout[state.ac_state]) {
-        topic = interface_dpms_to_topic;
-    } else if (val == &conf.screen_timeout[state.ac_state]) {
-        topic = interface_scr_to_topic;
+    to_req.type = -1;
+    if (userdata == &conf.timeout[ON_AC][DAY]) {
+        to_req.daytime = DAY;
+        to_req.state = ON_AC;
+        to_req.type = BL_TO_REQ;
+    } else if (userdata == &conf.timeout[ON_AC][NIGHT]) {
+        to_req.daytime = NIGHT;
+        to_req.state = ON_AC;
+        to_req.type = BL_TO_REQ;
+    } else if (userdata == &conf.timeout[ON_AC][IN_EVENT]) {
+        to_req.daytime = IN_EVENT;
+        to_req.state = ON_AC;
+        to_req.type = BL_TO_REQ;
+    } else if (userdata == &conf.timeout[ON_BATTERY][DAY]) {
+        to_req.daytime = DAY;
+        to_req.state = ON_BATTERY;
+        to_req.type = BL_TO_REQ;
+    } else if (userdata == &conf.timeout[ON_BATTERY][NIGHT]) {
+        to_req.daytime = NIGHT;
+        to_req.state = ON_BATTERY;
+        to_req.type = BL_TO_REQ;
+    } else if (userdata == &conf.timeout[ON_BATTERY][IN_EVENT]) {
+        to_req.daytime = IN_EVENT;
+        to_req.state = ON_BATTERY;
+        to_req.type = BL_TO_REQ;
+    } else if (userdata == &conf.dimmer_timeout[ON_AC]) {
+        to_req.type = DIMMER_TO_REQ;
+        to_req.state = ON_AC;
+    } else if (userdata == &conf.dimmer_timeout[ON_BATTERY]) {
+        to_req.type = DIMMER_TO_REQ;
+        to_req.state = ON_BATTERY;
+    } else if (userdata == &conf.dpms_timeout[ON_AC]) {
+        to_req.type = DPMS_TO_REQ;
+        to_req.state = ON_AC;
+    } else if (userdata == &conf.dpms_timeout[ON_BATTERY]) {
+        to_req.type = DPMS_TO_REQ;
+        to_req.state = ON_BATTERY;
+    } else if (userdata == &conf.screen_timeout[ON_AC]) {
+        to_req.type = SCR_TO_REQ;
+        to_req.state = ON_AC;
+    } else if (userdata == &conf.screen_timeout[ON_BATTERY]) {
+        to_req.type = SCR_TO_REQ;
+        to_req.state = ON_BATTERY;
     }
     
-    if (topic) {
-        to_msg.old = old_val;
-        to_msg.new = *val;
-        M_PUB(topic, &to_msg);
+    if (to_req.type != -1) {
+        M_PUB(&to_req);
     }
     return r;
 }
 
 static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    int old_val = *(int *)userdata;
-    int r = sd_bus_message_read(value, "i", userdata);
-    if (r >= 0 && old_val != *(int *)userdata) {
-        temp_msg.new = *(int *)userdata;
-        temp_msg.old = old_val;
-        M_PUB(interface_temp_topic, &temp_msg);
+    temp_req.old = *(int *)userdata;
+    int r = sd_bus_message_read(value, "i", &temp_req.new);
+    if (r >= 0 && temp_req.old != temp_req.new) {
+        M_PUB(&temp_req);
     }
     return r;
 }
 
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                           sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    int old_val = *(int *)userdata;
-    int r = sd_bus_message_read(value, "b", userdata);    
-    if (r >= 0 && old_val != *(int *)userdata) {
-        INFO("Backlight autocalibration %s by bus API.\n", *(int *)userdata ? "disabled" : "enabled");
-        calib_msg.old = old_val;
-        calib_msg.new = *(int *)userdata;
-        M_PUB(interface_bl_autocalib, &calib_msg);
+    calib_req.old = *(int *)userdata;
+    int r = sd_bus_message_read(value, "b", &calib_req.new);    
+    if (r >= 0 && calib_req.new != calib_req.old) {
+        M_PUB(&calib_req);
     }
     return r;
 }
@@ -368,15 +375,15 @@ static int set_event(sd_bus *bus, const char *path, const char *interface, const
     int r = sd_bus_message_read(value, "s", &event);
     if (r >= 0 && strlen(event) <= sizeof(conf.events[SUNRISE])) {
         struct tm timeinfo;
-        if (strlen(event) && !strptime(event, "%R", &timeinfo)) {
+        if (!strlen(event) || !strptime(event, "%R", &timeinfo)) {
             /* Failed to convert datetime */
             r = -EINVAL;
         } else {
             strncpy(userdata, event, sizeof(conf.events[SUNRISE]));
-            M_PUB(loc_topic, &loc_msg); // only to let gamma know it should recompute state.events
+            M_PUB(&loc_msg); // only to let gamma know it should recompute state.events
         }
     } else {
-        /* Datetime too long*/
+        /* Datetime too long */
         r = -EINVAL;
     }
     return r;
@@ -384,12 +391,10 @@ static int set_event(sd_bus *bus, const char *path, const char *interface, const
 
 static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    const double old_val = *(double *)userdata;
-    int r = sd_bus_message_read(value, "d", userdata);
-    if (r >= 0 && old_val != *(double *)userdata) {
-        contrib_msg.old = old_val;
-        contrib_msg.new = *(double *)userdata;
-        M_PUB(interface_scr_contrib, &contrib_msg);
+    contrib_req.old = *(double *)userdata;
+    int r = sd_bus_message_read(value, "d", &contrib_req.new);
+    if (r >= 0 && contrib_req.old != contrib_req.new) {
+        M_PUB(&contrib_req);
     }
     return r;
 }

@@ -10,9 +10,9 @@ static void set_keyboard_level(const double level);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_calibrate_callback(void);
-static void interface_autocalib_callback(void);
-static void interface_curve_callback(enum ac_states s);
-static void interface_timeout_callback(int old_val);
+static void interface_autocalib_callback(int new_val);
+static void interface_curve_callback(curve_upd *up);
+static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
 static void time_callback(int old_val, int is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -26,13 +26,9 @@ static int bl_fd;
 static int paused;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
 static sd_bus_slot *slot;
 
-static bl_upd bl_msg = { CURRENT_BL };
-static bl_upd kbd_msg = { CURRENT_KBD_BL };
-static bl_upd amb_msg = { AMBIENT_BR };
-
-const char *current_bl_topic = "CurrentBlPct";
-const char *current_kbd_topic = "CurrentKbdPct";
-const char *current_ab_topic = "CurrentAmbientBr"; 
+static bl_upd bl_msg = { CURRENT_BL_UPD };
+static bl_upd kbd_msg = { CURRENT_KBD_BL_UPD };
+static bl_upd amb_msg = { AMBIENT_BR_UPD };
 
 MODULE("BACKLIGHT");
 
@@ -41,14 +37,14 @@ static void init(void) {
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
 
-    m_subscribe(up_topic);
-    m_subscribe(display_topic);
-    m_subscribe(time_topic);
-    m_subscribe(evt_topic);
-    m_subscribe(interface_bl_to_topic);
-    m_subscribe(interface_bl_capture);
-    m_subscribe(interface_bl_curve);
-    m_subscribe(interface_bl_autocalib);
+    M_SUB(UPOWER_UPD);
+    M_SUB(DISPLAY_UPD);
+    M_SUB(TIME_UPD);
+    M_SUB(EVENT_UPD);
+    M_SUB(BL_TO_REQ);
+    M_SUB(CAPTURE_REQ);
+    M_SUB(CURVE_REQ);
+    M_SUB(AUTOCALIB_REQ);
 
     /* We do not fail if this fails */
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
@@ -102,26 +98,29 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case DISPLAY_UPD:
                 dimmed_callback();
                 break;
+            case EVENT_UPD:
             case TIME_UPD: {
                 time_upd *up = (time_upd *)msg->ps_msg->message;
-                time_callback(up->old, !strcmp(msg->ps_msg->topic, evt_topic));
+                time_callback(up->old, type == EVENT_UPD);
                 }
                 break;
-            case TIMEOUT_UPD: {
+            case BL_TO_REQ: {
                 timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
-                interface_timeout_callback(up->old);
+                interface_timeout_callback(up);
                 }
                 break;
-            case DO_CAPTURE:
+            case CAPTURE_REQ:
                 interface_calibrate_callback();
                 break;
-            case CURVE_UPD: {
+            case CURVE_REQ: {
                 curve_upd *up = (curve_upd *)msg->ps_msg->message;
-                interface_curve_callback(up->state);
+                interface_curve_callback(up);
                 }
                 break;
-            case AUTOCALIB_UPD:
-                interface_autocalib_callback();
+            case AUTOCALIB_REQ: {
+                calib_upd *up = (calib_upd *)msg->ps_msg->message;
+                interface_autocalib_callback(up->new);
+                }
                 break;
             default:
                 break;
@@ -137,19 +136,21 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
             case DISPLAY_UPD:
                 dimmed_callback();
                 break;
-            case CURVE_UPD: {
+            case CURVE_REQ: {
                 curve_upd *up = (curve_upd *)msg->ps_msg->message;
-                interface_curve_callback(up->state);
+                interface_curve_callback(up);
             }
             break;
-            case DO_CAPTURE:
+            case CAPTURE_REQ:
                 /* In paused state check that we're not dimmed/dpms and sensor is available */
                 if (!state.display_state && sensor_available) {
                     interface_calibrate_callback();
                 }
                 break;
-            case AUTOCALIB_UPD:
-                interface_autocalib_callback();
+            case AUTOCALIB_REQ: {
+                calib_upd *up = (calib_upd *)msg->ps_msg->message;
+                interface_autocalib_callback(up->new);
+                }
                 break;
             default:
                 break;
@@ -214,7 +215,7 @@ static void set_keyboard_level(const double level) {
         const int new_kbd_br = round(state.current_kbd_pct * max_kbd_backlight);
         if (call(NULL, NULL, &kbd_args, "i", new_kbd_br) == 0) {
             kbd_msg.curr = state.current_kbd_pct;
-            M_PUB(current_kbd_topic, &kbd_msg);
+            M_PUB(&kbd_msg);
         }
     }
 }
@@ -228,7 +229,7 @@ void set_backlight_level(const double pct, const int is_smooth, const double ste
     if (!r && ok) {
         state.current_bl_pct = pct;
         bl_msg.curr = pct;
-        M_PUB(current_bl_topic, &bl_msg);
+        M_PUB(&bl_msg);
     }
 }
 
@@ -240,7 +241,7 @@ static int capture_frames_brightness(void) {
         state.ambient_br = compute_average(intensity, conf.num_captures);
         DEBUG("Average frames brightness: %lf.\n", state.ambient_br);
         amb_msg.curr = state.ambient_br;
-        M_PUB(current_ab_topic, &amb_msg);
+        M_PUB(&amb_msg);
     }
     return r;
 }
@@ -256,7 +257,9 @@ static void interface_calibrate_callback(void) {
 }
 
 /* Callback on "AutoCalib" bus exposed writable property */
-static void interface_autocalib_callback(void) {
+static void interface_autocalib_callback(int new_val) {
+    INFO("Backlight autocalibration %s by user request.\n", new_val ? "disabled" : "enabled");
+    conf.no_auto_calib = new_val;
     if (conf.no_auto_calib) {
         pause_mod();
     } else {
@@ -265,13 +268,18 @@ static void interface_autocalib_callback(void) {
 }
 
 /* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
-static void interface_curve_callback(enum ac_states s) {
-    polynomialfit(s);
+static void interface_curve_callback(curve_upd *up) {
+    memcpy(conf.regression_points[up->state], up->regression_points, up->num_points * sizeof(double));
+    conf.num_points[up->state] = up->num_points;
+    polynomialfit(up->state);
 }
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
-static void interface_timeout_callback(int old_val) {
-    reset_timer(bl_fd, old_val, get_current_timeout());
+static void interface_timeout_callback(timeout_upd *up) {
+    conf.timeout[up->state][up->daytime] = up->new;
+    if (up->state == state.ac_state && (up->daytime == state.time || (state.in_event && up->daytime == IN_EVENT))) {
+        reset_timer(bl_fd, up->old, get_current_timeout());
+    }
 }
 
 /* Callback on state.display_state changes */

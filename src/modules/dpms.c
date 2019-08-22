@@ -10,16 +10,14 @@ static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
 static display_upd display_msg = { DISPLAY_UPD };
 
-const char *display_topic = "DisplayState";
-
 MODULE("DPMS");
 
 static void init(void) {
     int r = idle_init(client, &slot, conf.dpms_timeout[state.ac_state], on_new_idle);
     if (r == 0) {
-        m_subscribe(up_topic);
-        m_subscribe(inh_topic);
-        m_subscribe(interface_dpms_to_topic);
+        M_SUB(UPOWER_UPD);
+        M_SUB(INHIBIT_UPD);
+        M_SUB(DPMS_TO_REQ);
     } else {
         WARN("Failed to init.\n");
         m_poisonpill(self());
@@ -39,15 +37,22 @@ static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->is_pubsub && msg->ps_msg->type == USER) {
         MSG_TYPE();
         switch (type) {
-            case UPOWER_UPD:
-            case TIMEOUT_UPD:
+        case UPOWER_UPD:
+            upower_timeout_callback();
+            break;
+        case DPMS_TO_REQ: {
+            timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
+            conf.dpms_timeout[up->state] = up->new;
+            if (up->state == state.ac_state) {
                 upower_timeout_callback();
-                break;
-            case INHIBIT_UPD:
-                inhibit_callback();
-                break;
-            default:
-                break;
+            }
+            }
+            break;
+        case INHIBIT_UPD:
+            inhibit_callback();
+            break;
+        default:
+            break;
         }
     }
 }
@@ -75,7 +80,7 @@ static int on_new_idle(sd_bus_message *m,  __attribute__((unused)) void *userdat
     }
     display_msg.new = state.display_state;
     set_dpms(is_dpms);
-    M_PUB(display_topic, &display_msg);
+    M_PUB(&display_msg);
     return 0;
 }
 

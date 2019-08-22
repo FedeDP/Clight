@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <linux/limits.h>
@@ -8,12 +7,12 @@
 #include <math.h>
 #include <pwd.h>
 #include <setjmp.h>
-#include <module/module_easy.h>
-#include <module/modules_easy.h>
+#include "public.h"
 
 #define CLIGHTD_SERVICE "org.clightd.clightd"
 
-#define MAX_SIZE_POINTS 50                  // max number of points used for polynomial regression
+#define UNUSED __attribute__((unused))
+
 #define DEF_SIZE_POINTS 11                  // default number of points used for polynomial regression
 #define DEGREE 3                            // number of parameters for polynomial regression
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
@@ -22,142 +21,12 @@
 #define MINIMUM_CLIGHTD_VERSION_MAJ 4       // Clightd minimum required maj version
 #define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version
 
-/** PubSub Macros **/
-
-#define MSG_TYPE()              const enum mod_msg_types type = *(enum mod_msg_types *)msg->ps_msg->message
-#define M_PUB(topic, ptr)       m_publish(topic, ptr, sizeof(*ptr), false);
-
-/** Log Macros **/
-
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-
-#define DEBUG(msg, ...) if (conf.verbose) log_message(__FILENAME__, __LINE__, 'D', msg, ##__VA_ARGS__)
-#define INFO(msg, ...) log_message(__FILENAME__, __LINE__, 'I', msg, ##__VA_ARGS__)
-#define WARN(msg, ...) log_message(__FILENAME__, __LINE__, 'W', msg, ##__VA_ARGS__)
-/* ERROR macro will leave clight by calling longjmp */
+/* ERROR macro will leave clight by calling longjmp; thus it is not exposed to public header */
 #define ERROR(msg, ...) \
 do { \
     log_message(__FILENAME__, __LINE__, 'E', msg, ##__VA_ARGS__); \
     longjmp(state.quit_buf, ERR_QUIT); \
 } while (0)
-
-/** Generic Enums **/
-
-/*
- * List of states clight can be through: 
- * day between sunrise and sunset
- * night between sunset and sunrise
- */
-enum states { DAY, NIGHT, SIZE_STATES };
-
-/* List of events: sunrise and sunset */
-enum events { SUNRISE, SUNSET, SIZE_EVENTS };
-
-/* Whether laptop is on battery or connected to ac */
-enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
-
-/* Display states */
-enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
-
-/* Quit values */
-enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };
-
-/* PowerManagement states */
-enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON };
-
-/* Dimming transition states */
-enum dim_trans { ENTER, EXIT, SIZE_DIM };
-
-/* Type of pubsub messages */
-enum mod_msg_types { 
-    LOCATION_UPD, UPOWER_UPD, INHIBIT_UPD, 
-    DISPLAY_UPD, TIME_UPD, EVENT_UPD, 
-    TEMP_UPD, INTERFACE_TEMP, TIMEOUT_UPD,
-    DO_CAPTURE, CURVE_UPD, AUTOCALIB_UPD, 
-    AMBIENT_BR, CURRENT_BL, CURRENT_KBD_BL,
-    CURRENT_SCR_BL, CONTRIB_UPD
-};
-
-typedef struct {
-    double lat;
-    double lon;
-} loc_t;
-
-/** PubSub Messages **/
-
-typedef struct {
-    enum mod_msg_types type; /* LOCATION_UPD */ 
-    loc_t old;
-    loc_t new;
-} loc_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* UPOWER_UPD */
-    enum ac_states old;
-    enum ac_states new;
-} upower_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* INHIBIT_UPD */
-    enum pm_states old;
-    enum pm_states new;
-} inhibit_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* DISPLAY_UPD */
-    enum display_states old;
-    enum display_states new;
-} display_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* TIME_UPD */
-    enum states old;
-    enum states new;
-} time_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* EVENT_UPD */
-    enum events old;
-    enum events new;
-} evt_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* TEMP_UPD/INTERFACE_TEMP */
-    int old;
-    int new;
-} temp_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* TIMEOUT_UPD */
-    int old;
-    int new;
-} timeout_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* DO_CAPTURE */
-} capture_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* CURVE_UPDATE */
-    enum ac_states state;
-} curve_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* AUTOCALIB_UPD */
-    int old;
-    int new;
-} calib_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* AMBIENT_BR/CURRENT_BL/CURRENT_KBD_BL/CURRENT_SCR_BL */
-    double curr;
-} bl_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* CONTRIB_UPD */
-    double old;
-    double new;
-} contrib_upd;
 
 /** Generic structs **/
 
@@ -226,51 +95,7 @@ typedef struct {
     char version[32];                       // Clight version
 } state_t;
 
-/** PubSub Topics **/
-
-/* INHIBIT topics */
-extern const char *inh_topic;                       // Topic emitted on new PowerManagement inhibit state
-
-/* UPOWER topics */
-extern const char *up_topic;                        // Topic emitted on UPower state change
-
-/* LOCATION topics */
-extern const char *loc_topic;                       // Topic emitted on new location received (both by geoclue or user-setted through bus API)
-
-/* BACKLIGHT topics */
-extern const char *current_bl_topic;                // Topic emitted on current backlight level change
-extern const char *current_kbd_topic;               // Topic emitted on current keyboard backlight level change
-extern const char *current_ab_topic;                // Topic emitted on current ambient brightness change
-
-/* DIMMER/DPMS topics */
-extern const char *display_topic;                   // Topic emitted on display state changes (ON, DIMMED, OFF)
-
-/* INTERFACE topics */
-extern const char *interface_temp_topic;            // Topic emitted by INTERFACE to trigger a change to current GAMMA temperature
-extern const char *interface_dimmer_to_topic;       // Topic emitted by INTERFACE to trigger a change to current DIMMER timeouts
-extern const char *interface_dpms_to_topic;         // Topic emitted by INTERFACE to trigger a change to current DPMS timeouts
-extern const char *interface_scr_to_topic;          // Topic emitted by INTERFACE to trigger a change to current SCREEN timeouts
-extern const char *interface_bl_to_topic;           // Topic emitted by INTERFACE to trigger a change to current BACKLIGHT timeouts
-extern const char *interface_bl_capture;            // Topic emitted by INTERFACE to require a quick calibration to BACKLIGHT
-extern const char *interface_bl_curve;              // Topic emitted by INTERFACE to trigger an update to BACKLIGHT curve for given ac state
-extern const char *interface_bl_autocalib;          // Topic emitted by INTERFACE to pause/resume automatic calibration for BACKLIGHT
-extern const char *interface_scr_contrib;           // Topic emitted by INTERFACE to set new SCREEN contrib value
-
-/* GAMMA topics */
-extern const char *time_topic;                      // Topic emitted on time changed, ie: DAY -> NIGHT or NIGHT -> DAY
-extern const char *evt_topic;                       // Topic emitted for InEvent changes
-extern const char *sunrise_topic;                   // Topic emitted on new sunrise time computed
-extern const char *sunset_topic;                    // Topic emitted on new sunset time computed
-extern const char *temp_topic;                      // Topic emitted on new temp set
-
-/* SCREEN topics */
-extern const char *current_scr_topic;               // Topic emitted on screen-emitted brightness change
-
 /** Global state and config data **/
 
 extern state_t state;
 extern conf_t conf;
-
-/** Log function declaration **/
-
-void log_message(const char *filename, int lineno, const char type, const char *log_msg, ...);

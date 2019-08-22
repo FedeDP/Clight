@@ -10,7 +10,7 @@ static void check_state(const time_t *now);
 static void set_temp(int temp, const time_t *now);
 static void ambient_callback(void);
 static void location_callback(void);
-static void interface_callback(void);
+static void interface_callback(int value);
 
 static enum events target_event;               // which event are we targeting?
 static time_t last_t;                          // last time_t check_gamma() was called
@@ -19,22 +19,16 @@ static int long_transitioning;                 // are we inside a long transitio
 static int gamma_fd;
 
 static time_upd time_msg = { TIME_UPD };
-static time_upd in_ev_msg = { TIME_UPD };
-static evt_upd evt_msg[SIZE_EVENTS] = { { EVENT_UPD }, { EVENT_UPD } };
+static time_upd in_ev_msg = { EVENT_UPD };
+static evt_upd evt_msg[SIZE_EVENTS] = { { SUNRISE_UPD }, { SUNSET_UPD } };
 static temp_upd temp_msg = { TEMP_UPD };
-
-const char *time_topic = "Time";
-const char *evt_topic = "InEvent";
-const char *sunrise_topic = "Sunrise";
-const char *sunset_topic = "Sunset";
-const char *temp_topic = "CurrentTemp";
 
 MODULE("GAMMA");
 
 static void init(void) {
-    m_subscribe(current_bl_topic);
-    m_subscribe(loc_topic);
-    m_subscribe(interface_temp_topic);
+    M_SUB(CURRENT_BL_UPD);
+    M_SUB(LOCATION_UPD);
+    M_SUB(TEMP_REQ);
     
     gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     m_register_fd(gamma_fd, true, NULL);
@@ -64,11 +58,13 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case LOCATION_UPD:
                 location_callback();
                 break;
-            case CURRENT_BL:
+            case CURRENT_BL_UPD:
                 ambient_callback();
                 break;
-            case INTERFACE_TEMP:
-                interface_callback();
+            case TEMP_REQ: {
+                temp_upd *t = (temp_upd *)msg->ps_msg->message;
+                interface_callback(t->new);
+                }      
                 break;
             default:
                 break;
@@ -116,14 +112,14 @@ static void check_gamma(void) {
     if (old_state != state.time) {
         time_msg.old = old_state;
         time_msg.new = state.time;
-        M_PUB(time_topic, &time_msg);
+        M_PUB(&time_msg);
     }
     
     /* if we entered/left an event, emit signal */
     if (old_in_event != state.in_event) {
         in_ev_msg.old = old_in_event;
         in_ev_msg.new = state.in_event;
-        M_PUB(evt_topic, &in_ev_msg);
+        M_PUB(&in_ev_msg);
     }
 
     /*
@@ -204,11 +200,11 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
         
         evt_msg[SUNRISE].old = old_events[SUNRISE];
         evt_msg[SUNRISE].new = state.events[SUNRISE];
-        M_PUB(sunrise_topic, &evt_msg[SUNRISE]);
+        M_PUB(&evt_msg[SUNRISE]);
         
         evt_msg[SUNSET].old = old_events[SUNSET];
         evt_msg[SUNSET].new = state.events[SUNSET];
-        M_PUB(sunset_topic, &evt_msg[SUNSET]);
+        M_PUB(&evt_msg[SUNSET]);
     }
     check_next_event(now);
     check_state(now);
@@ -293,7 +289,7 @@ static void set_temp(int temp, const time_t *now) {
         temp_msg.old = state.current_temp;
         state.current_temp = temp;
         temp_msg.new = state.current_temp;
-        M_PUB(temp_topic, &temp_msg);
+        M_PUB(&temp_msg);
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);
         } else {
@@ -322,7 +318,8 @@ static void location_callback(void) {
     DEBUG("New position received. Updating sunrise and sunset times.\n");
 }
 
-static void interface_callback(void) {
+static void interface_callback(int value) {
+    conf.temp[state.time] = value;
     if (!conf.ambient_gamma) {
         set_temp(conf.temp[state.time], NULL); // force refresh (passing NULL time_t*)
     }

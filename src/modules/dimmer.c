@@ -16,9 +16,9 @@ MODULE("DIMMER");
 static void init(void) {
     int r = idle_init(client, &slot, conf.dimmer_timeout[state.ac_state], on_new_idle);
     if (r == 0) {
-        m_subscribe(up_topic);
-        m_subscribe(inh_topic);
-        m_subscribe(interface_dimmer_to_topic);
+        M_SUB(UPOWER_UPD);
+        M_SUB(INHIBIT_UPD);
+        M_SUB(DIMMER_TO_REQ);
         
         /*
          * If dimmer is started and BACKLIGHT module is disabled, or automatic calibration is disabled,
@@ -47,8 +47,15 @@ static void receive(const msg_t *const msg, const void* userdata) {
         MSG_TYPE();
         switch (type) {
             case UPOWER_UPD:
-            case TIMEOUT_UPD:
                 upower_timeout_callback();
+                break;
+            case DIMMER_TO_REQ: {
+                timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
+                conf.dimmer_timeout[up->state] = up->new;
+                if (up->state == state.ac_state) {
+                    upower_timeout_callback();
+                }
+                }
                 break;
             case INHIBIT_UPD:
                 inhibit_callback();
@@ -86,7 +93,7 @@ static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)
     }
     
     display_msg.new = state.display_state;
-    M_PUB(display_topic, &display_msg);
+    M_PUB(&display_msg);
     return 0;
 }
 

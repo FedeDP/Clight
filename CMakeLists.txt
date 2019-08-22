@@ -58,7 +58,7 @@ list(APPEND COMBINED_LDFLAGS ${LOGIN_LIBS_LDFLAGS})
 # Convert ld flag list from list to space separated string.
 string(REPLACE ";" " " COMBINED_LDFLAGS "${COMBINED_LDFLAGS}")
 
-set(PUBLIC_H src/commons.h)
+set(PUBLIC_H src/public.h)
 
 # Set the LDFLAGS target property
 set_target_properties(

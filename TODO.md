@@ -90,6 +90,11 @@ Annullato (core dump creato)
 - [x] FIX: interface Version and ClightdVersion properties
 - [x] FIX: state.ac_state should be -1 on start and various modules should wait on it (same as state.time) -> BACKLIGHT, DIMMER, DPMS
 - [x] Cleanup includes
+- [x] Modules should set new state/conf themselves from message values. This way when a custom modules send a message, everything is managed internally. 
+Eg: on new location we should send a message with new lat and lon and LOCATION module should store them in state.current_loc.
+-> split eg: LOCATION_UPD and LOCATION_UPD_REQ; request has to have a "new" field with new value.
+-> LOCATION, on new geocluelocation, will m_tell(self(), LOCATION_UPD_REQ) and then update state.current_loc and publish LOCATION_UPDATED
+- [x] Add a new "public.h" header to hide everything except PubSub and logs (but not ERROR)
 
 #### Support user supplied modules runtime loading
 - [x] Load modules from XDG_DATA_HOME/clight/modules.d/
@@ -117,6 +122,7 @@ Annullato (core dump creato)
 - [x] Avoid fill_match_data with old value whenever possible (only when value really changed), and remove useless checks (eg: src/modules/dpms.c:    if (!!old_pm_state != !!state.pm_inhibited) ...)
 - [x] Add "--expect-reply=false" to desktop file actions
 - [x] Log bus calls only in verbose mode
+- [ ] Fix clightd going mad if clight is stopped
 
 ### 4.1
 
