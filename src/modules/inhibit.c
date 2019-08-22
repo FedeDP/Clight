@@ -26,7 +26,7 @@ static bool check(void) {
 
 static bool evaluate() {
     /* Start as soon as PowerManagement.Inhibit becomes available */
-    return conf.no_inhibit == 0 && inhibit_check() == 0;
+    return !conf.no_inhibit && inhibit_check() == 0;
 }
 
 static void receive(const msg_t *const msg, const void* userdata) {

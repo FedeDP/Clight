@@ -73,7 +73,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return conf.no_backlight == 0 && (conf.no_gamma || state.time != -1) && state.ac_state != -1;
+    return !conf.no_backlight && (conf.no_gamma || state.time != -1) && state.ac_state != -1;
 }
 
 static void destroy(void) {

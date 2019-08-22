@@ -39,7 +39,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return conf.no_gamma == 0 && 
+    return !conf.no_gamma && 
            ((state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) ||
            (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])));
 }

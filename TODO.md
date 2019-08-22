@@ -122,7 +122,8 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Avoid fill_match_data with old value whenever possible (only when value really changed), and remove useless checks (eg: src/modules/dpms.c:    if (!!old_pm_state != !!state.pm_inhibited) ...)
 - [x] Add "--expect-reply=false" to desktop file actions
 - [x] Log bus calls only in verbose mode
-- [ ] Fix clightd going mad if clight is stopped
+- [x] Fix clightd going mad if clight is stopped (small bug in libmodule)
+- [ ] Fix 20s timeout on start?
 
 ### 4.1
 

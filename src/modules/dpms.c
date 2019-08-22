@@ -30,7 +30,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return conf.no_dpms == 0 && state.ac_state != -1;
+    return !conf.no_dpms && state.ac_state != -1;
 }
 
 static void receive(const msg_t *const msg, const void* userdata) {
