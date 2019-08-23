@@ -179,8 +179,8 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
 static void check_clightd_features(void) {
     SYSBUS_ARG(introspect_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.freedesktop.DBus.Introspectable", "Introspect");
     
-    const char *service_list = NULL;
-    int r = call(&service_list, "s", &introspect_args, NULL);
+    char service_list[PATH_MAX + 1];
+    int r = call(service_list, "s", &introspect_args, NULL);
     if (r < 0) {
         WARN("Clightd service could not be introspected. Automatic modules detection won't work.\n");
     } else {

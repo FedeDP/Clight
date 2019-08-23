@@ -149,9 +149,9 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
             sd_bus_message_read(reply, "s", &unused);
             userptr_type++;
         }
-        if (userptr_type[0] == 'o') {
+        if (userptr_type[0] == 'o' || userptr_type[0] == 's') {
             const char *obj = NULL;
-            r = sd_bus_message_read(reply, "o", &obj);
+            r = sd_bus_message_read(reply, &userptr_type[0], &obj);
             if (r >= 0) {
                 strncpy(userptr, obj, PATH_MAX);
             }
