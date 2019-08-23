@@ -26,7 +26,8 @@ void log_conf(void) {
     if (log_file) {
         time_t t = time(NULL);
 
-        fprintf(log_file, "Clight\n");
+        /* Start with a newline if any log is above */
+        fprintf(log_file, "%sClight\n", ftell(log_file) != 0 ? "\n" : "");
         fprintf(log_file, "* Software version:\t\t%s\n", VERSION);
         fprintf(log_file, "* Global config dir:\t\t%s\n", CONFDIR);
         fprintf(log_file, "* Global data dir:\t\t%s\n", DATADIR);

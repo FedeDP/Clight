@@ -30,8 +30,8 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-            /* Only when BACKLIGHT and SCREEN modules are enabled */
-    return !conf.no_backlight && !conf.no_screen && 
+            /* Only when SCREEN module is enabled */
+    return !conf.no_screen && 
             /* SCREEN configurations have meaningful values */
             conf.screen_contrib > 0 && conf.screen_samples > 0 &&
             /* After UPower */

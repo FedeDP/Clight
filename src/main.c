@@ -22,17 +22,18 @@
  * END_COMMON_COPYRIGHT_HEADER */
 
 #include <opts.h>
-#include <bus.h>
 #include <log.h>
 #include <glob.h>
-#include <assert.h>
+#ifndef NDEBUG
+    #include <assert.h>
+#endif
 #include <module/modules_easy.h>
 
-static int init(int argc, char *argv[]);
+static void init(int argc, char *argv[]);
 static void init_state(void);
 static void init_topics(void);
 static void sigsegv_handler(int signum);
-static int check_clightd(void);
+static void check_clightd_version(void);
 static void init_user_mod_path(enum CONFIG file, char *filename);
 static void load_user_modules(enum CONFIG file);
 
@@ -50,12 +51,11 @@ void modules_pre_start(void) {
 int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
-        if (init(argc, argv) == 0) {
-            if (conf.no_backlight && conf.no_dimmer && conf.no_dpms && conf.no_gamma) {
-                WARN("No functional module running. Leaving...\n");
-            } else {
-                modules_loop();
-            }
+        init(argc, argv);
+        if (conf.no_backlight && conf.no_dimmer && conf.no_dpms && conf.no_gamma) {
+            WARN("No functional module running. Leaving...\n");
+        } else {
+            modules_loop();
         }
     }
     close_log();
@@ -67,22 +67,24 @@ int main(int argc, char *argv[]) {
  * local config file, and from cmdline options.
  * Then init needed modules.
  */
-static int init(int argc, char *argv[]) {
+static void init(int argc, char *argv[]) {
     /* 
      * When receiving segfault signal,
      * call our sigsegv handler that just logs
      * a debug message before dying
      */
     signal(SIGSEGV, sigsegv_handler);
-    
-    /* Init conf and state */
+        
+    open_log();
+    /* We want any issue while parsing config to be logged */
     init_opts(argc, argv);
+    log_conf();
+    
+    /* We want any error while checking Clightd required version to be logged AFTER conf logging */
+    check_clightd_version();
+    
     init_state();
     init_topics();
-    
-    /* Init log file */
-    open_log();
-    log_conf();
     
     /* 
      * Load user custom modules after opening log (thus this information is logged).
@@ -94,9 +96,6 @@ static int init(int argc, char *argv[]) {
      */
     load_user_modules(LOCAL);
     load_user_modules(GLOBAL);
-    
-    /* Check Clightd version and supported features */
-    return check_clightd();
 }
 
 static void init_state(void) {
@@ -179,46 +178,21 @@ static void sigsegv_handler(int signum) {
     raise(signum);
 }
 
-static int check_clightd(void) {
-    SYSBUS_ARG(introspect_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.freedesktop.DBus.Introspectable", "Introspect");
+static void check_clightd_version(void) {
     SYSBUS_ARG(vers_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
-        
-    const char *service_list = NULL;
-    int r = call(&service_list, "s", &introspect_args, NULL);
-    if (r < 0) {
-        WARN("Clightd service could not be introspected. Automatic modules detection won't work.\n");
-    } else {
-        if (!conf.no_gamma && !strstr(service_list, "<node name=\"Gamma\"/>")) {
-            conf.no_gamma = true;
-            WARN("GAMMA forcefully disabled as Clightd was built without gamma support.\n");
-        }
-        
-        if (!conf.no_screen && !strstr(service_list, "<node name=\"Screen\"/>")) {
-            conf.no_screen = true;
-            WARN("SCREEN forcefully disabled as Clightd was built without screen support.\n");
-        }
-        
-        if (!conf.no_dpms && !strstr(service_list, "<node name=\"Dpms\"/>")) {
-            conf.no_dpms = true;
-            WARN("DPMS forcefully disabled as Clightd was built without dpms support.\n");
-        }
-    }
     
-    int ret = -1;
-    r = get_property(&vers_args, "s", state.clightd_version, sizeof(state.clightd_version));
+    int r = get_property(&vers_args, "s", state.clightd_version, sizeof(state.clightd_version));
     if (r < 0 || !strlen(state.clightd_version)) {
-        WARN("No clightd found. Clightd is a mandatory dep.\n");
+        ERROR("No clightd found. Clightd is a mandatory dep.\n");
     } else {
         int maj_val = atoi(state.clightd_version);
         int min_val = atoi(strchr(state.clightd_version, '.') + 1);
         if (maj_val < MINIMUM_CLIGHTD_VERSION_MAJ || (maj_val == MINIMUM_CLIGHTD_VERSION_MAJ && min_val < MINIMUM_CLIGHTD_VERSION_MIN)) {
-            WARN("Clightd must be updated. Required version: %d.%d.\n", MINIMUM_CLIGHTD_VERSION_MAJ, MINIMUM_CLIGHTD_VERSION_MIN);
+            ERROR("Clightd must be updated. Required version: %d.%d.\n", MINIMUM_CLIGHTD_VERSION_MAJ, MINIMUM_CLIGHTD_VERSION_MIN);
         } else {
             INFO("Clightd found, version: %s.\n", state.clightd_version);
-            ret = 0;
         }
     }
-    return ret;
 }
 
 static void init_user_mod_path(enum CONFIG file, char *filename) {

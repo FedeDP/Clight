@@ -2,6 +2,7 @@
 #include <popt.h>
 
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
+static void check_clightd_features(void);
 static void check_conf(void);
 
 /*
@@ -175,6 +176,31 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
     poptFreeContext(pc);
 }
 
+static void check_clightd_features(void) {
+    SYSBUS_ARG(introspect_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.freedesktop.DBus.Introspectable", "Introspect");
+    
+    const char *service_list = NULL;
+    int r = call(&service_list, "s", &introspect_args, NULL);
+    if (r < 0) {
+        WARN("Clightd service could not be introspected. Automatic modules detection won't work.\n");
+    } else {
+        if (!conf.no_gamma && !strstr(service_list, "<node name=\"Gamma\"/>")) {
+            conf.no_gamma = true;
+            WARN("GAMMA forcefully disabled as Clightd was built without gamma support.\n");
+        }
+        
+        if (!conf.no_screen && !strstr(service_list, "<node name=\"Screen\"/>")) {
+            conf.no_screen = true;
+            WARN("SCREEN forcefully disabled as Clightd was built without screen support.\n");
+        }
+        
+        if (!conf.no_dpms && !strstr(service_list, "<node name=\"Dpms\"/>")) {
+            conf.no_dpms = true;
+            WARN("DPMS forcefully disabled as Clightd was built without dpms support.\n");
+        }
+    }
+}
+
 /*
  * It does all needed checks to correctly reset default values
  * in case of wrong options set.
@@ -182,19 +208,37 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
 static void check_conf(void) {
     /* GAMMA and SCREEN require X */
     if (!state.display || !state.xauthority) {
-        conf.no_gamma = true;
-        conf.no_screen = true;
+        if (!conf.no_gamma) {
+            INFO("Disabling GAMMA on non-X environment.\n");
+            conf.no_gamma = true;
+        }
+        if (!conf.no_screen) {
+            INFO("Disabling SCREEN on non-X environment.\n");
+            conf.no_screen = true;
+        }
     }
     
     /* DPMS does not work in wayland */
-    if (state.wl_display) {
+    if (state.wl_display && !conf.no_dpms) {
+        INFO("Disabling DPMS in wayland environment.\n");
         conf.no_dpms = true;
     }
     
-    /* Forcefully disable ambient gamma if BACKLIGHT is disabled */
+    /* Forcefully disable ambient gamma and SCREEN if BACKLIGHT is disabled */
     if (conf.no_backlight) {
-        conf.ambient_gamma = false;
+        if (conf.ambient_gamma) {
+            INFO("Disabling ambient gamma as BACKLIGHT is disabled.\n");
+            conf.ambient_gamma = false;
+        }
+        
+        if (!conf.no_screen) {
+            INFO("Disabling SCREEN as BACKLIGHT is disabled.\n");
+            conf.no_screen = true;
+        }
     }
+    
+    /* Disable any not built feature in Clightd */
+    check_clightd_features();
     
     if (conf.timeout[ON_AC][DAY] <= 0) {
         WARN("Wrong day timeout on AC value. Resetting default value.\n");
