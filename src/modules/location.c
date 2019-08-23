@@ -42,7 +42,8 @@ static void init(void) {
 }
 
 static bool check(void) {
-    return true;
+    /* It is only needed by GAMMA module that only works on X */
+    return state.display && state.xauthority;
 }
 
 static bool evaluate(void) {

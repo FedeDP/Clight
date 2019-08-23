@@ -95,6 +95,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 -> split eg: LOCATION_UPD and LOCATION_UPD_REQ; request has to have a "new" field with new value.
 -> LOCATION, on new geocluelocation, will m_tell(self(), LOCATION_UPD_REQ) and then update state.current_loc and publish LOCATION_UPDATED
 - [x] Add a new "public.h" header to hide everything except PubSub and logs (but not ERROR)
+- [x] Test on wayland/tty
 
 #### Support user supplied modules runtime loading
 - [x] Load modules from XDG_DATA_HOME/clight/modules.d/

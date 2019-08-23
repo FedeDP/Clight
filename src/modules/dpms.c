@@ -26,7 +26,7 @@ static void init(void) {
 
 /* Works everywhere except wayland */
 static bool check(void) {
-    return state.wl_display == NULL || !strlen(state.wl_display);
+    return !state.wl_display;
 }
 
 static bool evaluate(void) {

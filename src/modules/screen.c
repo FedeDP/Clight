@@ -26,7 +26,7 @@ static void init(void) {
 
 static bool check(void) {
     /* Only on X */
-    return state.display != NULL;
+    return state.display && state.xauthority;
 }
 
 static bool evaluate(void) {

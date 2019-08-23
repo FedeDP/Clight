@@ -35,6 +35,7 @@ static void init(void) {
 }
 
 static bool check(void) {
+    /* Only on X */
     return state.display && state.xauthority;
 }
 
