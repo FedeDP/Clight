@@ -123,6 +123,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Add "--expect-reply=false" to desktop file actions
 - [x] Log bus calls only in verbose mode
 - [x] Fix clightd going mad if clight is stopped (small bug in libmodule)
+- [x] Automatically detect CLightd features and disable corresponding clight modules
 - [ ] Fix 20s timeout on start?
 
 ### 4.1

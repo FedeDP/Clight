@@ -32,7 +32,7 @@ static int init(int argc, char *argv[]);
 static void init_state(void);
 static void init_topics(void);
 static void sigsegv_handler(int signum);
-static int check_clightd_version(void);
+static int check_clightd(void);
 static void init_user_mod_path(enum CONFIG file, char *filename);
 static void load_user_modules(enum CONFIG file);
 
@@ -95,8 +95,8 @@ static int init(int argc, char *argv[]) {
     load_user_modules(LOCAL);
     load_user_modules(GLOBAL);
     
-    /* Check Clightd version */
-    return check_clightd_version();
+    /* Check Clightd version and supported features */
+    return check_clightd();
 }
 
 static void init_state(void) {
@@ -179,11 +179,33 @@ static void sigsegv_handler(int signum) {
     raise(signum);
 }
 
-static int check_clightd_version(void) {
-    int ret = -1;
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
+static int check_clightd(void) {
+    SYSBUS_ARG(introspect_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.freedesktop.DBus.Introspectable", "Introspect");
+    SYSBUS_ARG(vers_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
+        
+    const char *service_list = NULL;
+    int r = call(&service_list, "s", &introspect_args, NULL);
+    if (r < 0) {
+        WARN("Clightd service could not be introspected. Automatic modules detection won't work.\n");
+    } else {
+        if (!conf.no_gamma && !strstr(service_list, "<node name=\"Gamma\"/>")) {
+            conf.no_gamma = true;
+            WARN("GAMMA forcefully disabled as Clightd was built without gamma support.\n");
+        }
+        
+        if (!conf.no_screen && !strstr(service_list, "<node name=\"Screen\"/>")) {
+            conf.no_screen = true;
+            WARN("SCREEN forcefully disabled as Clightd was built without screen support.\n");
+        }
+        
+        if (!conf.no_dpms && !strstr(service_list, "<node name=\"Dpms\"/>")) {
+            conf.no_dpms = true;
+            WARN("DPMS forcefully disabled as Clightd was built without dpms support.\n");
+        }
+    }
     
-    int r = get_property(&args, "s", state.clightd_version, sizeof(state.clightd_version));
+    int ret = -1;
+    r = get_property(&vers_args, "s", state.clightd_version, sizeof(state.clightd_version));
     if (r < 0 || !strlen(state.clightd_version)) {
         WARN("No clightd found. Clightd is a mandatory dep.\n");
     } else {

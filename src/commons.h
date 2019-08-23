@@ -9,8 +9,6 @@
 #include <setjmp.h>
 #include "public.h"
 
-#define CLIGHTD_SERVICE "org.clightd.clightd"
-
 #define UNUSED __attribute__((unused))
 
 #define DEF_SIZE_POINTS 11                  // default number of points used for polynomial regression

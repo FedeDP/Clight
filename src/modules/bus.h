@@ -2,7 +2,9 @@
 
 #include <systemd/sd-bus.h>
 #include <timer.h>
-    
+
+#define CLIGHTD_SERVICE "org.clightd.clightd"
+
 /* Bus types */
 enum bus_type { SYSTEM_BUS, USER_BUS };
 
