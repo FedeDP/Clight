@@ -112,6 +112,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Expose through dbus API new state value (screen_comp)
 - [ ] Update API wiki
 - [x] Fix crash!
+- [x] Add to log!
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options
@@ -125,6 +126,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Log bus calls only in verbose mode
 - [x] Fix clightd going mad if clight is stopped (small bug in libmodule)
 - [x] Automatically detect CLightd features and disable corresponding clight modules
+- [x] Force eg: conf.no_gamma when not on X? This way, it would be accounted when checking functional running modules...
 - [ ] Fix 20s timeout on start?
 
 ### 4.1

@@ -102,7 +102,7 @@ static int init(int argc, char *argv[]) {
 static void init_state(void) {
     strncpy(state.version, VERSION, sizeof(state.version));
     memcpy(&state.current_loc, &conf.loc, sizeof(loc_t));
-    if (!conf.no_gamma && state.display && state.xauthority) {
+    if (!conf.no_gamma) {
         /* Initial value -> undefined; if GAMMA is disabled instead assume DAY */
         state.time = -1;
     } else {

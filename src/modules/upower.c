@@ -57,10 +57,12 @@ static int upower_check(void) {
     /* check initial AC state */
     SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
     int r = get_property(&args, "b", &state.ac_state, sizeof(state.ac_state));
-    if (r < 0 && state.ac_state == -1) {
-        /* Upower not available, for now. Let's assume ON_AC! */
-        state.ac_state = ON_AC;
-        INFO("Failed to retrieve AC state; fallback to connected.\n");
+    if (r < 0) {
+        if (state.ac_state == -1) {
+            /* Upower not available, for now. Let's assume ON_AC! */
+            state.ac_state = ON_AC;
+            INFO("Failed to retrieve AC state; fallback to connected.\n");
+        }
     } else {
         INFO("Initial AC state: %s.\n", state.ac_state == ON_AC ? "connected" : "disconnected");
     }

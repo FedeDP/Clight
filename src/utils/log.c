@@ -41,6 +41,8 @@ void log_conf(void) {
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
         fprintf(log_file, "* Ambient gamma:\t\t%s\n", conf.ambient_gamma ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Screen contrib:\t\t%.2lf\n", conf.screen_contrib);
+        fprintf(log_file, "* Screen samples:\t\t%d\n", conf.screen_samples);
 
         if (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED) {
             fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.loc.lat, conf.loc.lon);
@@ -60,6 +62,7 @@ void log_conf(void) {
         fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][SIZE_STATES], conf.timeout[ON_BATTERY][SIZE_STATES]);
         fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
         fprintf(log_file, "* Dpms timeouts:\t\tAC %d\tBATT %d\n", conf.dpms_timeout[ON_AC], conf.dpms_timeout[ON_BATTERY]);
+        fprintf(log_file, "* Screen timeouts:\t\tAC %d\tBATT %d\n", conf.screen_timeout[ON_AC], conf.screen_timeout[ON_BATTERY]);
 
         fprintf(log_file, "\n### Modules ###\n");
         fprintf(log_file, "* Backlight:\t\t%s\n", conf.no_backlight ? "Disabled" : "Enabled");
@@ -67,6 +70,7 @@ void log_conf(void) {
         fprintf(log_file, "* Dimmer:\t\t%s\n", conf.no_dimmer ? "Disabled" : "Enabled");
         fprintf(log_file, "* Dpms:\t\t%s\n", conf.no_dpms ? "Disabled" : "Enabled");
         fprintf(log_file, "* Inhibit:\t\t%s\n", conf.no_inhibit ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Screen:\t\t%s\n", conf.no_screen ? "Disabled" : "Enabled");
 
         fprintf(log_file, "\n### Smooth ###\n");
         fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");

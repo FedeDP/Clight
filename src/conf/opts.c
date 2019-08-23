@@ -180,6 +180,22 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
  * in case of wrong options set.
  */
 static void check_conf(void) {
+    /* GAMMA and SCREEN require X */
+    if (!state.display || !state.xauthority) {
+        conf.no_gamma = true;
+        conf.no_screen = true;
+    }
+    
+    /* DPMS does not work in wayland */
+    if (state.wl_display) {
+        conf.no_dpms = true;
+    }
+    
+    /* Forcefully disable ambient gamma if BACKLIGHT is disabled */
+    if (conf.no_backlight) {
+        conf.ambient_gamma = false;
+    }
+    
     if (conf.timeout[ON_AC][DAY] <= 0) {
         WARN("Wrong day timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][DAY] = 10 * 60;
@@ -267,11 +283,6 @@ static void check_conf(void) {
     if (conf.shutter_threshold < 0 || conf.shutter_threshold >= 1) {
         WARN("Wrong shutter_threshold value. Resetting default value.\n");
         conf.shutter_threshold = 0.0;
-    }
-    
-    /* Forcefully enable BACKLIGHT if ambient_gamma is enabled */
-    if (conf.ambient_gamma) {
-        conf.no_backlight = 0;
     }
 
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
