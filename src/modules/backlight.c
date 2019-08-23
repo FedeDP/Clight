@@ -182,7 +182,11 @@ static void do_capture(bool reset_timer) {
         state.ambient_br -= state.screen_comp;
         if (state.ambient_br > conf.shutter_threshold) {
             set_new_backlight(state.ambient_br * 10);
-            INFO("Ambient brightness: %.3lf (%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
+            if (state.screen_comp > 0.0) {
+                INFO("Ambient brightness: %.3lf (%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
+            } else {
+                INFO("Ambient brightness: %.3lf -> Backlight pct: %.3lf.\n", state.ambient_br, state.current_bl_pct);
+            }
         } else {
             INFO("Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
         }

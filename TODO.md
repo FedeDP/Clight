@@ -113,6 +113,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [ ] Update API wiki
 - [x] Fix crash!
 - [x] Add to log!
+- [x] Properly reset screen_br array values when entering a "screen paused" state (eg: on battery), and restart from scratch filling it.
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options
@@ -127,6 +128,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Fix clightd going mad if clight is stopped (small bug in libmodule)
 - [x] Automatically detect CLightd features and disable corresponding clight modules
 - [x] Force eg: conf.no_gamma when not on X? This way, it would be accounted when checking functional running modules...
+- [x] Fix bug in reset_timer with <0 old values.
 - [ ] Fix 20s timeout on start?
 
 ### 4.1

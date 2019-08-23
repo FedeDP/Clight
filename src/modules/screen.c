@@ -3,7 +3,7 @@
 
 static void get_screen_brightness(bool compute);
 static void receive_computing(const msg_t *msg, const void *userdata);
-static void timeout_callback(int old_val);
+static void timeout_callback(int old_val, bool is_computing);
 static void dimmed_callback(void);
 
 MODULE("SCREEN");
@@ -75,13 +75,13 @@ static void receive(const msg_t *msg, const void *userdata) {
             timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
             conf.screen_timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
-                timeout_callback(up->old);
+                timeout_callback(up->old, false);
             }
             }
             break;
         case UPOWER_UPD: {
             upower_upd *up = (upower_upd *)msg->ps_msg->message;
-            timeout_callback(conf.screen_timeout[up->old]);
+            timeout_callback(conf.screen_timeout[up->old], false);
             }
             break;
         case DISPLAY_UPD:
@@ -109,13 +109,13 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
             timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
             conf.screen_timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
-                timeout_callback(up->old);
+                timeout_callback(up->old, true);
             }
             }
             break;
         case UPOWER_UPD: {
             upower_upd *up = (upower_upd *)msg->ps_msg->message;
-            timeout_callback(conf.screen_timeout[up->old]);
+            timeout_callback(conf.screen_timeout[up->old], true);
             }
             break;
         case CONTRIB_REQ: {
@@ -134,8 +134,23 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
     }
 }
 
-static void timeout_callback(int old_val) {
+static void timeout_callback(int old_val, bool is_computing) {
     reset_timer(screen_fd, old_val, conf.screen_timeout[state.ac_state]);
+    /* 
+     * A paused timeout has been set; this means user does not want 
+     * SCREEN to work in current AC state.
+     * Avoid keeping alive old state.screen_comp that won't be never updated,
+     * and reset all screen_br values.
+     */
+    if (conf.screen_timeout[state.ac_state] <= 0) {
+        state.screen_comp = 0.0;
+        memset(screen_br, 0, conf.screen_samples * sizeof(double));
+        screen_ctr = 0;
+        
+        if (is_computing) {
+            m_unbecome();
+        }
+    }
 }
 
 static void dimmed_callback(void) {

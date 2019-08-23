@@ -56,6 +56,9 @@ static long get_timeout(int fd, size_t member) {
 }
 
 void reset_timer(int fd, int old_timer, int new_timer) {
+    if (old_timer < 0) {
+        old_timer = 0;
+    }
     unsigned int elapsed_time = old_timer - get_timeout_sec(fd);
     /* if we still need to wait some seconds */
     if (new_timer > elapsed_time) {
