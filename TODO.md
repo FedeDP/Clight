@@ -96,6 +96,12 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 -> LOCATION, on new geocluelocation, will m_tell(self(), LOCATION_UPD_REQ) and then update state.current_loc and publish LOCATION_UPDATED
 - [x] Add a new "public.h" header to hide everything except PubSub and logs (but not ERROR)
 - [x] Test on wayland/tty
+- [x] Let user call BL_REQ or KBD_BL_REQ too!
+- [x] Dimmer should use BL_REQ and depend on BACKLIGHT
+- [x] Drop backlight.h
+- [x] smooth options for backlight/gamma should be settable by BL_REQ/TEMP_REQ message
+- [ ] Drop API wiki page about Modules bus interface
+- [ ] Updated API (currentTemp -> Temp ecc ecc)
 
 #### Support user supplied modules runtime loading
 - [x] Load modules from XDG_DATA_HOME/clight/modules.d/

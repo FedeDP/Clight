@@ -1,4 +1,3 @@
-#include <backlight.h>
 #include "idler.h"
 
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -6,10 +5,12 @@ static void dim_backlight(const double pct);
 static void restore_backlight(const double pct);
 static void upower_timeout_callback(void);
 static void inhibit_callback(void);
+static void publish_bl_req(const double pct, const bool smooth, const double step, const int to);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
 static display_upd display_msg = { DISPLAY_UPD };
+static bl_upd bl_req = { BL_REQ };
 
 MODULE("DIMMER");
 
@@ -19,15 +20,6 @@ static void init(void) {
         M_SUB(UPOWER_UPD);
         M_SUB(INHIBIT_UPD);
         M_SUB(DIMMER_TO_REQ);
-        
-        /*
-         * If dimmer is started and BACKLIGHT module is disabled, or automatic calibration is disabled,
-         * we need to ensure to start from a well known backlight level.
-         * Force 100% backlight level.
-         */
-        if (conf.no_backlight || conf.no_auto_calib) {
-            set_backlight_level(1.0, 0, 0, 0);
-        }
     } else {
         WARN("Failed to init.\n");
         m_poisonpill(self());
@@ -102,13 +94,13 @@ static void dim_backlight(const double pct) {
     if (pct >= state.current_bl_pct) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
-        set_backlight_level(pct, !conf.no_smooth_dimmer[ENTER], conf.dimmer_trans_step[ENTER], conf.dimmer_trans_timeout[ENTER]);
+        publish_bl_req(pct, !conf.no_smooth_dimmer[ENTER], conf.dimmer_trans_step[ENTER], conf.dimmer_trans_timeout[ENTER]);
     }
 }
 
 /* restore previous backlight level */
 static void restore_backlight(const double pct) {
-    set_backlight_level(pct, !conf.no_smooth_dimmer[EXIT], conf.dimmer_trans_step[EXIT], conf.dimmer_trans_timeout[EXIT]);
+    publish_bl_req(pct, !conf.no_smooth_dimmer[EXIT], conf.dimmer_trans_step[EXIT], conf.dimmer_trans_timeout[EXIT]);
 }
 
 /* Reset dimmer timeout */
@@ -128,4 +120,12 @@ static void inhibit_callback(void) {
         DEBUG("Being paused.\n");
         idle_client_stop(client);
     }
+}
+
+static void publish_bl_req(const double pct, const bool smooth, const double step, const int to) {
+    bl_req.new = pct;
+    bl_req.smooth = smooth;
+    bl_req.step = step;
+    bl_req.timeout = to;
+    M_PUB(&bl_req);
 }

@@ -7,10 +7,10 @@ static void check_gamma(void);
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
 static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
-static void set_temp(int temp, const time_t *now);
+static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
 static void location_callback(void);
-static void interface_callback(int value);
+static void interface_callback(temp_upd *req);
 
 static enum events target_event;               // which event are we targeting?
 static time_t last_t;                          // last time_t check_gamma() was called
@@ -26,7 +26,7 @@ static temp_upd temp_msg = { TEMP_UPD };
 MODULE("GAMMA");
 
 static void init(void) {
-    M_SUB(CURRENT_BL_UPD);
+    M_SUB(BL_UPD);
     M_SUB(LOCATION_UPD);
     M_SUB(TEMP_REQ);
     
@@ -59,12 +59,11 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case LOCATION_UPD:
                 location_callback();
                 break;
-            case CURRENT_BL_UPD:
+            case BL_UPD:
                 ambient_callback();
                 break;
             case TEMP_REQ: {
-                temp_upd *t = (temp_upd *)msg->ps_msg->message;
-                interface_callback(t->new);
+                interface_callback((temp_upd *)msg->ps_msg->message);
                 }      
                 break;
             default:
@@ -131,7 +130,7 @@ static void check_gamma(void) {
      * and at the end (to be sure to correctly set desired gamma and to avoid any sync issue)
      */
     if (!long_transitioning && !conf.ambient_gamma) {
-        set_temp(conf.temp[state.time], &t);
+        set_temp(conf.temp[state.time], &t, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     }
     
     /* desired gamma temp has been set. Set new GAMMA timer */
@@ -253,8 +252,8 @@ static void check_state(const time_t *now) {
     }
 }
 
-static void set_temp(int temp, const time_t *now) {
-    int ok, smooth, step, timeout;
+static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout) {
+    int ok;
     
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Set");
     
@@ -278,10 +277,6 @@ static void set_temp(int temp, const time_t *now) {
         
         long_transitioning = 1;
     } else {
-        smooth = !conf.no_smooth_gamma;
-        step = conf.gamma_trans_step;
-        timeout = conf.gamma_trans_timeout;
-        
         long_transitioning = 0;
     }
     
@@ -308,7 +303,7 @@ static void ambient_callback(void) {
         const int diff = abs(conf.temp[DAY] - conf.temp[NIGHT]);
         const int min_temp = conf.temp[NIGHT] < conf.temp[DAY] ? conf.temp[NIGHT] : conf.temp[DAY]; 
         const int ambient_temp = (diff * state.current_bl_pct) + min_temp;
-        set_temp(ambient_temp, NULL); // force refresh
+        set_temp(ambient_temp, NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
     }
 }
 
@@ -319,9 +314,13 @@ static void location_callback(void) {
     DEBUG("New position received. Updating sunrise and sunset times.\n");
 }
 
-static void interface_callback(int value) {
-    conf.temp[state.time] = value;
+static void interface_callback(temp_upd *req) {
+    conf.temp[state.time] = req->new;
     if (!conf.ambient_gamma) {
-        set_temp(conf.temp[state.time], NULL); // force refresh (passing NULL time_t*)
+        if (req->smooth != -1) {
+            set_temp(conf.temp[state.time], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
+        } else {
+            set_temp(conf.temp[state.time], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
+        }
     }
 }

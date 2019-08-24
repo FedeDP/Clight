@@ -224,19 +224,24 @@ static void check_conf(void) {
         conf.no_dpms = true;
     }
     
-    /* Forcefully disable ambient gamma and SCREEN if BACKLIGHT is disabled */
+    /* Forcefully disable ambient gamma, DIMMER and SCREEN if BACKLIGHT is disabled */
     if (conf.no_backlight) {
         if (conf.ambient_gamma) {
             INFO("Disabling ambient gamma as BACKLIGHT is disabled.\n");
             conf.ambient_gamma = false;
         }
         
+        if (!conf.no_dimmer) {
+            INFO("Disabling DIMMER as BACKLIGHT is disabled.\n");
+            conf.no_dimmer = true;
+        }
+
         if (!conf.no_screen) {
             INFO("Disabling SCREEN as BACKLIGHT is disabled.\n");
             conf.no_screen = true;
         }
     }
-    
+
     /* Disable any not built feature in Clightd */
     check_clightd_features();
     

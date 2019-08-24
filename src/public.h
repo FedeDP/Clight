@@ -60,13 +60,15 @@ enum mod_msg_types {
     SUNSET_UPD,         // Subscribe to receive new Sunset times
     TEMP_UPD,           // Subscribe to receive new gamma temperatures
     AMBIENT_BR_UPD,     // Subscribe to receive new ambient brightness values
-    CURRENT_BL_UPD,     // Subscribe to receive new backlight level values
-    CURRENT_KBD_BL_UPD, // Subscribe to receive new kbd backlight values
-    CURRENT_SCR_BL_UPD, // Subscribe to receive new screen-emitted brightness values
+    BL_UPD,             // Subscribe to receive new backlight level values
+    KBD_BL_UPD,         // Subscribe to receive new keyboard backlight values
+    SCR_BL_UPD,         // Subscribe to receive new screen-emitted brightness values
     LOCATION_REQ,       // Publish to set a new location
     UPOWER_REQ,         // Publish to set a new UPower state
     INHIBIT_REQ,        // Publish to set a new PowerManagement state
     TEMP_REQ,           // Publish to set a new gamma temp
+    BL_REQ,             // Publish to set a new backlight level
+    KBD_BL_REQ,         // Publish to set a new keyboard backlight level
     DIMMER_TO_REQ,      // Publish to set a new dimmer timeout
     DPMS_TO_REQ,        // Publish to set a new dpms timeout
     SCR_TO_REQ,         // Publish to set a new screen timeout
@@ -125,6 +127,9 @@ typedef struct {
     enum mod_msg_types type; /* TEMP_UPD/TEMP_REQ */
     int old;
     int new;
+    int smooth;              // Only useful for requests. -1 to use conf values
+    int step;                // Only useful for requests
+    int timeout;             // Only useful for requests
 } temp_upd;
 
 typedef struct {
@@ -153,8 +158,12 @@ typedef struct {
 } calib_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* AMBIENT_BR_UPD/CURRENT_BL_UPD/CURRENT_KBD_BL_UPD/CURRENT_SCR_BL_UPD */
-    double curr;
+    enum mod_msg_types type; /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
+    double old;
+    double new;
+    int smooth;              // Only useful for requests. -1 to use conf values
+    double step;             // Only useful for requests
+    int timeout;             // Only useful for requests
 } bl_upd;
 
 typedef struct {

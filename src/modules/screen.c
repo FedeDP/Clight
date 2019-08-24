@@ -10,7 +10,7 @@ MODULE("SCREEN");
 
 static double *screen_br;
 static int screen_ctr, screen_fd;
-static bl_upd screen_msg = { CURRENT_SCR_BL_UPD };
+static bl_upd screen_msg = { SCR_BL_UPD };
 
 static void init(void) {
     screen_br = calloc(conf.screen_samples, sizeof(double));
@@ -52,9 +52,12 @@ static void get_screen_brightness(bool compute) {
     screen_ctr = (screen_ctr + 1) % conf.screen_samples;
     
     if (compute) {
+        double old_comp = state.screen_comp;
         state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
-        screen_msg.curr = state.screen_comp;
-        M_PUB(&screen_msg);
+        if (old_comp != state.screen_comp) {
+            screen_msg.new = state.screen_comp;
+            M_PUB(&screen_msg);
+        }
         DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
     } else if (screen_ctr + 1 == conf.screen_samples) {
         /* Bucket filled! Start computing! */

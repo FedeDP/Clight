@@ -1,11 +1,12 @@
-#include <backlight.h>
-#include <my_math.h>
+#include "bus.h"
+#include "my_math.h"
 
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static void init_kbd_backlight(void);
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer);
 static void set_new_backlight(const double perc);
+static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout);
 static void set_keyboard_level(const double level);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
@@ -26,8 +27,8 @@ static int bl_fd;
 static int paused;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
 static sd_bus_slot *slot;
 
-static bl_upd bl_msg = { CURRENT_BL_UPD };
-static bl_upd kbd_msg = { CURRENT_KBD_BL_UPD };
+static bl_upd bl_msg = { BL_UPD };
+static bl_upd kbd_msg = { KBD_BL_UPD };
 static bl_upd amb_msg = { AMBIENT_BR_UPD };
 
 MODULE("BACKLIGHT");
@@ -45,6 +46,8 @@ static void init(void) {
     M_SUB(CAPTURE_REQ);
     M_SUB(CURVE_REQ);
     M_SUB(AUTOCALIB_REQ);
+    M_SUB(BL_REQ);
+    M_SUB(KBD_BL_REQ);
 
     /* We do not fail if this fails */
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
@@ -64,6 +67,14 @@ static void init(void) {
         pause_mod();
     }
     if (conf.no_auto_calib) {
+        /*
+         * If automatic calibration is disabled, we need to ensure to start
+         * from a well known backlight level for DIMMER to correctly work.
+         * Force 100% backlight level.
+         *
+         * Cannot publish a BL_REQ as BACKLIGHT get paused.
+         */
+        set_backlight_level(1.0, false, 0, 0);
         pause_mod();
     }
 }
@@ -122,6 +133,20 @@ static void receive(const msg_t *const msg, const void* userdata) {
                 interface_autocalib_callback(up->new);
                 }
                 break;
+            case BL_REQ: {
+                bl_upd *up = (bl_upd *)msg->ps_msg->message;
+                if (up->smooth != -1) {
+                    set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+                } else {
+                    set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+                }
+                break;
+            }
+            case KBD_BL_REQ: {
+                bl_upd *up = (bl_upd *)msg->ps_msg->message;
+                set_keyboard_level(up->new);
+                break;
+            }
             default:
                 break;
         }
@@ -203,36 +228,40 @@ static void set_new_backlight(const double perc) {
     const double new_br_pct =  clamp(b, 1, 0);
 
     set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
-    set_keyboard_level(new_br_pct);
+    
+    /*
+     * keyboard backlight follows opposite curve:
+     * on high ambient brightness, it must be very low (off)
+     * on low ambient brightness, it must be turned on
+     */
+    set_keyboard_level(1.0 - new_br_pct);
 }
 
 static void set_keyboard_level(const double level) {
     if (max_kbd_backlight > 0 && !conf.no_keyboard_bl) {
         SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
-        /*
-         * keyboard backlight follows opposite curve:
-         * on high ambient brightness, it must be very low (off)
-         * on low ambient brightness, it must be turned on
-         */
-        state.current_kbd_pct = 1.0 - level;
+
+        kbd_msg.old = state.current_kbd_pct;
+        state.current_kbd_pct = level;
         /* We actually need to pass an int to variadic bus() call */
         const int new_kbd_br = round(state.current_kbd_pct * max_kbd_backlight);
         if (call(NULL, NULL, &kbd_args, "i", new_kbd_br) == 0) {
-            kbd_msg.curr = state.current_kbd_pct;
+            kbd_msg.new = state.current_kbd_pct;
             M_PUB(&kbd_msg);
         }
     }
 }
 
-void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
+static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
 
     /* Set backlight on both internal monitor (in case of laptop) and external ones */
     int ok;
     int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
     if (!r && ok) {
+        bl_msg.old = state.current_bl_pct;
         state.current_bl_pct = pct;
-        bl_msg.curr = pct;
+        bl_msg.new = pct;
         M_PUB(&bl_msg);
     }
 }
@@ -242,9 +271,10 @@ static int capture_frames_brightness(void) {
     double intensity[conf.num_captures];
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
+        amb_msg.old = state.ambient_br;
         state.ambient_br = compute_average(intensity, conf.num_captures);
         DEBUG("Average frames brightness: %lf.\n", state.ambient_br);
-        amb_msg.curr = state.ambient_br;
+        amb_msg.new = state.ambient_br;
         M_PUB(&amb_msg);
     }
     return r;

@@ -117,9 +117,9 @@ static void init_state(void) {
 
 static void init_topics(void) {
     /* BACKLIGHT */
-    topics[AMBIENT_BR_UPD] = "CurrentAmbientBr";
-    topics[CURRENT_BL_UPD] = "CurrentBlPct";
-    topics[CURRENT_KBD_BL_UPD] = "CurrentKbdPct";
+    topics[AMBIENT_BR_UPD] = "AmbientBr";
+    topics[BL_UPD] = "BlPct";
+    topics[KBD_BL_UPD] = "KbdPct";
     
     /* DIMMER/DPMS */
     topics[DISPLAY_UPD] = "DisplayState";
@@ -129,31 +129,33 @@ static void init_topics(void) {
     topics[EVENT_UPD] = "InEvent";
     topics[SUNRISE_UPD] = "Sunrise";
     topics[SUNSET_UPD] = "Sunset";
-    topics[TEMP_UPD] = "CurrentTemp";
+    topics[TEMP_UPD] = "Temp";
     
     /* INHIBIT */
     topics[INHIBIT_UPD] = "PmState";
     
     /* INTERFACE */
-    topics[DIMMER_TO_REQ] = "InterfaceDimmerTo";
-    topics[DPMS_TO_REQ] = "InterfaceDPMSTo";
-    topics[SCR_TO_REQ] = "InterfaceScreenTO";
-    topics[BL_TO_REQ] = "InterfaceBLTo";
-    topics[TEMP_REQ] = "InterfaceTemp";
-    topics[CAPTURE_REQ] = "InterfaceBLCapture";
-    topics[CURVE_REQ] = "InterfaceBLCurve";
-    topics[AUTOCALIB_REQ] = "InterfaceBLAuto";
-    topics[CONTRIB_REQ] = "InterfaceScrContrib";
-    topics[LOCATION_REQ] = "InterfaceLocation";
-    /* Following are currently unused */
-    topics[UPOWER_REQ] = "InterfaceUpower";
-    topics[INHIBIT_REQ] = "InterfaceInhibit";
+    topics[DIMMER_TO_REQ] = "ReqDimmerTo";
+    topics[DPMS_TO_REQ] = "ReqDpmsTo";
+    topics[SCR_TO_REQ] = "ReqScrTo";
+    topics[BL_TO_REQ] = "ReqBlTo";
+    topics[TEMP_REQ] = "ReqTemp";
+    topics[CAPTURE_REQ] = "ReqCapture";
+    topics[CURVE_REQ] = "ReqCurve";
+    topics[AUTOCALIB_REQ] = "ReqAutocalib";
+    topics[CONTRIB_REQ] = "ReqContrib";
+    topics[LOCATION_REQ] = "ReqLocation";
+    /* Following are currently unused, useful for custom modules */
+    topics[UPOWER_REQ] = "ReqAcState";
+    topics[INHIBIT_REQ] = "ReqInhibit";
+    topics[BL_REQ] = "ReqBl";
+    topics[KBD_BL_REQ] = "ReqKbdBl";
     
     /* LOCATION */
     topics[LOCATION_UPD] = "Location";
 
     /* SCREEN */
-    topics[CURRENT_SCR_BL_UPD] = "CurrentScreenComp";
+    topics[SCR_BL_UPD] = "ScreenComp";
 
     /* UPOWER */
     topics[UPOWER_UPD] = "AcState";
