@@ -75,6 +75,7 @@ static void init(void) {
          * Cannot publish a BL_REQ as BACKLIGHT get paused.
          */
         set_backlight_level(1.0, false, 0, 0);
+        set_keyboard_level(0.0);
         pause_mod();
     }
 }
