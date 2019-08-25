@@ -85,7 +85,7 @@ typedef struct {
     int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
     enum display_states display_state;      // current display state
-    enum pm_states pm_inhibited;            // whether powermanagement is inhibited
+    bool inhibited;                         // whether screensaver inhibition is enabled
     loc_t current_loc;                      // current user location
     double screen_comp;                     // current screen-emitted brightness compensation
     jmp_buf quit_buf;                       // quit jump called by longjmp

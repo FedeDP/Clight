@@ -132,7 +132,7 @@ static void init_topics(void) {
     topics[TEMP_UPD] = "Temp";
     
     /* INHIBIT */
-    topics[INHIBIT_UPD] = "PmState";
+    topics[INHIBIT_UPD] = "Inhibited";
     
     /* INTERFACE */
     topics[DIMMER_TO_REQ] = "ReqDimmerTo";

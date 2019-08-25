@@ -40,9 +40,6 @@ enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
 /* Quit values */
 enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };
 
-/* PowerManagement states */
-enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON };
-
 /* Dimming transition states */
 enum dim_trans { ENTER, EXIT, SIZE_DIM };
 
@@ -101,8 +98,8 @@ typedef struct {
 
 typedef struct {
     enum mod_msg_types type; /* INHIBIT_UPD/INHIBIT_REQ */
-    enum pm_states old;
-    enum pm_states new;
+    bool old;
+    bool new;
 } inhibit_upd;
 
 typedef struct {

@@ -1,11 +1,28 @@
 #include <stddef.h>
 #include <bus.h>
 #include <config.h>
+#include <module/map.h>
 
+#define CLIGHT_COOKIE -1
+#define CLIGHT_INH_KEY "LockClight"
+
+typedef struct {
+    int cookie;
+    int refs;
+} lock_t;
+
+/** org.freedesktop.ScreenSaver spec implementation **/
+static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
+static int create_inhibit(int cookie, const char *key, const char *app_name, const char *reason);
+static int drop_inhibit(int cookie, const char *key, bool force);
+static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+
+/** Clight bus api **/
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                        sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -39,7 +56,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(state_t, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(state_t, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("AcState", "i", NULL, offsetof(state_t, ac_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("PmState", "i", NULL, offsetof(state_t, pm_inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Inhibited", "b", NULL, offsetof(state_t, inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("BlPct", "d", NULL, offsetof(state_t, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("KbdPct", "d", NULL, offsetof(state_t, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("AmbientBr", "d", NULL, offsetof(state_t, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -47,7 +64,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(state_t, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("ScreenComp", "d", NULL, offsetof(state_t, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_METHOD("Inhibit", "b", NULL, method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Inhibit", "b", NULL, method_clight_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
@@ -112,6 +129,13 @@ static const sd_bus_vtable conf_to_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
+static const sd_bus_vtable sc_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("Inhibit", "ss", "u", method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("UnInhibit", "u", NULL, method_uninhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_VTABLE_END
+};
+
 static timeout_upd to_req;
 static inhibit_upd inhibit_req = { INHIBIT_REQ };
 static temp_upd temp_req = { TEMP_REQ };
@@ -121,6 +145,8 @@ static calib_upd calib_req = { AUTOCALIB_REQ };
 static loc_upd loc_req = { LOCATION_REQ };
 static loc_upd loc_msg = { LOCATION_UPD };
 static contrib_upd contrib_req = { CONTRIB_REQ };
+
+static map_t *lock_map;
 static sd_bus *userbus;
 
 MODULE("INTERFACE");
@@ -128,8 +154,10 @@ MODULE("INTERFACE");
 static void init(void) {    
     const char conf_path[] = "/org/clight/clight/Conf";
     const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
+    const char sc_path[] = "/org/freedesktop/ScreenSaver";
     const char conf_interface[] = "org.clight.clight.Conf";
-
+    const char sc_interface[] = "org.freedesktop.ScreenSaver";
+    
     userbus = get_user_bus();
     
     /* Main interface */
@@ -156,15 +184,32 @@ static void init(void) {
                                   conf_to_vtable,
                                   &conf);
     
+    r += sd_bus_add_object_vtable(userbus,
+                                  NULL,
+                                  sc_path,
+                                  sc_interface,
+                                  sc_vtable,
+                                  NULL);
+    
     if (r < 0) {
         WARN("Could not create Bus Interface: %s\n", strerror(-r));
     } else {
         r = sd_bus_request_name(userbus, bus_interface, 0);
         if (r < 0) {
-            WARN("Failed to acquire Bus Interface name: %s\n", strerror(-r));
+            WARN("Failed to create %s dbus interface: %s\n", bus_interface, strerror(-r));
         } else {
             /* Subscribe to any topic expept REQUESTS */
             m_subscribe("^[^Req].*");
+            
+            /** org.freedesktop.ScreenSaver API **/
+            if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
+                WARN("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
+            } else {
+                USERBUS_ARG(args, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameOwnerChanged");
+                add_match(&args, NULL, on_bus_name_changed);
+            }
+            lock_map = map_new(true, free);
+            /**                                 **/
         }
     }
     
@@ -198,34 +243,147 @@ static void destroy(void) {
     }
 }
 
-static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
-                       sd_bus_message *reply, void *userdata, sd_bus_error *error) {
-    return sd_bus_message_append(reply, "s", userdata);
+/** org.freedesktop.ScreenSaver spec implementation: https://people.freedesktop.org/~hadess/idle-inhibition-spec/re01.html **/
+
+/*
+ * org.freedesktop.ScreenSaver spec:
+ * Inhibition will stop when the UnInhibit function is called, 
+ * or the application disconnects from the D-Bus session bus (which usually happens upon exit).
+ * 
+ * Polling on NameOwnerChanged dbus signals.
+ */
+static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    const char *name = NULL, *old_owner = NULL, *new_owner = NULL;
+    if (sd_bus_message_read(m, "sss", &name, &old_owner, &new_owner) >= 0) {
+        if (map_has_key(lock_map, old_owner) && (!new_owner || !strlen(new_owner))) {
+            lock_t *l = map_get(lock_map, old_owner);
+            drop_inhibit(l->cookie, old_owner, true);
+        }
+    }
+    return 0;
 }
 
-static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    M_PUB(&capture_req);
-    return sd_bus_reply_method_return(m, NULL);
+static int create_inhibit(int cookie, const char *key, const char *app_name, const char *reason) {
+    lock_t *l = malloc(sizeof(lock_t));
+    if (l) {
+        l->cookie = cookie;
+        l->refs = 1;
+        map_put(lock_map, key, l);
+        
+        DEBUG("New ScreenSaver inhibition held by %s: %s. Cookie: %d\n", app_name, reason, cookie);
+        
+        if (map_length(lock_map) == 1) {
+            inhibit_req.old = false;
+            inhibit_req.new = true;
+            M_PUB(&inhibit_req);
+        }
+        return 0;
+    }
+    return -1;
 }
 
-static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    int r = sd_bus_message_read(m, "b", &inhibit_req.new);
+// TODO: take cookie from l?
+static int drop_inhibit(int cookie, const char *key, bool force) {
+    lock_t *l = map_get(lock_map, key);
+    if (l) {
+        if (!force) {
+            l->refs--;
+        } else {
+            l->refs = 0;
+        }
+        if (l->refs == 0 && map_remove(lock_map, key) == MAP_OK) {
+            DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", cookie);
+            
+            if (map_length(lock_map) == 0) {
+                inhibit_req.old = true;
+                inhibit_req.new = false;
+                M_PUB(&inhibit_req);
+            }
+        }
+        return 0;
+    }
+    return -1;
+}
+
+static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    int inhibit;
+    int r = sd_bus_message_read(m, "b", &inhibit);
     if (r < 0) {
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-
-    inhibit_req.old = state.pm_inhibited;
-    if (inhibit_req.new) {
-        inhibit_req.new = inhibit_req.new | PM_FORCED_ON;
+    
+    int ret = 0;
+    if (inhibit) {
+        if (!map_has_key(lock_map, CLIGHT_INH_KEY)) {
+            ret = create_inhibit(CLIGHT_COOKIE, CLIGHT_INH_KEY, "Clight", "user requested");
+        }
     } else {
-        inhibit_req.new = inhibit_req.new & ~PM_FORCED_ON;
+        ret = drop_inhibit(CLIGHT_COOKIE, CLIGHT_INH_KEY, true);
     }
-    if (inhibit_req.new != inhibit_req.old) {
-        M_PUB(&inhibit_req);
+
+    if (ret == 0) {
+        return sd_bus_reply_method_return(m, NULL);
     }
-    return sd_bus_reply_method_return(m, NULL);
+    sd_bus_error_set_errno(ret_error, EINVAL);
+    return -EINVAL;
 }
+
+static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    char *app_name = NULL, *reason = NULL;
+    
+    int r = sd_bus_message_read(m, "ss", &app_name, &reason);
+    if (r < 0) {
+        WARN("Failed to parse parameters: %s\n", strerror(-r));
+        return r;
+    }
+    
+    int cookie;
+    int ret = 0;
+    lock_t *l = map_get(lock_map, sd_bus_message_get_sender(m));
+    if (l) {
+        l->refs++;
+        cookie = l->cookie;
+    } else {
+        cookie = random();
+        // TODO: move above code inside create_inhibit!
+        ret = create_inhibit(cookie, sd_bus_message_get_sender(m), app_name, reason);
+    }
+
+    if (ret == 0) {
+        return sd_bus_reply_method_return(m, "u", cookie);
+    }
+    sd_bus_error_set_errno(ret_error, ENOMEM);
+    return -ENOMEM;
+}
+
+static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    unsigned int cookie;
+    
+    int r = sd_bus_message_read(m, "u", &cookie);
+    if (r < 0) {
+        WARN("Failed to parse parameters: %s\n", strerror(-r));
+        return r;
+    }
+    
+    if (drop_inhibit(cookie, sd_bus_message_get_sender(m), false) == 0) {
+        return sd_bus_reply_method_return(m, NULL);
+    }
+    sd_bus_error_set_errno(ret_error, EINVAL);
+    return -EINVAL;
+}
+
+/** Clight bus api **/
+
+static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
+                       sd_bus_message *reply, void *userdata, sd_bus_error *error) {
+    return sd_bus_message_append(reply, "s", userdata);
+                       }
+                       
+                       static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+                           M_PUB(&capture_req);
+                           return sd_bus_reply_method_return(m, NULL);
+                       }
 
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error) {

@@ -121,6 +121,16 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Add to log!
 - [x] Properly reset screen_br array values when entering a "screen paused" state (eg: on battery), and restart from scratch filling it.
 
+#### ScreenSaver (#76)
+- [ ] Implement org.freedesktop.ScreenSaver bus API (Inhibit/UnInhibit methods) 
+-> missing: "Inhibition will stop when the UnInhibit function is called, or the application disconnects from the D-Bus session bus (which usually happens upon exit)."
+-> -> use sd_bus_message_get_sender(m) as key? Return same cookie with refs to same application requesting it. Then, on NameOwnerChanged "sss" with new_onwer == NULL -> remove key alltogether
+- [x] If org.freedesktop.ScreenSaver is already present, avoid failing
+- [x] Redirect old Inhibit method to new internal api. Keep it available where org.freedesktop.ScreenSaver is already took by DE
+- [x] Eventually drop power management api/configs ... (?)
+- [x] Drop enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON }
+- [x] Drop no_inhibit
+
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options
 - [x] Add issue template
@@ -144,10 +154,6 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [ ] New conf to set a certain backlight level when entering inhibit state -> inhibit_backlight = {AC, BATT}. This implicitly will enable inhibit_autocalib=true
 - [ ] If inhibit_backlight -> when leaving inhibit state, do a quick capture
 
-#### ScreenSaver (#76)
-- [ ] Implement org.freedesktop.ScreenSaver bus API (Inhibit/UnInhibit methods)
-- [ ] If org.freedesktop.ScreenSaver is already present, avoid failing
-- [ ] Eventually drop power management api/configs ... (?)
 
 ### 4.2
 

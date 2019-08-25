@@ -51,7 +51,6 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_float(&cfg, "dimmer_pct", &conf.dimmer_pct);
         config_lookup_float(&cfg, "shutter_threshold", &conf.shutter_threshold);
         config_lookup_bool(&cfg, "no_dpms", &conf.no_dpms);
-        config_lookup_bool(&cfg, "no_inhibit", &conf.no_inhibit);
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
         config_lookup_bool(&cfg, "no_auto_calibration", &conf.no_auto_calib);
         config_lookup_bool(&cfg, "no_kdb_backlight", &conf.no_keyboard_bl);

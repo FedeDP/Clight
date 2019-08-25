@@ -113,7 +113,7 @@ static void upower_timeout_callback(void) {
  * Else, restart it.
  */
 static void inhibit_callback(void) {
-    if (!state.pm_inhibited) {
+    if (!state.inhibited) {
         DEBUG("Being resumed.\n");
         idle_client_start(client);
     } else {

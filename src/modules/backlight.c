@@ -243,10 +243,10 @@ static void set_keyboard_level(const double level) {
         SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
 
         kbd_msg.old = state.current_kbd_pct;
-        state.current_kbd_pct = level;
         /* We actually need to pass an int to variadic bus() call */
-        const int new_kbd_br = round(state.current_kbd_pct * max_kbd_backlight);
+        const int new_kbd_br = round(level * max_kbd_backlight);
         if (call(NULL, NULL, &kbd_args, "i", new_kbd_br) == 0) {
+            state.current_kbd_pct = level;
             kbd_msg.new = state.current_kbd_pct;
             M_PUB(&kbd_msg);
         }
@@ -263,6 +263,9 @@ static void set_backlight_level(const double pct, const int is_smooth, const dou
         bl_msg.old = state.current_bl_pct;
         state.current_bl_pct = pct;
         bl_msg.new = pct;
+        bl_msg.smooth = is_smooth;
+        bl_msg.step = step;
+        bl_msg.timeout = timeout;
         M_PUB(&bl_msg);
     }
 }
@@ -376,6 +379,7 @@ static void pause_mod(void) {
 static void resume_mod(void) {
     if (--paused == 0) {
         m_unbecome();
+        /* Register back our fd on resume */
         m_register_fd(bl_fd, false, NULL);
     }
 }

@@ -285,6 +285,9 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         temp_msg.old = state.current_temp;
         state.current_temp = temp;
         temp_msg.new = state.current_temp;
+        temp_msg.smooth = smooth;
+        temp_msg.step = step;
+        temp_msg.timeout = timeout;
         M_PUB(&temp_msg);
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);

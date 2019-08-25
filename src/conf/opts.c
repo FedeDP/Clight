@@ -117,7 +117,6 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 100, "Disable gamma correction tool", NULL},
         {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
-        {"no-inhibit", 0, POPT_ARG_NONE, &conf.no_inhibit, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
         {"no-backlight", 0, POPT_ARG_NONE, &conf.no_backlight, 100, "Disable backlight module", NULL},
         {"no-screen", 0, POPT_ARG_NONE, &conf.no_screen, 100, "Disable screen module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
