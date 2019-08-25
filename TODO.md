@@ -142,6 +142,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Automatically detect CLightd features and disable corresponding clight modules
 - [x] Force eg: conf.no_gamma when not on X? This way, it would be accounted when checking functional running modules...
 - [x] Fix bug in reset_timer with <0 old values.
+- [x] Rework clight conf file
 - [ ] Fix 20s timeout on start? Geoclue is super-slow...opened ticket: https://gitlab.freedesktop.org/geoclue/geoclue/issues/121
 
 #### DOC/WIKI updates
