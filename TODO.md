@@ -112,8 +112,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] move topics in commons.h
 - [x] Move log.h functions too, so users can log into clight's log
 
-#### Screen compensation support
-- [x] Fix #84
+#### Screen compensation support (#84)
 - [x] Expose through dbus API new conf options and react if they change
 - [x] Expose through dbus API new state value (screen_comp)
 - [ ] Update API wiki
@@ -122,7 +121,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Properly reset screen_br array values when entering a "screen paused" state (eg: on battery), and restart from scratch filling it.
 
 #### ScreenSaver (#76)
-- [ ] Implement org.freedesktop.ScreenSaver bus API (Inhibit/UnInhibit methods) 
+- [x] Implement org.freedesktop.ScreenSaver bus API (Inhibit/UnInhibit methods) 
 -> missing: "Inhibition will stop when the UnInhibit function is called, or the application disconnects from the D-Bus session bus (which usually happens upon exit)."
 -> -> use sd_bus_message_get_sender(m) as key? Return same cookie with refs to same application requesting it. Then, on NameOwnerChanged "sss" with new_onwer == NULL -> remove key alltogether
 - [x] If org.freedesktop.ScreenSaver is already present, avoid failing
@@ -145,7 +144,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Automatically detect CLightd features and disable corresponding clight modules
 - [x] Force eg: conf.no_gamma when not on X? This way, it would be accounted when checking functional running modules...
 - [x] Fix bug in reset_timer with <0 old values.
-- [ ] Fix 20s timeout on start?
+- [ ] Fix 20s timeout on start? Geoclue is super-slow...opened ticket: https://gitlab.freedesktop.org/geoclue/geoclue/issues/121
 
 ### 4.1
 
@@ -153,7 +152,6 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [ ] New conf to inhibit automatic calibration too (together with dimmer) -> inhibit_dimmer = true; inhibit_autocalib = true (if both false -> disable inhibit module)
 - [ ] New conf to set a certain backlight level when entering inhibit state -> inhibit_backlight = {AC, BATT}. This implicitly will enable inhibit_autocalib=true
 - [ ] If inhibit_backlight -> when leaving inhibit state, do a quick capture
-
 
 ### 4.2
 
