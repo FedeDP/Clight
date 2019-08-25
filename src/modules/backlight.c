@@ -185,6 +185,26 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
                 interface_autocalib_callback(up->new);
                 }
                 break;
+            case BL_REQ: {
+                /* In paused state check that we're not dimmed/dpms */
+                if (!state.display_state) {
+                    bl_upd *up = (bl_upd *)msg->ps_msg->message;
+                    if (up->smooth != -1) {
+                        set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+                    } else {
+                        set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+                    }
+                }
+                break;
+            }
+            case KBD_BL_REQ: {
+                /* In paused state check that we're not dimmed/dpms */
+                if (!state.display_state) {
+                    bl_upd *up = (bl_upd *)msg->ps_msg->message;
+                    set_keyboard_level(up->new);
+                }
+                break;
+            }
             case INHIBIT_UPD:
                 on_inbhibit_update();
                 break;
