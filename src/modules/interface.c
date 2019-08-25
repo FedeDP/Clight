@@ -13,11 +13,12 @@ typedef struct {
 
 /** org.freedesktop.ScreenSaver spec implementation **/
 static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
-static int create_inhibit(int cookie, const char *key, const char *app_name, const char *reason);
-static int drop_inhibit(int cookie, const char *key, bool force);
+static int create_inhibit(int *cookie, const char *key, const char *app_name, const char *reason);
+static int drop_inhibit(int *cookie, const char *key, bool force);
 static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 /** Clight bus api **/
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
@@ -45,6 +46,7 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
+static const char sc_interface[] = "org.freedesktop.ScreenSaver";
 
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
@@ -133,6 +135,7 @@ static const sd_bus_vtable sc_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_METHOD("Inhibit", "ss", "u", method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("UnInhibit", "u", NULL, method_uninhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD_WITH_OFFSET("GetActive", NULL, "b", method_get_inhibit, offsetof(state_t, inhibited), SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
@@ -156,7 +159,6 @@ static void init(void) {
     const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
     const char sc_path[] = "/org/freedesktop/ScreenSaver";
     const char conf_interface[] = "org.clight.clight.Conf";
-    const char sc_interface[] = "org.freedesktop.ScreenSaver";
     
     userbus = get_user_bus();
     
@@ -184,15 +186,15 @@ static void init(void) {
                                   conf_to_vtable,
                                   &conf);
     
-    r += sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  sc_path,
-                                  sc_interface,
-                                  sc_vtable,
-                                  NULL);
+    sd_bus_add_object_vtable(userbus,
+                                NULL,
+                                sc_path,
+                                sc_interface,
+                                sc_vtable,
+                                &state);
     
     if (r < 0) {
-        WARN("Could not create Bus Interface: %s\n", strerror(-r));
+        WARN("Could not create %s dbus interface: %s\n", bus_interface, strerror(-r));
     } else {
         r = sd_bus_request_name(userbus, bus_interface, 0);
         if (r < 0) {
@@ -239,6 +241,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
 static void destroy(void) {
     if (userbus) {
         sd_bus_release_name(userbus, bus_interface);
+        sd_bus_release_name(userbus, sc_interface);
         userbus = sd_bus_flush_close_unref(userbus);
     }
 }
@@ -256,44 +259,65 @@ static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED 
     const char *name = NULL, *old_owner = NULL, *new_owner = NULL;
     if (sd_bus_message_read(m, "sss", &name, &old_owner, &new_owner) >= 0) {
         if (map_has_key(lock_map, old_owner) && (!new_owner || !strlen(new_owner))) {
-            lock_t *l = map_get(lock_map, old_owner);
-            drop_inhibit(l->cookie, old_owner, true);
+            drop_inhibit(NULL, old_owner, true);
         }
     }
     return 0;
 }
 
-static int create_inhibit(int cookie, const char *key, const char *app_name, const char *reason) {
-    lock_t *l = malloc(sizeof(lock_t));
-    if (l) {
-        l->cookie = cookie;
-        l->refs = 1;
-        map_put(lock_map, key, l);
-        
-        DEBUG("New ScreenSaver inhibition held by %s: %s. Cookie: %d\n", app_name, reason, cookie);
-        
-        if (map_length(lock_map) == 1) {
-            inhibit_req.old = false;
-            inhibit_req.new = true;
-            M_PUB(&inhibit_req);
-        }
-        return 0;
-    }
-    return -1;
-}
-
-// TODO: take cookie from l?
-static int drop_inhibit(int cookie, const char *key, bool force) {
+static int create_inhibit(int *cookie, const char *key, const char *app_name, const char *reason) {
     lock_t *l = map_get(lock_map, key);
     if (l) {
+        l->refs++;
+        *cookie = l->cookie;
+    } else {
+        lock_t *l = malloc(sizeof(lock_t));
+        if (l) {
+            if (*cookie != CLIGHT_COOKIE) {
+                *cookie = random();
+            }
+            l->cookie = *cookie;
+            l->refs = 1;
+            map_put(lock_map, key, l);
+
+            DEBUG("New ScreenSaver inhibition held by %s: %s. Cookie: %d\n", app_name, reason, l->cookie);
+
+            if (map_length(lock_map) == 1) {
+                inhibit_req.old = false;
+                inhibit_req.new = true;
+                M_PUB(&inhibit_req);
+            }
+        } else {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int drop_inhibit(int *cookie, const char *key, bool force) {
+    lock_t *l = map_get(lock_map, key);
+    if (!l && cookie) {
+        /* May be another sender is asking to drop a cookie? Linear search */
+        for (map_itr_t *itr = map_itr_new(lock_map); itr; itr = map_itr_next(itr)) {
+            lock_t *tmp = (lock_t *)map_itr_get_data(itr);
+            if (tmp->cookie == *cookie) {
+                l = tmp;
+                free(itr);
+                itr = NULL;
+            }
+        }
+    }
+
+    if (l) {
+        const int c = l->cookie;
         if (!force) {
             l->refs--;
         } else {
             l->refs = 0;
         }
         if (l->refs == 0 && map_remove(lock_map, key) == MAP_OK) {
-            DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", cookie);
-            
+            DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", c);
+
             if (map_length(lock_map) == 0) {
                 inhibit_req.old = true;
                 inhibit_req.new = false;
@@ -315,11 +339,10 @@ static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error
     
     int ret = 0;
     if (inhibit) {
-        if (!map_has_key(lock_map, CLIGHT_INH_KEY)) {
-            ret = create_inhibit(CLIGHT_COOKIE, CLIGHT_INH_KEY, "Clight", "user requested");
-        }
+        int cookie = CLIGHT_COOKIE;
+        ret = create_inhibit(&cookie, CLIGHT_INH_KEY, "Clight", "user requested");
     } else {
-        ret = drop_inhibit(CLIGHT_COOKIE, CLIGHT_INH_KEY, true);
+        ret = drop_inhibit(NULL, CLIGHT_INH_KEY, true);
     }
 
     if (ret == 0) {
@@ -338,19 +361,8 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
         return r;
     }
     
-    int cookie;
-    int ret = 0;
-    lock_t *l = map_get(lock_map, sd_bus_message_get_sender(m));
-    if (l) {
-        l->refs++;
-        cookie = l->cookie;
-    } else {
-        cookie = random();
-        // TODO: move above code inside create_inhibit!
-        ret = create_inhibit(cookie, sd_bus_message_get_sender(m), app_name, reason);
-    }
-
-    if (ret == 0) {
+    int cookie = 0;
+    if (create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason) == 0) {
         return sd_bus_reply_method_return(m, "u", cookie);
     }
     sd_bus_error_set_errno(ret_error, ENOMEM);
@@ -358,7 +370,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
 }
 
 static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    unsigned int cookie;
+    int cookie;
     
     int r = sd_bus_message_read(m, "u", &cookie);
     if (r < 0) {
@@ -366,11 +378,15 @@ static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret
         return r;
     }
     
-    if (drop_inhibit(cookie, sd_bus_message_get_sender(m), false) == 0) {
+    if (drop_inhibit(&cookie, sd_bus_message_get_sender(m), false) == 0) {
         return sd_bus_reply_method_return(m, NULL);
     }
     sd_bus_error_set_errno(ret_error, EINVAL);
     return -EINVAL;
+}
+
+static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    return sd_bus_reply_method_return(m, "b", *(bool *)userdata);
 }
 
 /** Clight bus api **/
@@ -378,12 +394,12 @@ static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                        sd_bus_message *reply, void *userdata, sd_bus_error *error) {
     return sd_bus_message_append(reply, "s", userdata);
-                       }
+}
                        
-                       static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-                           M_PUB(&capture_req);
-                           return sd_bus_reply_method_return(m, NULL);
-                       }
+static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    M_PUB(&capture_req);
+    return sd_bus_reply_method_return(m, NULL);
+}
 
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error) {
