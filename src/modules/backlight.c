@@ -1,6 +1,8 @@
 #include "bus.h"
 #include "my_math.h"
 
+enum backlight_pause { UNPAUSED = 0, DISPLAY = 1, SENSOR = 2, AUTOCALIB = 4, INHIBIT = 8 };
+
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static void init_kbd_backlight(void);
 static int is_sensor_available(void);
@@ -18,8 +20,9 @@ static void dimmed_callback(void);
 static void time_callback(int old_val, int is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_current_timeout(void);
-static void pause_mod(void);
-static void resume_mod(void);
+static void on_inbhibit_update(void);
+static void pause_mod(enum backlight_pause type);
+static void resume_mod(enum backlight_pause type);
 
 static int sensor_available;
 static int max_kbd_backlight;
@@ -40,6 +43,7 @@ static void init(void) {
 
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);
+    M_SUB(INHIBIT_UPD);
     M_SUB(TIME_UPD);
     M_SUB(EVENT_UPD);
     M_SUB(BL_TO_REQ);
@@ -64,7 +68,7 @@ static void init(void) {
     bl_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     m_register_fd(bl_fd, false, NULL);
     if (!sensor_available) {
-        pause_mod();
+        pause_mod(SENSOR);
     }
     if (conf.no_auto_calib) {
         /*
@@ -76,7 +80,7 @@ static void init(void) {
          */
         set_backlight_level(1.0, false, 0, 0);
         set_keyboard_level(0.0);
-        pause_mod();
+        pause_mod(AUTOCALIB);
     }
 }
 
@@ -148,6 +152,9 @@ static void receive(const msg_t *const msg, const void* userdata) {
                 set_keyboard_level(up->new);
                 break;
             }
+            case INHIBIT_UPD:
+                on_inbhibit_update();
+                break;
             default:
                 break;
         }
@@ -177,6 +184,9 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
                 calib_upd *up = (calib_upd *)msg->ps_msg->message;
                 interface_autocalib_callback(up->new);
                 }
+                break;
+            case INHIBIT_UPD:
+                on_inbhibit_update();
                 break;
             default:
                 break;
@@ -299,9 +309,9 @@ static void interface_autocalib_callback(int new_val) {
     INFO("Backlight autocalibration %s by user request.\n", new_val ? "disabled" : "enabled");
     conf.no_auto_calib = new_val;
     if (conf.no_auto_calib) {
-        pause_mod();
+        pause_mod(AUTOCALIB);
     } else {
-        resume_mod();
+        resume_mod(AUTOCALIB);
     }
 }
 
@@ -323,9 +333,9 @@ static void interface_timeout_callback(timeout_upd *up) {
 /* Callback on state.display_state changes */
 static void dimmed_callback(void) {
     if (state.display_state) {
-        pause_mod();
+        pause_mod(DISPLAY);
     } else {
-        resume_mod();
+        resume_mod(DISPLAY);
     }
 }
 
@@ -352,10 +362,10 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
         sensor_available = new_sensor_avail;
         if (sensor_available) {
             DEBUG("Resumed as a sensor is now available.\n");
-            resume_mod();
+            resume_mod(SENSOR);
         } else {
             DEBUG("Paused as no sensor is available.\n");
-            pause_mod();
+            pause_mod(SENSOR);
         }
     }
     return 0;
@@ -368,16 +378,34 @@ static inline int get_current_timeout(void) {
     return conf.timeout[state.ac_state][state.time];
 }
 
-static void pause_mod(void) {
-    if (++paused == 1) {
+static void on_inbhibit_update(void) {
+    if (conf.inhibit_autocalib && state.inhibited) {
+        pause_mod(INHIBIT);
+    } else {
+        /* 
+         * Always resume: this is needed
+         * in case INTERFACE disables conf.inhibit_autocalib
+         * while we are inhibited.
+         * Note that it won't do anything if we were not inhibited.
+         */
+        resume_mod(INHIBIT);
+    }
+}
+
+static void pause_mod(enum backlight_pause type) {
+    int old_paused = paused;
+    paused |= type;
+    if (old_paused == UNPAUSED && paused != UNPAUSED) {
         m_become(paused);
         /* Properly deregister our fd while paused */
         m_deregister_fd(bl_fd);
     }
 }
 
-static void resume_mod(void) {
-    if (--paused == 0) {
+static void resume_mod(enum backlight_pause type) {
+    int old_pause = paused;
+    paused &= ~type;
+    if (old_pause != UNPAUSED && paused == UNPAUSED) {
         m_unbecome();
         /* Register back our fd on resume */
         m_register_fd(bl_fd, false, NULL);

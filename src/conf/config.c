@@ -59,6 +59,7 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_bool(&cfg, "no_screen", &conf.no_screen);
         config_lookup_float(&cfg, "screen_contrib", &conf.screen_contrib);
         config_lookup_int(&cfg, "screen_samples", &conf.screen_samples);
+        config_lookup_bool(&cfg, "inhibit_autocalib", &conf.inhibit_autocalib);
 
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
@@ -286,6 +287,9 @@ int store_config(enum CONFIG file) {
 
     setting = config_setting_add(root, "no_kdb_backlight", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.no_keyboard_bl);
+    
+    setting = config_setting_add(root, "inhibit_autocalib", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.inhibit_autocalib);
 
     setting = config_setting_add(root, "sensor_devname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.dev_name);

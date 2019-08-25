@@ -4,7 +4,7 @@
 static void get_screen_brightness(bool compute);
 static void receive_computing(const msg_t *msg, const void *userdata);
 static void timeout_callback(int old_val, bool is_computing);
-static void dimmed_callback(void);
+static void pause_screen(bool pause);
 
 MODULE("SCREEN");
 
@@ -88,7 +88,7 @@ static void receive(const msg_t *msg, const void *userdata) {
             }
             break;
         case DISPLAY_UPD:
-            dimmed_callback();
+            pause_screen(state.display_state);
             break;
         case CONTRIB_REQ: {
             contrib_upd *up = (contrib_upd *)msg->ps_msg->message;
@@ -126,10 +126,14 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
             conf.screen_contrib = up->new;
             /* Recompute current screen compensation */
             state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
+            /* If screen_comp is now 0, or old screen_comp was 0, check if we need to pause */
+            if (up->new == 0 || up->old == 0) {
+                pause_screen(up->new == 0);
+            }
             }
             break;
         case DISPLAY_UPD:
-            dimmed_callback();
+            pause_screen(state.display_state);
             break;
         default:
             break;
@@ -156,9 +160,9 @@ static void timeout_callback(int old_val, bool is_computing) {
     }
 }
 
-static void dimmed_callback(void) {
-    if (state.display_state) {
-        /* Stop capturing snapshots while dimmed or dpms */
+static void pause_screen(bool pause) {
+    if (pause) {
+        /* Stop capturing snapshots while dimmed or dpms or conf.screen_contrib is 0 */
         m_deregister_fd(screen_fd);
     } else {
         /* Resume capturing */

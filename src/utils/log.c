@@ -35,7 +35,8 @@ void log_conf(void) {
         fprintf(log_file, "Starting options:\n");
         fprintf(log_file, "\n### Generic ###\n");
         fprintf(log_file, "* Verbose (debugging):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
-        fprintf(log_file, "* Automatic calibration:\t\t%s\n", conf.no_auto_calib ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Autocalibration:\t\t%s\n", conf.no_auto_calib ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Inhibit autocalibration:\t\t%s\n", conf.inhibit_autocalib ? "Enabled" : "Disabled");
         fprintf(log_file, "* Keyboard backlight:\t\t%s\n", conf.no_keyboard_bl ? "Disabled" : "Enabled");
         fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
         fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
@@ -70,7 +71,6 @@ void log_conf(void) {
         fprintf(log_file, "* Gamma:\t\t%s\n", conf.no_gamma ? "Disabled" : "Enabled");
         fprintf(log_file, "* Dimmer:\t\t%s\n", conf.no_dimmer ? "Disabled" : "Enabled");
         fprintf(log_file, "* Dpms:\t\t%s\n", conf.no_dpms ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Inhibit:\t\t%s\n", conf.no_inhibit ? "Disabled" : "Enabled");
         fprintf(log_file, "* Screen:\t\t%s\n", conf.no_screen ? "Disabled" : "Enabled");
 
         fprintf(log_file, "\n### Smooth ###\n");

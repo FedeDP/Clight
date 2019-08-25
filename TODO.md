@@ -100,14 +100,11 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Dimmer should use BL_REQ and depend on BACKLIGHT
 - [x] Drop backlight.h
 - [x] smooth options for backlight/gamma should be settable by BL_REQ/TEMP_REQ message
-- [ ] Drop API wiki page about Modules bus interface
-- [ ] Updated API (currentTemp -> Temp ecc ecc)
 
 #### Support user supplied modules runtime loading
 - [x] Load modules from XDG_DATA_HOME/clight/modules.d/
 - [x] Supply a skeleton module to be used as example
 - [x] Support global user modules (/usr/share/clight/modules.d ?)
-- [ ] Provide a working module in wiki pages to switch user theme on SUNRISE/SUNSET events
 - [x] Install commons.h in /usr/include/clight/
 - [x] move topics in commons.h
 - [x] Move log.h functions too, so users can log into clight's log
@@ -115,20 +112,21 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 #### Screen compensation support (#84)
 - [x] Expose through dbus API new conf options and react if they change
 - [x] Expose through dbus API new state value (screen_comp)
-- [ ] Update API wiki
 - [x] Fix crash!
 - [x] Add to log!
 - [x] Properly reset screen_br array values when entering a "screen paused" state (eg: on battery), and restart from scratch filling it.
 
 #### ScreenSaver (#76)
 - [x] Implement org.freedesktop.ScreenSaver bus API (Inhibit/UnInhibit methods) 
--> missing: "Inhibition will stop when the UnInhibit function is called, or the application disconnects from the D-Bus session bus (which usually happens upon exit)."
--> -> use sd_bus_message_get_sender(m) as key? Return same cookie with refs to same application requesting it. Then, on NameOwnerChanged "sss" with new_onwer == NULL -> remove key alltogether
 - [x] If org.freedesktop.ScreenSaver is already present, avoid failing
 - [x] Redirect old Inhibit method to new internal api. Keep it available where org.freedesktop.ScreenSaver is already took by DE
 - [x] Eventually drop power management api/configs ... (?)
 - [x] Drop enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON }
 - [x] Drop no_inhibit
+
+#### Inhibition (#81)
+- [x] New conf to inhibit automatic calibration too (together with dimmer) on Screensaver inhibition enabled inhibit_autocalib = true
+- [x] Expose through interface
 
 #### Generic
 - [x] Update conf file/clight autocompletion script/interface.c with new options
@@ -146,14 +144,16 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Fix bug in reset_timer with <0 old values.
 - [ ] Fix 20s timeout on start? Geoclue is super-slow...opened ticket: https://gitlab.freedesktop.org/geoclue/geoclue/issues/121
 
-### 4.1
+#### DOC/WIKI updates
+- [ ] Drop API wiki page about Modules bus interface
+- [ ] Updated API ("CurrentTemp" -> "Temp" ecc ecc)
+- [ ] Provide a working module in wiki pages to switch user theme on SUNRISE/SUNSET events
+- [ ] Provide a working module in wiki pages to set a certain backlight level when entering inhibit state
+- [ ] Update API wiki for screen compensation (#84)
+- [ ] Update API wiki for inhibit_autocalib (#81)
+- [ ] Update API wiki dropping NoInhibit (#76)
 
-#### Inhibition (#81)
-- [ ] New conf to inhibit automatic calibration too (together with dimmer) -> inhibit_dimmer = true; inhibit_autocalib = true (if both false -> disable inhibit module)
-- [ ] New conf to set a certain backlight level when entering inhibit state -> inhibit_backlight = {AC, BATT}. This implicitly will enable inhibit_autocalib=true
-- [ ] If inhibit_backlight -> when leaving inhibit state, do a quick capture
-
-### 4.2
+### 4.X
 
 #### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)

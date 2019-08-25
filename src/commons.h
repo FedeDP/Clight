@@ -58,6 +58,7 @@ typedef struct {
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
     int gamma_long_transition;              // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
+    int inhibit_autocalib;                  // whether to inhibit backlight autocalibration too when Screensaver inhibition is enabled
     int screen_timeout[SIZE_AC];            // screen timeouts
     double screen_contrib;                  // how much does screen-emitted brightness affect ambient brightness (eg 0.1)
     int screen_samples;                     // number of samples used to compute average screen-emitted brightness
@@ -65,7 +66,6 @@ typedef struct {
     int no_backlight;
     int no_dimmer;
     int no_dpms;
-    int no_inhibit;
     int no_screen;
 } conf_t;
 

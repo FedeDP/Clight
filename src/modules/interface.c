@@ -38,6 +38,8 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_inhibit_autocalib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                                 sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -76,7 +78,6 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_PROPERTY("NoGamma", "b", NULL, offsetof(conf_t, no_gamma), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NoDimmer", "b", NULL, offsetof(conf_t, no_dimmer), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NoDpms", "b", NULL, offsetof(conf_t, no_dpms), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("NoInhibit", "b", NULL, offsetof(conf_t, no_inhibit), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NoScreen", "b", NULL, offsetof(conf_t, no_screen), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("ScreenSamples", "i", NULL, offsetof(conf_t, screen_samples), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("ScreenContrib", "d", NULL, set_screen_contrib, offsetof(conf_t, screen_contrib), 0),
@@ -84,6 +85,7 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(conf_t, events[SUNSET]), 0),
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(conf_t, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(conf_t, no_auto_calib), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitAutoCalib", "b", NULL, set_inhibit_autocalib, offsetof(conf_t, inhibit_autocalib), 0),
     SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(conf_t, no_keyboard_bl), 0),
     SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(conf_t, ambient_gamma), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothBacklight", "b", NULL, NULL, offsetof(conf_t, no_smooth_backlight), 0),
@@ -540,6 +542,25 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
     int r = sd_bus_message_read(value, "b", &calib_req.new);    
     if (r >= 0 && calib_req.new != calib_req.old) {
         M_PUB(&calib_req);
+    }
+    return r;
+}
+
+static int set_inhibit_autocalib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                          sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    const int old_val = *(int *)userdata;
+    int r = sd_bus_message_read(value, "b", userdata);
+    if (r >= 0 && old_val != *(int *)userdata) {
+        static const self_t *ref = NULL;
+        if (!ref) {
+            m_ref("BACKLIGHT", &ref);
+        }
+
+        inhibit_upd *msg = malloc(sizeof(inhibit_upd));
+        msg->type = INHIBIT_UPD;
+        msg->old = state.inhibited;
+        msg->new = state.inhibited;
+        m_tell(ref, msg, sizeof(inhibit_upd), true);
     }
     return r;
 }
