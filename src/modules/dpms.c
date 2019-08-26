@@ -8,7 +8,8 @@ static void inhibit_callback(void);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
-static display_upd display_msg = { DISPLAY_UPD };
+
+DECLARE_MSG(display_msg, DISPLAY_UPD);
 
 MODULE("DPMS");
 
@@ -35,16 +36,20 @@ static bool evaluate(void) {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
         case UPOWER_UPD:
             upower_timeout_callback();
             break;
         case DPMS_TO_REQ: {
-            timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
-            conf.dpms_timeout[up->state] = up->new;
-            if (up->state == state.ac_state) {
-                upower_timeout_callback();
+            timeout_upd *up = (timeout_upd *)MSG_DATA();
+            /* Validate */
+            if (up->state >= ON_AC && up->state < SIZE_AC) {
+                conf.dpms_timeout[up->state] = up->new;
+                if (up->state == state.ac_state) {
+                    upower_timeout_callback();
+                }
+            } else {
+                WARN("Failed to validate timeout request.\n");
             }
             }
             break;
@@ -69,7 +74,7 @@ static int on_new_idle(sd_bus_message *m,  UNUSED void *userdata, UNUSED sd_bus_
     int is_dpms;
     sd_bus_message_read(m, "b", &is_dpms);
     
-    display_msg.old = state.display_state;
+    display_msg.display.old = state.display_state;
     
     if (is_dpms) {
         state.display_state |= DISPLAY_OFF;
@@ -78,7 +83,7 @@ static int on_new_idle(sd_bus_message *m,  UNUSED void *userdata, UNUSED sd_bus_
         state.display_state &= ~DISPLAY_OFF;
         DEBUG("Leaving dpms state...\n");
     }
-    display_msg.new = state.display_state;
+    display_msg.display.new = state.display_state;
     set_dpms(is_dpms);
     M_PUB(&display_msg);
     return 0;

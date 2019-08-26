@@ -10,7 +10,8 @@ MODULE("SCREEN");
 
 static double *screen_br;
 static int screen_ctr, screen_fd;
-static bl_upd screen_msg = { SCR_BL_UPD };
+
+DECLARE_MSG(screen_msg, SCR_BL_UPD);
 
 static void init(void) {
     screen_br = calloc(conf.screen_samples, sizeof(double));
@@ -52,10 +53,10 @@ static void get_screen_brightness(bool compute) {
     screen_ctr = (screen_ctr + 1) % conf.screen_samples;
     
     if (compute) {
-        double old_comp = state.screen_comp;
+        screen_msg.bl.old = state.screen_comp;
         state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
-        if (old_comp != state.screen_comp) {
-            screen_msg.new = state.screen_comp;
+        if (screen_msg.bl.old != state.screen_comp) {
+            screen_msg.bl.new = state.screen_comp;
             M_PUB(&screen_msg);
         }
         DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
@@ -72,18 +73,23 @@ static void receive(const msg_t *msg, const void *userdata) {
         read_timer(msg->fd_msg->fd);
         get_screen_brightness(false);
     } else if (msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
         case SCR_TO_REQ: {
-            timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
-            conf.screen_timeout[up->state] = up->new;
-            if (up->state == state.ac_state) {
-                timeout_callback(up->old, false);
+            timeout_upd *up = (timeout_upd *)MSG_DATA();
+            /* Validate */
+            if (up->state >= ON_AC && up->state < SIZE_AC) {
+                const int old = conf.screen_timeout[up->state];
+                conf.screen_timeout[up->state] = up->new;
+                if (up->state == state.ac_state) {
+                    timeout_callback(old, false);
+                }
+            } else {
+                WARN("Failed to validate timeout request.\n");
             }
             }
             break;
         case UPOWER_UPD: {
-            upower_upd *up = (upower_upd *)msg->ps_msg->message;
+            upower_upd *up = (upower_upd *)MSG_DATA();
             timeout_callback(conf.screen_timeout[up->old], false);
             }
             break;
@@ -91,8 +97,13 @@ static void receive(const msg_t *msg, const void *userdata) {
             pause_screen(state.display_state);
             break;
         case CONTRIB_REQ: {
-            contrib_upd *up = (contrib_upd *)msg->ps_msg->message;
-            conf.screen_contrib = up->new;
+            contrib_upd *up = (contrib_upd *)MSG_DATA();
+            /* Validate */
+            if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_contrib != up->new) {
+                conf.screen_contrib = up->new;
+            } else {
+                WARN("Failed to validate contrib request.\n");
+            }
             }
             break;
         default:
@@ -106,29 +117,44 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
         read_timer(msg->fd_msg->fd);
         get_screen_brightness(true);
     } else if (msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
         case SCR_TO_REQ: {
-            timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
-            conf.screen_timeout[up->state] = up->new;
-            if (up->state == state.ac_state) {
-                timeout_callback(up->old, true);
+            timeout_upd *up = (timeout_upd *)MSG_DATA();
+            /* Validate */
+            if (up->state >= ON_AC && up->state < SIZE_AC) {
+                const int old = conf.screen_timeout[up->state];
+                conf.screen_timeout[up->state] = up->new;
+                if (up->state == state.ac_state) {
+                    timeout_callback(old, true);
+                }
+            } else {
+                WARN("Failed to validate timeout request.\n");
             }
             }
             break;
         case UPOWER_UPD: {
-            upower_upd *up = (upower_upd *)msg->ps_msg->message;
+            upower_upd *up = (upower_upd *)MSG_DATA();
             timeout_callback(conf.screen_timeout[up->old], true);
             }
             break;
         case CONTRIB_REQ: {
-            contrib_upd *up = (contrib_upd *)msg->ps_msg->message;
-            conf.screen_contrib = up->new;
-            /* Recompute current screen compensation */
-            state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
-            /* If screen_comp is now 0, or old screen_comp was 0, check if we need to pause */
-            if (up->new == 0 || up->old == 0) {
-                pause_screen(up->new == 0);
+            contrib_upd *up = (contrib_upd *)MSG_DATA();
+            if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_contrib != up->new) {
+                const double old = conf.screen_contrib;
+                conf.screen_contrib = up->new;
+                /* Recompute current screen compensation */
+                screen_msg.bl.old = state.screen_comp;
+                state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
+                if (screen_msg.bl.old != state.screen_comp) {
+                    screen_msg.bl.new = state.screen_comp;
+                    M_PUB(&screen_msg);
+                }
+                /* If screen_comp is now 0, or old screen_comp was 0, check if we need to pause */
+                if (up->new == 0 || old == 0) {
+                    pause_screen(up->new == 0);
+                }
+            } else {
+                WARN("Failed to validate contrib request.\n");
             }
             }
             break;

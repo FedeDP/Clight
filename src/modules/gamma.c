@@ -18,10 +18,11 @@ static int event_time_range;                   // variable that holds minutes in
 static int long_transitioning;                 // are we inside a long transition?
 static int gamma_fd;
 
-static time_upd time_msg = { TIME_UPD };
-static time_upd in_ev_msg = { EVENT_UPD };
-static evt_upd evt_msg[SIZE_EVENTS] = { { SUNRISE_UPD }, { SUNSET_UPD } };
-static temp_upd temp_msg = { TEMP_UPD };
+DECLARE_MSG(time_msg, TIME_UPD);
+DECLARE_MSG(in_ev_msg, IN_EVENT_UPD);
+DECLARE_MSG(sunrise_msg, SUNRISE_UPD);
+DECLARE_MSG(sunset_msg, SUNSET_UPD);
+DECLARE_MSG(temp_msg, TEMP_UPD);
 
 MODULE("GAMMA");
 
@@ -29,6 +30,8 @@ static void init(void) {
     M_SUB(BL_UPD);
     M_SUB(LOCATION_UPD);
     M_SUB(TEMP_REQ);
+    M_SUB(SUNRISE_REQ);
+    M_SUB(SUNSET_REQ);
     
     gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     m_register_fd(gamma_fd, true, NULL);
@@ -54,16 +57,36 @@ static void receive(const msg_t *const msg, const void* userdata) {
         read_timer(msg->fd_msg->fd);
         check_gamma();
     } else if (msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
             case LOCATION_UPD:
                 location_callback();
+                break;
+            case SUNSET_REQ:
+            case SUNRISE_REQ: {
+                evt_upd *up = (evt_upd *)MSG_DATA();
+                
+                /* Validate */
+                struct tm timeinfo;
+                if (strlen(up->event) && 
+                    strlen(up->event) < sizeof(conf.events[SUNRISE]) &&
+                    strptime(up->event, "%R", &timeinfo)) {
+                    
+                    if (MSG_TYPE() == SUNRISE_REQ) {
+                        strncpy(conf.events[SUNRISE], up->event, sizeof(conf.events[SUNRISE]));
+                    } else {
+                        strncpy(conf.events[SUNSET], up->event, sizeof(conf.events[SUNSET]));
+                    }
+                    location_callback();
+                } else {
+                    WARN("Failed to validate sunrise/sunset request.\n");
+                }
+                }
                 break;
             case BL_UPD:
                 ambient_callback();
                 break;
             case TEMP_REQ: {
-                interface_callback((temp_upd *)msg->ps_msg->message);
+                interface_callback((temp_upd *)MSG_DATA());
                 }      
                 break;
             default:
@@ -110,15 +133,15 @@ static void check_gamma(void) {
     
     /* If we switched time, emit signal */
     if (old_state != state.time) {
-        time_msg.old = old_state;
-        time_msg.new = state.time;
+        time_msg.time.old = old_state;
+        time_msg.time.new = state.time;
         M_PUB(&time_msg);
     }
     
     /* if we entered/left an event, emit signal */
     if (old_in_event != state.in_event) {
-        in_ev_msg.old = old_in_event;
-        in_ev_msg.new = state.in_event;
+        in_ev_msg.time.old = old_in_event;
+        in_ev_msg.time.new = state.in_event;
         M_PUB(&in_ev_msg);
     }
 
@@ -198,13 +221,13 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
             WARN("Failed to retrieve sunrise/sunset informations.\n");
         }
         
-        evt_msg[SUNRISE].old = old_events[SUNRISE];
-        evt_msg[SUNRISE].new = state.events[SUNRISE];
-        M_PUB(&evt_msg[SUNRISE]);
+        sunrise_msg.event.old = old_events[SUNRISE];
+        sunrise_msg.event.new = state.events[SUNRISE];
+        M_PUB(&sunrise_msg);
         
-        evt_msg[SUNSET].old = old_events[SUNSET];
-        evt_msg[SUNSET].new = state.events[SUNSET];
-        M_PUB(&evt_msg[SUNSET]);
+        sunset_msg.event.old = old_events[SUNSET];
+        sunset_msg.event.new = state.events[SUNSET];
+        M_PUB(&sunset_msg);
     }
     check_next_event(now);
     check_state(now);
@@ -282,12 +305,13 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
     
     int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);
     if (!r && ok) {
-        temp_msg.old = state.current_temp;
+        temp_msg.temp.old = state.current_temp;
         state.current_temp = temp;
-        temp_msg.new = state.current_temp;
-        temp_msg.smooth = smooth;
-        temp_msg.step = step;
-        temp_msg.timeout = timeout;
+        temp_msg.temp.new = state.current_temp;
+        temp_msg.temp.smooth = smooth;
+        temp_msg.temp.step = step;
+        temp_msg.temp.timeout = timeout;
+        temp_msg.temp.daytime = state.time;
         M_PUB(&temp_msg);
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);
@@ -318,12 +342,20 @@ static void location_callback(void) {
 }
 
 static void interface_callback(temp_upd *req) {
-    conf.temp[state.time] = req->new;
-    if (!conf.ambient_gamma) {
-        if (req->smooth != -1) {
-            set_temp(conf.temp[state.time], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
-        } else {
-            set_temp(conf.temp[state.time], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
+    /* Validate new temp: check clighd limits */
+    if (req->new >= 1000 && req->new <= 10000 && 
+        req->daytime >= DAY && req->daytime < SIZE_STATES &&
+        req->new != conf.temp[req->daytime]) {
+        
+        conf.temp[req->daytime] = req->new;
+        if (!conf.ambient_gamma && req->daytime == state.time) {
+            if (req->smooth != -1) {
+                set_temp(conf.temp[req->daytime], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
+            } else {
+                set_temp(conf.temp[req->daytime], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
+            }
         }
+    } else {
+        WARN("Failed to validate temperature request.\n");
     }
 }

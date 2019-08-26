@@ -126,7 +126,7 @@ static void init_topics(void) {
     
     /* GAMMA */
     topics[TIME_UPD] = "Time";
-    topics[EVENT_UPD] = "InEvent";
+    topics[IN_EVENT_UPD] = "InEvent";
     topics[SUNRISE_UPD] = "Sunrise";
     topics[SUNSET_UPD] = "Sunset";
     topics[TEMP_UPD] = "Temp";
@@ -134,7 +134,7 @@ static void init_topics(void) {
     /* INHIBIT */
     topics[INHIBIT_UPD] = "Inhibited";
     
-    /* INTERFACE */
+    /* INTERFACE/Requests */
     topics[DIMMER_TO_REQ] = "ReqDimmerTo";
     topics[DPMS_TO_REQ] = "ReqDpmsTo";
     topics[SCR_TO_REQ] = "ReqScrTo";
@@ -145,10 +145,11 @@ static void init_topics(void) {
     topics[AUTOCALIB_REQ] = "ReqAutocalib";
     topics[CONTRIB_REQ] = "ReqContrib";
     topics[LOCATION_REQ] = "ReqLocation";
-    /* Following are currently unused, useful for custom modules */
-    topics[UPOWER_REQ] = "ReqAcState";
+    topics[SUNRISE_REQ] = "ReqSunrise";
+    topics[SUNSET_REQ] = "ReqSunset";
     topics[INHIBIT_REQ] = "ReqInhibit";
     topics[BL_REQ] = "ReqBl";
+    topics[UPOWER_REQ] = "ReqAcState";
     topics[KBD_BL_REQ] = "ReqKbdBl";
     
     /* LOCATION */

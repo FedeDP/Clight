@@ -1,15 +1,16 @@
 #pragma once
 
+#include <stddef.h>
 #include <string.h>
 #include <module/module_easy.h>
 
-#define MAX_SIZE_POINTS 50                  // max number of points used for polynomial regression
-
 /** PubSub Macros **/
 
-#define MSG_TYPE()              const enum mod_msg_types type = *(enum mod_msg_types *)msg->ps_msg->message
-#define M_PUB(ptr)              m_publish(topics[(ptr)->type], ptr, sizeof(*(ptr)), false);
-#define M_SUB(type)             m_subscribe(topics[type]);
+#define MSG_TYPE()                  ((message_t *)msg->ps_msg->message)->type
+#define MSG_DATA()                  (msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding
+#define DECLARE_MSG(name, type)     static message_t name = { type }
+#define M_PUB(ptr)                  m_publish(topics[(ptr)->type], ptr, sizeof(message_t), false);
+#define M_SUB(type)                 m_subscribe(topics[type]);
 
 /** Log Macros **/
 
@@ -52,7 +53,7 @@ enum mod_msg_types {
     INHIBIT_UPD,        // Subscribe to receive new PowerManagement states
     DISPLAY_UPD,        // Subscribe to receive new display states (on/dimmed/off)
     TIME_UPD,           // Subscribe to receive new time states (day/night)
-    EVENT_UPD,          // Subscribe to receive new InEvent states
+    IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times
     TEMP_UPD,           // Subscribe to receive new gamma temperatures
@@ -63,6 +64,8 @@ enum mod_msg_types {
     LOCATION_REQ,       // Publish to set a new location
     UPOWER_REQ,         // Publish to set a new UPower state
     INHIBIT_REQ,        // Publish to set a new PowerManagement state
+    SUNRISE_REQ,        // Publish to set a new fixed Sunrise
+    SUNSET_REQ,         // Publish to set a new fixed Sunset
     TEMP_REQ,           // Publish to set a new gamma temp
     BL_REQ,             // Publish to set a new backlight level
     KBD_BL_REQ,         // Publish to set a new keyboard backlight level
@@ -85,89 +88,91 @@ typedef struct {
 /** PubSub Messages **/
 
 typedef struct {
-    enum mod_msg_types type; /* LOCATION_UPD/LOCATION_REQ */ 
-    loc_t old;
-    loc_t new;
+    loc_t old;                  // Valued in updates. Useless for requests
+    loc_t new;                  // Mandatory for requests. Valued in updates
 } loc_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* UPOWER_UPD/UPOWER_REQ */
-    enum ac_states old;
-    enum ac_states new;
+    enum ac_states old;         // Valued in updates. Useless for requests
+    enum ac_states new;         // Mandatory for requests. Valued in updates
 } upower_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* INHIBIT_UPD/INHIBIT_REQ */
-    bool old;
-    bool new;
+    bool old;                   // Valued in updates. Useless for requests 
+    bool new;                   // Mandatory for requests. Valued in updates
 } inhibit_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* DISPLAY_UPD */
-    enum display_states old;
-    enum display_states new;
+    enum display_states old;    // Valued in updates
+    enum display_states new;    // Valued in updates
 } display_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* TIME_UPD/EVENT_UPD */
-    enum states old;
-    enum states new;
+    enum states old;            // Valued in updates
+    enum states new;            // Valued in updates
 } time_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* SUNRISE_UPD/SUNSET_UPD */
-    enum events old;
-    enum events new;
+    enum events old;            // Valued in updates. Useless for requests
+    enum events new;            // Valued in updates. Useless for requests
+    char event[10];             // Mandatory for requests. Empty on updates
 } evt_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* TEMP_UPD/TEMP_REQ */
-    int old;
-    int new;
-    int smooth;              // Only useful for requests. -1 to use conf values
-    int step;                // Only useful for requests
-    int timeout;             // Only useful for requests
+    enum states daytime;        // Mandatory for requests. Valued in updates
+    int old;                    // Valued in updates. Useless for requests
+    int new;                    // Mandatory for requests. Valued in updates
+    int smooth;                 // Mandatory for requests. -1 to use conf values
+    int step;                   // Only useful for requests
+    int timeout;                // Only useful for requests
 } temp_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ */
-    int old;
-    int new;
-    enum ac_states state;
-    enum states daytime;    // only useful for backlight timeouts!
+    int new;                    // Mandatory for requests
+    enum ac_states state;       // Mandatory for requests
+    enum states daytime;        // Mandatory for BL_TO_REQ only
 } timeout_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* CAPTURE_REQ */
-} capture_upd;
-
-typedef struct {
-    enum mod_msg_types type; /* CURVE_REQ */
-    enum ac_states state;
-    double regression_points[MAX_SIZE_POINTS];
-    int num_points;
+    enum ac_states state;       // Mandatory for requests
+    int num_points;             // Mandatory for requests
+    double *regression_points;  // Mandatory for requests
 } curve_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* AUTOCALIB_REQ */
-    int old;
-    int new;
+    bool new;                   // Mandatory for requests
 } calib_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
-    double old;
-    double new;
-    int smooth;              // Only useful for requests. -1 to use conf values
-    double step;             // Only useful for requests
-    int timeout;             // Only useful for requests
+    double old;                 // Valued in updates. Useless for requests
+    double new;                 // Mandatory for requests. Valued in updates
+    /* The following are only useful for BL_UPD/BL_REQ */
+    int smooth;                 // Mandatory for requests. -1 to use conf values. Valued in updates
+    int timeout;                // Only useful for requests. Valued in updates
+    double step;                // Only useful for requests. Valued in updates
 } bl_upd;
 
 typedef struct {
-    enum mod_msg_types type; /* CONTRIB_REQ */
-    double old;
-    double new;
+    double new;                 // Mandatory for requests
 } contrib_upd;
+
+typedef struct {
+    enum mod_msg_types type;
+    union {
+        loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
+        upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
+        inhibit_upd inhibit;    /* INHIBIT_UPD/INHIBIT_REQ */
+        display_upd display;    /* DISPLAY_UPD */
+        time_upd time;          /* TIME_UPD/IN_EVENT_UPD */
+        evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ */
+        temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
+        timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ */
+        curve_upd curve;        /* CURVE_REQ */
+        calib_upd calib;        /* AUTOCALIB_REQ */
+        bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
+        contrib_upd contrib;    /* CONTRIB_REQ */
+    };
+} message_t;
 
 /** PubSub Topics **/
 extern const char *topics[MSGS_SIZE];

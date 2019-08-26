@@ -1,8 +1,6 @@
 #include <bus.h>
 
-static void publish_inhibit(int old, int new, inhibit_upd *up);
-
-static inhibit_upd inh_msg = { INHIBIT_UPD };
+DECLARE_MSG(inh_msg, INHIBIT_UPD);
 
 MODULE("INHIBIT");
 
@@ -20,13 +18,18 @@ static bool evaluate() {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
         case INHIBIT_REQ: {
-            inhibit_upd *up = (inhibit_upd *)msg->ps_msg->message;
+            inhibit_upd *up = (inhibit_upd *)MSG_DATA();
+            inh_msg.inhibit.old = state.inhibited;
             state.inhibited = up->new;
-            INFO("ScreenSaver inhibition %s.\n", state.inhibited ? "enabled" : "disabled");
-            publish_inhibit(up->old, up->new, &inh_msg);
+            inh_msg.inhibit.new = state.inhibited;
+            if (inh_msg.inhibit.old != inh_msg.inhibit.new) {
+                M_PUB(&inh_msg);
+                INFO("ScreenSaver inhibition %s.\n", state.inhibited ? "enabled" : "disabled");
+            } else {
+                WARN("Failed to validate inhibit request.\n");
+            }
             }
             break;
         default:
@@ -37,10 +40,4 @@ static void receive(const msg_t *const msg, const void* userdata) {
 
 static void destroy(void) {
 
-}
-
-static void publish_inhibit(int old, int new, inhibit_upd *up) {
-    up->old = old;
-    up->new = new;
-    M_PUB(up);
 }

@@ -3,11 +3,12 @@
 static int upower_check(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void publish_upower(int old, int new, upower_upd *up);
+static void publish_upower(int old, int new, message_t *up);
 
 static sd_bus_slot *slot;
-static upower_upd upower_msg = { UPOWER_UPD };
-static upower_upd upower_req = { UPOWER_REQ };
+
+DECLARE_MSG(upower_msg, UPOWER_UPD);
+DECLARE_MSG(upower_req, UPOWER_REQ);
 
 MODULE("UPOWER");
 
@@ -31,13 +32,16 @@ static bool evaluate(void) {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
         case UPOWER_REQ: {
-            upower_upd *up = (upower_upd *)msg->ps_msg->message;
-            state.ac_state = up->new;
-            INFO("AC cable %s.\n", state.ac_state ? "connected" : "disconnected");
-            publish_upower(up->old, up->new, &upower_msg);
+            upower_upd *up = (upower_upd *)MSG_DATA();
+            if (state.ac_state != up->new && up->new >= ON_AC && up->new < SIZE_AC) {
+                state.ac_state = up->new;
+                INFO("AC cable %s.\n", state.ac_state ? "connected" : "disconnected");
+                publish_upower(up->old, up->new, &upower_msg);
+            } else {
+                WARN("Failed to validate upower request.\n");
+            }
             }
             break;
         default:
@@ -98,8 +102,8 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
     return 0;
 }
 
-static void publish_upower(int old, int new, upower_upd *up) {
-    up->old = old;
-    up->new = new;
+static void publish_upower(int old, int new, message_t *up) {
+    up->upower.old = old;
+    up->upower.new = new;
     M_PUB(up);
 }

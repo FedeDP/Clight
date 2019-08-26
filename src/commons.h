@@ -11,6 +11,7 @@
 
 #define UNUSED __attribute__((unused))
 
+#define MAX_SIZE_POINTS 50                  // max number of points used for polynomial regression
 #define DEF_SIZE_POINTS 11                  // default number of points used for polynomial regression
 #define DEGREE 3                            // number of parameters for polynomial regression
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT

@@ -9,8 +9,9 @@ static void publish_bl_req(const double pct, const bool smooth, const double ste
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
-static display_upd display_msg = { DISPLAY_UPD };
-static bl_upd bl_req = { BL_REQ };
+
+DECLARE_MSG(display_msg, DISPLAY_UPD);
+DECLARE_MSG(bl_req, BL_REQ);
 
 MODULE("DIMMER");
 
@@ -36,16 +37,20 @@ static bool evaluate(void) {
 
 static void receive(const msg_t *const msg, const void* userdata) {
     if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
             case UPOWER_UPD:
                 upower_timeout_callback();
                 break;
             case DIMMER_TO_REQ: {
-                timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
-                conf.dimmer_timeout[up->state] = up->new;
-                if (up->state == state.ac_state) {
-                    upower_timeout_callback();
+                timeout_upd *up = (timeout_upd *)MSG_DATA();
+                /* Validate */
+                if (up->state >= ON_AC && up->state < SIZE_AC) {
+                    conf.dimmer_timeout[up->state] = up->new;
+                    if (up->state == state.ac_state) {
+                        upower_timeout_callback();
+                    }
+                } else {
+                    WARN("Failed to validate timeout request.\n");
                 }
                 }
                 break;
@@ -70,7 +75,7 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
     static double old_pct = -1.0;
     int dimmed;
     
-    display_msg.old = state.display_state;
+    display_msg.display.old = state.display_state;
     
     sd_bus_message_read(m, "b", &dimmed);
     if (dimmed) {
@@ -84,7 +89,7 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
         restore_backlight(old_pct);
     }
     
-    display_msg.new = state.display_state;
+    display_msg.display.new = state.display_state;
     M_PUB(&display_msg);
     return 0;
 }
@@ -123,9 +128,9 @@ static void inhibit_callback(void) {
 }
 
 static void publish_bl_req(const double pct, const bool smooth, const double step, const int to) {
-    bl_req.new = pct;
-    bl_req.smooth = smooth;
-    bl_req.step = step;
-    bl_req.timeout = to;
+    bl_req.bl.new = pct;
+    bl_req.bl.smooth = smooth;
+    bl_req.bl.step = step;
+    bl_req.bl.timeout = to;
     M_PUB(&bl_req);
 }

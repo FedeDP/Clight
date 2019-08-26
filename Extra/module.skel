@@ -54,10 +54,9 @@ static void destroy(void) {
  */
 static void receive(const msg_t *msg, const void *userdata) {
     if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
         case TIME_UPDATE: {
-            time_upd *up = (time_upd *)msg->ps_msg->message;
+            time_upd *up = (time_upd *)MSG_DATA();
             if (up->new == DAY) {
                 // system("lookandfeeltool -a org.kde.breeze.desktop");
                 INFO("We're now during the day!\n");

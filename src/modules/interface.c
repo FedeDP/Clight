@@ -3,6 +3,13 @@
 #include <config.h>
 #include <module/map.h>
 
+#define VALIDATE_PARAMS(m, signature, ...) \
+    int r = sd_bus_message_read(m, signature, __VA_ARGS__); \
+    if (r < 0) { \
+        WARN("Failed to parse parameters: %s\n", strerror(-r)); \
+        return r; \
+    }
+
 #define CLIGHT_COOKIE -1
 #define CLIGHT_INH_KEY "LockClight"
 
@@ -141,18 +148,21 @@ static const sd_bus_vtable sc_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
-static timeout_upd to_req;
-static inhibit_upd inhibit_req = { INHIBIT_REQ };
-static temp_upd temp_req = { TEMP_REQ };
-static capture_upd capture_req = { CAPTURE_REQ };
-static curve_upd curve_req = { CURVE_REQ };
-static calib_upd calib_req = { AUTOCALIB_REQ };
-static loc_upd loc_req = { LOCATION_REQ };
-static loc_upd loc_msg = { LOCATION_UPD };
-static contrib_upd contrib_req = { CONTRIB_REQ };
+DECLARE_MSG(to_req, -1); // this is indeed used to manage any Timeout request!
+DECLARE_MSG(inhibit_req, INHIBIT_REQ);
+DECLARE_MSG(temp_req, TEMP_REQ);
+DECLARE_MSG(capture_req, CAPTURE_REQ);
+DECLARE_MSG(curve_req, CURVE_REQ);
+DECLARE_MSG(calib_req, AUTOCALIB_REQ);
+DECLARE_MSG(loc_req, LOCATION_REQ);
+DECLARE_MSG(contrib_req, CONTRIB_REQ);
+DECLARE_MSG(sunrise_req, SUNRISE_REQ);
+DECLARE_MSG(sunset_req, SUNSET_REQ);
 
 static map_t *lock_map;
 static sd_bus *userbus;
+// this is used to keep curve points data lingering around in set_curve
+static sd_bus_message *curve_message;
 
 MODULE("INTERFACE");
 
@@ -246,6 +256,8 @@ static void destroy(void) {
         sd_bus_release_name(userbus, sc_interface);
         userbus = sd_bus_flush_close_unref(userbus);
     }
+    map_free(lock_map);
+    curve_message = sd_bus_message_unref(curve_message);
 }
 
 /** org.freedesktop.ScreenSaver spec implementation: https://people.freedesktop.org/~hadess/idle-inhibition-spec/re01.html **/
@@ -285,8 +297,8 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
             DEBUG("New ScreenSaver inhibition held by %s: %s. Cookie: %d\n", app_name, reason, l->cookie);
 
             if (map_length(lock_map) == 1) {
-                inhibit_req.old = false;
-                inhibit_req.new = true;
+                inhibit_req.inhibit.old = false;
+                inhibit_req.inhibit.new = true;
                 M_PUB(&inhibit_req);
             }
         } else {
@@ -321,8 +333,8 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
             DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", c);
 
             if (map_length(lock_map) == 0) {
-                inhibit_req.old = true;
-                inhibit_req.new = false;
+                inhibit_req.inhibit.old = true;
+                inhibit_req.inhibit.new = false;
                 M_PUB(&inhibit_req);
             }
         }
@@ -333,11 +345,7 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
 
 static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int inhibit;
-    int r = sd_bus_message_read(m, "b", &inhibit);
-    if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
-        return r;
-    }
+    VALIDATE_PARAMS(m, "b", &inhibit);
     
     int ret = 0;
     if (inhibit) {
@@ -357,11 +365,7 @@ static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     char *app_name = NULL, *reason = NULL;
     
-    int r = sd_bus_message_read(m, "ss", &app_name, &reason);
-    if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
-        return r;
-    }
+    VALIDATE_PARAMS(m, "ss", &app_name, &reason);
     
     int cookie = 0;
     if (create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason) == 0) {
@@ -374,11 +378,7 @@ static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
 static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int cookie;
     
-    int r = sd_bus_message_read(m, "u", &cookie);
-    if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
-        return r;
-    }
+    VALIDATE_PARAMS(m, "u", &cookie);
     
     if (drop_inhibit(&cookie, sd_bus_message_get_sender(m), false) == 0) {
         return sd_bus_reply_method_return(m, NULL);
@@ -416,24 +416,28 @@ static int get_curve(sd_bus *bus, const char *path, const char *interface, const
 static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
 
-    const double *data = NULL;
+    /* Unref last curve message, if any */
+    curve_message = sd_bus_message_unref(curve_message);
+
+    double *data = NULL;
     size_t length;
     int r = sd_bus_message_read_array(value, 'd', (const void**) &data, &length);
     if (r < 0) {
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-    if (length / sizeof(double) > MAX_SIZE_POINTS) {
+    curve_req.curve.num_points = length / sizeof(double);
+    if (curve_req.curve.num_points > MAX_SIZE_POINTS) {
         WARN("Wrong parameters.\n");
         sd_bus_error_set_const(error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         r = -EINVAL;
     } else {
-        curve_req.state = ON_AC;
+        curve_req.curve.state = ON_AC;
         if (userdata == conf.regression_points[ON_BATTERY]) {
-            curve_req.state = ON_BATTERY;
+            curve_req.curve.state = ON_BATTERY;
         }
-        memcpy(curve_req.regression_points, data, length);
-        curve_req.num_points = length / sizeof(double);
+        curve_req.curve.regression_points = data;
+        curve_message = sd_bus_message_ref(value);
         M_PUB(&curve_req);
     }
     return r;
@@ -447,18 +451,13 @@ static int get_location(sd_bus *bus, const char *path, const char *interface, co
 
 static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    loc_t *l = (loc_t *)userdata;
-    loc_req.old = *l;
-    sd_bus_message_read(value, "(dd)", &loc_req.new.lat, &loc_req.new.lon);
-    
-    if (fabs(loc_req.new.lat) <  90.0f && fabs(loc_req.new.lon) < 180.0f) {
-        INFO("New location from BUS api: %.2lf %.2lf\n", loc_req.new.lat, loc_req.new.lat);
-        
-        /* Only if different from current one */
-        if (state.current_loc.lat != loc_req.new.lat && state.current_loc.lon != loc_req.new.lon) {
-            M_PUB(&loc_req);
-        }
-        return 0;
+
+    VALIDATE_PARAMS(value, "(dd)", &loc_req.loc.new.lat, &loc_req.loc.new.lon);
+
+    if (fabs(loc_req.loc.new.lat) <  90.0f && fabs(loc_req.loc.new.lon) < 180.0f) {
+        INFO("New location from BUS api: %.2lf %.2lf\n", loc_req.loc.new.lat, loc_req.loc.new.lat);
+        M_PUB(&loc_req);
+        return r;
     }
     INFO("Wrong location set. Rejected.\n");
     return -EINVAL;
@@ -466,57 +465,52 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
 
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
                             sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    to_req.old = *(int *)userdata;
-    int r = sd_bus_message_read(value, "i", &to_req.new);
-    if (r < 0) {
-        WARN("Failed to parse parameters: %s\n", strerror(-r));
-        return r;
-    }
+    VALIDATE_PARAMS(value, "i", &to_req.to.new);
     
     /* Check if we modified currently used timeout! */
     to_req.type = -1;
     if (userdata == &conf.timeout[ON_AC][DAY]) {
-        to_req.daytime = DAY;
-        to_req.state = ON_AC;
+        to_req.to.daytime = DAY;
+        to_req.to.state = ON_AC;
         to_req.type = BL_TO_REQ;
     } else if (userdata == &conf.timeout[ON_AC][NIGHT]) {
-        to_req.daytime = NIGHT;
-        to_req.state = ON_AC;
+        to_req.to.daytime = NIGHT;
+        to_req.to.state = ON_AC;
         to_req.type = BL_TO_REQ;
     } else if (userdata == &conf.timeout[ON_AC][IN_EVENT]) {
-        to_req.daytime = IN_EVENT;
-        to_req.state = ON_AC;
+        to_req.to.daytime = IN_EVENT;
+        to_req.to.state = ON_AC;
         to_req.type = BL_TO_REQ;
     } else if (userdata == &conf.timeout[ON_BATTERY][DAY]) {
-        to_req.daytime = DAY;
-        to_req.state = ON_BATTERY;
+        to_req.to.daytime = DAY;
+        to_req.to.state = ON_BATTERY;
         to_req.type = BL_TO_REQ;
     } else if (userdata == &conf.timeout[ON_BATTERY][NIGHT]) {
-        to_req.daytime = NIGHT;
-        to_req.state = ON_BATTERY;
+        to_req.to.daytime = NIGHT;
+        to_req.to.state = ON_BATTERY;
         to_req.type = BL_TO_REQ;
     } else if (userdata == &conf.timeout[ON_BATTERY][IN_EVENT]) {
-        to_req.daytime = IN_EVENT;
-        to_req.state = ON_BATTERY;
+        to_req.to.daytime = IN_EVENT;
+        to_req.to.state = ON_BATTERY;
         to_req.type = BL_TO_REQ;
     } else if (userdata == &conf.dimmer_timeout[ON_AC]) {
         to_req.type = DIMMER_TO_REQ;
-        to_req.state = ON_AC;
+        to_req.to.state = ON_AC;
     } else if (userdata == &conf.dimmer_timeout[ON_BATTERY]) {
         to_req.type = DIMMER_TO_REQ;
-        to_req.state = ON_BATTERY;
+        to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.dpms_timeout[ON_AC]) {
         to_req.type = DPMS_TO_REQ;
-        to_req.state = ON_AC;
+        to_req.to.state = ON_AC;
     } else if (userdata == &conf.dpms_timeout[ON_BATTERY]) {
         to_req.type = DPMS_TO_REQ;
-        to_req.state = ON_BATTERY;
+        to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.screen_timeout[ON_AC]) {
         to_req.type = SCR_TO_REQ;
-        to_req.state = ON_AC;
+        to_req.to.state = ON_AC;
     } else if (userdata == &conf.screen_timeout[ON_BATTERY]) {
         to_req.type = SCR_TO_REQ;
-        to_req.state = ON_BATTERY;
+        to_req.to.state = ON_BATTERY;
     }
     
     if (to_req.type != -1) {
@@ -527,40 +521,43 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
 
 static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    temp_req.old = *(int *)userdata;
-    int r = sd_bus_message_read(value, "i", &temp_req.new);
-    if (r >= 0 && temp_req.old != temp_req.new) {
-        temp_req.smooth = -1; // use conf values
-        M_PUB(&temp_req);
-    }
+    VALIDATE_PARAMS(value, "i", &temp_req.temp.new);
+    
+    temp_req.temp.daytime = userdata == &conf.temp[DAY] ? DAY : NIGHT;
+    temp_req.temp.smooth = -1; // use conf values
+    M_PUB(&temp_req);
     return r;
 }
 
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                           sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    calib_req.old = *(int *)userdata;
-    int r = sd_bus_message_read(value, "b", &calib_req.new);    
-    if (r >= 0 && calib_req.new != calib_req.old) {
-        M_PUB(&calib_req);
-    }
+    VALIDATE_PARAMS(value, "b", &calib_req.calib.new);
+    
+    M_PUB(&calib_req);
     return r;
 }
 
 static int set_inhibit_autocalib(sd_bus *bus, const char *path, const char *interface, const char *property,
                           sd_bus_message *value, void *userdata, sd_bus_error *error) {
     const int old_val = *(int *)userdata;
-    int r = sd_bus_message_read(value, "b", userdata);
-    if (r >= 0 && old_val != *(int *)userdata) {
+    VALIDATE_PARAMS(value, "b", userdata);
+    
+    if (old_val != *(int *)userdata) {
         static const self_t *ref = NULL;
         if (!ref) {
             m_ref("BACKLIGHT", &ref);
         }
 
-        inhibit_upd *msg = malloc(sizeof(inhibit_upd));
-        msg->type = INHIBIT_UPD;
-        msg->old = state.inhibited;
-        msg->new = state.inhibited;
-        m_tell(ref, msg, sizeof(inhibit_upd), true);
+        if (ref) {
+            /* 
+             * Tell a fake inhibit_upd message to BACKLIGHT 
+             * to let it update its internal state with new inhibit_autocalib value
+             */
+            DECLARE_MSG(msg, INHIBIT_UPD);
+            msg.inhibit.old = state.inhibited;
+            msg.inhibit.new = state.inhibited;
+            m_tell(ref, &msg, sizeof(message_t), false);
+        }
     }
     return r;
 }
@@ -568,30 +565,22 @@ static int set_inhibit_autocalib(sd_bus *bus, const char *path, const char *inte
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
     const char *event = NULL;
-    int r = sd_bus_message_read(value, "s", &event);
-    if (r >= 0 && strlen(event) <= sizeof(conf.events[SUNRISE])) {
-        struct tm timeinfo;
-        if (!strlen(event) || !strptime(event, "%R", &timeinfo)) {
-            /* Failed to convert datetime */
-            r = -EINVAL;
-        } else {
-            strncpy(userdata, event, sizeof(conf.events[SUNRISE]));
-            M_PUB(&loc_msg); // only to let gamma know it should recompute state.events
-        }
-    } else {
-        /* Datetime too long */
-        r = -EINVAL;
+    VALIDATE_PARAMS(value, "s", &event);
+
+    message_t *msg = &sunrise_req;
+    if (userdata == &conf.events[SUNSET]) {
+        msg = &sunset_req;
     }
+    strncpy(msg->event.event, event, sizeof(msg->event.event));
+    M_PUB(msg);
     return r;
 }
 
 static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    contrib_req.old = *(double *)userdata;
-    int r = sd_bus_message_read(value, "d", &contrib_req.new);
-    if (r >= 0 && contrib_req.old != contrib_req.new) {
-        M_PUB(&contrib_req);
-    }
+    VALIDATE_PARAMS(value, "d", &contrib_req.contrib.new);
+
+    M_PUB(&contrib_req);
     return r;
 }
 

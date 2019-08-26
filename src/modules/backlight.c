@@ -13,7 +13,7 @@ static void set_keyboard_level(const double level);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_calibrate_callback(void);
-static void interface_autocalib_callback(int new_val);
+static void interface_autocalib_callback(bool new_val);
 static void interface_curve_callback(curve_upd *up);
 static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
@@ -30,9 +30,9 @@ static int bl_fd;
 static int paused;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
 static sd_bus_slot *slot;
 
-static bl_upd bl_msg = { BL_UPD };
-static bl_upd kbd_msg = { KBD_BL_UPD };
-static bl_upd amb_msg = { AMBIENT_BR_UPD };
+DECLARE_MSG(bl_msg, BL_UPD);
+DECLARE_MSG(kbd_msg, KBD_BL_UPD);
+DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 
 MODULE("BACKLIGHT");
 
@@ -45,7 +45,7 @@ static void init(void) {
     M_SUB(DISPLAY_UPD);
     M_SUB(INHIBIT_UPD);
     M_SUB(TIME_UPD);
-    M_SUB(EVENT_UPD);
+    M_SUB(IN_EVENT_UPD);
     M_SUB(BL_TO_REQ);
     M_SUB(CAPTURE_REQ);
     M_SUB(CURVE_REQ);
@@ -106,22 +106,21 @@ static void receive(const msg_t *const msg, const void* userdata) {
         read_timer(msg->fd_msg->fd);
         do_capture(true);
     } else if (msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
             case UPOWER_UPD:
                 upower_callback();
                 break;
             case DISPLAY_UPD:
                 dimmed_callback();
                 break;
-            case EVENT_UPD:
+            case IN_EVENT_UPD:
             case TIME_UPD: {
-                time_upd *up = (time_upd *)msg->ps_msg->message;
-                time_callback(up->old, type == EVENT_UPD);
+                time_upd *up = (time_upd *)MSG_DATA();
+                time_callback(up->old, MSG_TYPE() == IN_EVENT_UPD);
                 }
                 break;
             case BL_TO_REQ: {
-                timeout_upd *up = (timeout_upd *)msg->ps_msg->message;
+                timeout_upd *up = (timeout_upd *)MSG_DATA();
                 interface_timeout_callback(up);
                 }
                 break;
@@ -129,27 +128,36 @@ static void receive(const msg_t *const msg, const void* userdata) {
                 interface_calibrate_callback();
                 break;
             case CURVE_REQ: {
-                curve_upd *up = (curve_upd *)msg->ps_msg->message;
+                curve_upd *up = (curve_upd *)MSG_DATA();
+                /* Validate */
                 interface_curve_callback(up);
                 }
                 break;
             case AUTOCALIB_REQ: {
-                calib_upd *up = (calib_upd *)msg->ps_msg->message;
+                calib_upd *up = (calib_upd *)MSG_DATA();
                 interface_autocalib_callback(up->new);
                 }
                 break;
             case BL_REQ: {
-                bl_upd *up = (bl_upd *)msg->ps_msg->message;
-                if (up->smooth != -1) {
-                    set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+                bl_upd *up = (bl_upd *)MSG_DATA();
+                if (up->new >= 0.0 && up->new <= 1.0) {
+                    if (up->smooth != -1) {
+                        set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+                    } else {
+                        set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+                    }
                 } else {
-                    set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+                    WARN("Failed to validate backlight level request.\n");
                 }
                 break;
             }
             case KBD_BL_REQ: {
-                bl_upd *up = (bl_upd *)msg->ps_msg->message;
-                set_keyboard_level(up->new);
+                bl_upd *up = (bl_upd *)MSG_DATA();
+                if (up->new >= 0.0 && up->new <= 1.0) {
+                    set_keyboard_level(up->new);
+                } else {
+                    WARN("Failed to validate keyboard backlight level request.\n");
+                }
                 break;
             }
             case INHIBIT_UPD:
@@ -164,13 +172,12 @@ static void receive(const msg_t *const msg, const void* userdata) {
 static void receive_paused(const msg_t *const msg, const void* userdata) {
     /* In paused state we have deregistered our fd, thus we can only receive PubSub messages */
     if (msg->ps_msg->type == USER) {
-        MSG_TYPE();
-        switch (type) {
+        switch (MSG_TYPE()) {
             case DISPLAY_UPD:
                 dimmed_callback();
                 break;
             case CURVE_REQ: {
-                curve_upd *up = (curve_upd *)msg->ps_msg->message;
+                curve_upd *up = (curve_upd *)MSG_DATA();
                 interface_curve_callback(up);
             }
             break;
@@ -181,18 +188,22 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
                 }
                 break;
             case AUTOCALIB_REQ: {
-                calib_upd *up = (calib_upd *)msg->ps_msg->message;
+                calib_upd *up = (calib_upd *)MSG_DATA();
                 interface_autocalib_callback(up->new);
                 }
                 break;
             case BL_REQ: {
                 /* In paused state check that we're not dimmed/dpms */
                 if (!state.display_state) {
-                    bl_upd *up = (bl_upd *)msg->ps_msg->message;
-                    if (up->smooth != -1) {
-                        set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+                    bl_upd *up = (bl_upd *)MSG_DATA();
+                    if (up->new >= 0.0 && up->new <= 1.0) {
+                        if (up->smooth != -1) {
+                            set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+                        } else {
+                            set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+                        }
                     } else {
-                        set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+                        WARN("Failed to validate backlight level request.\n");
                     }
                 }
                 break;
@@ -200,8 +211,12 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
             case KBD_BL_REQ: {
                 /* In paused state check that we're not dimmed/dpms */
                 if (!state.display_state) {
-                    bl_upd *up = (bl_upd *)msg->ps_msg->message;
-                    set_keyboard_level(up->new);
+                    bl_upd *up = (bl_upd *)MSG_DATA();
+                    if (up->new >= 0.0 && up->new <= 1.0) {
+                        set_keyboard_level(up->new);
+                    } else {
+                        WARN("Failed to validate keyboard backlight level request.\n");
+                    }
                 }
                 break;
             }
@@ -272,12 +287,12 @@ static void set_keyboard_level(const double level) {
     if (max_kbd_backlight > 0 && !conf.no_keyboard_bl) {
         SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
 
-        kbd_msg.old = state.current_kbd_pct;
+        kbd_msg.bl.old = state.current_kbd_pct;
         /* We actually need to pass an int to variadic bus() call */
         const int new_kbd_br = round(level * max_kbd_backlight);
         if (call(NULL, NULL, &kbd_args, "i", new_kbd_br) == 0) {
             state.current_kbd_pct = level;
-            kbd_msg.new = state.current_kbd_pct;
+            kbd_msg.bl.new = state.current_kbd_pct;
             M_PUB(&kbd_msg);
         }
     }
@@ -290,12 +305,12 @@ static void set_backlight_level(const double pct, const int is_smooth, const dou
     int ok;
     int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
     if (!r && ok) {
-        bl_msg.old = state.current_bl_pct;
+        bl_msg.bl.old = state.current_bl_pct;
         state.current_bl_pct = pct;
-        bl_msg.new = pct;
-        bl_msg.smooth = is_smooth;
-        bl_msg.step = step;
-        bl_msg.timeout = timeout;
+        bl_msg.bl.new = pct;
+        bl_msg.bl.smooth = is_smooth;
+        bl_msg.bl.step = step;
+        bl_msg.bl.timeout = timeout;
         M_PUB(&bl_msg);
     }
 }
@@ -305,10 +320,10 @@ static int capture_frames_brightness(void) {
     double intensity[conf.num_captures];
     int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
     if (!r) {
-        amb_msg.old = state.ambient_br;
+        amb_msg.bl.old = state.ambient_br;
         state.ambient_br = compute_average(intensity, conf.num_captures);
         DEBUG("Average frames brightness: %lf.\n", state.ambient_br);
-        amb_msg.new = state.ambient_br;
+        amb_msg.bl.new = state.ambient_br;
         M_PUB(&amb_msg);
     }
     return r;
@@ -325,28 +340,43 @@ static void interface_calibrate_callback(void) {
 }
 
 /* Callback on "AutoCalib" bus exposed writable property */
-static void interface_autocalib_callback(int new_val) {
-    INFO("Backlight autocalibration %s by user request.\n", new_val ? "disabled" : "enabled");
-    conf.no_auto_calib = new_val;
-    if (conf.no_auto_calib) {
-        pause_mod(AUTOCALIB);
-    } else {
-        resume_mod(AUTOCALIB);
+static void interface_autocalib_callback(bool new_val) {
+    if (conf.no_auto_calib != new_val) {
+        INFO("Backlight autocalibration %s.\n", new_val ? "disabled" : "enabled");
+        conf.no_auto_calib = new_val;
+        if (conf.no_auto_calib) {
+            pause_mod(AUTOCALIB);
+        } else {
+            resume_mod(AUTOCALIB);
+        }
     }
 }
 
 /* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
 static void interface_curve_callback(curve_upd *up) {
-    memcpy(conf.regression_points[up->state], up->regression_points, up->num_points * sizeof(double));
-    conf.num_points[up->state] = up->num_points;
-    polynomialfit(up->state);
+    if (up->state >= ON_AC && up->state < SIZE_AC &&
+        up->num_points > 0 && up->num_points <= MAX_SIZE_POINTS) {
+
+        memcpy(conf.regression_points[up->state], up->regression_points, up->num_points * sizeof(double));
+        conf.num_points[up->state] = up->num_points;
+        polynomialfit(up->state);
+
+    } else {
+        WARN("Failed to validate curve request.\n");
+    }
 }
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(timeout_upd *up) {
-    conf.timeout[up->state][up->daytime] = up->new;
-    if (up->state == state.ac_state && (up->daytime == state.time || (state.in_event && up->daytime == IN_EVENT))) {
-        reset_timer(bl_fd, up->old, get_current_timeout());
+    /* Validate */
+    if (up->state >= ON_AC && up->state < SIZE_AC && up->daytime >= DAY && up->daytime < SIZE_STATES) {
+        const int old = get_current_timeout();
+        conf.timeout[up->state][up->daytime] = up->new;
+        if (up->state == state.ac_state && (up->daytime == state.time || (state.in_event && up->daytime == IN_EVENT))) {
+            reset_timer(bl_fd, old, get_current_timeout());
+        }
+    } else {
+        WARN("Failed to validate timeout request.\n");
     }
 }
 

@@ -108,6 +108,8 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Install commons.h in /usr/include/clight/
 - [x] move topics in commons.h
 - [x] Move log.h functions too, so users can log into clight's log
+- [x] Validate user message request
+- [x] Add SUNRISE_REQ and SUNSET_REQ messages
 
 #### Screen compensation support (#84)
 - [x] Expose through dbus API new conf options and react if they change
