@@ -42,7 +42,6 @@ static void receive(const msg_t *const msg, const void* userdata) {
             break;
         case DPMS_TO_REQ: {
             timeout_upd *up = (timeout_upd *)MSG_DATA();
-            /* Validate */
             if (up->state >= ON_AC && up->state < SIZE_AC) {
                 conf.dpms_timeout[up->state] = up->new;
                 if (up->state == state.ac_state) {

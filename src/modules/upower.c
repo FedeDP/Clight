@@ -3,7 +3,7 @@
 static int upower_check(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void publish_upower(int old, int new, message_t *up);
+static void publish_upower(int new, message_t *up);
 
 static sd_bus_slot *slot;
 
@@ -36,9 +36,10 @@ static void receive(const msg_t *const msg, const void* userdata) {
         case UPOWER_REQ: {
             upower_upd *up = (upower_upd *)MSG_DATA();
             if (state.ac_state != up->new && up->new >= ON_AC && up->new < SIZE_AC) {
+                INFO("AC cable %s.\n", up->new ? "connected" : "disconnected");
+                // publish upower before storing new ac state as state.ac_state is sent as "old" parameter
+                publish_upower(up->new, &upower_msg);
                 state.ac_state = up->new;
-                INFO("AC cable %s.\n", state.ac_state ? "connected" : "disconnected");
-                publish_upower(up->old, up->new, &upower_msg);
             } else {
                 WARN("Failed to validate upower request.\n");
             }
@@ -93,17 +94,16 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
      * .LidIsPresent                       property  b         true         emits-change
      * .OnBattery                          property  b         false        emits-change
      */
-    int old_ac_state = state.ac_state;
     int ac_state;
     int r = get_property(&args, "b", &ac_state, sizeof(ac_state));
-    if (!r && old_ac_state != ac_state) {
-        publish_upower(old_ac_state, ac_state, &upower_req);
+    if (!r && state.ac_state != ac_state) {
+        publish_upower(ac_state, &upower_req);
     }
     return 0;
 }
 
-static void publish_upower(int old, int new, message_t *up) {
-    up->upower.old = old;
+static void publish_upower(int new, message_t *up) {
+    up->upower.old = state.ac_state;
     up->upower.new = new;
     M_PUB(up);
 }

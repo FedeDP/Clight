@@ -76,7 +76,6 @@ static void receive(const msg_t *msg, const void *userdata) {
         switch (MSG_TYPE()) {
         case SCR_TO_REQ: {
             timeout_upd *up = (timeout_upd *)MSG_DATA();
-            /* Validate */
             if (up->state >= ON_AC && up->state < SIZE_AC) {
                 const int old = conf.screen_timeout[up->state];
                 conf.screen_timeout[up->state] = up->new;
@@ -98,7 +97,6 @@ static void receive(const msg_t *msg, const void *userdata) {
             break;
         case CONTRIB_REQ: {
             contrib_upd *up = (contrib_upd *)MSG_DATA();
-            /* Validate */
             if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_contrib != up->new) {
                 conf.screen_contrib = up->new;
             } else {
@@ -120,7 +118,6 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
         switch (MSG_TYPE()) {
         case SCR_TO_REQ: {
             timeout_upd *up = (timeout_upd *)MSG_DATA();
-            /* Validate */
             if (up->state >= ON_AC && up->state < SIZE_AC) {
                 const int old = conf.screen_timeout[up->state];
                 conf.screen_timeout[up->state] = up->new;

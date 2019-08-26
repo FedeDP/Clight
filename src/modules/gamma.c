@@ -65,7 +65,6 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case SUNRISE_REQ: {
                 evt_upd *up = (evt_upd *)MSG_DATA();
                 
-                /* Validate */
                 struct tm timeinfo;
                 if (strlen(up->event) && 
                     strlen(up->event) < sizeof(conf.events[SUNRISE]) &&

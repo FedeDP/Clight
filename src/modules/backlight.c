@@ -129,7 +129,6 @@ static void receive(const msg_t *const msg, const void* userdata) {
                 break;
             case CURVE_REQ: {
                 curve_upd *up = (curve_upd *)MSG_DATA();
-                /* Validate */
                 interface_curve_callback(up);
                 }
                 break;
@@ -368,7 +367,6 @@ static void interface_curve_callback(curve_upd *up) {
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(timeout_upd *up) {
-    /* Validate */
     if (up->state >= ON_AC && up->state < SIZE_AC && up->daytime >= DAY && up->daytime < SIZE_STATES) {
         const int old = get_current_timeout();
         conf.timeout[up->state][up->daytime] = up->new;
