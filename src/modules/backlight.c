@@ -208,25 +208,21 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
                 break;
             case BL_REQ: {
                 /* In paused state check that we're not dimmed/dpms */
-                if (!state.display_state) {
-                    bl_upd *up = (bl_upd *)MSG_DATA();
-                    if (VALIDATE_REQ(up)) {
-                        if (up->smooth != -1) {
-                            set_backlight_level(up->new, up->smooth, up->step, up->timeout);
-                        } else {
-                            set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
-                        }
+                bl_upd *up = (bl_upd *)MSG_DATA();
+                if (VALIDATE_REQ(up) && !state.display_state) {
+                    if (up->smooth != -1) {
+                        set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+                    } else {
+                        set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
                     }
                 }
                 break;
             }
             case KBD_BL_REQ: {
                 /* In paused state check that we're not dimmed/dpms */
-                if (!state.display_state) {
-                    bl_upd *up = (bl_upd *)MSG_DATA();
-                    if (VALIDATE_REQ(up)) {
-                        set_keyboard_level(up->new);
-                    }
+                bl_upd *up = (bl_upd *)MSG_DATA();
+                if (VALIDATE_REQ(up) && !state.display_state) {
+                    set_keyboard_level(up->new);
                 }
                 break;
             }
