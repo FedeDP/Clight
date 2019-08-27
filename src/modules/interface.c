@@ -153,7 +153,7 @@ DECLARE_MSG(inhibit_req, INHIBIT_REQ);
 DECLARE_MSG(temp_req, TEMP_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(curve_req, CURVE_REQ);
-DECLARE_MSG(calib_req, AUTOCALIB_REQ);
+DECLARE_MSG(calib_req, NO_AUTOCALIB_REQ);
 DECLARE_MSG(loc_req, LOCATION_REQ);
 DECLARE_MSG(contrib_req, CONTRIB_REQ);
 DECLARE_MSG(sunrise_req, SUNRISE_REQ);
@@ -528,7 +528,7 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
 
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                           sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    VALIDATE_PARAMS(value, "b", &calib_req.calib.new);
+    VALIDATE_PARAMS(value, "b", &calib_req.nocalib.new);
     
     M_PUB(&calib_req);
     return r;

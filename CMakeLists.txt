@@ -84,6 +84,8 @@ configure_file(${EXTRA_DIR}/org.clight.clight.service
 pkg_get_variable(COMPLETIONS_DIR bash-completion completionsdir)
 pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
 
+file(GLOB_RECURSE SKELETONS Extra/skeletons/*.skel)
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.clight.clight.service
         DESTINATION ${SESSION_BUS_DIR})
 install(FILES ${EXTRA_DIR}/clight.conf
@@ -94,8 +96,7 @@ install(FILES ${EXTRA_DIR}/desktop/clightc.desktop
         DESTINATION /usr/share/applications)
 install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
-install(FILES ${EXTRA_DIR}/module.skel
-        DESTINATION ${CLIGHT_DATADIR})
+install(FILES ${SKELETONS} DESTINATION ${CLIGHT_DATADIR})
 install(DIRECTORY DESTINATION ${CLIGHT_DATADIR}/modules.d/)
 if (COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/clight

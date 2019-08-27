@@ -143,7 +143,7 @@ static void init_topics(void) {
     topics[TEMP_REQ] = "ReqTemp";
     topics[CAPTURE_REQ] = "ReqCapture";
     topics[CURVE_REQ] = "ReqCurve";
-    topics[AUTOCALIB_REQ] = "ReqAutocalib";
+    topics[NO_AUTOCALIB_REQ] = "ReqAutocalib";
     topics[CONTRIB_REQ] = "ReqContrib";
     topics[LOCATION_REQ] = "ReqLocation";
     topics[SUNRISE_REQ] = "ReqSunrise";

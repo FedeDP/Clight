@@ -76,7 +76,7 @@ enum mod_msg_types {
     BL_TO_REQ,          // Publish to set a new backlight timeout
     CAPTURE_REQ,        // Publish to set a new backlight calibration
     CURVE_REQ,          // Publish to set a new backlight curve for given ac state
-    AUTOCALIB_REQ,      // Publish to set a new autocalib value for BACKLIGHT
+    NO_AUTOCALIB_REQ,   // Publish to set a new no_autocalib value for BACKLIGHT
     CONTRIB_REQ,        // Publish to set a new screen-emitted compensation value
     MSGS_SIZE
 };
@@ -173,10 +173,10 @@ typedef struct {
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ */
         curve_upd curve;        /* CURVE_REQ */
-        calib_upd calib;        /* AUTOCALIB_REQ */
+        calib_upd nocalib;      /* NO_AUTOCALIB_REQ */
         bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
         contrib_upd contrib;    /* CONTRIB_REQ */
-        capture_upd capture;
+        capture_upd capture;    /* CAPTURE_REQ */
     };
 } message_t;
 

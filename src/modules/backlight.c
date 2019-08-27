@@ -51,7 +51,7 @@ static void init(void) {
     M_SUB(BL_TO_REQ);
     M_SUB(CAPTURE_REQ);
     M_SUB(CURVE_REQ);
-    M_SUB(AUTOCALIB_REQ);
+    M_SUB(NO_AUTOCALIB_REQ);
     M_SUB(BL_REQ);
     M_SUB(KBD_BL_REQ);
 
@@ -143,7 +143,7 @@ static void receive(const msg_t *const msg, const void* userdata) {
                 }
                 }
                 break;
-            case AUTOCALIB_REQ: {
+            case NO_AUTOCALIB_REQ: {
                 calib_upd *up = (calib_upd *)MSG_DATA();
                 if (VALIDATE_REQ(up)) {
                     interface_autocalib_callback(up->new);
@@ -199,7 +199,7 @@ static void receive_paused(const msg_t *const msg, const void* userdata) {
                 }
                 }
                 break;
-            case AUTOCALIB_REQ: {
+            case NO_AUTOCALIB_REQ: {
                 calib_upd *up = (calib_upd *)MSG_DATA();
                 if (VALIDATE_REQ(up)) {
                     interface_autocalib_callback(up->new);
@@ -337,7 +337,7 @@ static void upower_callback(void) {
     set_timeout(0, 1, bl_fd, 0);
 }
 
-/* Callback on "AutoCalib" bus exposed writable property */
+/* Callback on "NoAutoCalib" bus exposed writable property */
 static void interface_autocalib_callback(bool new_val) {
     INFO("Backlight autocalibration %s.\n", new_val ? "disabled" : "enabled");
     conf.no_auto_calib = new_val;
