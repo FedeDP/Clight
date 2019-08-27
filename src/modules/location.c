@@ -81,17 +81,12 @@ static void receive(const msg_t *const msg, const void* userdata) {
         switch (MSG_TYPE()) {
         case LOCATION_REQ: {
             loc_upd *l = (loc_upd *)MSG_DATA();
-            /* Validate location */
-            if (fabs(l->new.lat) <  90.0f && fabs(l->new.lon) < 180.0f && 
-                (l->new.lat != state.current_loc.lat || l->new.lon != state.current_loc.lon)) {
-                
+            if (VALIDATE_REQ(l)) {
                 INFO("New location received: %.2lf, %.2lf.\n", l->new.lat, l->new.lon);
                 // publish location before storing new location as state.current_loc is sent as "old" parameter
                 publish_location(l->new.lat, l->new.lon, &loc_msg);
                 memcpy(&state.current_loc, &l->new, sizeof(loc_t));
-            } else {
-                WARN("Failed to validate location request.\n");
-            }
+            } 
             }
             break;
         default:

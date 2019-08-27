@@ -74,19 +74,6 @@ static void receive(const msg_t *msg, const void *userdata) {
         get_screen_brightness(false);
     } else if (msg->ps_msg->type == USER) {
         switch (MSG_TYPE()) {
-        case SCR_TO_REQ: {
-            timeout_upd *up = (timeout_upd *)MSG_DATA();
-            if (up->state >= ON_AC && up->state < SIZE_AC) {
-                const int old = conf.screen_timeout[up->state];
-                conf.screen_timeout[up->state] = up->new;
-                if (up->state == state.ac_state) {
-                    timeout_callback(old, false);
-                }
-            } else {
-                WARN("Failed to validate timeout request.\n");
-            }
-            }
-            break;
         case UPOWER_UPD: {
             upower_upd *up = (upower_upd *)MSG_DATA();
             timeout_callback(conf.screen_timeout[up->old], false);
@@ -95,12 +82,21 @@ static void receive(const msg_t *msg, const void *userdata) {
         case DISPLAY_UPD:
             pause_screen(state.display_state);
             break;
+        case SCR_TO_REQ: {
+            timeout_upd *up = (timeout_upd *)MSG_DATA();
+            if (VALIDATE_REQ(up)) {
+                const int old = conf.screen_timeout[up->state];
+                conf.screen_timeout[up->state] = up->new;
+                if (up->state == state.ac_state) {
+                    timeout_callback(old, false);
+                }
+            }
+            }
+            break;
         case CONTRIB_REQ: {
             contrib_upd *up = (contrib_upd *)MSG_DATA();
-            if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_contrib != up->new) {
+            if (VALIDATE_REQ(up)) {
                 conf.screen_contrib = up->new;
-            } else {
-                WARN("Failed to validate contrib request.\n");
             }
             }
             break;
@@ -116,27 +112,28 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
         get_screen_brightness(true);
     } else if (msg->ps_msg->type == USER) {
         switch (MSG_TYPE()) {
-        case SCR_TO_REQ: {
-            timeout_upd *up = (timeout_upd *)MSG_DATA();
-            if (up->state >= ON_AC && up->state < SIZE_AC) {
-                const int old = conf.screen_timeout[up->state];
-                conf.screen_timeout[up->state] = up->new;
-                if (up->state == state.ac_state) {
-                    timeout_callback(old, true);
-                }
-            } else {
-                WARN("Failed to validate timeout request.\n");
-            }
-            }
-            break;
         case UPOWER_UPD: {
             upower_upd *up = (upower_upd *)MSG_DATA();
             timeout_callback(conf.screen_timeout[up->old], true);
             }
             break;
+        case DISPLAY_UPD:
+            pause_screen(state.display_state);
+            break;
+        case SCR_TO_REQ: {
+            timeout_upd *up = (timeout_upd *)MSG_DATA();
+            if (VALIDATE_REQ(up)) {
+                const int old = conf.screen_timeout[up->state];
+                conf.screen_timeout[up->state] = up->new;
+                if (up->state == state.ac_state) {
+                    timeout_callback(old, true);
+                }
+            }
+            }
+            break;
         case CONTRIB_REQ: {
             contrib_upd *up = (contrib_upd *)MSG_DATA();
-            if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_contrib != up->new) {
+            if (VALIDATE_REQ(up)) {
                 const double old = conf.screen_contrib;
                 conf.screen_contrib = up->new;
                 /* Recompute current screen compensation */
@@ -150,13 +147,8 @@ static void receive_computing(const msg_t *msg, const void *userdata) {
                 if (up->new == 0 || old == 0) {
                     pause_screen(up->new == 0);
                 }
-            } else {
-                WARN("Failed to validate contrib request.\n");
             }
             }
-            break;
-        case DISPLAY_UPD:
-            pause_screen(state.display_state);
             break;
         default:
             break;

@@ -35,13 +35,11 @@ static void receive(const msg_t *const msg, const void* userdata) {
         switch (MSG_TYPE()) {
         case UPOWER_REQ: {
             upower_upd *up = (upower_upd *)MSG_DATA();
-            if (state.ac_state != up->new && up->new >= ON_AC && up->new < SIZE_AC) {
+            if (VALIDATE_REQ(up)) {
                 INFO("AC cable %s.\n", up->new ? "connected" : "disconnected");
                 // publish upower before storing new ac state as state.ac_state is sent as "old" parameter
                 publish_upower(up->new, &upower_msg);
                 state.ac_state = up->new;
-            } else {
-                WARN("Failed to validate upower request.\n");
             }
             }
             break;

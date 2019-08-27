@@ -166,7 +166,7 @@ static sd_bus_message *curve_message;
 
 MODULE("INTERFACE");
 
-static void init(void) {    
+static void init(void) {
     const char conf_path[] = "/org/clight/clight/Conf";
     const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
     const char sc_path[] = "/org/freedesktop/ScreenSaver";
@@ -399,6 +399,7 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 }
                        
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    capture_req.capture.reset_timer = false;
     M_PUB(&capture_req);
     return sd_bus_reply_method_return(m, NULL);
 }
@@ -454,13 +455,9 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
 
     VALIDATE_PARAMS(value, "(dd)", &loc_req.loc.new.lat, &loc_req.loc.new.lon);
 
-    if (fabs(loc_req.loc.new.lat) <  90.0f && fabs(loc_req.loc.new.lon) < 180.0f) {
-        INFO("New location from BUS api: %.2lf %.2lf\n", loc_req.loc.new.lat, loc_req.loc.new.lat);
-        M_PUB(&loc_req);
-        return r;
-    }
-    INFO("Wrong location set. Rejected.\n");
-    return -EINVAL;
+    INFO("New location from BUS api: %.2lf %.2lf\n", loc_req.loc.new.lat, loc_req.loc.new.lat);
+    M_PUB(&loc_req);
+    return r;
 }
 
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,

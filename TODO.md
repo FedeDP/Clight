@@ -109,6 +109,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] move topics in commons.h
 - [x] Move log.h functions too, so users can log into clight's log
 - [x] Validate user message request
+- [x] Use a generic macro to validate requests!
 - [x] Add SUNRISE_REQ and SUNSET_REQ messages
 
 #### Screen compensation support (#84)

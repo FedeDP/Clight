@@ -61,31 +61,27 @@ static void receive(const msg_t *const msg, const void* userdata) {
             case LOCATION_UPD:
                 location_callback();
                 break;
+            case BL_UPD:
+                ambient_callback();
+                break;
             case SUNSET_REQ:
             case SUNRISE_REQ: {
                 evt_upd *up = (evt_upd *)MSG_DATA();
-                
-                struct tm timeinfo;
-                if (strlen(up->event) && 
-                    strlen(up->event) < sizeof(conf.events[SUNRISE]) &&
-                    strptime(up->event, "%R", &timeinfo)) {
-                    
+                if (VALIDATE_REQ(up)) {
                     if (MSG_TYPE() == SUNRISE_REQ) {
                         strncpy(conf.events[SUNRISE], up->event, sizeof(conf.events[SUNRISE]));
                     } else {
                         strncpy(conf.events[SUNSET], up->event, sizeof(conf.events[SUNSET]));
                     }
                     location_callback();
-                } else {
-                    WARN("Failed to validate sunrise/sunset request.\n");
                 }
                 }
-                break;
-            case BL_UPD:
-                ambient_callback();
                 break;
             case TEMP_REQ: {
-                interface_callback((temp_upd *)MSG_DATA());
+                temp_upd *up = (temp_upd *)MSG_DATA();
+                if (VALIDATE_REQ(up)) {
+                    interface_callback(up);
+                }
                 }      
                 break;
             default:
@@ -341,20 +337,12 @@ static void location_callback(void) {
 }
 
 static void interface_callback(temp_upd *req) {
-    /* Validate new temp: check clighd limits */
-    if (req->new >= 1000 && req->new <= 10000 && 
-        req->daytime >= DAY && req->daytime < SIZE_STATES &&
-        req->new != conf.temp[req->daytime]) {
-        
-        conf.temp[req->daytime] = req->new;
-        if (!conf.ambient_gamma && req->daytime == state.time) {
-            if (req->smooth != -1) {
-                set_temp(conf.temp[req->daytime], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
-            } else {
-                set_temp(conf.temp[req->daytime], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
-            }
+    conf.temp[req->daytime] = req->new;
+    if (!conf.ambient_gamma && req->daytime == state.time) {
+        if (req->smooth != -1) {
+            set_temp(conf.temp[req->daytime], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
+        } else {
+            set_temp(conf.temp[req->daytime], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
         }
-    } else {
-        WARN("Failed to validate temperature request.\n");
     }
 }

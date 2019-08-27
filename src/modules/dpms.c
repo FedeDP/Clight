@@ -1,15 +1,13 @@
 #include "idler.h"
-#include <bus.h>
 
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void set_dpms(int dpms_state);
 static void upower_timeout_callback(void);
 static void inhibit_callback(void);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
 
-DECLARE_MSG(display_msg, DISPLAY_UPD);
+DECLARE_MSG(display_req, DISPLAY_REQ);
 
 MODULE("DPMS");
 
@@ -40,20 +38,18 @@ static void receive(const msg_t *const msg, const void* userdata) {
         case UPOWER_UPD:
             upower_timeout_callback();
             break;
+        case INHIBIT_UPD:
+            inhibit_callback();
+            break;
         case DPMS_TO_REQ: {
             timeout_upd *up = (timeout_upd *)MSG_DATA();
-            if (up->state >= ON_AC && up->state < SIZE_AC) {
+            if (VALIDATE_REQ(up)) {
                 conf.dpms_timeout[up->state] = up->new;
                 if (up->state == state.ac_state) {
                     upower_timeout_callback();
                 }
-            } else {
-                WARN("Failed to validate timeout request.\n");
             }
             }
-            break;
-        case INHIBIT_UPD:
-            inhibit_callback();
             break;
         default:
             break;
@@ -73,24 +69,15 @@ static int on_new_idle(sd_bus_message *m,  UNUSED void *userdata, UNUSED sd_bus_
     int is_dpms;
     sd_bus_message_read(m, "b", &is_dpms);
     
-    display_msg.display.old = state.display_state;
-    
+    /* Unused in requests! */
+    display_req.display.old = state.display_state;
     if (is_dpms) {
-        state.display_state |= DISPLAY_OFF;
-        DEBUG("Entering dpms state...\n");
+        display_req.display.new = DISPLAY_OFF;
     } else {
-        state.display_state &= ~DISPLAY_OFF;
-        DEBUG("Leaving dpms state...\n");
+        display_req.display.new = ~DISPLAY_OFF;
     }
-    display_msg.display.new = state.display_state;
-    set_dpms(is_dpms);
-    M_PUB(&display_msg);
+    M_PUB(&display_req);
     return 0;
-}
-
-static void set_dpms(int dpms_state) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Set");
-    call(NULL, NULL, &args, "ssi", state.display, state.xauthority, dpms_state);
 }
 
 static void upower_timeout_callback(void) {

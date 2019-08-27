@@ -36,7 +36,7 @@ enum events { SUNRISE, SUNSET, SIZE_EVENTS };
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 
 /* Display states */
-enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
+enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF, DISPLAY_SIZE };
 
 /* Quit values */
 enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };
@@ -64,6 +64,7 @@ enum mod_msg_types {
     LOCATION_REQ,       // Publish to set a new location
     UPOWER_REQ,         // Publish to set a new UPower state
     INHIBIT_REQ,        // Publish to set a new PowerManagement state
+    DISPLAY_REQ,        // Publish to set a new Display state (Set ~DISPLAY_DIMMED/~DISPLAY_OFF to unrequest a UNDIMMED/UN-DPMS state)
     SUNRISE_REQ,        // Publish to set a new fixed Sunrise
     SUNSET_REQ,         // Publish to set a new fixed Sunset
     TEMP_REQ,           // Publish to set a new gamma temp
@@ -104,7 +105,7 @@ typedef struct {
 
 typedef struct {
     enum display_states old;    // Valued in updates
-    enum display_states new;    // Valued in updates
+    enum display_states new;    // Mandatory for requests. Valued in updates
 } display_upd;
 
 typedef struct {
@@ -144,6 +145,10 @@ typedef struct {
 } calib_upd;
 
 typedef struct {
+    bool reset_timer;           // Mandatory for requests. Whether to reset BACKLIGHT module internal capture timer after the capture
+} capture_upd;
+
+typedef struct {
     double old;                 // Valued in updates. Useless for requests
     double new;                 // Mandatory for requests. Valued in updates
     /* The following are only useful for BL_UPD/BL_REQ */
@@ -162,7 +167,7 @@ typedef struct {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
         inhibit_upd inhibit;    /* INHIBIT_UPD/INHIBIT_REQ */
-        display_upd display;    /* DISPLAY_UPD */
+        display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
         time_upd time;          /* TIME_UPD/IN_EVENT_UPD */
         evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ */
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
@@ -171,6 +176,7 @@ typedef struct {
         calib_upd calib;        /* AUTOCALIB_REQ */
         bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
         contrib_upd contrib;    /* CONTRIB_REQ */
+        capture_upd capture;
     };
 } message_t;
 

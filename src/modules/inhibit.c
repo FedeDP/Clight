@@ -21,14 +21,12 @@ static void receive(const msg_t *const msg, const void* userdata) {
         switch (MSG_TYPE()) {
         case INHIBIT_REQ: {
             inhibit_upd *up = (inhibit_upd *)MSG_DATA();
-            inh_msg.inhibit.old = state.inhibited;
-            state.inhibited = up->new;
-            inh_msg.inhibit.new = state.inhibited;
-            if (inh_msg.inhibit.old != inh_msg.inhibit.new) {
+            if (VALIDATE_REQ(up)) {
+                inh_msg.inhibit.old = state.inhibited;
+                state.inhibited = up->new;
+                inh_msg.inhibit.new = state.inhibited;
                 M_PUB(&inh_msg);
                 INFO("ScreenSaver inhibition %s.\n", state.inhibited ? "enabled" : "disabled");
-            } else {
-                WARN("Failed to validate inhibit request.\n");
             }
             }
             break;

@@ -139,6 +139,7 @@ static void init_topics(void) {
     topics[DPMS_TO_REQ] = "ReqDpmsTo";
     topics[SCR_TO_REQ] = "ReqScrTo";
     topics[BL_TO_REQ] = "ReqBlTo";
+    topics[DISPLAY_REQ] = "ReqDisplay";
     topics[TEMP_REQ] = "ReqTemp";
     topics[CAPTURE_REQ] = "ReqCapture";
     topics[CURVE_REQ] = "ReqCurve";

@@ -29,7 +29,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     -DCONFDIR="${CLIGHT_CONFDIR}"
     -DDATADIR="${CLIGHT_DATADIR}"
 )
-set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD_REQUIRED ON)
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)
 
 # Required dependencies
 pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig libmodule>=5.0.0)

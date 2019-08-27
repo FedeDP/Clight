@@ -8,6 +8,7 @@
 #include <pwd.h>
 #include <setjmp.h>
 #include "public.h"
+#include "validations.h"
 
 #define UNUSED __attribute__((unused))
 

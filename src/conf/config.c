@@ -114,7 +114,7 @@ int read_config(enum CONFIG file, char *config_file) {
         int len;
         if ((points = config_setting_get_member(root, "ac_backlight_regression_points"))) {
             len = config_setting_length(points);
-            if (len <= MAX_SIZE_POINTS) {
+            if (len > 0 && len <= MAX_SIZE_POINTS) {
                 conf.num_points[ON_AC] = len;
                 for (int i = 0; i < len; i++) {
                     conf.regression_points[ON_AC][i] = config_setting_get_float_elem(points, i);
@@ -127,7 +127,7 @@ int read_config(enum CONFIG file, char *config_file) {
         /* Load regression points for backlight curve */
         if ((points = config_setting_get_member(root, "batt_backlight_regression_points"))) {
             len = config_setting_length(points);
-            if (len <= MAX_SIZE_POINTS) {
+            if (len > 0 && len <= MAX_SIZE_POINTS) {
                 conf.num_points[ON_BATTERY] = len;
                 for (int i = 0; i < len; i++) {
                     conf.regression_points[ON_BATTERY][i] = config_setting_get_float_elem(points, i);
