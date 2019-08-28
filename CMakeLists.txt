@@ -22,6 +22,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            "${CMAKE_CURRENT_SOURCE_DIR}/src/conf"
                            "${CMAKE_CURRENT_SOURCE_DIR}/src/modules"
                            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils"
+                           "${CMAKE_CURRENT_SOURCE_DIR}/src/pubsub"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     -D_GNU_SOURCE
