@@ -1,7 +1,7 @@
 #include <module/modules_easy.h>
 #include <sys/signalfd.h>
 #include <signal.h>
-#include <log.h>
+#include "commons.h"
 
 MODULE("SIGNAL");
 
@@ -37,8 +37,9 @@ static void destroy(void) {
  * if received an external SIGINT or SIGTERM,
  * just switch the quit flag to 1 and print to stdout.
  */
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (!msg->is_pubsub) {
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD: {
         struct signalfd_siginfo fdsi;
         ssize_t s;
 
@@ -48,6 +49,10 @@ static void receive(const msg_t *const msg, const void* userdata) {
         }
         INFO("Received %d. Leaving.\n", fdsi.ssi_signo);
         modules_quit(NORM_QUIT);
+        break;
+    }
+    default:
+        break;
     }
 }
 

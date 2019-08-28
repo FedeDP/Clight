@@ -1,5 +1,5 @@
-#include <bus.h>
 #include <unistd.h>
+#include "bus.h"
 
 #define GET_BUS(a)  sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus; if (!tmp) { return -1; }
 
@@ -48,13 +48,18 @@ static void destroy(void) {
     }
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (!msg->is_pubsub) {
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD: {
         sd_bus *b = (sd_bus *)msg->fd_msg->userptr;
         int r;
         do {
             r = sd_bus_process(b, NULL);
         } while (r > 0);
+        break;
+    }
+    default:
+        break;
     }
 }
 

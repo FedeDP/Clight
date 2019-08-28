@@ -111,6 +111,8 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Validate user message request
 - [x] Use a generic macro to validate requests!
 - [x] Add SUNRISE_REQ and SUNSET_REQ messages
+- [x] Compile time assert correctness of enum mod_msg_type values in DECLARE_MSG and M_SUB calls
+- [x] Compile time assert correctness of topics
 
 #### Screen compensation support (#84)
 - [x] Expose through dbus API new conf options and react if they change
@@ -146,6 +148,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Force eg: conf.no_gamma when not on X? This way, it would be accounted when checking functional running modules...
 - [x] Fix bug in reset_timer with <0 old values.
 - [x] Rework clight conf file
+- [x] Fix bug in idler.c: pass correct timeout in idle_client_start()
 - [ ] Fix 20s timeout on start? Geoclue is super-slow...opened ticket: https://gitlab.freedesktop.org/geoclue/geoclue/issues/121
 
 #### DOC/WIKI updates

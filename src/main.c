@@ -21,17 +21,12 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#include <opts.h>
-#include <log.h>
 #include <glob.h>
-#ifndef NDEBUG
-    #include <assert.h>
-#endif
 #include <module/modules_easy.h>
+#include "opts.h"
 
 static void init(int argc, char *argv[]);
 static void init_state(void);
-static void init_topics(void);
 static void sigsegv_handler(int signum);
 static void check_clightd_version(void);
 static void init_user_mod_path(enum CONFIG file, char *filename);
@@ -39,7 +34,6 @@ static void load_user_modules(enum CONFIG file);
 
 state_t state = {0};
 conf_t conf = {0};
-const char *topics[MSGS_SIZE] = { 0 };
 
 /* Every module needs these; let's init them before any module */
 void modules_pre_start(void) {
@@ -84,8 +78,6 @@ static void init(int argc, char *argv[]) {
     check_clightd_version();
     
     init_state();
-    init_topics();
-    
     /* 
      * Load user custom modules after opening log (thus this information is logged).
      * Note that local (ie: placed in $HOME) modules have higher priority,
@@ -113,61 +105,6 @@ static void init_state(void) {
      * or to ON_AC if UPower is not available 
      */
     state.ac_state = -1;
-}
-
-static void init_topics(void) {
-    /* BACKLIGHT */
-    topics[AMBIENT_BR_UPD] = "AmbientBr";
-    topics[BL_UPD] = "BlPct";
-    topics[KBD_BL_UPD] = "KbdPct";
-    
-    /* DIMMER/DPMS */
-    topics[DISPLAY_UPD] = "DisplayState";
-    
-    /* GAMMA */
-    topics[TIME_UPD] = "Time";
-    topics[IN_EVENT_UPD] = "InEvent";
-    topics[SUNRISE_UPD] = "Sunrise";
-    topics[SUNSET_UPD] = "Sunset";
-    topics[TEMP_UPD] = "Temp";
-    
-    /* INHIBIT */
-    topics[INHIBIT_UPD] = "Inhibited";
-    
-    /* INTERFACE/Requests */
-    topics[DIMMER_TO_REQ] = "ReqDimmerTo";
-    topics[DPMS_TO_REQ] = "ReqDpmsTo";
-    topics[SCR_TO_REQ] = "ReqScrTo";
-    topics[BL_TO_REQ] = "ReqBlTo";
-    topics[DISPLAY_REQ] = "ReqDisplay";
-    topics[TEMP_REQ] = "ReqTemp";
-    topics[CAPTURE_REQ] = "ReqCapture";
-    topics[CURVE_REQ] = "ReqCurve";
-    topics[NO_AUTOCALIB_REQ] = "ReqAutocalib";
-    topics[CONTRIB_REQ] = "ReqContrib";
-    topics[LOCATION_REQ] = "ReqLocation";
-    topics[SUNRISE_REQ] = "ReqSunrise";
-    topics[SUNSET_REQ] = "ReqSunset";
-    topics[INHIBIT_REQ] = "ReqInhibit";
-    topics[BL_REQ] = "ReqBl";
-    topics[UPOWER_REQ] = "ReqAcState";
-    topics[KBD_BL_REQ] = "ReqKbdBl";
-    
-    /* LOCATION */
-    topics[LOCATION_UPD] = "Location";
-
-    /* SCREEN */
-    topics[SCR_BL_UPD] = "ScreenComp";
-
-    /* UPOWER */
-    topics[UPOWER_UPD] = "AcState";
-    
-#ifndef NDEBUG
-    /* Runtime check that any topic has been inited; useful in devel */
-    for (int i = 0; i < MSGS_SIZE; i++) {
-        assert(strlen(topics[i]));
-    }
-#endif
 }
 
 /*

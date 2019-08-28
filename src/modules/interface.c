@@ -1,7 +1,6 @@
-#include <stddef.h>
-#include <bus.h>
-#include <config.h>
 #include <module/map.h>
+#include "bus.h"
+#include "config.h"
 
 #define VALIDATE_PARAMS(m, signature, ...) \
     int r = sd_bus_message_read(m, signature, __VA_ARGS__); \
@@ -45,8 +44,6 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_inhibit_autocalib(sd_bus *bus, const char *path, const char *interface, const char *property,
-                                 sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -61,8 +58,8 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_PROPERTY("Version", "s", get_version, offsetof(state_t, version), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("ClightdVersion", "s", get_version, offsetof(state_t, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(state_t, events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(state_t, events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(state_t, day_events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(state_t, day_events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Time", "i", NULL, offsetof(state_t, time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(state_t, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(state_t, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -88,11 +85,11 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_PROPERTY("NoScreen", "b", NULL, offsetof(conf_t, no_screen), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("ScreenSamples", "i", NULL, offsetof(conf_t, screen_samples), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("ScreenContrib", "d", NULL, set_screen_contrib, offsetof(conf_t, screen_contrib), 0),
-    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(conf_t, events[SUNRISE]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(conf_t, events[SUNSET]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(conf_t, day_events[SUNRISE]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(conf_t, day_events[SUNSET]), 0),
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(conf_t, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(conf_t, no_auto_calib), 0),
-    SD_BUS_WRITABLE_PROPERTY("InhibitAutoCalib", "b", NULL, set_inhibit_autocalib, offsetof(conf_t, inhibit_autocalib), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitAutoCalib", "b", NULL, NULL, offsetof(conf_t, inhibit_autocalib), 0),
     SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(conf_t, no_keyboard_bl), 0),
     SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(conf_t, ambient_gamma), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothBacklight", "b", NULL, NULL, offsetof(conf_t, no_smooth_backlight), 0),
@@ -148,7 +145,7 @@ static const sd_bus_vtable sc_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
-DECLARE_MSG(to_req, -1); // this is indeed used to manage any Timeout request!
+DECLARE_MSG(to_req, BL_TO_REQ); // this is indeed used to manage any Timeout request!
 DECLARE_MSG(inhibit_req, INHIBIT_REQ);
 DECLARE_MSG(temp_req, TEMP_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
@@ -241,12 +238,16 @@ static bool evaluate() {
     return true;
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (msg->ps_msg->type == USER) {
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD:
         if (userbus) {
             DEBUG("Emitting %s property\n", msg->ps_msg->topic);
             sd_bus_emit_properties_changed(userbus, object_path, bus_interface, msg->ps_msg->topic, NULL);
         }
+        break;
+    default:
+        break;
     }
 }
 
@@ -534,38 +535,13 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
     return r;
 }
 
-static int set_inhibit_autocalib(sd_bus *bus, const char *path, const char *interface, const char *property,
-                          sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    const int old_val = *(int *)userdata;
-    VALIDATE_PARAMS(value, "b", userdata);
-    
-    if (old_val != *(int *)userdata) {
-        static const self_t *ref = NULL;
-        if (!ref) {
-            m_ref("BACKLIGHT", &ref);
-        }
-
-        if (ref) {
-            /* 
-             * Tell a fake inhibit_upd message to BACKLIGHT 
-             * to let it update its internal state with new inhibit_autocalib value
-             */
-            DECLARE_MSG(msg, INHIBIT_UPD);
-            msg.inhibit.old = state.inhibited;
-            msg.inhibit.new = state.inhibited;
-            m_tell(ref, &msg, sizeof(message_t), false);
-        }
-    }
-    return r;
-}
-
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
     const char *event = NULL;
     VALIDATE_PARAMS(value, "s", &event);
 
     message_t *msg = &sunrise_req;
-    if (userdata == &conf.events[SUNSET]) {
+    if (userdata == &conf.day_events[SUNSET]) {
         msg = &sunset_req;
     }
     strncpy(msg->event.event, event, sizeof(msg->event.event));

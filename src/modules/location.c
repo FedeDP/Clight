@@ -1,5 +1,4 @@
-#include <my_math.h>
-#include <bus.h>
+#include "bus.h"
 
 #define LOC_TIME_THRS 600                   // time threshold (seconds) before triggering location changed events (10mins)
 #define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
@@ -54,7 +53,7 @@ static bool evaluate(void) {
      */
     return  !conf.no_gamma && 
             (conf.loc.lat == LAT_UNDEFINED || conf.loc.lon == LON_UNDEFINED) && 
-            (!strlen(conf.events[SUNRISE]) || !strlen(conf.events[SUNSET]));
+            (!strlen(conf.day_events[SUNRISE]) || !strlen(conf.day_events[SUNSET]));
 }
 
 /*
@@ -71,27 +70,26 @@ static void destroy(void) {
     }
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (!msg->is_pubsub) {
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD:
         read_timer(msg->fd_msg->fd);
         if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
             load_cache_location();
         }
-    } else if (msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-        case LOCATION_REQ: {
-            loc_upd *l = (loc_upd *)MSG_DATA();
-            if (VALIDATE_REQ(l)) {
-                INFO("New location received: %.2lf, %.2lf.\n", l->new.lat, l->new.lon);
-                // publish location before storing new location as state.current_loc is sent as "old" parameter
-                publish_location(l->new.lat, l->new.lon, &loc_msg);
-                memcpy(&state.current_loc, &l->new, sizeof(loc_t));
-            } 
-            }
-            break;
-        default:
-            break;
-        }
+        break;
+    case LOCATION_REQ: {
+        loc_upd *l = (loc_upd *)MSG_DATA();
+        if (VALIDATE_REQ(l)) {
+            INFO("New location received: %.2lf, %.2lf.\n", l->new.lat, l->new.lon);
+            // publish location before storing new location as state.current_loc is sent as "old" parameter
+            publish_location(l->new.lat, l->new.lon, &loc_msg);
+            memcpy(&state.current_loc, &l->new, sizeof(loc_t));
+        } 
+        break;
+    }
+    default:
+        break;
     }
 }
 

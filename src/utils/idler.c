@@ -41,7 +41,7 @@ int idle_set_timeout(char *client, int timeout) {
         r = set_property(&to_args, 'u', &timeout);
         if (!state.inhibited) {
             /* Only start client if we are not inhibited */
-            r += idle_client_start(client);
+            r += idle_client_start(client, timeout);
         }
     } else {
         r = idle_client_stop(client);
@@ -49,10 +49,10 @@ int idle_set_timeout(char *client, int timeout) {
     return r;
 }
 
-int idle_client_start(char *client) {
+int idle_client_start(char *client, int timeout) {
     VALIDATE_CLIENT(client);
     
-    if (conf.dimmer_timeout[state.ac_state] > 0 && !state.inhibited) {
+    if (timeout > 0 && !state.inhibited) {
         SYSBUS_ARG(args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Start");
         return call(NULL, NULL, &args, NULL);
     }

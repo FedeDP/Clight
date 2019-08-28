@@ -15,64 +15,30 @@
  * Place daytime in: $HOME/.local/share/clight/modules.d/ OR, globally, in /usr/share/clight/modules.d/
  */
 
-MODULE("DAYTIME");
+CLIGHT_MODULE("DAYTIME");
 
 static void init(void) {
-    /* Topics on which you can subscribe can be found in clight/public.h */
+    /* Suscribe to daytime updates */
     M_SUB(TIME_UPD);
-}
-
-/* 
- * Whether this module should be actually created:
- * true if module must be created, !true otherwise.
- * 
- * Use this function as a starting filter: 
- * you may desire that a module is not started in certain conditions.
- * 
- * Eg: avoid registering the module on wayland (getenv("WAYLAND_DISPLAY") == NULL)
- */
-static bool check(void) {
-    return true;
-}
-
-/* 
- * Should return not-0 value when module can be actually started (and thus polled).
- * Use this to check intra-modules dependencies or any other env variable.
- * 
- * You probably desire to leave this as "return true" unless you're injecting
- * multiple modules and you eg: wish module A to be started after module B.
- */
-static bool evaluate(void) {
-    return true;
-}
-
-/*
- * Destroyer function, called at module unload (at end of program).
- * If you allocated any heap structure, you must free it here.
- */
-static void destroy(void) {
-    /* ByeBye */
 }
 
 /*
  * PubSub callback
  */
 static void receive(const msg_t *msg, const void *userdata) {
-    if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-        case TIME_UPD: {
-            time_upd *up = (time_upd *)MSG_DATA();
-            if (up->new == DAY) {
-                // system("lookandfeeltool -a org.kde.breeze.desktop");
-                INFO("We're now during the day!\n");
-            } else {
-                // system("lookandfeeltool -a org.kde.breezedark.desktop");
-                INFO("We're now during the night!\n");
-            }
-            break;
+    switch (MSG_TYPE()) {
+    case TIME_UPD: {
+        time_upd *up = (time_upd *)MSG_DATA();
+        if (up->new == DAY) {
+            // system("lookandfeeltool -a org.kde.breeze.desktop");
+            INFO("We're now during the day!\n");
+        } else {
+            // system("lookandfeeltool -a org.kde.breezedark.desktop");
+            INFO("We're now during the night!\n");
         }
-        default:
-            break;
-        }
+        break;
+    }
+    default:
+        break;
     }
 }

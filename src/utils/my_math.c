@@ -1,11 +1,11 @@
-#include <my_math.h>
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
+#include "my_math.h"
 
 #define ZENITH -0.83
 
 static float to_hours(const float rad);
-static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow);
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, int tomorrow);
 
 /*
  * Convert degrees to radians
@@ -88,7 +88,7 @@ static float to_hours(const float rad) {
  * If conf.events[event] is set, it means "event" time is user-set.
  * So, only store in *tt its corresponding time_t values.
  */
-static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow) {
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, int tomorrow) {
     // 1. compute the day of the year (timeinfo->tm_yday below)
     time(tt);
     struct tm *timeinfo = localtime(tt);
@@ -101,8 +101,8 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     timeinfo->tm_sec = 0;
 
     /* If user provided a sunrise/sunset time, use them */
-    if (strlen(conf.events[event]) > 0) {
-        strptime(conf.events[event], "%R", timeinfo);
+    if (strlen(conf.day_events[event]) > 0) {
+        strptime(conf.day_events[event], "%R", timeinfo);
         *tt = mktime(timeinfo);
         return 0;
     }

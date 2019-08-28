@@ -1,7 +1,7 @@
 #pragma once
 
 #include <systemd/sd-bus.h>
-#include <timer.h>
+#include "timer.h"
 
 #define CLIGHTD_SERVICE "org.clightd.clightd"
 

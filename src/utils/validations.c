@@ -45,7 +45,7 @@ bool validate_contrib(contrib_upd *up) {
 bool validate_evt(evt_upd *up) {
     struct tm timeinfo;
     if (strlen(up->event) && 
-        strlen(up->event) < sizeof(conf.events[SUNRISE]) &&
+        strlen(up->event) < sizeof(conf.day_events[SUNRISE]) &&
         strptime(up->event, "%R", &timeinfo)) {
      
         return true;

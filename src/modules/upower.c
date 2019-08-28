@@ -1,4 +1,4 @@
-#include <bus.h>
+#include "bus.h"
 
 static int upower_check(void);
 static int upower_init(void);
@@ -30,22 +30,20 @@ static bool evaluate(void) {
     return upower_check() == 0;
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-        case UPOWER_REQ: {
-            upower_upd *up = (upower_upd *)MSG_DATA();
-            if (VALIDATE_REQ(up)) {
-                INFO("AC cable %s.\n", up->new ? "connected" : "disconnected");
-                // publish upower before storing new ac state as state.ac_state is sent as "old" parameter
-                publish_upower(up->new, &upower_msg);
-                state.ac_state = up->new;
-            }
-            }
-            break;
-        default:
-            break;
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case UPOWER_REQ: {
+        upower_upd *up = (upower_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            INFO("AC cable %s.\n", up->new ? "connected" : "disconnected");
+            // publish upower before storing new ac state as state.ac_state is sent as "old" parameter
+            publish_upower(up->new, &upower_msg);
+            state.ac_state = up->new;
         }
+        break;
+    }
+    default:
+        break;
     }
 }
 

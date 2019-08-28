@@ -103,132 +103,129 @@ static void destroy(void) {
     }
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (!msg->is_pubsub) {
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD:
         read_timer(msg->fd_msg->fd);
         M_PUB(&capture_req);
-    } else if (msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-            case UPOWER_UPD:
-                upower_callback();
-                break;
-            case DISPLAY_UPD:
-                dimmed_callback();
-                break;
-            case IN_EVENT_UPD:
-            case TIME_UPD: {
-                time_upd *up = (time_upd *)MSG_DATA();
-                time_callback(up->old, MSG_TYPE() == IN_EVENT_UPD);
-                }
-                break;
-            case INHIBIT_UPD:
-                on_inbhibit_update();
-                break;
-            case BL_TO_REQ: {
-                timeout_upd *up = (timeout_upd *)MSG_DATA();
-                interface_timeout_callback(up);
-                }
-                break;
-            case CAPTURE_REQ: {
-                capture_upd *up = (capture_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    do_capture(up->reset_timer);
-                }
-                }
-                break;
-            case CURVE_REQ: {
-                curve_upd *up = (curve_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    interface_curve_callback(up);
-                }
-                }
-                break;
-            case NO_AUTOCALIB_REQ: {
-                calib_upd *up = (calib_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    interface_autocalib_callback(up->new);
-                }
-                }
-                break;
-            case BL_REQ: {
-                bl_upd *up = (bl_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    if (up->smooth != -1) {
-                        set_backlight_level(up->new, up->smooth, up->step, up->timeout);
-                    } else {
-                        set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
-                    }
-                }
-                break;
-            }
-            case KBD_BL_REQ: {
-                bl_upd *up = (bl_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    set_keyboard_level(up->new);
-                }
-                break;
-            }
-            default:
-                break;
+        break;
+    case UPOWER_UPD:
+        upower_callback();
+        break;
+    case DISPLAY_UPD:
+        dimmed_callback();
+        break;
+    case IN_EVENT_UPD:
+    case TIME_UPD: {
+        time_upd *up = (time_upd *)MSG_DATA();
+        time_callback(up->old, MSG_TYPE() == IN_EVENT_UPD);
+        break;
+    }
+    case INHIBIT_UPD:
+        on_inbhibit_update();
+        break;
+    case BL_TO_REQ: {
+        timeout_upd *up = (timeout_upd *)MSG_DATA();
+        interface_timeout_callback(up);
+        break;
+    }
+    case CAPTURE_REQ: {
+        capture_upd *up = (capture_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            do_capture(up->reset_timer);
         }
+        break;
+    }
+    case CURVE_REQ: {
+        curve_upd *up = (curve_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            interface_curve_callback(up);
+        }
+        break;
+    }
+    case NO_AUTOCALIB_REQ: {
+        calib_upd *up = (calib_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            interface_autocalib_callback(up->new);
+        }
+        break;
+    }
+    case BL_REQ: {
+        bl_upd *up = (bl_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            if (up->smooth != -1) {
+                set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+            } else {
+                set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+            }
+        }
+        break;
+    }
+    case KBD_BL_REQ: {
+        bl_upd *up = (bl_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            set_keyboard_level(up->new);
+        }
+        break;
+    }
+    default:
+        break;
     }
 }
 
-static void receive_paused(const msg_t *const msg, const void* userdata) {
+static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     /* In paused state we have deregistered our fd, thus we can only receive PubSub messages */
-    if (msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-            case DISPLAY_UPD:
-                dimmed_callback();
-                break;
-            case INHIBIT_UPD:
-                on_inbhibit_update();
-                break;
-            case CURVE_REQ: {
-                curve_upd *up = (curve_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    interface_curve_callback(up);
-                }
-            }
-            break;
-            case CAPTURE_REQ: {
-                capture_upd *up = (capture_upd *)MSG_DATA();
-                /* In paused state check that we're not dimmed/dpms and sensor is available */
-                if (VALIDATE_REQ(up) && !state.display_state && sensor_available) {
-                    do_capture(up->reset_timer);
-                }
-                }
-                break;
-            case NO_AUTOCALIB_REQ: {
-                calib_upd *up = (calib_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    interface_autocalib_callback(up->new);
-                }
-                }
-                break;
-            case BL_REQ: {
-                /* In paused state check that we're not dimmed/dpms */
-                bl_upd *up = (bl_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up) && !state.display_state) {
-                    if (up->smooth != -1) {
-                        set_backlight_level(up->new, up->smooth, up->step, up->timeout);
-                    } else {
-                        set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
-                    }
-                }
-                break;
-            }
-            case KBD_BL_REQ: {
-                /* In paused state check that we're not dimmed/dpms */
-                bl_upd *up = (bl_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up) && !state.display_state) {
-                    set_keyboard_level(up->new);
-                }
-                break;
-            }
-            default:
-                break;
+    switch (MSG_TYPE()) {
+    case DISPLAY_UPD:
+        dimmed_callback();
+        break;
+    case INHIBIT_UPD:
+        on_inbhibit_update();
+        break;
+    case CURVE_REQ: {
+        curve_upd *up = (curve_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            interface_curve_callback(up);
         }
+        break;
+    }
+    case CAPTURE_REQ: {
+        capture_upd *up = (capture_upd *)MSG_DATA();
+        /* In paused state check that we're not dimmed/dpms and sensor is available */
+        if (VALIDATE_REQ(up) && !state.display_state && sensor_available) {
+            do_capture(up->reset_timer);
+        }
+        break;
+    }
+    case NO_AUTOCALIB_REQ: {
+        calib_upd *up = (calib_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            interface_autocalib_callback(up->new);
+        }
+        break;
+    }
+    case BL_REQ: {
+        /* In paused state check that we're not dimmed/dpms */
+        bl_upd *up = (bl_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up) && !state.display_state) {
+            if (up->smooth != -1) {
+                set_backlight_level(up->new, up->smooth, up->step, up->timeout);
+            } else {
+                set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+            }
+        }
+        break;
+    }
+    case KBD_BL_REQ: {
+        /* In paused state check that we're not dimmed/dpms */
+        bl_upd *up = (bl_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up) && !state.display_state) {
+            set_keyboard_level(up->new);
+        }
+        break;
+    }
+    default:
+        break;
     }
 }
 

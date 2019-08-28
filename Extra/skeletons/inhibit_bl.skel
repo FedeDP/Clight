@@ -16,7 +16,7 @@
  * Place inhibit_bl in: $HOME/.local/share/clight/modules.d/ OR, globally, in /usr/share/clight/modules.d/
  */
 
-MODULE("INHIBIT_BL");
+CLIGHT_MODULE("INHIBIT_BL");
 
 DECLARE_MSG(bl_req, BL_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
@@ -31,38 +31,24 @@ static void init(void) {
     M_SUB(INHIBIT_UPD);
 }
 
-static bool check(void) {
-    return true;
-}
-
-static bool evaluate(void) {
-    return true;
-}
-
-static void destroy(void) {
-    
-}
-
 static void receive(const msg_t *msg, const void *userdata) {
-    if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-        case INHIBIT_UPD: {
-            inhibit_upd *up = (inhibit_upd *)MSG_DATA();
-            if (up->new) {
-                calib_req.nocalib.new = true;
-                M_PUB(&calib_req);
-                M_PUB(&bl_req);
-                INFO("We are now inhibited! Set 100%% screen backlight.\n");
-            } else {
-                INFO("We're not inhibited anymore. Do a quick backlight calibration.\n");
-                calib_req.nocalib.new = false;
-                M_PUB(&calib_req);
-                M_PUB(&capture_req);
-            }
-            break;
+    switch (MSG_TYPE()) {
+    case INHIBIT_UPD: {
+        inhibit_upd *up = (inhibit_upd *)MSG_DATA();
+        if (up->new) {
+            calib_req.nocalib.new = true;
+            M_PUB(&calib_req);
+            M_PUB(&bl_req);
+            INFO("We are now inhibited! Set 100%% screen backlight.\n");
+        } else {
+            INFO("We're not inhibited anymore. Do a quick backlight calibration.\n");
+            calib_req.nocalib.new = false;
+            M_PUB(&calib_req);
+            M_PUB(&capture_req);
         }
-        default:
-            break;
-        }
+        break;
+    }
+    default:
+        break;
     }
 }

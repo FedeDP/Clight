@@ -1,5 +1,5 @@
-#include <log.h>
 #include <sys/file.h>
+#include "commons.h"
 
 static FILE *log_file;
 
@@ -53,8 +53,8 @@ void log_conf(void) {
         }
         fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
         fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
-        fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(conf.events[SUNRISE]) ? conf.events[SUNRISE] : "Unset");
-        fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(conf.events[SUNSET]) ? conf.events[SUNSET] : "Unset");
+        fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(conf.day_events[SUNRISE]) ? conf.day_events[SUNRISE] : "Unset");
+        fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(conf.day_events[SUNSET]) ? conf.day_events[SUNSET] : "Unset");
         fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
         fprintf(log_file, "* Dimmer backlight pct:\t\t%.2lf\n", conf.dimmer_pct);
 

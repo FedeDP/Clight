@@ -1,5 +1,5 @@
-#include <opts.h>
 #include <popt.h>
+#include "opts.h"
 
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
 static void check_clightd_features(void);
@@ -144,10 +144,10 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
                 strncpy(conf.screen_path, str, sizeof(conf.screen_path) - 1);
                 break;
             case 3:
-                strncpy(conf.events[SUNRISE], str, sizeof(conf.events[SUNRISE]) - 1);
+                strncpy(conf.day_events[SUNRISE], str, sizeof(conf.day_events[SUNRISE]) - 1);
                 break;
             case 4:
-                strncpy(conf.events[SUNSET], str, sizeof(conf.events[SUNSET]) - 1);
+                strncpy(conf.day_events[SUNSET], str, sizeof(conf.day_events[SUNSET]) - 1);
                 break;
             case 5:
                 printf("%s: C daemon utility to automagically adjust screen backlight to match ambient brightness.\n"
@@ -363,8 +363,8 @@ static void check_conf(void) {
 
     for (i = 0; i < SIZE_EVENTS; i++) {
         struct tm timeinfo;
-        if (strlen(conf.events[i]) && !strptime(conf.events[i], "%R", &timeinfo)) {
-            memset(conf.events[i], 0, sizeof(conf.events[i]));
+        if (strlen(conf.day_events[i]) && !strptime(conf.day_events[i], "%R", &timeinfo)) {
+            memset(conf.day_events[i], 0, sizeof(conf.day_events[i]));
         }
     }
     

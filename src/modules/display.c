@@ -1,4 +1,4 @@
-#include "idler.h"
+#include "bus.h"
 
 static void dim_backlight(const double pct);
 static void restore_backlight(const double pct);
@@ -22,51 +22,49 @@ static bool evaluate(void) {
     return !conf.no_dimmer || !conf.no_dpms;
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     static double old_pct = -1.0;
     
-    if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-            case DISPLAY_REQ: {
-                display_upd *up = (display_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    display_msg.display.old = state.display_state;
+    switch (MSG_TYPE()) {
+    case DISPLAY_REQ: {
+        display_upd *up = (display_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            display_msg.display.old = state.display_state;
                     
-                    /*
-                     * If we are now dimmed, dim backlight, else if we are now in dpms, set dpms level.
-                     * Otherwise we should come back to normal state, ie: DISPLAY_ON.
-                     * If we were in dpms, set new dpms level (ie: switch ON monitor),
-                     * plus, if we were dimmed, reset correct backligth level.
-                     */
-                    if (up->new == DISPLAY_DIMMED) {
-                        state.display_state |= DISPLAY_DIMMED;
-                        DEBUG("Entering dimmed state...\n");
-                        old_pct = state.current_bl_pct;
-                        dim_backlight(conf.dimmer_pct);
-                    } else if (up->new == DISPLAY_OFF) {
-                        state.display_state |= DISPLAY_OFF;
-                        DEBUG("Entering dpms state...\n");
-                        set_dpms(true);
-                    } else if (up->new == ~DISPLAY_OFF) {
-                        state.display_state &= ~DISPLAY_OFF;
-                        DEBUG("Leaving dpms state...\n");
-                        set_dpms(false);
-                    } else  if (up->new == ~DISPLAY_DIMMED) {
-                        DEBUG("Leaving dimmed state...\n");
-                        state.display_state &= ~DISPLAY_DIMMED;
-                        if (old_pct >= 0.0) {
-                            restore_backlight(old_pct);
-                            old_pct = -1.0;
-                        }
-                    }
-                    display_msg.display.new = state.display_state;
-                    M_PUB(&display_msg);
+            /*
+             * If we are now dimmed, dim backlight, else if we are now in dpms, set dpms level.
+             * Otherwise we should come back to normal state, ie: DISPLAY_ON.
+             * If we were in dpms, set new dpms level (ie: switch ON monitor),
+             * plus, if we were dimmed, reset correct backligth level.
+             */
+            if (up->new == DISPLAY_DIMMED) {
+                state.display_state |= DISPLAY_DIMMED;
+                DEBUG("Entering dimmed state...\n");
+                old_pct = state.current_bl_pct;
+                dim_backlight(conf.dimmer_pct);
+            } else if (up->new == DISPLAY_OFF) {
+                state.display_state |= DISPLAY_OFF;
+                DEBUG("Entering dpms state...\n");
+                set_dpms(true);
+            } else if (up->new == ~DISPLAY_OFF) {
+                state.display_state &= ~DISPLAY_OFF;
+                DEBUG("Leaving dpms state...\n");
+                set_dpms(false);
+            } else  if (up->new == ~DISPLAY_DIMMED) {
+                DEBUG("Leaving dimmed state...\n");
+                state.display_state &= ~DISPLAY_DIMMED;
+                if (old_pct >= 0.0) {
+                    restore_backlight(old_pct);
+                    old_pct = -1.0;
                 }
-                }
-                break;
-            default:
-                break;
+            }
+            display_msg.display.new = state.display_state;
+            M_PUB(&display_msg);
         }
+        break;
+    }
+    default:
+        break;
     }
 }
 

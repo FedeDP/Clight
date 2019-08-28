@@ -1,4 +1,4 @@
-#include <bus.h>
+#include "bus.h"
 
 DECLARE_MSG(inh_msg, INHIBIT_UPD);
 
@@ -16,23 +16,21 @@ static bool evaluate() {
     return true;
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-        case INHIBIT_REQ: {
-            inhibit_upd *up = (inhibit_upd *)MSG_DATA();
-            if (VALIDATE_REQ(up)) {
-                inh_msg.inhibit.old = state.inhibited;
-                state.inhibited = up->new;
-                inh_msg.inhibit.new = state.inhibited;
-                M_PUB(&inh_msg);
-                INFO("ScreenSaver inhibition %s.\n", state.inhibited ? "enabled" : "disabled");
-            }
-            }
-            break;
-        default:
-            break;
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case INHIBIT_REQ: {
+        inhibit_upd *up = (inhibit_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            inh_msg.inhibit.old = state.inhibited;
+            state.inhibited = up->new;
+            inh_msg.inhibit.new = state.inhibited;
+            M_PUB(&inh_msg);
+            INFO("ScreenSaver inhibition %s.\n", state.inhibited ? "enabled" : "disabled");
         }
+        break;
+    }
+    default:
+        break;
     }
 }
 

@@ -31,28 +31,26 @@ static bool evaluate(void) {
     return !conf.no_dimmer && state.ac_state != -1;
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (msg->is_pubsub && msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-            case UPOWER_UPD:
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case UPOWER_UPD:
+        upower_timeout_callback();
+        break;
+    case INHIBIT_UPD:
+        inhibit_callback();
+        break;
+    case DIMMER_TO_REQ: {
+        timeout_upd *up = (timeout_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            conf.dimmer_timeout[up->state] = up->new;
+            if (up->state == state.ac_state) {
                 upower_timeout_callback();
-                break;
-            case INHIBIT_UPD:
-                inhibit_callback();
-                break;
-            case DIMMER_TO_REQ: {
-                timeout_upd *up = (timeout_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    conf.dimmer_timeout[up->state] = up->new;
-                    if (up->state == state.ac_state) {
-                        upower_timeout_callback();
-                    }
-                }
-                }
-                break;
-            default:
-                break;
+            }
         }
+        break;
+    }
+    default:
+        break;
     }
 }
 
@@ -91,7 +89,7 @@ static void upower_timeout_callback(void) {
 static void inhibit_callback(void) {
     if (!state.inhibited) {
         DEBUG("Being resumed.\n");
-        idle_client_start(client);
+        idle_client_start(client, conf.dimmer_timeout[state.ac_state]);
     } else {
         DEBUG("Being paused.\n");
         idle_client_stop(client);

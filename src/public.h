@@ -4,13 +4,21 @@
 #include <string.h>
 #include <module/module_easy.h>
 
+/** Libmodule wrapping macros, for convenience **/
+
+#define CLIGHT_MODULE(name, ...);   MODULE(name) \
+                                    static bool check(void) { return true; } \
+                                    static bool evaluate(void) { return true; } \
+                                    static void destroy(void) { }
+
 /** PubSub Macros **/
 
-#define MSG_TYPE()                  ((message_t *)msg->ps_msg->message)->type
+#define ASSERT_MSG(type);           _Static_assert(type >= 0 && type < MSGS_SIZE, "Wrong MSG type.");
+#define MSG_TYPE()                  msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type : SYSTEM_UPD) : FD_UPD
 #define MSG_DATA()                  (msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding
-#define DECLARE_MSG(name, type)     static message_t name = { type }
+#define DECLARE_MSG(name, type)     ASSERT_MSG(type); static message_t name = { type }
 #define M_PUB(ptr)                  m_publish(topics[(ptr)->type], ptr, sizeof(message_t), false);
-#define M_SUB(type)                 m_subscribe(topics[type]);
+#define M_SUB(type)                 ASSERT_MSG(type); m_subscribe(topics[type]);
 
 /** Log Macros **/
 
@@ -27,10 +35,10 @@
  * day between sunrise and sunset
  * night between sunset and sunrise
  */
-enum states { DAY, NIGHT, SIZE_STATES };
+enum day_states { DAY, NIGHT, SIZE_STATES };
 
 /* List of events: sunrise and sunset */
-enum events { SUNRISE, SUNSET, SIZE_EVENTS };
+enum day_events { SUNRISE, SUNSET, SIZE_EVENTS };
 
 /* Whether laptop is on battery or connected to ac */
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
@@ -48,6 +56,8 @@ enum dim_trans { ENTER, EXIT, SIZE_DIM };
 
 /* You should only subscribe on _UPD, and publish on _REQ */
 enum mod_msg_types {
+    SYSTEM_UPD = -2,    // Used internally by Clight
+    FD_UPD = -1,        // Used internally by Clight
     LOCATION_UPD,       // Subscribe to receive new locations
     UPOWER_UPD,         // Subscribe to receive new AC states
     INHIBIT_UPD,        // Subscribe to receive new PowerManagement states
@@ -109,29 +119,29 @@ typedef struct {
 } display_upd;
 
 typedef struct {
-    enum states old;            // Valued in updates
-    enum states new;            // Valued in updates
+    enum day_states old;        // Valued in updates
+    enum day_states new;        // Valued in updates
 } time_upd;
 
 typedef struct {
-    enum events old;            // Valued in updates. Useless for requests
-    enum events new;            // Valued in updates. Useless for requests
+    enum day_events old;        // Valued in updates. Useless for requests
+    enum day_events new;        // Valued in updates. Useless for requests
     char event[10];             // Mandatory for requests. Empty on updates
 } evt_upd;
 
 typedef struct {
-    enum states daytime;        // Mandatory for requests. Valued in updates
+    enum day_states daytime;    // Mandatory for requests. Valued in updates
     int old;                    // Valued in updates. Useless for requests
     int new;                    // Mandatory for requests. Valued in updates
-    int smooth;                 // Mandatory for requests. -1 to use conf values
-    int step;                   // Only useful for requests
-    int timeout;                // Only useful for requests
+    int smooth;                 // Mandatory for requests. -1 to use conf values. Valued in updates
+    int step;                   // Only useful for requests. Valued in updates
+    int timeout;                // Only useful for requests. Valued in updates
 } temp_upd;
 
 typedef struct {
     int new;                    // Mandatory for requests
     enum ac_states state;       // Mandatory for requests
-    enum states daytime;        // Mandatory for BL_TO_REQ only
+    enum day_states daytime;    // Mandatory for BL_TO_REQ only
 } timeout_upd;
 
 typedef struct {
@@ -151,10 +161,9 @@ typedef struct {
 typedef struct {
     double old;                 // Valued in updates. Useless for requests
     double new;                 // Mandatory for requests. Valued in updates
-    /* The following are only useful for BL_UPD/BL_REQ */
-    int smooth;                 // Mandatory for requests. -1 to use conf values. Valued in updates
-    int timeout;                // Only useful for requests. Valued in updates
-    double step;                // Only useful for requests. Valued in updates
+    int smooth;                 // Mandatory for BL_REQ requests. -1 to use conf values. Valued in updates
+    int timeout;                // Only useful for BL_REQ requests. Valued in updates
+    double step;                // Only useful for BL_REQ requests. Valued in updates
 } bl_upd;
 
 typedef struct {
@@ -181,7 +190,7 @@ typedef struct {
 } message_t;
 
 /** PubSub Topics **/
-extern const char *topics[MSGS_SIZE];
+extern const char *topics[];
 
 /** Log function declaration **/
 

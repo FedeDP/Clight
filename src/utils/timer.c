@@ -1,6 +1,5 @@
-#include <timer.h>
-#include <stddef.h>
 #include <sys/timerfd.h>
+#include "timer.h"
 
 static long get_timeout_sec(int fd);
 static long get_timeout(int fd, size_t member);

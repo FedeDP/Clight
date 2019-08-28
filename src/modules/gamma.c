@@ -1,5 +1,5 @@
-#include <my_math.h>
-#include <bus.h>
+#include "my_math.h"
+#include "bus.h"
 
 #define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 
@@ -12,7 +12,7 @@ static void ambient_callback(void);
 static void location_callback(void);
 static void interface_callback(temp_upd *req);
 
-static enum events target_event;               // which event are we targeting?
+static enum day_events target_event;               // which event are we targeting?
 static time_t last_t;                          // last time_t check_gamma() was called
 static int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
 static int long_transitioning;                 // are we inside a long transition?
@@ -45,56 +45,55 @@ static bool check(void) {
 static bool evaluate(void) {
     return !conf.no_gamma && 
            ((state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) ||
-           (strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])));
+           (strlen(conf.day_events[SUNRISE]) && strlen(conf.day_events[SUNSET])));
 }
 
 static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static void receive(const msg_t *const msg, const void* userdata) {
-    if (!msg->is_pubsub) {
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD:
         read_timer(msg->fd_msg->fd);
         check_gamma();
-    } else if (msg->ps_msg->type == USER) {
-        switch (MSG_TYPE()) {
-            case LOCATION_UPD:
-                location_callback();
-                break;
-            case BL_UPD:
-                ambient_callback();
-                break;
-            case SUNSET_REQ:
-            case SUNRISE_REQ: {
-                evt_upd *up = (evt_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    if (MSG_TYPE() == SUNRISE_REQ) {
-                        strncpy(conf.events[SUNRISE], up->event, sizeof(conf.events[SUNRISE]));
-                    } else {
-                        strncpy(conf.events[SUNSET], up->event, sizeof(conf.events[SUNSET]));
-                    }
-                    location_callback();
-                }
-                }
-                break;
-            case TEMP_REQ: {
-                temp_upd *up = (temp_upd *)MSG_DATA();
-                if (VALIDATE_REQ(up)) {
-                    interface_callback(up);
-                }
-                }      
-                break;
-            default:
-                break;
+        break;
+    case LOCATION_UPD:
+        location_callback();
+        break;
+    case BL_UPD:
+        ambient_callback();
+        break;
+    case SUNSET_REQ:
+    case SUNRISE_REQ: {
+        evt_upd *up = (evt_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            if (MSG_TYPE() == SUNRISE_REQ) {
+                strncpy(conf.day_events[SUNRISE], up->event, sizeof(conf.day_events[SUNRISE]));
+            } else {
+                strncpy(conf.day_events[SUNSET], up->event, sizeof(conf.day_events[SUNSET]));
+            }
+            location_callback();
         }
+        break;
+    }
+    case TEMP_REQ: {
+        temp_upd *up = (temp_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            interface_callback(up);
+        }
+        break;
+    }
+    default:
+        break;
     }
 }
 
 static void check_gamma(void) {
     const time_t t = time(NULL);
-    const enum states old_state = state.time;
+    const enum day_states old_state = state.time;
     const int old_in_event = state.in_event;
-    const enum events old_target_event = target_event; 
+    const enum day_events old_target_event = target_event; 
     
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
@@ -152,7 +151,7 @@ static void check_gamma(void) {
     }
     
     /* desired gamma temp has been set. Set new GAMMA timer */
-    time_t next = state.events[target_event] + event_time_range;
+    time_t next = state.day_events[target_event] + event_time_range;
     INFO("Next alarm due to: %s", ctime(&next));
     set_timeout(next - t, 0, gamma_fd, 0);
     
@@ -172,11 +171,11 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
     time_t t;
     
     time_t old_events[2];
-    old_events[SUNRISE] = state.events[SUNRISE];
-    old_events[SUNSET] = state.events[SUNSET];
+    old_events[SUNRISE] = state.day_events[SUNRISE];
+    old_events[SUNSET] = state.day_events[SUNSET];
 
     /* only every new day, after today's last event (ie: sunset + event_duration) */
-    if (*now + 1 >= state.events[SUNSET] + conf.event_duration) {
+    if (*now + 1 >= state.day_events[SUNSET] + conf.event_duration) {
         if (calculate_sunset(lat, lon, &t, day) == 0) {
             /* If today's sunset was before now, compute tomorrow */
             if (*now + 1 >= t + conf.event_duration) {
@@ -187,9 +186,9 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
                 return get_gamma_events(now, lat, lon, ++day);
             }
             
-            state.events[SUNSET] = t;
+            state.day_events[SUNSET] = t;
         } else {
-            state.events[SUNSET] = -1;
+            state.day_events[SUNSET] = -1;
         }
 
         if (calculate_sunrise(lat, lon, &t, day) == 0) {
@@ -198,30 +197,30 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
              * not today; eg: in local time it is at 6am, but utc time is 22,
              * so it counts as today while it is indeed tomorrow...
              */
-            if (t > state.events[SUNSET]) {
+            if (t > state.day_events[SUNSET]) {
                 calculate_sunrise(lat, lon, &t, day - 1);
             }
             
-            state.events[SUNRISE] = t;
+            state.day_events[SUNRISE] = t;
         } else {
-            state.events[SUNRISE] = -1;
+            state.day_events[SUNRISE] = -1;
         }
 
-        if (state.events[SUNRISE] == -1 && state.events[SUNSET] == -1) {
+        if (state.day_events[SUNRISE] == -1 && state.day_events[SUNSET] == -1) {
             /*
              * no sunrise/sunset could be found.
              * Assume day and set sunset 12hrs from now
              */
-            state.events[SUNSET] = *now + 12 * 60 * 60;
+            state.day_events[SUNSET] = *now + 12 * 60 * 60;
             WARN("Failed to retrieve sunrise/sunset informations.\n");
         }
         
         sunrise_msg.event.old = old_events[SUNRISE];
-        sunrise_msg.event.new = state.events[SUNRISE];
+        sunrise_msg.event.new = state.day_events[SUNRISE];
         M_PUB(&sunrise_msg);
         
         sunset_msg.event.old = old_events[SUNSET];
-        sunset_msg.event.new = state.events[SUNSET];
+        sunset_msg.event.new = state.day_events[SUNSET];
         M_PUB(&sunset_msg);
     }
     check_next_event(now);
@@ -238,12 +237,12 @@ static void check_next_event(const time_t *now) {
      * We're after state.events[SUNSET] (when clight is started between SUNSET)
      * We're before state.events[SUNRISE] (when clight is started before today's SUNRISE)
      */
-    if (*now + 1 > state.events[SUNSET] || *now + 1 < state.events[SUNRISE]) {
+    if (*now + 1 > state.day_events[SUNSET] || *now + 1 < state.day_events[SUNRISE]) {
         state.time = NIGHT;
     } else {
         state.time = DAY;
     }
-    target_event = (*now + 1 < (state.events[SUNRISE] + conf.event_duration)) ? SUNRISE : SUNSET;    
+    target_event = (*now + 1 < (state.day_events[SUNRISE] + conf.event_duration)) ? SUNRISE : SUNSET;    
 }
 
 /*
@@ -256,8 +255,8 @@ static void check_next_event(const time_t *now) {
  * 30mins after event to remove EVENT state.
  */
 static void check_state(const time_t *now) {
-    if (labs(state.events[target_event] - (*now + 1)) <= conf.event_duration) {
-        if (state.events[target_event] > *now + 1) {
+    if (labs(state.day_events[target_event] - (*now + 1)) <= conf.event_duration) {
+        if (state.day_events[target_event] > *now + 1) {
             event_time_range = 0; // next timer is on next_event
         } else {
             event_time_range = conf.event_duration; // next timer is when leaving event
@@ -280,11 +279,11 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         smooth = 1;
         if (event_time_range == 0) {
             /* Remaining time in first half + second half of transition */
-            timeout = (state.events[target_event] - *now) + conf.event_duration;
+            timeout = (state.day_events[target_event] - *now) + conf.event_duration;
             temp = conf.temp[!state.time]; // use correct temp, ie the one for next event
         } else {
             /* Remaining time in second half of transition */
-            timeout = conf.event_duration - (*now - state.events[target_event]);
+            timeout = conf.event_duration - (*now - state.day_events[target_event]);
         }
         /* Temperature difference */
         step = abs(conf.temp[DAY] - conf.temp[NIGHT]);        
@@ -331,7 +330,7 @@ static void ambient_callback(void) {
 
 static void location_callback(void) {
     /* Updated GAMMA module sunrise/sunset for new location */
-    state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+    state.day_events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
     set_timeout(0, 1, gamma_fd, 0);
     DEBUG("New position received. Updating sunrise and sunset times.\n");
 }

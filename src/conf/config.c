@@ -1,5 +1,5 @@
-#include <config.h>
 #include <libconfig.h>
+#include "config.h"
 
 static void init_config_file(enum CONFIG file, char *filename);
 
@@ -68,10 +68,10 @@ int read_config(enum CONFIG file, char *config_file) {
             strncpy(conf.screen_path, screendev, sizeof(conf.screen_path) - 1);
         }
         if (config_lookup_string(&cfg, "sunrise", &sunrise) == CONFIG_TRUE) {
-            strncpy(conf.events[SUNRISE], sunrise, sizeof(conf.events[SUNRISE]) - 1);
+            strncpy(conf.day_events[SUNRISE], sunrise, sizeof(conf.day_events[SUNRISE]) - 1);
         }
         if (config_lookup_string(&cfg, "sunset", &sunset) == CONFIG_TRUE) {
-            strncpy(conf.events[SUNSET], sunset, sizeof(conf.events[SUNSET]) - 1);
+            strncpy(conf.day_events[SUNSET], sunset, sizeof(conf.day_events[SUNSET]) - 1);
         }
 
         config_setting_t *points, *root, *timeouts, *gamma;
@@ -298,10 +298,10 @@ int store_config(enum CONFIG file) {
     config_setting_set_string(setting, conf.screen_path);
 
     setting = config_setting_add(root, "sunrise", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, conf.events[SUNRISE]);
+    config_setting_set_string(setting, conf.day_events[SUNRISE]);
 
     setting = config_setting_add(root, "sunset", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, conf.events[SUNSET]);
+    config_setting_set_string(setting, conf.day_events[SUNSET]);
 
     setting = config_setting_add(root, "shutter_threshold", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, conf.shutter_threshold);
