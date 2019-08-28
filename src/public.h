@@ -6,7 +6,7 @@
 
 /** Libmodule wrapping macros, for convenience **/
 
-#define CLIGHT_MODULE(name, ...);   MODULE(name) \
+#define CLIGHT_MODULE(name, ...)    MODULE(name); \
                                     static bool check(void) { return true; } \
                                     static bool evaluate(void) { return true; } \
                                     static void destroy(void) { }
