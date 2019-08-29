@@ -3,18 +3,18 @@
 #include "commons.h"
 
 #define VALIDATE_REQ(X) _Generic((X), \
-    loc_upd: validate_loc, \
-    upower_upd: validate_upower, \
-    inhibit_upd: validate_inhibit, \
-    timeout_upd: validate_timeout, \
-    contrib_upd: validate_contrib, \
-    evt_upd: validate_evt, \
-    temp_upd: validate_temp, \
-    calib_upd: validate_autocalib, \
-    curve_upd: validate_curve, \
-    bl_upd: validate_backlight, \
-    display_upd: validate_display, \
-    default: validate_nothing),(X)
+    loc_upd *: validate_loc, \
+    upower_upd *: validate_upower, \
+    inhibit_upd *: validate_inhibit, \
+    timeout_upd *: validate_timeout, \
+    contrib_upd *: validate_contrib, \
+    evt_upd *: validate_evt, \
+    temp_upd *: validate_temp, \
+    calib_upd *: validate_autocalib, \
+    curve_upd *: validate_curve, \
+    bl_upd *: validate_backlight, \
+    display_upd *: validate_display, \
+    default: validate_nothing)(X)
 
 bool validate_loc(loc_upd *up);
 bool validate_upower(upower_upd *up);

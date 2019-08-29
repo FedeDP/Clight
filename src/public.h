@@ -9,14 +9,18 @@
 #define CLIGHT_MODULE(name, ...)    MODULE(name); \
                                     static bool check(void) { return true; } \
                                     static bool evaluate(void) { return true; } \
-                                    static void destroy(void) { }
+                                    static void destroy(void) { } \
+                                    extern int errno /* Declare errno to force a semicolon */
 
 /** PubSub Macros **/
 
 #define ASSERT_MSG(type);           _Static_assert(type >= 0 && type < MSGS_SIZE, "Wrong MSG type.");
+
 #define MSG_TYPE()                  msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type : SYSTEM_UPD) : FD_UPD
-#define MSG_DATA()                  (msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding
+#define MSG_DATA()                  ((uint8_t *)msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding
+
 #define DECLARE_MSG(name, type)     ASSERT_MSG(type); static message_t name = { type }
+
 #define M_PUB(ptr)                  m_publish(topics[(ptr)->type], ptr, sizeof(message_t), false);
 #define M_SUB(type)                 ASSERT_MSG(type); m_subscribe(topics[type]);
 
@@ -44,7 +48,7 @@ enum day_events { SUNRISE, SUNSET, SIZE_EVENTS };
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 
 /* Display states */
-enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF, DISPLAY_SIZE };
+enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
 
 /* Quit values */
 enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };

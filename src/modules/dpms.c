@@ -59,7 +59,6 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
-    idle_client_stop(client);
     idle_client_destroy(client);
 }
 

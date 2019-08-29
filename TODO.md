@@ -149,16 +149,18 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Fix bug in reset_timer with <0 old values.
 - [x] Rework clight conf file
 - [x] Fix bug in idler.c: pass correct timeout in idle_client_start()
+- [x] Fix validations not working
+- [ ] Fix display_state validations and messages...
 - [ ] Fix 20s timeout on start? Geoclue is super-slow...opened ticket: https://gitlab.freedesktop.org/geoclue/geoclue/issues/121
 
 #### DOC/WIKI updates
-- [ ] Drop API wiki page about Modules bus interface
-- [ ] Updated API ("CurrentTemp" -> "Temp" ecc ecc)
-- [ ] Provide a working module in wiki pages to switch user theme on SUNRISE/SUNSET events
-- [ ] Provide a working module in wiki pages to set a certain backlight level when entering inhibit state
-- [ ] Update API wiki for screen compensation (#84)
-- [ ] Update API wiki for inhibit_autocalib (#81)
-- [ ] Update API wiki dropping NoInhibit (#76)
+- [x] Drop API wiki page about Modules bus interface
+- [x] Updated API ("CurrentTemp" -> "Temp" ecc ecc)
+- [x] Provide a working module in wiki pages to switch user theme on SUNRISE/SUNSET events
+- [x] Provide a working module in wiki pages to set a certain backlight level when entering inhibit state
+- [x] Update API wiki for screen compensation (#84)
+- [x] Update API wiki for inhibit_autocalib (#81)
+- [x] Update API wiki dropping NoInhibit (#76)
 
 ### 4.X
 
