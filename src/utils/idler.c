@@ -1,6 +1,6 @@
 #include "idler.h"
 
-#define VALIDATE_CLIENT(cl) do { if (!client || !strlen(client)) return -1; } while (0);
+#define VALIDATE_CLIENT(client) do { if (!client || !strlen(client)) return -1; } while (0);
 
 static int idle_get_client(char *client);
 static int idle_hook_update(char *client, sd_bus_slot **slot, sd_bus_message_handler_t handler);
