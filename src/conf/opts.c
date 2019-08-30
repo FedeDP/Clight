@@ -332,6 +332,16 @@ static void check_conf(void) {
         WARN("Wrong shutter_threshold value. Resetting default value.\n");
         conf.shutter_threshold = 0.0;
     }
+    
+    if (conf.dpms_timeout[ON_AC] <= conf.dimmer_timeout[ON_AC]) {
+        WARN("DPMS AC timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+        conf.dpms_timeout[ON_AC] = 900;
+    }
+    
+    if (conf.dpms_timeout[ON_BATTERY] <= conf.dimmer_timeout[ON_BATTERY]) {
+        WARN("DPMS BATT timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+        conf.dpms_timeout[ON_BATTERY] = 300;
+    }
 
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */

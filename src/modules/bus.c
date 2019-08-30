@@ -1,4 +1,3 @@
-#include <unistd.h>
 #include "bus.h"
 
 #define GET_BUS(a)  sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus; if (!tmp) { return -1; }
@@ -186,11 +185,11 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
     GET_BUS(a);
 
 #if LIBSYSTEMD_VERSION >= 237
-    int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, &state);
+    int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, NULL);
 #else
     char match[500] = {0};
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(tmp, slot, match, cb, &state);
+    int r = sd_bus_add_match(tmp, slot, match, cb, NULL);
 #endif
     return check_err(r, NULL, a->caller);
 }
@@ -220,7 +219,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
 }
 
 /*
- * Get a property of type "type" into userptr.
+ * Get a property of type "type" with size "size" into userptr.
  */
 int get_property(const struct bus_args *a, const char *type, void *userptr, int size) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -247,9 +246,6 @@ finish:
     return r;
 }
 
-/*
- * Free used resources.
- */
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply) {
     if (err) {
         sd_bus_error_free(err);
@@ -262,13 +258,6 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
     }
 }
 
-/*
- * Check any error. Do not leave for EBUSY, EPERM and EHOSTUNREACH errors.
- * Only leave for EHOSTUNREACH if from clightd. (it can't be missing).
- * Will return 1 if an error happened, 0 otherwise.
- * Note that this function will only return 1 if a not fatal error happened (ie: WARN has been called),
- * as ERROR() macro does a longjmp
- */
 static int check_err(int r, sd_bus_error *err, const char *caller) {
     if (r < 0) {
         DEBUG("%s(): %s\n", caller, err && err->message ? err->message : strerror(-r));

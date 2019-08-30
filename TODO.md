@@ -150,7 +150,9 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Rework clight conf file
 - [x] Fix bug in idler.c: pass correct timeout in idle_client_start()
 - [x] Fix validations not working
-- [ ] Fix display_state validations and messages...
+- [x] Constify message_t -> type
+- [x] Fix display_state validations and messages...
+- [x] Fix DPMS/Dimmer: they'll both send a DISPLAY_ON request to DISPLAY when leaving idle. Last request to arrive will fail to validate as we are already DISPLAY_ON.
 - [ ] Fix 20s timeout on start? Geoclue is super-slow...opened ticket: https://gitlab.freedesktop.org/geoclue/geoclue/issues/121
 
 #### DOC/WIKI updates

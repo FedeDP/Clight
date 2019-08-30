@@ -48,7 +48,7 @@ enum day_events { SUNRISE, SUNSET, SIZE_EVENTS };
 enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 
 /* Display states */
-enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF };
+enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF, DISPLAY_SIZE };
 
 /* Quit values */
 enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };
@@ -119,6 +119,11 @@ typedef struct {
 
 typedef struct {
     enum display_states old;    // Valued in updates
+    /*
+     * Use DISPLAY_DIMMED to dim display.
+     * Use DISPLAY_OFF to enter DPMS state.
+     * Use DISPLAY_ON to restore normal state (ie: not DIMMED and not DPMS).
+     */
     enum display_states new;    // Mandatory for requests. Valued in updates
 } display_upd;
 
@@ -175,7 +180,7 @@ typedef struct {
 } contrib_upd;
 
 typedef struct {
-    enum mod_msg_types type;
+    const enum mod_msg_types type;
     union {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */

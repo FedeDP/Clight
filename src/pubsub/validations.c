@@ -93,13 +93,11 @@ bool validate_backlight(bl_upd *up) {
 }
 
 bool validate_display(display_upd *up) {
-    if (up->new >= DISPLAY_ON && up->new < ~DISPLAY_DIMMED                      // check up->new validity
+    if (up->new >= DISPLAY_ON && up->new < DISPLAY_SIZE                              // check up->new validity.
         &&
-        (((state.display_state & DISPLAY_OFF) && (up->new == ~DISPLAY_OFF))     // if we are in DPMS, always require a ~DISPLAY_OFF request even if we are DIMMED too. 
+        (((state.display_state & DISPLAY_OFF) && (up->new == DISPLAY_ON))            // if we are in DPMS, always require a DISPLAY_ON request even if we are DIMMED too.
         ||
-        (state.display_state == DISPLAY_DIMMED && up->new == ~DISPLAY_DIMMED)   // if we are dimmed only (ie: not DIMMED + DPMS), request a ~DISPLAY_DIMMED
-        ||
-        (up->new <= DISPLAY_OFF && up->new > state.display_state))) {           // else, only accept incremental requests (eg: ON->DIMMED or DIMMED->OFF)
+        (!(state.display_state & DISPLAY_OFF) && up->new != state.display_state))) { // if we are !DPMS (ie: DIMMED or ON), request any value that is different from current one.
         
         return true;
     }

@@ -30,13 +30,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         display_upd *up = (display_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             display_msg.display.old = state.display_state;
-                    
-            /*
-             * If we are now dimmed, dim backlight, else if we are now in dpms, set dpms level.
-             * Otherwise we should come back to normal state, ie: DISPLAY_ON.
-             * If we were in dpms, set new dpms level (ie: switch ON monitor),
-             * plus, if we were dimmed, reset correct backligth level.
-             */
             if (up->new == DISPLAY_DIMMED) {
                 state.display_state |= DISPLAY_DIMMED;
                 DEBUG("Entering dimmed state...\n");
@@ -46,16 +39,19 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 state.display_state |= DISPLAY_OFF;
                 DEBUG("Entering dpms state...\n");
                 set_dpms(true);
-            } else if (up->new == ~DISPLAY_OFF) {
-                state.display_state &= ~DISPLAY_OFF;
-                DEBUG("Leaving dpms state...\n");
-                set_dpms(false);
-            } else  if (up->new == ~DISPLAY_DIMMED) {
-                DEBUG("Leaving dimmed state...\n");
-                state.display_state &= ~DISPLAY_DIMMED;
-                if (old_pct >= 0.0) {
-                    restore_backlight(old_pct);
-                    old_pct = -1.0;
+            } else if (up->new == DISPLAY_ON) {
+                if (state.display_state & DISPLAY_OFF) {
+                    state.display_state &= ~DISPLAY_OFF;
+                    DEBUG("Leaving dpms state...\n");
+                    set_dpms(false);
+                }
+                if (state.display_state & DISPLAY_DIMMED) {
+                    state.display_state &= ~DISPLAY_DIMMED;
+                    DEBUG("Leaving dimmed state...\n");
+                    if (old_pct >= 0.0) {
+                        restore_backlight(old_pct);
+                        old_pct = -1.0;
+                    }
                 }
             }
             display_msg.display.new = state.display_state;

@@ -145,7 +145,10 @@ static const sd_bus_vtable sc_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
-DECLARE_MSG(to_req, BL_TO_REQ); // this is indeed used to manage any Timeout request!
+DECLARE_MSG(bl_to_req, BL_TO_REQ);
+DECLARE_MSG(dimmer_to_req, DIMMER_TO_REQ);
+DECLARE_MSG(dpms_to_req, DPMS_TO_REQ);
+DECLARE_MSG(scr_to_req, SCR_TO_REQ);
 DECLARE_MSG(inhibit_req, INHIBIT_REQ);
 DECLARE_MSG(temp_req, TEMP_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
@@ -462,57 +465,57 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
 }
 
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
-                            sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    VALIDATE_PARAMS(value, "i", &to_req.to.new);
-    
+                            sd_bus_message *value, void *userdata, sd_bus_error *error) {    
     /* Check if we modified currently used timeout! */
-    to_req.type = -1;
+    message_t *msg = NULL;
     if (userdata == &conf.timeout[ON_AC][DAY]) {
-        to_req.to.daytime = DAY;
-        to_req.to.state = ON_AC;
-        to_req.type = BL_TO_REQ;
+        msg = &bl_to_req;
+        bl_to_req.to.daytime = DAY;
+        bl_to_req.to.state = ON_AC;
     } else if (userdata == &conf.timeout[ON_AC][NIGHT]) {
-        to_req.to.daytime = NIGHT;
-        to_req.to.state = ON_AC;
-        to_req.type = BL_TO_REQ;
+        msg = &bl_to_req;
+        bl_to_req.to.daytime = NIGHT;
+        bl_to_req.to.state = ON_AC;
     } else if (userdata == &conf.timeout[ON_AC][IN_EVENT]) {
-        to_req.to.daytime = IN_EVENT;
-        to_req.to.state = ON_AC;
-        to_req.type = BL_TO_REQ;
+        msg = &bl_to_req;
+        bl_to_req.to.daytime = IN_EVENT;
+        bl_to_req.to.state = ON_AC;
     } else if (userdata == &conf.timeout[ON_BATTERY][DAY]) {
-        to_req.to.daytime = DAY;
-        to_req.to.state = ON_BATTERY;
-        to_req.type = BL_TO_REQ;
+        msg = &bl_to_req;
+        bl_to_req.to.daytime = DAY;
+        bl_to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.timeout[ON_BATTERY][NIGHT]) {
-        to_req.to.daytime = NIGHT;
-        to_req.to.state = ON_BATTERY;
-        to_req.type = BL_TO_REQ;
+        msg = &bl_to_req;
+        bl_to_req.to.daytime = NIGHT;
+        bl_to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.timeout[ON_BATTERY][IN_EVENT]) {
-        to_req.to.daytime = IN_EVENT;
-        to_req.to.state = ON_BATTERY;
-        to_req.type = BL_TO_REQ;
+        msg = &bl_to_req;
+        bl_to_req.to.daytime = IN_EVENT;
+        bl_to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.dimmer_timeout[ON_AC]) {
-        to_req.type = DIMMER_TO_REQ;
-        to_req.to.state = ON_AC;
+        msg = &dimmer_to_req;
+        dimmer_to_req.to.state = ON_AC;
     } else if (userdata == &conf.dimmer_timeout[ON_BATTERY]) {
-        to_req.type = DIMMER_TO_REQ;
-        to_req.to.state = ON_BATTERY;
+        msg = &dimmer_to_req;
+        dimmer_to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.dpms_timeout[ON_AC]) {
-        to_req.type = DPMS_TO_REQ;
-        to_req.to.state = ON_AC;
+        msg = &dpms_to_req;
+        dpms_to_req.to.state = ON_AC;
     } else if (userdata == &conf.dpms_timeout[ON_BATTERY]) {
-        to_req.type = DPMS_TO_REQ;
-        to_req.to.state = ON_BATTERY;
+        msg = &dpms_to_req;
+        dimmer_to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.screen_timeout[ON_AC]) {
-        to_req.type = SCR_TO_REQ;
-        to_req.to.state = ON_AC;
+        msg = &scr_to_req;
+        scr_to_req.to.state = ON_AC;
     } else if (userdata == &conf.screen_timeout[ON_BATTERY]) {
-        to_req.type = SCR_TO_REQ;
-        to_req.to.state = ON_BATTERY;
+        msg = &scr_to_req;
+        scr_to_req.to.state = ON_BATTERY;
     }
     
-    if (to_req.type != -1) {
-        M_PUB(&to_req);
+    VALIDATE_PARAMS(value, "i", &msg->to.new);
+
+    if (msg) {
+        M_PUB(msg);
     }
     return r;
 }
