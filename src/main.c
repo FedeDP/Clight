@@ -95,9 +95,9 @@ static void init_state(void) {
     memcpy(&state.current_loc, &conf.loc, sizeof(loc_t));
     if (!conf.no_gamma) {
         /* Initial value -> undefined; if GAMMA is disabled instead assume DAY */
-        state.time = -1;
+        state.day_time = -1;
     } else {
-        state.time = DAY;
+        state.day_time = DAY;
     }
     
     /* 

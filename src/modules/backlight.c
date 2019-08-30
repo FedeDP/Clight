@@ -46,7 +46,7 @@ static void init(void) {
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);
     M_SUB(INHIBIT_UPD);
-    M_SUB(TIME_UPD);
+    M_SUB(DAYTIME_UPD);
     M_SUB(IN_EVENT_UPD);
     M_SUB(BL_TO_REQ);
     M_SUB(CAPTURE_REQ);
@@ -91,7 +91,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.no_backlight && state.time != -1 && state.ac_state != -1;
+    return !conf.no_backlight && state.day_time != -1 && state.ac_state != -1;
 }
 
 static void destroy(void) {
@@ -116,7 +116,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         dimmed_callback();
         break;
     case IN_EVENT_UPD:
-    case TIME_UPD: {
+    case DAYTIME_UPD: {
         time_upd *up = (time_upd *)MSG_DATA();
         time_callback(up->old, MSG_TYPE() == IN_EVENT_UPD);
         break;
@@ -357,7 +357,7 @@ static void interface_timeout_callback(timeout_upd *up) {
     if (up->state >= ON_AC && up->state < SIZE_AC && up->daytime >= DAY && up->daytime < SIZE_STATES) {
         const int old = get_current_timeout();
         conf.timeout[up->state][up->daytime] = up->new;
-        if (up->state == state.ac_state && (up->daytime == state.time || (state.in_event && up->daytime == IN_EVENT))) {
+        if (up->state == state.ac_state && (up->daytime == state.day_time || (state.in_event && up->daytime == IN_EVENT))) {
             reset_timer(bl_fd, old, get_current_timeout());
         }
     } else {
@@ -385,7 +385,7 @@ static void time_callback(int old_val, int is_event) {
          * If state.in_event is now true, it means we were in state.time timeout.
          * Else, an event ended, thus we were IN_EVENT.
          */
-        old_timeout = conf.timeout[state.ac_state][state.in_event ? state.time : IN_EVENT];
+        old_timeout = conf.timeout[state.ac_state][state.in_event ? state.day_time : IN_EVENT];
     }
     reset_timer(bl_fd, old_timeout, get_current_timeout());
 }
@@ -410,7 +410,7 @@ static inline int get_current_timeout(void) {
     if (state.in_event) {
         return conf.timeout[state.ac_state][IN_EVENT];
     }
-    return conf.timeout[state.ac_state][state.time];
+    return conf.timeout[state.ac_state][state.day_time];
 }
 
 static void on_inbhibit_update(void) {

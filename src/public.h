@@ -66,7 +66,7 @@ enum mod_msg_types {
     UPOWER_UPD,         // Subscribe to receive new AC states
     INHIBIT_UPD,        // Subscribe to receive new PowerManagement states
     DISPLAY_UPD,        // Subscribe to receive new display states (on/dimmed/off)
-    TIME_UPD,           // Subscribe to receive new time states (day/night)
+    DAYTIME_UPD,           // Subscribe to receive new daytime states (day/night)
     IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times
@@ -186,7 +186,7 @@ typedef struct {
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
         inhibit_upd inhibit;    /* INHIBIT_UPD/INHIBIT_REQ */
         display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
-        time_upd time;          /* TIME_UPD/IN_EVENT_UPD */
+        time_upd day_time;          /* TIME_UPD/IN_EVENT_UPD */
         evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ */
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ */

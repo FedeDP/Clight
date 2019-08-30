@@ -18,7 +18,7 @@ static int event_time_range;                   // variable that holds minutes in
 static int long_transitioning;                 // are we inside a long transition?
 static int gamma_fd;
 
-DECLARE_MSG(time_msg, TIME_UPD);
+DECLARE_MSG(time_msg, DAYTIME_UPD);
 DECLARE_MSG(in_ev_msg, IN_EVENT_UPD);
 DECLARE_MSG(sunrise_msg, SUNRISE_UPD);
 DECLARE_MSG(sunset_msg, SUNSET_UPD);
@@ -91,7 +91,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void check_gamma(void) {
     const time_t t = time(NULL);
-    const enum day_states old_state = state.time;
+    const enum day_states old_state = state.day_time;
     const int old_in_event = state.in_event;
     const enum day_events old_target_event = target_event; 
     
@@ -126,16 +126,16 @@ static void check_gamma(void) {
     }
     
     /* If we switched time, emit signal */
-    if (old_state != state.time) {
-        time_msg.time.old = old_state;
-        time_msg.time.new = state.time;
+    if (old_state != state.day_time) {
+        time_msg.day_time.old = old_state;
+        time_msg.day_time.new = state.day_time;
         M_PUB(&time_msg);
     }
     
     /* if we entered/left an event, emit signal */
     if (old_in_event != state.in_event) {
-        in_ev_msg.time.old = old_in_event;
-        in_ev_msg.time.new = state.in_event;
+        in_ev_msg.day_time.old = old_in_event;
+        in_ev_msg.day_time.new = state.in_event;
         M_PUB(&in_ev_msg);
     }
 
@@ -147,7 +147,7 @@ static void check_gamma(void) {
      * and at the end (to be sure to correctly set desired gamma and to avoid any sync issue)
      */
     if (!long_transitioning && !conf.ambient_gamma) {
-        set_temp(conf.temp[state.time], &t, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
+        set_temp(conf.temp[state.day_time], &t, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     }
     
     /* desired gamma temp has been set. Set new GAMMA timer */
@@ -238,9 +238,9 @@ static void check_next_event(const time_t *now) {
      * We're before state.events[SUNRISE] (when clight is started before today's SUNRISE)
      */
     if (*now + 1 > state.day_events[SUNSET] || *now + 1 < state.day_events[SUNRISE]) {
-        state.time = NIGHT;
+        state.day_time = NIGHT;
     } else {
-        state.time = DAY;
+        state.day_time = DAY;
     }
     target_event = (*now + 1 < (state.day_events[SUNRISE] + conf.event_duration)) ? SUNRISE : SUNSET;    
 }
@@ -280,7 +280,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         if (event_time_range == 0) {
             /* Remaining time in first half + second half of transition */
             timeout = (state.day_events[target_event] - *now) + conf.event_duration;
-            temp = conf.temp[!state.time]; // use correct temp, ie the one for next event
+            temp = conf.temp[!state.day_time]; // use correct temp, ie the one for next event
         } else {
             /* Remaining time in second half of transition */
             timeout = conf.event_duration - (*now - state.day_events[target_event]);
@@ -305,7 +305,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         temp_msg.temp.smooth = smooth;
         temp_msg.temp.step = step;
         temp_msg.temp.timeout = timeout;
-        temp_msg.temp.daytime = state.time;
+        temp_msg.temp.daytime = state.day_time;
         M_PUB(&temp_msg);
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);
@@ -337,7 +337,7 @@ static void location_callback(void) {
 
 static void interface_callback(temp_upd *req) {
     conf.temp[req->daytime] = req->new;
-    if (!conf.ambient_gamma && req->daytime == state.time) {
+    if (!conf.ambient_gamma && req->daytime == state.day_time) {
         if (req->smooth != -1) {
             set_temp(conf.temp[req->daytime], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
         } else {

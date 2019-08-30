@@ -66,7 +66,7 @@ typedef struct {
 /* Global state of program */
 typedef struct {
     int quit;                               // should we quit?
-    enum day_states time;                       // whether it is day or night time
+    enum day_states day_time;                       // whether it is day or night time
     int in_event;                           // Whether we are in a TIME event +- conf.event_duration
     time_t day_events[SIZE_EVENTS];             // today events (sunrise/sunset)
     enum ac_states ac_state;                // is laptop on battery?

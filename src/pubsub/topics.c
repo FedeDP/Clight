@@ -5,7 +5,7 @@ const char *topics[] = {
     "AcState",
     "Inhibited",
     "DisplayState",
-    "Time",
+    "DayTime",
     "InEvent",
     "Sunrise",
     "Sunset",

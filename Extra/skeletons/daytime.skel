@@ -19,7 +19,7 @@ CLIGHT_MODULE("DAYTIME");
 
 static void init(void) {
     /* Suscribe to daytime updates */
-    M_SUB(TIME_UPD);
+    M_SUB(DAYTIME_UPD);
 }
 
 /*
@@ -27,7 +27,7 @@ static void init(void) {
  */
 static void receive(const msg_t *msg, const void *userdata) {
     switch (MSG_TYPE()) {
-    case TIME_UPD: {
+        case DAYTIME_UPD: {
         time_upd *up = (time_upd *)MSG_DATA();
         if (up->new == DAY) {
             // system("lookandfeeltool -a org.kde.breeze.desktop");
