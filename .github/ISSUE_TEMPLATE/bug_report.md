@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: A report of an issue in Clight
-title: ''
+title: "[BUG] "
 labels: ''
 assignees: ''
 

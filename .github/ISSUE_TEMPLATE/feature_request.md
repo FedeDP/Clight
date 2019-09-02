@@ -1,8 +1,8 @@
 ---
 name: Feature request
 about: Suggest an idea/improvement for Clight
-title: ''
-labels: ''
+title: "[FEATURE REQ]"
+labels: enhancement
 assignees: ''
 
 ---
