@@ -30,6 +30,8 @@ static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *r
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                        sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_load(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -73,6 +75,8 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("ScreenComp", "d", NULL, offsetof(state_t, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_clight_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Load", "s", NULL, method_load, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Unload", "s", NULL, method_unload, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
@@ -406,6 +410,34 @@ static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret
     capture_req.capture.reset_timer = false;
     M_PUB(&capture_req);
     return sd_bus_reply_method_return(m, NULL);
+}
+
+static int method_load(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    const char *module_path;
+
+    VALIDATE_PARAMS(m, "s", &module_path);
+    if (m_load(module_path) == MOD_OK) {
+        INFO("'%s' loaded.\n", module_path);
+        return sd_bus_reply_method_return(m, NULL);
+    }
+
+    WARN("'%s' failed to load.\n", module_path);
+    sd_bus_error_set_errno(ret_error, EINVAL);
+    return -EINVAL;
+}
+
+static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    const char *module_path;
+
+    VALIDATE_PARAMS(m, "s", &module_path);
+    if (m_unload(module_path) == MOD_OK) {
+        INFO("'%s' unloaded.\n", module_path);
+        return sd_bus_reply_method_return(m, NULL);
+    }
+
+    WARN("'%s' failed to unload.\n", module_path);
+    sd_bus_error_set_errno(ret_error, EINVAL);
+    return -EINVAL;
 }
 
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,

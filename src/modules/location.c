@@ -10,7 +10,7 @@ static int geoclue_get_client(void);
 static int geoclue_hook_update(void);
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int geoclue_client_start(void);
-static void geoclue_client_stop(void);
+static void geoclue_client_delete(void);
 static void cache_location(void);
 static void publish_location(double new_lat, double new_lon, message_t *l);
 
@@ -61,7 +61,7 @@ static bool evaluate(void) {
  */
 static void destroy(void) {
     if (strlen(client)) {
-        geoclue_client_stop();
+        geoclue_client_delete();
         cache_location();
     }
     /* Destroy this match slot */
@@ -199,11 +199,14 @@ static int geoclue_client_start(void) {
 }
 
 /*
- * Stop geoclue2 client.
+ * Stop and delete geoclue2 client.
  */
-static void geoclue_client_stop(void) {
-    SYSBUS_ARG(args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop");
-    call(NULL, "", &args, NULL);
+static void geoclue_client_delete(void) {
+    SYSBUS_ARG(stop_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop");
+    call(NULL, "", &stop_args, NULL);
+
+    SYSBUS_ARG(del_args, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "DeleteClient");
+    call(NULL, "", &del_args, "o", client);
 }
 
 static void cache_location(void) {

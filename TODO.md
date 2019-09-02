@@ -46,6 +46,7 @@
 - [x] fix: ->  WARN("Wrong longitude value. Resetting default value.\n");
 - [x] Drop get_distance method, directly use Geoclue2 threshold. "TimeThreshold" was needed too: "When TimeThreshold is zero, it always emits the signal."
 - [x] Only cache location when leaving if any geoclue2 client was initialized
+- [x] Properly delete geoclue client when leaving
 
 #### Bus api
 - [x] Expose CurrentKbdPct through bus api
@@ -153,6 +154,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Constify message_t -> type
 - [x] Fix display_state validations and messages...
 - [x] Fix DPMS/Dimmer: they'll both send a DISPLAY_ON request to DISPLAY when leaving idle. Last request to arrive will fail to validate as we are already DISPLAY_ON.
+- [x] Expose a Load/Unload functions from API interface to load new custom modules
 - [ ] Fix 20s timeout on start? Geoclue is super-slow...opened ticket: https://gitlab.freedesktop.org/geoclue/geoclue/issues/121
 
 #### DOC/WIKI updates
@@ -163,6 +165,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Update API wiki for screen compensation (#84)
 - [x] Update API wiki for inhibit_autocalib (#81)
 - [x] Update API wiki dropping NoInhibit (#76)
+- [ ] Update API wiki with new Load/Unload functions
 
 ### 4.X
 
