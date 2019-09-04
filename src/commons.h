@@ -27,6 +27,7 @@ typedef struct {
     int num_captures;                       // number of frame captured for each screen backlight compute
     int timeout[SIZE_AC][SIZE_STATES + 1];  // timeout between captures for each ac_state and time state (day/night + during event)
     char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
+    char dev_opts[NAME_MAX + 1];            // sensor capture options
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int temp[SIZE_STATES];                  // screen temperature for each state
     loc_t loc;                              // user location as loaded by config

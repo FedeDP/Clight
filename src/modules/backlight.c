@@ -318,7 +318,7 @@ static void set_backlight_level(const double pct, const int is_smooth, const dou
 static int capture_frames_brightness(void) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Capture");
     double intensity[conf.num_captures];
-    int r = call(intensity, "sad", &args, "si", conf.dev_name, conf.num_captures);
+    int r = call(intensity, "sad", &args, "sis", conf.dev_name, conf.num_captures, conf.dev_opts);
     if (!r) {
         amb_msg.bl.old = state.ambient_br;
         state.ambient_br = compute_average(intensity, conf.num_captures);

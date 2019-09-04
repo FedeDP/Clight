@@ -23,7 +23,7 @@ static void init_config_file(enum CONFIG file, char *filename) {
 int read_config(enum CONFIG file, char *config_file) {
     int r = 0;
     config_t cfg;
-    const char *sensor_dev, *screendev, *sunrise, *sunset;
+    const char *sensor_dev, *screendev, *sunrise, *sunset, *sensor_settings;
 
     if (!strlen(config_file)) {
         init_config_file(file, config_file);
@@ -63,6 +63,9 @@ int read_config(enum CONFIG file, char *config_file) {
 
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
+        }
+        if (config_lookup_string(&cfg, "sensor_settings", &sensor_settings) == CONFIG_TRUE) {
+            strncpy(conf.dev_opts, sensor_settings, sizeof(conf.dev_opts) - 1);
         }
         if (config_lookup_string(&cfg, "screen_sysname", &screendev) == CONFIG_TRUE) {
             strncpy(conf.screen_path, screendev, sizeof(conf.screen_path) - 1);
@@ -293,6 +296,9 @@ int store_config(enum CONFIG file) {
 
     setting = config_setting_add(root, "sensor_devname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.dev_name);
+    
+    setting = config_setting_add(root, "sensor_settings", CONFIG_TYPE_STRING);
+    config_setting_set_string(setting, conf.dev_opts);
 
     setting = config_setting_add(root, "screen_sysname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.screen_path);
