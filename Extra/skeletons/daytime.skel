@@ -28,7 +28,7 @@ static void init(void) {
 static void receive(const msg_t *msg, const void *userdata) {
     switch (MSG_TYPE()) {
         case DAYTIME_UPD: {
-        time_upd *up = (time_upd *)MSG_DATA();
+        daytime_upd *up = (daytime_upd *)MSG_DATA();
         if (up->new == DAY) {
             // system("lookandfeeltool -a org.kde.breeze.desktop");
             INFO("We're now during the day!\n");

@@ -130,7 +130,7 @@ typedef struct {
 typedef struct {
     enum day_states old;        // Valued in updates
     enum day_states new;        // Valued in updates
-} time_upd;
+} daytime_upd;
 
 typedef struct {
     enum day_events old;        // Valued in updates. Useless for requests
@@ -186,7 +186,7 @@ typedef struct {
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
         inhibit_upd inhibit;    /* INHIBIT_UPD/INHIBIT_REQ */
         display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
-        time_upd day_time;          /* TIME_UPD/IN_EVENT_UPD */
+        daytime_upd day_time;   /* TIME_UPD/IN_EVENT_UPD */
         evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ */
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ */

@@ -117,7 +117,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     case IN_EVENT_UPD:
     case DAYTIME_UPD: {
-        time_upd *up = (time_upd *)MSG_DATA();
+        daytime_upd *up = (daytime_upd *)MSG_DATA();
         time_callback(up->old, MSG_TYPE() == IN_EVENT_UPD);
         break;
     }
