@@ -1,4 +1,6 @@
-#include <log.h>
+#pragma once
+
+#include "commons.h"
 
 enum CONFIG { GLOBAL, LOCAL, CUSTOM };
 

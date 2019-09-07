@@ -1,11 +1,8 @@
-#include <config.h>
 #include <libconfig.h>
+#include "config.h"
 
 static void init_config_file(enum CONFIG file, char *filename);
 
-/*
- * Use getpwuid to get user home dir
- */
 static void init_config_file(enum CONFIG file, char *filename) {
     switch (file) {
         case LOCAL:
@@ -26,7 +23,7 @@ static void init_config_file(enum CONFIG file, char *filename) {
 int read_config(enum CONFIG file, char *config_file) {
     int r = 0;
     config_t cfg;
-    const char *sensor_dev, *screendev, *sunrise, *sunset;
+    const char *sensor_dev, *screendev, *sunrise, *sunset, *sensor_settings;
 
     if (!strlen(config_file)) {
         init_config_file(file, config_file);
@@ -45,33 +42,39 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_int(&cfg, "gamma_trans_step", &conf.gamma_trans_step);
         config_lookup_int(&cfg, "backlight_trans_timeout", &conf.backlight_trans_timeout);
         config_lookup_int(&cfg, "gamma_trans_timeout", &conf.gamma_trans_timeout);
-        config_lookup_bool(&cfg, "no_backlight", (int *)&modules[BACKLIGHT].state);
-        config_lookup_bool(&cfg, "no_gamma", (int *)&modules[GAMMA].state);
+        config_lookup_bool(&cfg, "no_backlight", &conf.no_backlight);
+        config_lookup_bool(&cfg, "no_gamma", &conf.no_gamma);
         config_lookup_float(&cfg, "latitude", &conf.loc.lat);
         config_lookup_float(&cfg, "longitude", &conf.loc.lon);
         config_lookup_int(&cfg, "event_duration", &conf.event_duration);
-        config_lookup_bool(&cfg, "no_dimmer", (int *)&modules[DIMMER].state);
+        config_lookup_bool(&cfg, "no_dimmer", &conf.no_dimmer);
         config_lookup_float(&cfg, "dimmer_pct", &conf.dimmer_pct);
         config_lookup_float(&cfg, "shutter_threshold", &conf.shutter_threshold);
-        config_lookup_bool(&cfg, "no_dpms", (int *)&modules[DPMS].state);
-        config_lookup_bool(&cfg, "no_inhibit", (int *)&modules[INHIBIT].state);
+        config_lookup_bool(&cfg, "no_dpms", &conf.no_dpms);
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
         config_lookup_bool(&cfg, "no_auto_calibration", &conf.no_auto_calib);
         config_lookup_bool(&cfg, "no_kdb_backlight", &conf.no_keyboard_bl);
         config_lookup_bool(&cfg, "gamma_long_transition", &conf.gamma_long_transition);
         config_lookup_bool(&cfg, "ambient_gamma", &conf.ambient_gamma);
+        config_lookup_bool(&cfg, "no_screen", &conf.no_screen);
+        config_lookup_float(&cfg, "screen_contrib", &conf.screen_contrib);
+        config_lookup_int(&cfg, "screen_samples", &conf.screen_samples);
+        config_lookup_bool(&cfg, "inhibit_autocalib", &conf.inhibit_autocalib);
 
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
+        }
+        if (config_lookup_string(&cfg, "sensor_settings", &sensor_settings) == CONFIG_TRUE) {
+            strncpy(conf.dev_opts, sensor_settings, sizeof(conf.dev_opts) - 1);
         }
         if (config_lookup_string(&cfg, "screen_sysname", &screendev) == CONFIG_TRUE) {
             strncpy(conf.screen_path, screendev, sizeof(conf.screen_path) - 1);
         }
         if (config_lookup_string(&cfg, "sunrise", &sunrise) == CONFIG_TRUE) {
-            strncpy(conf.events[SUNRISE], sunrise, sizeof(conf.events[SUNRISE]) - 1);
+            strncpy(conf.day_events[SUNRISE], sunrise, sizeof(conf.day_events[SUNRISE]) - 1);
         }
         if (config_lookup_string(&cfg, "sunset", &sunset) == CONFIG_TRUE) {
-            strncpy(conf.events[SUNSET], sunset, sizeof(conf.events[SUNSET]) - 1);
+            strncpy(conf.day_events[SUNSET], sunset, sizeof(conf.day_events[SUNSET]) - 1);
         }
 
         config_setting_t *points, *root, *timeouts, *gamma;
@@ -111,9 +114,12 @@ int read_config(enum CONFIG file, char *config_file) {
         }
         
         /* Load regression points for backlight curve */
+        int len;
         if ((points = config_setting_get_member(root, "ac_backlight_regression_points"))) {
-            if (config_setting_length(points) == SIZE_POINTS) {
-                for (int i = 0; i < SIZE_POINTS; i++) {
+            len = config_setting_length(points);
+            if (len > 0 && len <= MAX_SIZE_POINTS) {
+                conf.num_points[ON_AC] = len;
+                for (int i = 0; i < len; i++) {
                     conf.regression_points[ON_AC][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
@@ -123,8 +129,10 @@ int read_config(enum CONFIG file, char *config_file) {
 
         /* Load regression points for backlight curve */
         if ((points = config_setting_get_member(root, "batt_backlight_regression_points"))) {
-            if (config_setting_length(points) == SIZE_POINTS) {
-                for (int i = 0; i < SIZE_POINTS; i++) {
+            len = config_setting_length(points);
+            if (len > 0 && len <= MAX_SIZE_POINTS) {
+                conf.num_points[ON_BATTERY] = len;
+                for (int i = 0; i < len; i++) {
                     conf.regression_points[ON_BATTERY][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
@@ -184,6 +192,16 @@ int read_config(enum CONFIG file, char *config_file) {
                 }
             } else {
                 WARN("Wrong number of gamma_temp array elements.\n");
+            }
+        }
+        
+        if ((timeouts = config_setting_get_member(root, "screen_timeouts"))) {
+            if (config_setting_length(timeouts) == SIZE_AC) {
+                for (int i = 0; i < SIZE_AC; i++) {
+                    conf.screen_timeout[i] = config_setting_get_int_elem(timeouts, i);
+                }
+            } else {
+                WARN("Wrong number of screen_timeouts array elements.\n");
             }
         }
 
@@ -272,30 +290,42 @@ int store_config(enum CONFIG file) {
 
     setting = config_setting_add(root, "no_kdb_backlight", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.no_keyboard_bl);
+    
+    setting = config_setting_add(root, "inhibit_autocalib", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.inhibit_autocalib);
 
     setting = config_setting_add(root, "sensor_devname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.dev_name);
+    
+    setting = config_setting_add(root, "sensor_settings", CONFIG_TYPE_STRING);
+    config_setting_set_string(setting, conf.dev_opts);
 
     setting = config_setting_add(root, "screen_sysname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.screen_path);
 
     setting = config_setting_add(root, "sunrise", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, conf.events[SUNRISE]);
+    config_setting_set_string(setting, conf.day_events[SUNRISE]);
 
     setting = config_setting_add(root, "sunset", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, conf.events[SUNSET]);
+    config_setting_set_string(setting, conf.day_events[SUNSET]);
 
     setting = config_setting_add(root, "shutter_threshold", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, conf.shutter_threshold);
+    
+    setting = config_setting_add(root, "screen_samples", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, conf.screen_samples);
+    
+    setting = config_setting_add(root, "screen_contrib", CONFIG_TYPE_FLOAT);
+    config_setting_set_float(setting, conf.screen_contrib);
 
     /* -1 here below means append to end of array */
     setting = config_setting_add(root, "ac_backlight_regression_points", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_POINTS; i++) {
+    for (int i = 0; i < conf.num_points[ON_AC]; i++) {
         config_setting_set_float_elem(setting, -1, conf.regression_points[ON_AC][i]);
     }
 
     setting = config_setting_add(root, "batt_backlight_regression_points", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < SIZE_POINTS; i++) {
+    for (int i = 0; i < conf.num_points[ON_BATTERY]; i++) {
         config_setting_set_float_elem(setting, -1, conf.regression_points[ON_BATTERY][i]);
     }
 
@@ -322,6 +352,11 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "gamma_temp", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_STATES; i++) {
         config_setting_set_int_elem(setting, -1, conf.temp[i]);
+    }
+    
+    setting = config_setting_add(root, "screen_timeouts", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_AC; i++) {
+        config_setting_set_int_elem(setting, -1, conf.screen_timeout[i]);
     }
 
     if(config_write_file(&cfg, config_file) != CONFIG_TRUE) {

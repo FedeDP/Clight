@@ -7,11 +7,11 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 find_package(PkgConfig)
 
-
-# Options
+# Needed folders
 set(CLIGHT_CONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
-    CACHE FILEPATH "Path for config file")
-
+    CACHE PATH "Path for config file")    
+set(CLIGHT_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/clight"
+    CACHE PATH "Path for data dir folder")
 
 # Create program target
 file(GLOB_RECURSE SOURCES src/*.c)
@@ -22,16 +22,19 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            "${CMAKE_CURRENT_SOURCE_DIR}/src/conf"
                            "${CMAKE_CURRENT_SOURCE_DIR}/src/modules"
                            "${CMAKE_CURRENT_SOURCE_DIR}/src/utils"
+                           "${CMAKE_CURRENT_SOURCE_DIR}/src/pubsub"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     -D_GNU_SOURCE
     -DVERSION="${PROJECT_VERSION}"
     -DCONFDIR="${CLIGHT_CONFDIR}"
+    -DDATADIR="${CLIGHT_DATADIR}"
 )
-set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD_REQUIRED ON)
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)
 
 # Required dependencies
-pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig)
+pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig libmodule>=5.0.0)
 pkg_search_module(LOGIN_LIBS REQUIRED libelogind libsystemd>=221)
 
 # Avoid float versioning for libsystemd/libelogind
@@ -57,15 +60,19 @@ list(APPEND COMBINED_LDFLAGS ${LOGIN_LIBS_LDFLAGS})
 # Convert ld flag list from list to space separated string.
 string(REPLACE ";" " " COMBINED_LDFLAGS "${COMBINED_LDFLAGS}")
 
+set(PUBLIC_H src/public.h)
+
 # Set the LDFLAGS target property
 set_target_properties(
     ${PROJECT_NAME} PROPERTIES
-    LINK_FLAGS "${COMBINED_LDFLAGS}"
+    LINK_FLAGS "${COMBINED_LDFLAGS} -rdynamic"
+    PUBLIC_HEADER "${PUBLIC_H}"
 )
 
 # Installation of targets (must be before file configuration to work)
 install(TARGETS ${PROJECT_NAME}
-        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clight)
 
 # Configure files with install paths
 set(EXTRA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Extra")
@@ -78,6 +85,8 @@ configure_file(${EXTRA_DIR}/org.clight.clight.service
 pkg_get_variable(COMPLETIONS_DIR bash-completion completionsdir)
 pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
 
+file(GLOB_RECURSE SKELETONS Extra/skeletons/*.skel)
+
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.clight.clight.service
         DESTINATION ${SESSION_BUS_DIR})
 install(FILES ${EXTRA_DIR}/clight.conf
@@ -86,13 +95,14 @@ install(FILES ${EXTRA_DIR}/desktop/clight.desktop
         DESTINATION /etc/xdg/autostart)
 install(FILES ${EXTRA_DIR}/desktop/clightc.desktop
         DESTINATION /usr/share/applications)
-
+install(FILES ${EXTRA_DIR}/icons/clight.svg
+        DESTINATION /usr/share/icons/hicolor/scalable/apps)
+install(FILES ${SKELETONS} DESTINATION ${CLIGHT_DATADIR})
+install(DIRECTORY DESTINATION ${CLIGHT_DATADIR}/modules.d/)
 if (COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/clight
             DESTINATION ${COMPLETIONS_DIR})
 endif()
-install(FILES ${EXTRA_DIR}/icons/clight.svg
-        DESTINATION /usr/share/icons/hicolor/scalable/apps)
 
 #
 # Packaging support
@@ -118,7 +128,8 @@ set(CPACK_RPM_PACKAGE_LICENSE "GPL")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
-set(CPACK_RPM_PACKAGE_REQUIRES "libsystemd0 libpopt0 libconfig9 libgsl23 clightd>=4.0")
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc/xdg" "/etc/xdg/autostart" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_BINDIR}" "/usr/share/applications" "${SESSION_BUS_DIR}" "/usr/share/icons" "/usr/share/icons/hicolor" "/usr/share/icons/hicolor/scalable" "/usr/share/icons/hicolor/scalable/apps")
+set(CPACK_RPM_PACKAGE_REQUIRES "systemd-libs popt libconfig gsl clightd >= 4.0 libmodule >= 5.0.0")
 set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 
@@ -127,7 +138,7 @@ set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 #
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/FedeDP/Clight")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 4.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd0, libpopt0, libconfig9, libgsl23, clightd (>= 4.0), libmodule (>= 5.0.0)")
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0, upower, bash-completion")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 

@@ -1,4 +1,6 @@
-#include <log.h>
+#pragma once
+
+#include "commons.h"
 
 double degToRad(double angleDeg);
 double radToDeg(double angleRad);

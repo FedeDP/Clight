@@ -21,30 +21,38 @@
  *
  * END_COMMON_COPYRIGHT_HEADER */
 
-#include <modules.h>
-#include <opts.h>
+#include <glob.h>
+#include <module/modules_easy.h>
+#include "opts.h"
 
 static void init(int argc, char *argv[]);
+static void init_state(void);
 static void sigsegv_handler(int signum);
-static void init_all_modules(void);
-static void destroy(void);
-static void main_poll(void);
+static void check_clightd_version(void);
+static void init_user_mod_path(enum CONFIG file, char *filename);
+static void load_user_modules(enum CONFIG file);
 
-struct state state;
-struct config conf;
-struct module modules[MODULES_NUM];
-struct pollfd main_p[MODULES_NUM];
+state_t state = {0};
+conf_t conf = {0};
 
-int main(int argc, char *argv[]) {
+/* Every module needs these; let's init them before any module */
+void modules_pre_start(void) {
     state.display = getenv("DISPLAY");
     state.wl_display = getenv("WAYLAND_DISPLAY");
     state.xauthority = getenv("XAUTHORITY");
+} 
+
+int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         init(argc, argv);
-        main_poll();
+        if (conf.no_backlight && conf.no_dimmer && conf.no_dpms && conf.no_gamma) {
+            WARN("No functional module running. Leaving...\n");
+        } else {
+            modules_loop();
+        }
     }
-    destroy();
+    close_log();
     return state.quit == NORM_QUIT ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -60,10 +68,43 @@ static void init(int argc, char *argv[]) {
      * a debug message before dying
      */
     signal(SIGSEGV, sigsegv_handler);
-    init_opts(argc, argv);
+        
     open_log();
+    /* We want any issue while parsing config to be logged */
+    init_opts(argc, argv);
     log_conf();
-    init_all_modules();
+    
+    /* We want any error while checking Clightd required version to be logged AFTER conf logging */
+    check_clightd_version();
+    
+    init_state();
+    /* 
+     * Load user custom modules after opening log (thus this information is logged).
+     * Note that local (ie: placed in $HOME) modules have higher priority,
+     * thus one can override a global module (placed in /usr/share/clight/modules.d/)
+     * by creating a module with same name in $HOME.
+     * 
+     * Clight internal modules cannot be overriden.
+     */
+    load_user_modules(LOCAL);
+    load_user_modules(GLOBAL);
+}
+
+static void init_state(void) {
+    strncpy(state.version, VERSION, sizeof(state.version));
+    memcpy(&state.current_loc, &conf.loc, sizeof(loc_t));
+    if (!conf.no_gamma) {
+        /* Initial value -> undefined; if GAMMA is disabled instead assume DAY */
+        state.day_time = -1;
+    } else {
+        state.day_time = DAY;
+    }
+    
+    /* 
+     * Initial state -> undefined; UPower will set this as soon as it is available, 
+     * or to ON_AC if UPower is not available 
+     */
+    state.ac_state = -1;
 }
 
 /*
@@ -75,54 +116,56 @@ static void sigsegv_handler(int signum) {
     WARN("Received sigsegv signal. Aborting.\n");
     close_log();
     signal(signum, SIG_DFL);
-    kill(getpid(), signum);
+    raise(signum);
 }
 
-/*
- * Init every module
- */
-static void init_all_modules(void) {
-    for (int i = 0; i < MODULES_NUM; i++) {
-        init_modules(i);
-    }
-}
-
-/*
- * Free every used resource
- */
-static void destroy(void) {
-    /*
-     * Avoid continuously cyclying here if any error happens inside destroy_modules()
-     * (as ERROR macro would longjmp again here);
-     * Only try once, otherwise avoid destroying modules and go on closing log
-     */
-    static int first_time = 1;
-
-    if (first_time) {
-        first_time = 0;
-        destroy_modules();
-    }
-    close_log();
-}
-
-/*
- * Listens on all fds and calls correct callback
- */
-static void main_poll(void) {
-    /* Force a sd_bus_process before entering loop */
-    poll_cb(BUS);
-    poll_cb(USERBUS);
-    while (!state.quit) {
-        int r = poll(main_p, MODULES_NUM, -1);
-        if (r == -1 && errno != EINTR && errno != EAGAIN) {
-            ERROR("%s\n", strerror(errno));
+static void check_clightd_version(void) {
+    SYSBUS_ARG(vers_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
+    
+    int r = get_property(&vers_args, "s", state.clightd_version, sizeof(state.clightd_version));
+    if (r < 0 || !strlen(state.clightd_version)) {
+        ERROR("No clightd found. Clightd is a mandatory dep.\n");
+    } else {
+        int maj_val = atoi(state.clightd_version);
+        int min_val = atoi(strchr(state.clightd_version, '.') + 1);
+        if (maj_val < MINIMUM_CLIGHTD_VERSION_MAJ || (maj_val == MINIMUM_CLIGHTD_VERSION_MAJ && min_val < MINIMUM_CLIGHTD_VERSION_MIN)) {
+            ERROR("Clightd must be updated. Required version: %d.%d.\n", MINIMUM_CLIGHTD_VERSION_MAJ, MINIMUM_CLIGHTD_VERSION_MIN);
+        } else {
+            INFO("Clightd found, version: %s.\n", state.clightd_version);
         }
+    }
+}
 
-        for (int i = 0; i < MODULES_NUM && !state.quit && r > 0; i++) {
-            if (main_p[i].revents & POLLIN) {
-                poll_cb(i);
-                r--;
+static void init_user_mod_path(enum CONFIG file, char *filename) {
+    switch (file) {
+        case LOCAL:
+            if (getenv("XDG_DATA_HOME")) {
+                snprintf(filename, PATH_MAX, "%s/clight/modules.d/*", getenv("XDG_DATA_HOME"));
+            } else {
+                snprintf(filename, PATH_MAX, "%s/.local/share/clight/modules.d/*", getpwuid(getuid())->pw_dir);
+            }
+            break;
+        case GLOBAL:
+            snprintf(filename, PATH_MAX, "%s/modules.d/*", DATADIR);
+            break;
+        default:
+            break;
+    }    
+}
+
+static void load_user_modules(enum CONFIG file) {
+    char modules_path[PATH_MAX + 1];
+    init_user_mod_path(file, modules_path);
+    
+    glob_t gl = {0};
+    if (glob(modules_path, GLOB_NOSORT | GLOB_ERR, NULL, &gl) == 0) {
+        for (int i = 0; i < gl.gl_pathc; i++) {
+            if (m_load(gl.gl_pathv[i]) == MOD_OK) {
+                INFO("'%s' loaded.\n", gl.gl_pathv[i]);
+            } else {
+                WARN("'%s' failed to load.\n", gl.gl_pathv[i]);
             }
         }
+        globfree(&gl);
     }
 }

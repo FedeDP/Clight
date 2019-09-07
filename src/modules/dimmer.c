@@ -1,106 +1,83 @@
-#include <backlight.h>
 #include "idler.h"
-#include <interface.h>
 
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void dim_backlight(const double pct);
-static void restore_backlight(const double pct);
-static void upower_callback(const void *ptr);
-static void inhibit_callback(const void * ptr);
-static void interface_timeout_callback(const void *ptr);
+static void upower_timeout_callback(void);
+static void inhibit_callback(void);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
-static struct dependency dependencies[] = {
-    {SOFT, UPOWER},     // Are we on AC or BATT?
-    {SOFT, BACKLIGHT},  // We need BACKLIGHT as we have to be sure that state.current_br_pct is correctly setted
-    {SOFT, INHIBIT},    // We may get inhibited by powersave
-    {HARD, CLIGHTD},    // We need clightd
-    {SOFT, INTERFACE}   // It adds callbacks on INTERFACE
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps =  dependencies,
-    .functional_module = 1
-};
 
-MODULE(DIMMER);
+DECLARE_MSG(display_req, DISPLAY_REQ);
+
+MODULE("DIMMER");
 
 static void init(void) {
-    struct bus_cb upower_cb = { UPOWER, upower_callback };
-    struct bus_cb inhibit_cb = { INHIBIT, inhibit_callback };
-    struct bus_cb interface_inhibit_cb = { INTERFACE, inhibit_callback, "inhibit" };
-    struct bus_cb interface_to_cb = { INTERFACE, interface_timeout_callback, "dimmer_timeout" };
-
-    int r = idle_init(client, slot, conf.dimmer_timeout[state.ac_state], on_new_idle);
-
-    /*
-     * If dimmer is started and BACKLIGHT module is disabled, or automatic calibration is disabled,
-     * we need to ensure to start from a well known backlight level.
-     * Force 100% backlight level.
-     */
-    if (!is_running(BACKLIGHT) || conf.no_auto_calib) {
-        set_backlight_level(1.0, 0, 0, 0);
+    int r = idle_init(client, &slot, conf.dimmer_timeout[state.ac_state], on_new_idle);
+    if (r == 0) {
+        M_SUB(UPOWER_UPD);
+        M_SUB(INHIBIT_UPD);
+        M_SUB(DIMMER_TO_REQ);
+    } else {
+        WARN("Failed to init.\n");
+        m_poisonpill(self());
     }
-    INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR, &upower_cb, &inhibit_cb, &interface_inhibit_cb, &interface_to_cb);
 }
 
-static int check(void) {
-    return 0;
+static bool check(void) {
+    return true;
 }
 
-static int callback(void) {
-    return 0;
+static bool evaluate(void) {
+    return !conf.no_dimmer && state.ac_state != -1;
+}
+
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case UPOWER_UPD:
+        upower_timeout_callback();
+        break;
+    case INHIBIT_UPD:
+        inhibit_callback();
+        break;
+    case DIMMER_TO_REQ: {
+        timeout_upd *up = (timeout_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            conf.dimmer_timeout[up->state] = up->new;
+            if (up->state == state.ac_state) {
+                upower_timeout_callback();
+            }
+        }
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
-    idle_client_stop(client);
     idle_client_destroy(client);
 }
 
-/* 
- * Dimming logic cannot be moved to BACKLIGHT module,
- * even if BACKLIGHT module is hooked to "Dimmed" prop state,
- * because dimming has to work even if BACKLIGHT module is disabled.
- */
-static int on_new_idle(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    static double old_pct = -1.0;
-    int dimmed;
+static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    int idle;
     
-    sd_bus_message_read(m, "b", &dimmed);
-    if (dimmed) {
-        state.display_state |= DISPLAY_DIMMED;
-        DEBUG("Entering dimmed state...\n");
-        old_pct = state.current_bl_pct;
-        dim_backlight(conf.dimmer_pct);
-    } else if (old_pct >= 0.0) {
-        state.display_state &= ~DISPLAY_DIMMED;
-        DEBUG("Leaving dimmed state...\n");
-        restore_backlight(old_pct);
+    /* Unused in requests! */
+    display_req.display.old = state.display_state;
+    sd_bus_message_read(m, "b", &idle);
+    if (idle) {
+        display_req.display.new = DISPLAY_DIMMED;
+    } else {
+        display_req.display.new = DISPLAY_ON;
     }
-    emit_prop("DisplayState");
+    M_PUB(&display_req);
     return 0;
 }
 
-static void dim_backlight(const double pct) {
-    /* Don't touch backlight if a lower level is already set */
-    if (pct >= state.current_bl_pct) {
-        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
-    } else {
-        set_backlight_level(pct, !conf.no_smooth_dimmer[ENTER], conf.dimmer_trans_step[ENTER], conf.dimmer_trans_timeout[ENTER]);
-    }
-}
-
-/* restore previous backlight level */
-static void restore_backlight(const double pct) {
-    set_backlight_level(pct, !conf.no_smooth_dimmer[EXIT], conf.dimmer_trans_step[EXIT], conf.dimmer_trans_timeout[EXIT]);
-}
-
 /* Reset dimmer timeout */
-static void upower_callback(const void *ptr) {
+static void upower_timeout_callback(void) {
     idle_set_timeout(client, conf.dimmer_timeout[state.ac_state]);
 }
 
@@ -108,18 +85,12 @@ static void upower_callback(const void *ptr) {
  * If we're getting inhibited, stop idle client.
  * Else, restart it.
  */
-static void inhibit_callback(const void *ptr) {
-    DEBUG("%s module being %s.\n", self.name, state.pm_inhibited ? "paused" : "restarted");
-    if (!state.pm_inhibited) {
-        idle_client_start(client);
+static void inhibit_callback(void) {
+    if (!state.inhibited) {
+        DEBUG("Being resumed.\n");
+        idle_client_start(client, conf.dimmer_timeout[state.ac_state]);
     } else {
+        DEBUG("Being paused.\n");
         idle_client_stop(client);
     }
-}
-
-/*
- * Interface callback to change timeout
- */
-static void interface_timeout_callback(const void *ptr) {
-    idle_set_timeout(client, conf.dimmer_timeout[state.ac_state]);
 }

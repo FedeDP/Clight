@@ -1,12 +1,9 @@
+#include <module/modules_easy.h>
 #include <sys/signalfd.h>
 #include <signal.h>
-#include <modules.h>
+#include "commons.h"
 
-static struct self_t self = {
-    .standalone = 1,
-};
-
-MODULE(SIGNAL);
+MODULE("SIGNAL");
 
 /*
  * Set signals handler for SIGINT and SIGTERM (using a signalfd)
@@ -20,12 +17,17 @@ static void init(void) {
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
-    INIT_MOD(fd);
+    m_register_fd(fd, true, NULL);
 }
 
-static int check(void) {
-    return 0; /* Skeleton function needed for modules interface */
+static bool check(void) {
+    return true;
 }
+
+static bool evaluate() {
+    return true;
+}
+
 
 static void destroy(void) {
     /* Skeleton function needed for modules interface */
@@ -35,16 +37,22 @@ static void destroy(void) {
  * if received an external SIGINT or SIGTERM,
  * just switch the quit flag to 1 and print to stdout.
  */
-static int callback(void) {
-    struct signalfd_siginfo fdsi;
-    ssize_t s;
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD: {
+        struct signalfd_siginfo fdsi;
+        ssize_t s;
 
-    s = read(main_p[self.idx].fd, &fdsi, sizeof(struct signalfd_siginfo));
-    if (s != sizeof(struct signalfd_siginfo)) {
-        ERROR("an error occurred while getting signalfd data.\n");
+        s = read(msg->fd_msg->fd, &fdsi, sizeof(struct signalfd_siginfo));
+        if (s != sizeof(struct signalfd_siginfo)) {
+            ERROR("An error occurred while getting signalfd data.\n");
+        }
+        INFO("Received %d. Leaving.\n", fdsi.ssi_signo);
+        modules_quit(NORM_QUIT);
+        break;
     }
-    INFO("received signal %d. Leaving.\n", fdsi.ssi_signo);
-    state.quit = NORM_QUIT;
-    return 0;
+    default:
+        break;
+    }
 }
 

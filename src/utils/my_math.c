@@ -1,11 +1,11 @@
-#include <my_math.h>
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
+#include "my_math.h"
 
 #define ZENITH -0.83
 
 static float to_hours(const float rad);
-static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow);
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, int tomorrow);
 
 /*
  * Convert degrees to radians
@@ -26,7 +26,6 @@ double radToDeg(double angleRad) {
  */
 double compute_average(double *intensity, int num) {
     double mean = gsl_stats_mean(intensity, 1, num);
-    DEBUG("Average frames brightness: %lf.\n", mean);
     return mean;
 }
 
@@ -40,19 +39,19 @@ void polynomialfit(enum ac_states s) {
     double chisq;
     int i, j;
 
-    X = gsl_matrix_alloc(SIZE_POINTS, DEGREE);
-    y = gsl_vector_alloc(SIZE_POINTS);
+    X = gsl_matrix_alloc(conf.num_points[s], DEGREE);
+    y = gsl_vector_alloc(conf.num_points[s]);
     c = gsl_vector_alloc(DEGREE);
     cov = gsl_matrix_alloc(DEGREE, DEGREE);
 
-    for(i=0; i < SIZE_POINTS; i++) {
+    for(i=0; i < conf.num_points[s]; i++) {
         for(j=0; j < DEGREE; j++) {
             gsl_matrix_set(X, i, j, pow(i, j));
         }
         gsl_vector_set(y, i, conf.regression_points[s][i]);
     }
 
-    ws = gsl_multifit_linear_alloc(SIZE_POINTS, DEGREE);
+    ws = gsl_multifit_linear_alloc(conf.num_points[s], DEGREE);
     gsl_multifit_linear(X, y, c, cov, &chisq, ws);
 
     /* store results */
@@ -89,7 +88,7 @@ static float to_hours(const float rad) {
  * If conf.events[event] is set, it means "event" time is user-set.
  * So, only store in *tt its corresponding time_t values.
  */
-static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum events event, int tomorrow) {
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, int tomorrow) {
     // 1. compute the day of the year (timeinfo->tm_yday below)
     time(tt);
     struct tm *timeinfo = localtime(tt);
@@ -102,8 +101,8 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     timeinfo->tm_sec = 0;
 
     /* If user provided a sunrise/sunset time, use them */
-    if (strlen(conf.events[event]) > 0) {
-        strptime(conf.events[event], "%R", timeinfo);
+    if (strlen(conf.day_events[event]) > 0) {
+        strptime(conf.day_events[event], "%R", timeinfo);
         *tt = mktime(timeinfo);
         return 0;
     }

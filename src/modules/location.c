@@ -1,6 +1,7 @@
-#include <bus.h>
-#include <my_math.h>
-#include <interface.h>
+#include "bus.h"
+
+#define LOC_TIME_THRS 600                   // time threshold (seconds) before triggering location changed events (10mins)
+#define LOC_DISTANCE_THRS 50000             // threshold for location distances before triggering location changed events (50km)
 
 static int load_cache_location(void);
 static void init_cache_file(void);
@@ -9,78 +10,103 @@ static int geoclue_get_client(void);
 static int geoclue_hook_update(void);
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int geoclue_client_start(void);
-static void geoclue_client_stop(void);
+static void geoclue_client_delete(void);
 static void cache_location(void);
+static void publish_location(double new_lat, double new_lon, message_t *l);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
-static struct dependency dependencies[] = {
-    {HARD, BUS}     // we need a bus connection
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps =  dependencies
-};
 
-MODULE(LOCATION);
+DECLARE_MSG(loc_msg, LOCATION_UPD);
+DECLARE_MSG(loc_req, LOCATION_REQ);
 
-/*
- * init location:
- * init geoclue and set a match on bus on new location signal
- * if geoclue is not present, go ahead and try to load a location
- * from cache file. If it fails, DONT_POLL_W_ERR this module (ie: disable it),
- * else, DONT_POLL this module and consider it started.
- */
+MODULE("LOCATION");
+
 static void init(void) {
-    int r = geoclue_init();
-    /*
-     * timeout after 3s to check if geoclue2 gave us
-     * any location. Otherwise, attempt to load it from cache
-     */
-    int fd;
     init_cache_file();
+    int r = geoclue_init();
     if (r == 0) {
-        fd = start_timer(CLOCK_MONOTONIC, 3, 0);
+        M_SUB(LOCATION_REQ);
+        
+        /*
+         * timeout after 3s to check if geoclue2 gave us
+         * any location. Otherwise, attempt to load it from cache
+         */
+        int fd = start_timer(CLOCK_MONOTONIC, 3, 0);
+        m_register_fd(fd, true, NULL);
     } else {
-        int ret = load_cache_location();
-        if (ret == 0) {
-            /* We have a location, but no geoclue instance is running. */
-            change_dep_type(GAMMA, self.idx, SOFT);
-        }
-        fd = DONT_POLL_W_ERR;
+        WARN("Failed to init.\n");
+        load_cache_location();
+        m_poisonpill(self());
     }
-    /* In case of errors, geoclue_init returns -1 -> disable location. */
-    INIT_MOD(fd);
 }
 
-static int callback(void) {
-    uint64_t t;
-    if (read(main_p[self.idx].fd, &t, sizeof(uint64_t)) != -1) {
-        if (load_cache_location() != 0) {
-            return -1;
-        }
-    } else {
-        /* Disarm timerfd as we received a location before it triggered */
-        set_timeout(0, 0, main_p[self.idx].fd, 0);
+static bool check(void) {
+    /* It is only needed by GAMMA module that only works on X */
+    return state.display && state.xauthority;
+}
+
+static bool evaluate(void) {
+    /* 
+     * Only start when no location and no fixed times for both events are specified in conf
+     * AND GAMMA is enabled
+     */
+    return  !conf.no_gamma && 
+            (conf.loc.lat == LAT_UNDEFINED || conf.loc.lon == LON_UNDEFINED) && 
+            (!strlen(conf.day_events[SUNRISE]) || !strlen(conf.day_events[SUNSET]));
+}
+
+/*
+ * Stop geoclue2 client and store latest location to cache.
+ */
+static void destroy(void) {
+    if (strlen(client)) {
+        geoclue_client_delete();
+        cache_location();
     }
-    /* disable this poll_cb */
-    modules[self.idx].poll_cb = NULL;
-    return 0;
+    /* Destroy this match slot */
+    if (slot) {
+        slot = sd_bus_slot_unref(slot);
+    }
+}
+
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD:
+        read_timer(msg->fd_msg->fd);
+        if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
+            load_cache_location();
+        }
+        break;
+    case LOCATION_REQ: {
+        loc_upd *l = (loc_upd *)MSG_DATA();
+        if (VALIDATE_REQ(l)) {
+            INFO("New location received: %.2lf, %.2lf.\n", l->new.lat, l->new.lon);
+            // publish location before storing new location as state.current_loc is sent as "old" parameter
+            publish_location(l->new.lat, l->new.lon, &loc_msg);
+            memcpy(&state.current_loc, &l->new, sizeof(loc_t));
+        } 
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 static int load_cache_location(void) {
     int ret = -1;
     FILE *f = fopen(cache_file, "r");
     if (f) {
-        if (fscanf(f, "%lf %lf\n", &state.current_loc.lat, &state.current_loc.lon) == 2) {
-            emit_prop("Location");
-            INFO("Location %.2lf %.2lf loaded from cache file!\n", state.current_loc.lat, state.current_loc.lon);
+        double new_lat, new_lon;
+        if (fscanf(f, "%lf %lf\n", &new_lat, &new_lon) == 2) {
+            publish_location(new_lat, new_lon, &loc_req);
+            INFO("%.2lf %.2lf loaded from cache file!\n", new_lat, new_lon);
             ret = 0;
         }
         fclose(f);
     }
     if (ret != 0) {
-        WARN("Error loading location from cache file.\n");
+        WARN("Error loading from cache file.\n");
     }
     return ret;
 }
@@ -116,33 +142,6 @@ end:
 }
 
 /*
- * Stop geoclue2 client and store latest location to cache.
- */
-static void destroy(void) {
-    if (strlen(client)) {
-        geoclue_client_stop();
-        cache_location();
-    }
-    /* Destroy this match slot */
-    if (slot) {
-        slot = sd_bus_slot_unref(slot);
-    }
-}
-
-static int check(void) {
-    /*
-     * If sunrise and sunset times, or lat and lon, are both passed,
-     * disable LOCATION (but not gamma, by setting a SOFT dep instead of HARD)
-     */
-    memcpy(&state.current_loc, &conf.loc, sizeof(struct location));
-    if ((strlen(conf.events[SUNRISE]) && strlen(conf.events[SUNSET])) || (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED)) {
-        change_dep_type(GAMMA, self.idx, SOFT);
-        return 1;
-    }
-    return 0;
-}
-
-/*
  * Store Client object path in client (static) global var
  */
 static int geoclue_get_client(void) {
@@ -162,17 +161,21 @@ static int geoclue_hook_update(void) {
  * On new location callback: retrieve new_location object,
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
-static int on_geoclue_new_location(sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
-    const char *new_location, *old_location;
-    sd_bus_message_read(m, "oo", &old_location, &new_location);
+static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    /* Only if no conf location is set */
+    if (conf.loc.lat == LAT_UNDEFINED && conf.loc.lon == LON_UNDEFINED) {
+        const char *new_location, *old_location;
+        sd_bus_message_read(m, "oo", &old_location, &new_location);
 
-    SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
-    SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
-    int r = get_property(&lat_args, "d", &state.current_loc.lat) + get_property(&lon_args, "d", &state.current_loc.lon);
-    if (!r) {
-        FILL_MATCH_NONE();
-        INFO("New location received: %.2lf, %.2lf\n", state.current_loc.lat, state.current_loc.lon);
-        emit_prop("Location");
+        double new_lat, new_lon;
+    
+        SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
+        SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
+        int r = get_property(&lat_args, "d", &new_lat, sizeof(new_lat)) + 
+                get_property(&lon_args, "d", &new_lon, sizeof(new_lon));
+        if (!r) {
+            publish_location(new_lat, new_lon, &loc_req);
+        }
     }
     return 0;
 }
@@ -185,20 +188,25 @@ static int geoclue_client_start(void) {
     SYSBUS_ARG(id_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId");
     SYSBUS_ARG(thres_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold");
     SYSBUS_ARG(time_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "TimeThreshold");
+    SYSBUS_ARG(accuracy_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "RequestedAccuracyLevel");
 
     /* It now needs proper /usr/share/applications/clightc.desktop name */
     set_property(&id_args, 's', "clightc");
     set_property(&time_args, 'u', &(unsigned int) { LOC_TIME_THRS });
     set_property(&thres_args, 'u', &(unsigned int) { LOC_DISTANCE_THRS });
+    set_property(&accuracy_args, 'u', &(unsigned int) { 2 }); // https://www.freedesktop.org/software/geoclue/docs/geoclue-gclue-enums.html#GClueAccuracyLevel -> GCLUE_ACCURACY_LEVEL_CITY
     return call(NULL, "", &call_args, NULL);
 }
 
 /*
- * Stop geoclue2 client.
+ * Stop and delete geoclue2 client.
  */
-static void geoclue_client_stop(void) {
-    SYSBUS_ARG(args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop");
-    call(NULL, "", &args, NULL);
+static void geoclue_client_delete(void) {
+    SYSBUS_ARG(stop_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop");
+    call(NULL, "", &stop_args, NULL);
+
+    SYSBUS_ARG(del_args, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "DeleteClient");
+    call(NULL, "", &del_args, "o", client);
 }
 
 static void cache_location(void) {
@@ -209,7 +217,15 @@ static void cache_location(void) {
             DEBUG("Latest location stored in cache file!\n");
             fclose(f);
         } else {
-            WARN("Caching location: %s\n", strerror(errno));
+            WARN("Caching location failed: %s.\n", strerror(errno));
         }
     }
+}
+
+static void publish_location(double new_lat, double new_lon, message_t *l) {
+    l->loc.old.lat = state.current_loc.lat;
+    l->loc.old.lon = state.current_loc.lon;
+    l->loc.new.lat = new_lat;
+    l->loc.new.lon = new_lon;
+    M_PUB(l);
 }

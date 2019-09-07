@@ -1,69 +1,99 @@
-#include <bus.h>
-#include <my_math.h>
-#include <interface.h>
+#include "my_math.h"
+#include "bus.h"
+
+#define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 
 static void check_gamma(void);
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
 static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
-static void set_temp(int temp, const time_t *now);
+static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
-static void location_callback(const void *ptr);
-static void interface_callback(const void *ptr);
+static void location_callback(void);
+static void interface_callback(temp_upd *req);
 
-static struct dependency dependencies[] = {
-    {HARD, LOCATION},   // Needed for sunrise/sunset computation
-    {HARD, CLIGHTD},    // We need clightd
-    {SOFT, INTERFACE}   // It adds a callback on INTERFACE
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps =  dependencies,
-    .functional_module = 1
-};
-
-static enum events target_event;               // which event are we targeting?
+static enum day_events target_event;               // which event are we targeting?
 static time_t last_t;                          // last time_t check_gamma() was called
 static int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
 static int long_transitioning;                 // are we inside a long transition?
+static int gamma_fd;
 
-MODULE(GAMMA);
+DECLARE_MSG(time_msg, DAYTIME_UPD);
+DECLARE_MSG(in_ev_msg, IN_EVENT_UPD);
+DECLARE_MSG(sunrise_msg, SUNRISE_UPD);
+DECLARE_MSG(sunset_msg, SUNSET_UPD);
+DECLARE_MSG(temp_msg, TEMP_UPD);
+
+MODULE("GAMMA");
 
 static void init(void) {
-    struct bus_cb loc_cb = { LOCATION, location_callback };
-    struct bus_cb interface_cb = { INTERFACE, interface_callback, "gamma" };
+    M_SUB(BL_UPD);
+    M_SUB(LOCATION_UPD);
+    M_SUB(TEMP_REQ);
+    M_SUB(SUNRISE_REQ);
+    M_SUB(SUNSET_REQ);
     
-    struct prop_cb amb_cb = { "CurrentBlPct", ambient_callback };
-    ADD_PROP_CB(&amb_cb);
-
-    /* Initial value -> undefined */
-    state.time = -1;
-    
-    int fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    INIT_MOD(fd, &loc_cb, &interface_cb);
+    gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    m_register_fd(gamma_fd, true, NULL);
 }
 
-static int check(void) {
-    return !state.display || !state.xauthority;
+static bool check(void) {
+    /* Only on X */
+    return state.display && state.xauthority;
+}
+
+static bool evaluate(void) {
+    return !conf.no_gamma && 
+           ((state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) ||
+           (strlen(conf.day_events[SUNRISE]) && strlen(conf.day_events[SUNSET])));
 }
 
 static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-static int callback(void) {
-    uint64_t t;
-
-    read(main_p[self.idx].fd, &t, sizeof(uint64_t));
-    check_gamma();
-    return 0;
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case FD_UPD:
+        read_timer(msg->fd_msg->fd);
+        check_gamma();
+        break;
+    case LOCATION_UPD:
+        location_callback();
+        break;
+    case BL_UPD:
+        ambient_callback();
+        break;
+    case SUNSET_REQ:
+    case SUNRISE_REQ: {
+        evt_upd *up = (evt_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            if (MSG_TYPE() == SUNRISE_REQ) {
+                strncpy(conf.day_events[SUNRISE], up->event, sizeof(conf.day_events[SUNRISE]));
+            } else {
+                strncpy(conf.day_events[SUNSET], up->event, sizeof(conf.day_events[SUNSET]));
+            }
+            location_callback();
+        }
+        break;
+    }
+    case TEMP_REQ: {
+        temp_upd *up = (temp_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            interface_callback(up);
+        }
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 static void check_gamma(void) {
     const time_t t = time(NULL);
-    const enum states old_state = state.time;
+    const enum day_states old_state = state.day_time;
     const int old_in_event = state.in_event;
-    const enum events old_target_event = target_event; 
+    const enum day_events old_target_event = target_event; 
     
     /*
      * get_gamma_events will always poll today events. It should not be necessary,
@@ -91,18 +121,22 @@ static void check_gamma(void) {
         || tm_now.tm_yday != tm_old.tm_yday 
         || tm_now.tm_year != tm_old.tm_year)) {
 
-        INFO("Long gamma transition ended.\n");
+        INFO("Long transition ended.\n");
         long_transitioning = 0;
     }
     
     /* If we switched time, emit signal */
-    if (old_state != state.time) {
-        emit_prop("Time");
+    if (old_state != state.day_time) {
+        time_msg.day_time.old = old_state;
+        time_msg.day_time.new = state.day_time;
+        M_PUB(&time_msg);
     }
     
     /* if we entered/left an event, emit signal */
     if (old_in_event != state.in_event) {
-        emit_prop("InEvent");
+        in_ev_msg.day_time.old = old_in_event;
+        in_ev_msg.day_time.new = state.in_event;
+        M_PUB(&in_ev_msg);
     }
 
     /*
@@ -113,13 +147,13 @@ static void check_gamma(void) {
      * and at the end (to be sure to correctly set desired gamma and to avoid any sync issue)
      */
     if (!long_transitioning && !conf.ambient_gamma) {
-        set_temp(conf.temp[state.time], &t);
+        set_temp(conf.temp[state.day_time], &t, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     }
     
     /* desired gamma temp has been set. Set new GAMMA timer */
-    time_t next = state.events[target_event] + event_time_range;
-    INFO("Next gamma alarm due to: %s", ctime(&next));
-    set_timeout(next - t, 0, main_p[self.idx].fd, 0);
+    time_t next = state.day_events[target_event] + event_time_range;
+    INFO("Next alarm due to: %s", ctime(&next));
+    set_timeout(next - t, 0, gamma_fd, 0);
     
     last_t = t;
 }
@@ -135,9 +169,13 @@ static void check_gamma(void) {
  */
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day) {
     time_t t;
+    
+    time_t old_events[2];
+    old_events[SUNRISE] = state.day_events[SUNRISE];
+    old_events[SUNSET] = state.day_events[SUNSET];
 
     /* only every new day, after today's last event (ie: sunset + event_duration) */
-    if (*now + 1 >= state.events[SUNSET] + conf.event_duration) {
+    if (*now + 1 >= state.day_events[SUNSET] + conf.event_duration) {
         if (calculate_sunset(lat, lon, &t, day) == 0) {
             /* If today's sunset was before now, compute tomorrow */
             if (*now + 1 >= t + conf.event_duration) {
@@ -147,10 +185,10 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
                  */
                 return get_gamma_events(now, lat, lon, ++day);
             }
-            state.events[SUNSET] = t;
-            emit_prop("Sunset");
+            
+            state.day_events[SUNSET] = t;
         } else {
-            state.events[SUNSET] = -1;
+            state.day_events[SUNSET] = -1;
         }
 
         if (calculate_sunrise(lat, lon, &t, day) == 0) {
@@ -159,23 +197,31 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
              * not today; eg: in local time it is at 6am, but utc time is 22,
              * so it counts as today while it is indeed tomorrow...
              */
-            if (t > state.events[SUNSET]) {
+            if (t > state.day_events[SUNSET]) {
                 calculate_sunrise(lat, lon, &t, day - 1);
             }
-            state.events[SUNRISE] = t;
-            emit_prop("Sunrise");
+            
+            state.day_events[SUNRISE] = t;
         } else {
-            state.events[SUNRISE] = -1;
+            state.day_events[SUNRISE] = -1;
         }
 
-        if (state.events[SUNRISE] == -1 && state.events[SUNSET] == -1) {
+        if (state.day_events[SUNRISE] == -1 && state.day_events[SUNSET] == -1) {
             /*
              * no sunrise/sunset could be found.
              * Assume day and set sunset 12hrs from now
              */
-            state.events[SUNSET] = *now + 12 * 60 * 60;
+            state.day_events[SUNSET] = *now + 12 * 60 * 60;
             WARN("Failed to retrieve sunrise/sunset informations.\n");
         }
+        
+        sunrise_msg.event.old = old_events[SUNRISE];
+        sunrise_msg.event.new = state.day_events[SUNRISE];
+        M_PUB(&sunrise_msg);
+        
+        sunset_msg.event.old = old_events[SUNSET];
+        sunset_msg.event.new = state.day_events[SUNSET];
+        M_PUB(&sunset_msg);
     }
     check_next_event(now);
     check_state(now);
@@ -191,12 +237,12 @@ static void check_next_event(const time_t *now) {
      * We're after state.events[SUNSET] (when clight is started between SUNSET)
      * We're before state.events[SUNRISE] (when clight is started before today's SUNRISE)
      */
-    if (*now + 1 > state.events[SUNSET] || *now + 1 < state.events[SUNRISE]) {
-        state.time = NIGHT;
+    if (*now + 1 > state.day_events[SUNSET] || *now + 1 < state.day_events[SUNRISE]) {
+        state.day_time = NIGHT;
     } else {
-        state.time = DAY;
+        state.day_time = DAY;
     }
-    target_event = (*now + 1 < (state.events[SUNRISE] + conf.event_duration)) ? SUNRISE : SUNSET;    
+    target_event = (*now + 1 < (state.day_events[SUNRISE] + conf.event_duration)) ? SUNRISE : SUNSET;    
 }
 
 /*
@@ -209,8 +255,8 @@ static void check_next_event(const time_t *now) {
  * 30mins after event to remove EVENT state.
  */
 static void check_state(const time_t *now) {
-    if (labs(state.events[target_event] - (*now + 1)) <= conf.event_duration) {
-        if (state.events[target_event] > *now + 1) {
+    if (labs(state.day_events[target_event] - (*now + 1)) <= conf.event_duration) {
+        if (state.day_events[target_event] > *now + 1) {
             event_time_range = 0; // next timer is on next_event
         } else {
             event_time_range = conf.event_duration; // next timer is when leaving event
@@ -223,8 +269,8 @@ static void check_state(const time_t *now) {
     }
 }
 
-static void set_temp(int temp, const time_t *now) {
-    int ok, smooth, step, timeout;
+static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout) {
+    int ok;
     
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Set");
     
@@ -233,11 +279,11 @@ static void set_temp(int temp, const time_t *now) {
         smooth = 1;
         if (event_time_range == 0) {
             /* Remaining time in first half + second half of transition */
-            timeout = (state.events[target_event] - *now) + conf.event_duration;
-            temp = conf.temp[!state.time]; // use correct temp, ie the one for next event
+            timeout = (state.day_events[target_event] - *now) + conf.event_duration;
+            temp = conf.temp[!state.day_time]; // use correct temp, ie the one for next event
         } else {
             /* Remaining time in second half of transition */
-            timeout = conf.event_duration - (*now - state.events[target_event]);
+            timeout = conf.event_duration - (*now - state.day_events[target_event]);
         }
         /* Temperature difference */
         step = abs(conf.temp[DAY] - conf.temp[NIGHT]);        
@@ -248,17 +294,19 @@ static void set_temp(int temp, const time_t *now) {
         
         long_transitioning = 1;
     } else {
-        smooth = !conf.no_smooth_gamma;
-        step = conf.gamma_trans_step;
-        timeout = conf.gamma_trans_timeout;
-        
         long_transitioning = 0;
     }
     
     int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);
     if (!r && ok) {
+        temp_msg.temp.old = state.current_temp;
         state.current_temp = temp;
-        emit_prop("CurrentTemp");
+        temp_msg.temp.new = state.current_temp;
+        temp_msg.temp.smooth = smooth;
+        temp_msg.temp.step = step;
+        temp_msg.temp.timeout = timeout;
+        temp_msg.temp.daytime = state.day_time;
+        M_PUB(&temp_msg);
         if (!long_transitioning && conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);
         } else {
@@ -276,18 +324,24 @@ static void ambient_callback(void) {
         const int diff = abs(conf.temp[DAY] - conf.temp[NIGHT]);
         const int min_temp = conf.temp[NIGHT] < conf.temp[DAY] ? conf.temp[NIGHT] : conf.temp[DAY]; 
         const int ambient_temp = (diff * state.current_bl_pct) + min_temp;
-        set_temp(ambient_temp, NULL); // force refresh
+        set_temp(ambient_temp, NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
     }
 }
 
-static void location_callback(const void *ptr) {
+static void location_callback(void) {
     /* Updated GAMMA module sunrise/sunset for new location */
-    state.events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
-    set_timeout(0, 1, main_p[self.idx].fd, 0);
+    state.day_events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
+    set_timeout(0, 1, gamma_fd, 0);
+    DEBUG("New position received. Updating sunrise and sunset times.\n");
 }
 
-static void interface_callback(const void *ptr) {
-    if (!conf.ambient_gamma) {
-        set_temp(conf.temp[state.time], NULL); // force refresh (passing NULL time_t*)
+static void interface_callback(temp_upd *req) {
+    conf.temp[req->daytime] = req->new;
+    if (!conf.ambient_gamma && req->daytime == state.day_time) {
+        if (req->smooth != -1) {
+            set_temp(conf.temp[req->daytime], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
+        } else {
+            set_temp(conf.temp[req->daytime], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
+        }
     }
 }

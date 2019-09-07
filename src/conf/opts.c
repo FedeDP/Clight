@@ -1,9 +1,8 @@
-#include <config.h>
-#include <opts.h>
 #include <popt.h>
-#include "modules.h"
+#include "opts.h"
 
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
+static void check_clightd_features(void);
 static void check_conf(void);
 
 /*
@@ -12,8 +11,8 @@ static void check_conf(void);
  * and parse cmdline args through popt lib.
  * Finally, check configuration values and log it.
  */
-void init_opts(int argc, char *argv[]) {
-    /* default values */
+void init_opts(int argc, char *argv[]) {    
+    /* BACKLIGHT */
     conf.num_captures = 5;
     conf.timeout[ON_AC][DAY] = 10 * 60;
     conf.timeout[ON_AC][NIGHT] = 45 * 60;
@@ -21,23 +20,36 @@ void init_opts(int argc, char *argv[]) {
     conf.timeout[ON_BATTERY][DAY] = 2 * conf.timeout[ON_AC][DAY];
     conf.timeout[ON_BATTERY][NIGHT] = 2 * conf.timeout[ON_AC][NIGHT];
     conf.timeout[ON_BATTERY][IN_EVENT] = 2 * conf.timeout[ON_AC][IN_EVENT];
+    conf.backlight_trans_step = 0.05;
+    conf.backlight_trans_timeout = 30;
+    
+    /* GAMMA */
     conf.temp[DAY] = 6500;
     conf.temp[NIGHT] = 4000;
     conf.event_duration = 30 * 60;
-    conf.dimmer_timeout[ON_AC] = 45;
-    conf.dimmer_timeout[ON_BATTERY] = 20;
-    conf.dpms_timeout[ON_AC] = 900;
-    conf.dpms_timeout[ON_BATTERY] = 300;
-    conf.dimmer_pct = 0.2;
-    conf.backlight_trans_step = 0.05;
-    conf.dimmer_trans_step[ENTER] = 0.05;
-    conf.dimmer_trans_step[EXIT] = 0.05;
     conf.gamma_trans_step = 50;
-    conf.backlight_trans_timeout = 30;
-    conf.dimmer_trans_timeout[ENTER] = 30;
-    conf.dimmer_trans_timeout[EXIT] = 30;
     conf.gamma_trans_timeout = 300;
     
+    /* DIMMER */
+    conf.dimmer_timeout[ON_AC] = 45;
+    conf.dimmer_timeout[ON_BATTERY] = 20;
+    conf.dimmer_pct = 0.2;
+    conf.dimmer_trans_step[ENTER] = 0.05;
+    conf.dimmer_trans_step[EXIT] = 0.05;
+    conf.dimmer_trans_timeout[ENTER] = 30;
+    conf.dimmer_trans_timeout[EXIT] = 30;
+    
+    /* DPMS */
+    conf.dpms_timeout[ON_AC] = 900;
+    conf.dpms_timeout[ON_BATTERY] = 300;
+
+    /* SCREEN */
+    conf.screen_timeout[ON_AC] = 30;
+    conf.screen_timeout[ON_BATTERY] = -1; // disabled on battery by default
+    conf.screen_contrib = 0.1;
+    conf.screen_samples = 10;
+    
+    /* LOCATION */
     conf.loc.lat = LAT_UNDEFINED;
     conf.loc.lon = LON_UNDEFINED;
 
@@ -58,12 +70,14 @@ void init_opts(int argc, char *argv[]) {
      * Where X is ambient brightness and Y is backlight level.
      * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
      */
+    conf.num_points[ON_AC] = DEF_SIZE_POINTS;
+    conf.num_points[ON_BATTERY] = DEF_SIZE_POINTS;
     memcpy(conf.regression_points[ON_AC],
            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
-           SIZE_POINTS * sizeof(double));
+           DEF_SIZE_POINTS * sizeof(double));
     memcpy(conf.regression_points[ON_BATTERY],
            (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
-           SIZE_POINTS * sizeof(double));
+           DEF_SIZE_POINTS * sizeof(double));
 
     char conf_file[PATH_MAX + 1] = {0};
     
@@ -100,11 +114,11 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"lon", 0, POPT_ARG_DOUBLE, &conf.loc.lon, 100, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
-        {"no-gamma", 0, POPT_ARG_NONE, &modules[GAMMA].state, 100, "Disable gamma correction tool", NULL},
-        {"no-dimmer", 0, POPT_ARG_NONE, &modules[DIMMER].state, 100, "Disable dimmer tool", NULL},
-        {"no-dpms", 0, POPT_ARG_NONE, &modules[DPMS].state, 100, "Disable dpms tool", NULL},
-        {"no-inhibit", 0, POPT_ARG_NONE, &modules[INHIBIT].state, 100, "Disable org.freedesktop.PowerManagement.Inhibit support", NULL},
-        {"no-backlight", 0, POPT_ARG_NONE, &modules[BACKLIGHT].state, 100, "Disable backlight module", NULL},
+        {"no-gamma", 0, POPT_ARG_NONE, &conf.no_gamma, 100, "Disable gamma correction tool", NULL},
+        {"no-dimmer", 0, POPT_ARG_NONE, &conf.no_dimmer, 100, "Disable dimmer tool", NULL},
+        {"no-dpms", 0, POPT_ARG_NONE, &conf.no_dpms, 100, "Disable dpms tool", NULL},
+        {"no-backlight", 0, POPT_ARG_NONE, &conf.no_backlight, 100, "Disable backlight module", NULL},
+        {"no-screen", 0, POPT_ARG_NONE, &conf.no_screen, 100, "Disable screen module", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dimmer_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"no-auto-calib", 0, POPT_ARG_NONE, &conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
@@ -130,10 +144,10 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
                 strncpy(conf.screen_path, str, sizeof(conf.screen_path) - 1);
                 break;
             case 3:
-                strncpy(conf.events[SUNRISE], str, sizeof(conf.events[SUNRISE]) - 1);
+                strncpy(conf.day_events[SUNRISE], str, sizeof(conf.day_events[SUNRISE]) - 1);
                 break;
             case 4:
-                strncpy(conf.events[SUNSET], str, sizeof(conf.events[SUNSET]) - 1);
+                strncpy(conf.day_events[SUNSET], str, sizeof(conf.day_events[SUNSET]) - 1);
                 break;
             case 5:
                 printf("%s: C daemon utility to automagically adjust screen backlight to match ambient brightness.\n"
@@ -161,11 +175,75 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
     poptFreeContext(pc);
 }
 
+static void check_clightd_features(void) {
+    SYSBUS_ARG(introspect_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.freedesktop.DBus.Introspectable", "Introspect");
+    
+    char service_list[PATH_MAX + 1];
+    int r = call(service_list, "s", &introspect_args, NULL);
+    if (r < 0) {
+        WARN("Clightd service could not be introspected. Automatic modules detection won't work.\n");
+    } else {
+        if (!conf.no_gamma && !strstr(service_list, "<node name=\"Gamma\"/>")) {
+            conf.no_gamma = true;
+            WARN("GAMMA forcefully disabled as Clightd was built without gamma support.\n");
+        }
+        
+        if (!conf.no_screen && !strstr(service_list, "<node name=\"Screen\"/>")) {
+            conf.no_screen = true;
+            WARN("SCREEN forcefully disabled as Clightd was built without screen support.\n");
+        }
+        
+        if (!conf.no_dpms && !strstr(service_list, "<node name=\"Dpms\"/>")) {
+            conf.no_dpms = true;
+            WARN("DPMS forcefully disabled as Clightd was built without dpms support.\n");
+        }
+    }
+}
+
 /*
  * It does all needed checks to correctly reset default values
  * in case of wrong options set.
  */
 static void check_conf(void) {
+    /* GAMMA and SCREEN require X */
+    if (!state.display || !state.xauthority) {
+        if (!conf.no_gamma) {
+            INFO("Disabling GAMMA on non-X environment.\n");
+            conf.no_gamma = true;
+        }
+        if (!conf.no_screen) {
+            INFO("Disabling SCREEN on non-X environment.\n");
+            conf.no_screen = true;
+        }
+    }
+    
+    /* DPMS does not work in wayland */
+    if (state.wl_display && !conf.no_dpms) {
+        INFO("Disabling DPMS in wayland environment.\n");
+        conf.no_dpms = true;
+    }
+    
+    /* Forcefully disable ambient gamma, DIMMER and SCREEN if BACKLIGHT is disabled */
+    if (conf.no_backlight) {
+        if (conf.ambient_gamma) {
+            INFO("Disabling ambient gamma as BACKLIGHT is disabled.\n");
+            conf.ambient_gamma = false;
+        }
+        
+        if (!conf.no_dimmer) {
+            INFO("Disabling DIMMER as BACKLIGHT is disabled.\n");
+            conf.no_dimmer = true;
+        }
+
+        if (!conf.no_screen) {
+            INFO("Disabling SCREEN as BACKLIGHT is disabled.\n");
+            conf.no_screen = true;
+        }
+    }
+
+    /* Disable any not built feature in Clightd */
+    check_clightd_features();
+    
     if (conf.timeout[ON_AC][DAY] <= 0) {
         WARN("Wrong day timeout on AC value. Resetting default value.\n");
         conf.timeout[ON_AC][DAY] = 10 * 60;
@@ -255,40 +333,58 @@ static void check_conf(void) {
         conf.shutter_threshold = 0.0;
     }
     
-    /* Forcefully enable BACKLIGHT if ambient_gamma is enabled */
-    if (conf.ambient_gamma) {
-        change_dep_type(GAMMA, BACKLIGHT, HARD);
+    if (conf.dpms_timeout[ON_AC] <= conf.dimmer_timeout[ON_AC]) {
+        WARN("DPMS AC timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+        conf.dpms_timeout[ON_AC] = 900;
+    }
+    
+    if (conf.dpms_timeout[ON_BATTERY] <= conf.dimmer_timeout[ON_BATTERY]) {
+        WARN("DPMS BATT timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+        conf.dpms_timeout[ON_BATTERY] = 300;
     }
 
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */
-    for (i = 0; i < SIZE_POINTS && !reg_points_batt_needed && !reg_points_ac_needed; i++) {
-        if (!reg_points_ac_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
+    for (i = 0; i < conf.num_points[ON_AC] && !reg_points_ac_needed; i++) {
+        if (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0) {
             reg_points_ac_needed = 1;
         }
-
-        if (!reg_points_batt_needed && (conf.regression_points[ON_AC][i] < 0.0 || conf.regression_points[ON_AC][i] > 1.0)) {
+    }
+    for (i = 0; i < conf.num_points[ON_BATTERY] && !reg_points_batt_needed; i++) {
+        if (conf.regression_points[ON_BATTERY][i] < 0.0 || conf.regression_points[ON_BATTERY][i] > 1.0) {
             reg_points_batt_needed = 1;
         }
-
     }
+    
     if (reg_points_ac_needed) {
         WARN("Wrong ac_regression points. Resetting default values.\n");
+        conf.num_points[ON_AC] = DEF_SIZE_POINTS;
         memcpy(conf.regression_points[ON_AC],
                (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
-               SIZE_POINTS * sizeof(double));
+               DEF_SIZE_POINTS * sizeof(double));
     }
     if (reg_points_batt_needed) {
         WARN("Wrong batt_regression points. Resetting default values.\n");
+        conf.num_points[ON_BATTERY] = DEF_SIZE_POINTS;
         memcpy(conf.regression_points[ON_BATTERY],
                (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
-               SIZE_POINTS * sizeof(double));
+               DEF_SIZE_POINTS * sizeof(double));
     }
 
     for (i = 0; i < SIZE_EVENTS; i++) {
         struct tm timeinfo;
-        if (strlen(conf.events[i]) && !strptime(conf.events[i], "%R", &timeinfo)) {
-            memset(conf.events[i], 0, sizeof(conf.events[i]));
+        if (strlen(conf.day_events[i]) && !strptime(conf.day_events[i], "%R", &timeinfo)) {
+            memset(conf.day_events[i], 0, sizeof(conf.day_events[i]));
         }
+    }
+    
+    if (conf.screen_contrib < 0 || conf.screen_contrib >= 1) {
+        WARN("Wrong screen_contrib value. Resetting default value.\n");
+        conf.screen_contrib = 0.1;
+    }
+    
+    if (conf.screen_samples < 0) {
+        WARN("Wrong screen_samples value. Resetting default value.\n");
+        conf.screen_samples = 10;
     }
 }

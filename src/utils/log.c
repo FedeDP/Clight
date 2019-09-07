@@ -1,6 +1,5 @@
-#include <log.h>
-#include <modules.h>
 #include <sys/file.h>
+#include "commons.h"
 
 static FILE *log_file;
 
@@ -27,19 +26,25 @@ void log_conf(void) {
     if (log_file) {
         time_t t = time(NULL);
 
-        fprintf(log_file, "Clight\n");
+        /* Start with a newline if any log is above */
+        fprintf(log_file, "%sClight\n", ftell(log_file) != 0 ? "\n" : "");
         fprintf(log_file, "* Software version:\t\t%s\n", VERSION);
+        fprintf(log_file, "* Global config dir:\t\t%s\n", CONFDIR);
+        fprintf(log_file, "* Global data dir:\t\t%s\n", DATADIR);
         fprintf(log_file, "* Starting time:\t\t%s\n", ctime(&t));
         fprintf(log_file, "Starting options:\n");
         fprintf(log_file, "\n### Generic ###\n");
         fprintf(log_file, "* Verbose (debugging):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
-        fprintf(log_file, "* Automatic calibration:\t\t%s\n", conf.no_auto_calib ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Autocalibration:\t\t%s\n", conf.no_auto_calib ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Inhibit autocalibration:\t\t%s\n", conf.inhibit_autocalib ? "Enabled" : "Disabled");
         fprintf(log_file, "* Keyboard backlight:\t\t%s\n", conf.no_keyboard_bl ? "Disabled" : "Enabled");
         fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
         fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
         fprintf(log_file, "* Ambient gamma:\t\t%s\n", conf.ambient_gamma ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Screen contrib:\t\t%.2lf\n", conf.screen_contrib);
+        fprintf(log_file, "* Screen samples:\t\t%d\n", conf.screen_samples);
 
         if (conf.loc.lat != LAT_UNDEFINED && conf.loc.lon != LON_UNDEFINED) {
             fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.loc.lat, conf.loc.lon);
@@ -48,8 +53,8 @@ void log_conf(void) {
         }
         fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.temp[DAY]);
         fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.temp[NIGHT]);
-        fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(conf.events[SUNRISE]) ? conf.events[SUNRISE] : "Unset");
-        fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(conf.events[SUNSET]) ? conf.events[SUNSET] : "Unset");
+        fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(conf.day_events[SUNRISE]) ? conf.day_events[SUNRISE] : "Unset");
+        fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(conf.day_events[SUNSET]) ? conf.day_events[SUNSET] : "Unset");
         fprintf(log_file, "* Event duration:\t\t%d\n", conf.event_duration);
         fprintf(log_file, "* Dimmer backlight pct:\t\t%.2lf\n", conf.dimmer_pct);
 
@@ -59,14 +64,14 @@ void log_conf(void) {
         fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][SIZE_STATES], conf.timeout[ON_BATTERY][SIZE_STATES]);
         fprintf(log_file, "* Dimmer timeouts:\t\tAC %d\tBATT %d\n", conf.dimmer_timeout[ON_AC], conf.dimmer_timeout[ON_BATTERY]);
         fprintf(log_file, "* Dpms timeouts:\t\tAC %d\tBATT %d\n", conf.dpms_timeout[ON_AC], conf.dpms_timeout[ON_BATTERY]);
+        fprintf(log_file, "* Screen timeouts:\t\tAC %d\tBATT %d\n", conf.screen_timeout[ON_AC], conf.screen_timeout[ON_BATTERY]);
 
         fprintf(log_file, "\n### Modules ###\n");
-        for (int i = 0; i < MODULES_NUM; i++) {
-            const struct self_t *self = modules[i].self;
-            if (self->functional_module) {
-                fprintf(log_file, "* %s:\t\t%s\n", self->name, is_started_disabled(i) ? "Disabled" : "Enabled");
-            }
-        }
+        fprintf(log_file, "* Backlight:\t\t%s\n", conf.no_backlight ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Gamma:\t\t%s\n", conf.no_gamma ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Dimmer:\t\t%s\n", conf.no_dimmer ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Dpms:\t\t%s\n", conf.no_dpms ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Screen:\t\t%s\n", conf.no_screen ? "Disabled" : "Enabled");
 
         fprintf(log_file, "\n### Smooth ###\n");
         fprintf(log_file, "* Bright smooth trans:\t\t%s\n", conf.no_smooth_backlight ? "Disabled" : "Enabled");

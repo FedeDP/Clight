@@ -1,13 +1,8 @@
 #pragma once
 
-#include <commons.h>
+#include <setjmp.h>
 
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-
-#define DEBUG(msg, ...) if (conf.verbose) log_message(__FILENAME__, __LINE__, 'D', msg, ##__VA_ARGS__)
-#define INFO(msg, ...) log_message(__FILENAME__, __LINE__, 'I', msg, ##__VA_ARGS__)
-#define WARN(msg, ...) log_message(__FILENAME__, __LINE__, 'W', msg, ##__VA_ARGS__)
-/* ERROR macro will leave clight by calling longjmp */
+/* ERROR macro will leave clight by calling longjmp; thus it is not exposed to public header */
 #define ERROR(msg, ...) \
 do { \
     log_message(__FILENAME__, __LINE__, 'E', msg, ##__VA_ARGS__); \
@@ -16,5 +11,4 @@ do { \
 
 void open_log(void);
 void log_conf(void);
-void log_message(const char *filename, int lineno, const char type, const char *log_msg, ...);
 void close_log(void);

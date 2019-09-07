@@ -1,33 +1,50 @@
-#include <bus.h>
+#include "bus.h"
 
 static int upower_check(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static void publish_upower(int new, message_t *up);
 
 static sd_bus_slot *slot;
-static struct dependency dependencies[] = {
-    {HARD, BUS}     // we need a bus connection
-};
-static struct self_t self = {
-    .num_deps = SIZE(dependencies),
-    .deps =  dependencies
-};
 
-MODULE(UPOWER);
+DECLARE_MSG(upower_msg, UPOWER_UPD);
+DECLARE_MSG(upower_req, UPOWER_REQ);
+
+MODULE("UPOWER");
 
 static void init(void) {
-    int r = upower_init();
-    /* In case of errors, upower_init returns -1 -> disable upower. */
-    INIT_MOD(r == 0 ? DONT_POLL : DONT_POLL_W_ERR);
+    if (upower_init() != 0) {
+        WARN("Failed to init.\n");
+        m_poisonpill(self());
+    } else {
+        M_SUB(UPOWER_REQ);
+    }
 }
 
-static int check(void) {
-    return upower_check();
+static bool check(void) {
+    return true;
 }
 
-static int callback(void) {
-    // Skeleton interface
-    return 0;
+static bool evaluate(void) {
+    /* Start as soon as upower becomes available */
+    return upower_check() == 0;
+}
+
+static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case UPOWER_REQ: {
+        upower_upd *up = (upower_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            INFO("AC cable %s.\n", up->new ? "connected" : "disconnected");
+            // publish upower before storing new ac state as state.ac_state is sent as "old" parameter
+            publish_upower(up->new, &upower_msg);
+            state.ac_state = up->new;
+        }
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 static void destroy(void) {
@@ -40,9 +57,15 @@ static void destroy(void) {
 static int upower_check(void) {
     /* check initial AC state */
     SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
-    int r = get_property(&args, "b", &state.ac_state);
+    int r = get_property(&args, "b", &state.ac_state, sizeof(state.ac_state));
     if (r < 0) {
-        WARN("Upower appears to be unsupported.\n");
+        if (state.ac_state == -1) {
+            /* Upower not available, for now. Let's assume ON_AC! */
+            state.ac_state = ON_AC;
+            INFO("Failed to retrieve AC state; fallback to connected.\n");
+        }
+    } else {
+        INFO("Initial AC state: %s.\n", state.ac_state == ON_AC ? "connected" : "disconnected");
     }
     return -(r < 0);
 }
@@ -55,7 +78,7 @@ static int upower_init(void) {
 /*
  * Callback on upower changes: recheck on_battery boolean value
  */
-static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *userdata, __attribute__((unused)) sd_bus_error *ret_error) {
+static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     SYSBUS_ARG(args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
 
     /*
@@ -67,11 +90,16 @@ static int on_upower_change(__attribute__((unused)) sd_bus_message *m, void *use
      * .LidIsPresent                       property  b         true         emits-change
      * .OnBattery                          property  b         false        emits-change
      */
-    int old_ac_state = state.ac_state;
-    int r = get_property(&args, "b", &state.ac_state);
-    if (!r && old_ac_state != state.ac_state) {
-        FILL_MATCH_NONE();
-        INFO(state.ac_state ? "Ac cable disconnected. Powersaving mode enabled.\n" : "Ac cable connected. Powersaving mode disabled.\n");
+    int ac_state;
+    int r = get_property(&args, "b", &ac_state, sizeof(ac_state));
+    if (!r && state.ac_state != ac_state) {
+        publish_upower(ac_state, &upower_req);
     }
     return 0;
+}
+
+static void publish_upower(int new, message_t *up) {
+    up->upower.old = state.ac_state;
+    up->upower.new = new;
+    M_PUB(up);
 }

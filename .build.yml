@@ -5,6 +5,7 @@ packages:
   - libconfig
   - gsl
   - cmake
+  - libmodule
 sources:
   - https://github.com/FedeDP/Clight
 tasks:
