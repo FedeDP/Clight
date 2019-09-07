@@ -156,7 +156,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Fix DPMS/Dimmer: they'll both send a DISPLAY_ON request to DISPLAY when leaving idle. Last request to arrive will fail to validate as we are already DISPLAY_ON.
 - [x] Expose a Load/Unload functions from API interface to load new custom modules
 - [x] Add support for new Capture method param in Clightd
-- [ ] Fix 20s timeout on start? Geoclue is super-slow...opened PR: https://gitlab.freedesktop.org/geoclue/geoclue/merge_requests/50
+- [x] Fix 20s timeout on start? Geoclue is super-slow...PR was merged and will be available with next release!: https://gitlab.freedesktop.org/geoclue/geoclue/merge_requests/50
 
 #### DOC/WIKI updates
 - [x] Drop API wiki page about Modules bus interface
