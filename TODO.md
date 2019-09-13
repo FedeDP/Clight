@@ -158,7 +158,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Add support for new Capture method param in Clightd
 - [x] Fix 20s timeout on start? Geoclue is super-slow...PR was merged and will be available with next release!: https://gitlab.freedesktop.org/geoclue/geoclue/merge_requests/50
 - [x] Move log file too in XDG_DATA_HOME, to avoid cluttering filesystem (#99)
-- [ ] Mention new log file place in wiki pages
+- [x] Mention new log file place in wiki pages
 
 #### DOC/WIKI updates
 - [x] Drop API wiki page about Modules bus interface
