@@ -338,10 +338,6 @@ static void location_callback(void) {
 static void interface_callback(temp_upd *req) {
     conf.temp[req->daytime] = req->new;
     if (!conf.ambient_gamma && req->daytime == state.day_time) {
-        if (req->smooth != -1) {
-            set_temp(conf.temp[req->daytime], NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
-        } else {
-            set_temp(conf.temp[req->daytime], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
-        }
+        set_temp(conf.temp[req->daytime], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
     }
 }

@@ -139,22 +139,22 @@ typedef struct {
 } evt_upd;
 
 typedef struct {
-    enum day_states daytime;    // Mandatory for requests. Valued in updates
+    enum day_states daytime;    // Mandatory for requests. Valued in updates. Special value: -1 -> current daytime
     int old;                    // Valued in updates. Useless for requests
     int new;                    // Mandatory for requests. Valued in updates
-    int smooth;                 // Mandatory for requests. -1 to use conf values. Valued in updates
+    int smooth;                 // Mandatory for requests. Valued in updates. Special value: -1 -> use conf values
     int step;                   // Only useful for requests. Valued in updates
     int timeout;                // Only useful for requests. Valued in updates
 } temp_upd;
 
 typedef struct {
     int new;                    // Mandatory for requests
-    enum ac_states state;       // Mandatory for requests
-    enum day_states daytime;    // Mandatory for BL_TO_REQ only
+    enum ac_states state;       // Mandatory for requests. Special value: -1 -> use current ac state
+    enum day_states daytime;    // Mandatory for BL_TO_REQ only. Special value: -1 -> use current daytime
 } timeout_upd;
 
 typedef struct {
-    enum ac_states state;       // Mandatory for requests
+    enum ac_states state;       // Mandatory for requests. Special value: -1 -> use current ac state
     int num_points;             // Mandatory for requests
     double *regression_points;  // Mandatory for requests
 } curve_upd;
@@ -170,7 +170,7 @@ typedef struct {
 typedef struct {
     double old;                 // Valued in updates. Useless for requests
     double new;                 // Mandatory for requests. Valued in updates
-    int smooth;                 // Mandatory for BL_REQ requests. -1 to use conf values. Valued in updates
+    int smooth;                 // Mandatory for BL_REQ requests. Valued in updates. Special value: -1 -> use conf values
     int timeout;                // Only useful for BL_REQ requests. Valued in updates
     double step;                // Only useful for BL_REQ requests. Valued in updates
 } bl_upd;

@@ -35,16 +35,15 @@ static void receive(const msg_t *msg, const void *userdata) {
     switch (MSG_TYPE()) {
     case INHIBIT_UPD: {
         inhibit_upd *up = (inhibit_upd *)MSG_DATA();
+        calib_req.nocalib.new = up->new;
         if (up->new) {
-            calib_req.nocalib.new = true;
-            M_PUB(&calib_req);
-            M_PUB(&bl_req);
+            M_PUB(&calib_req);      // stop backlight autocalibration
+            M_PUB(&bl_req);         // set 100% screen backlight
             INFO("We are now inhibited! Set 100%% screen backlight.\n");
         } else {
             INFO("We're not inhibited anymore. Do a quick backlight calibration.\n");
-            calib_req.nocalib.new = false;
-            M_PUB(&calib_req);
-            M_PUB(&capture_req);
+            M_PUB(&calib_req);      // resume backlight autocalibration
+            M_PUB(&capture_req);    // ask for a quick calibration
         }
         break;
     }

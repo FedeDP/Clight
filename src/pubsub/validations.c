@@ -19,6 +19,14 @@ bool validate_upower(upower_upd *up) {
 }
 
 bool validate_timeout(timeout_upd *up) {
+    if (up->state == -1) {
+        up->state = state.ac_state;
+    }
+    
+    if (up->daytime == -1) {
+        up->daytime = state.day_time;
+    }
+    
     if (up->state >= ON_AC && up->state < SIZE_AC) {
         return true;
     }
@@ -55,6 +63,16 @@ bool validate_evt(evt_upd *up) {
 }
 
 bool validate_temp(temp_upd *up) {
+    if (up->daytime == -1) {
+        up->daytime = state.day_time;
+    }
+    
+    if (up->smooth == -1) {
+        up->smooth = !conf.no_smooth_gamma;
+        up->step = conf.gamma_trans_step;
+        up->timeout = conf.gamma_trans_timeout;
+    }
+    
     /* Validate new temp: check clighd limits */
     if (up->new >= 1000 && up->new <= 10000 && 
         up->daytime >= DAY && up->daytime < SIZE_STATES &&
@@ -75,6 +93,10 @@ bool validate_autocalib(calib_upd *up) {
 }
 
 bool validate_curve(curve_upd *up) {
+    if (up->state == -1) {
+        up->state = state.ac_state;
+    }
+    
     if (up->state >= ON_AC && up->state < SIZE_AC &&
         up->num_points > 0 && up->num_points <= MAX_SIZE_POINTS) {
      
@@ -85,6 +107,12 @@ bool validate_curve(curve_upd *up) {
 }
 
 bool validate_backlight(bl_upd *up) {
+    if (up->smooth == -1) {
+        up->smooth = !conf.no_smooth_backlight;
+        up->step = conf.backlight_trans_step;
+        up->timeout = conf.backlight_trans_timeout;
+    }
+    
     if (up->new >= 0.0 && up->new <= 1.0) {
         return true;
     }

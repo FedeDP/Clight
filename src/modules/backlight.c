@@ -153,11 +153,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case BL_REQ: {
         bl_upd *up = (bl_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            if (up->smooth != -1) {
-                set_backlight_level(up->new, up->smooth, up->step, up->timeout);
-            } else {
-                set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
-            }
+            set_backlight_level(up->new, up->smooth, up->step, up->timeout);
         }
         break;
     }
@@ -208,11 +204,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         /* In paused state check that we're not dimmed/dpms */
         bl_upd *up = (bl_upd *)MSG_DATA();
         if (VALIDATE_REQ(up) && !state.display_state) {
-            if (up->smooth != -1) {
-                set_backlight_level(up->new, up->smooth, up->step, up->timeout);
-            } else {
-                set_backlight_level(up->new, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
-            }
+            set_backlight_level(up->new, up->smooth, up->step, up->timeout);
         }
         break;
     }
