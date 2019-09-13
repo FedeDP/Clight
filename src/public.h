@@ -62,11 +62,11 @@ enum dim_trans { ENTER, EXIT, SIZE_DIM };
 enum mod_msg_types {
     SYSTEM_UPD = -2,    // Used internally by Clight
     FD_UPD = -1,        // Used internally by Clight
-    LOCATION_UPD,       // Subscribe to receive new locations
+    LOC_UPD,            // Subscribe to receive new locations
     UPOWER_UPD,         // Subscribe to receive new AC states
     INHIBIT_UPD,        // Subscribe to receive new PowerManagement states
     DISPLAY_UPD,        // Subscribe to receive new display states (on/dimmed/off)
-    DAYTIME_UPD,           // Subscribe to receive new daytime states (day/night)
+    DAYTIME_UPD,        // Subscribe to receive new daytime states (day/night)
     IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times

@@ -17,7 +17,7 @@ static void publish_location(double new_lat, double new_lon, message_t *l);
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
 
-DECLARE_MSG(loc_msg, LOCATION_UPD);
+DECLARE_MSG(loc_msg, LOC_UPD);
 DECLARE_MSG(loc_req, LOCATION_REQ);
 
 MODULE("LOCATION");

@@ -28,7 +28,7 @@ MODULE("GAMMA");
 
 static void init(void) {
     M_SUB(BL_UPD);
-    M_SUB(LOCATION_UPD);
+    M_SUB(LOC_UPD);
     M_SUB(TEMP_REQ);
     M_SUB(SUNRISE_REQ);
     M_SUB(SUNSET_REQ);
@@ -58,7 +58,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         read_timer(msg->fd_msg->fd);
         check_gamma();
         break;
-    case LOCATION_UPD:
+    case LOC_UPD:
         location_callback();
         break;
     case BL_UPD:
