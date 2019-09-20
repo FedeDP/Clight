@@ -1,4 +1,5 @@
 #include <sys/file.h>
+#include <sys/stat.h>
 #include "commons.h"
 
 static FILE *log_file;
@@ -7,11 +8,15 @@ void open_log(void) {
     char log_path[PATH_MAX + 1] = {0};
 
     if (getenv("XDG_DATA_HOME")) {
-        snprintf(log_path, PATH_MAX, "%s/clight/clight.log", getenv("XDG_DATA_HOME"));
+        snprintf(log_path, PATH_MAX, "%s/clight/", getenv("XDG_DATA_HOME"));
     } else {
-        snprintf(log_path, PATH_MAX, "%s/.local/share/clight/clight.log", getpwuid(getuid())->pw_dir);
+        snprintf(log_path, PATH_MAX, "%s/.local/share/clight/", getpwuid(getuid())->pw_dir);
     }
-    
+
+    /* Create XDG_DATA_HOME/clight/ folder if it does not exist! */
+    mkdir(log_path, 0755);
+
+    strcat(log_path, "clight.log");
     int fd = open(log_path, O_CREAT | O_WRONLY, 0644);
     if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
         WARN("%s\n", strerror(errno));
