@@ -6,7 +6,7 @@
 #define CLIGHTD_SERVICE "org.clightd.clightd"
 
 /* Bus types */
-enum bus_type { SYSTEM_BUS, USER_BUS, MON_BUS };
+enum bus_type { SYSTEM_BUS, USER_BUS };
 
 /*
  * Object wrapper for bus calls

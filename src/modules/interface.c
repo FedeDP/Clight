@@ -19,6 +19,7 @@ typedef struct {
 
 /** org.freedesktop.ScreenSaver spec implementation **/
 static int start_inhibit_monitor(void);
+static void inhibit_parse_msg(sd_bus_message *m);
 static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int create_inhibit(int *cookie, const char *key, const char *app_name, const char *reason);
 static int drop_inhibit(int *cookie, const char *key, bool force);
@@ -275,22 +276,10 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         do {
             sd_bus_message *m = NULL;
             r = sd_bus_process(b, &m);
-            if (m && sd_bus_message_get_member(m)) {
-                const char *member = sd_bus_message_get_member(m);
-                if (!strcmp(member, "Inhibit")) {
-                    int cookie = 0;
-                    char *app_name = NULL, *reason = NULL;
-                    int r = sd_bus_message_read(m, "ss", &app_name, &reason); 
-                    if (r < 0) { 
-                        WARN("Failed to parse parameters: %s\n", strerror(-r));
-                    } else {
-                        create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason);
-                    }
-                } else if (!strcmp(member, "UnInhibit")) {
-                    drop_inhibit(NULL, sd_bus_message_get_sender(m), false);
-                }
+            if (m) {
+                inhibit_parse_msg(m);
+                sd_bus_message_unref(m);
             }
-            sd_bus_message_unref(m);
         } while (r > 0);
         break;
     }
@@ -380,6 +369,24 @@ static int start_inhibit_monitor(void) {
         m_register_fd(dup(fd), true, monbus);
     }
     return r;
+}
+
+static void inhibit_parse_msg(sd_bus_message *m) {
+    if (sd_bus_message_get_member(m)) {
+        const char *member = sd_bus_message_get_member(m);
+        if (!strcmp(member, sc_vtable[1].x.method.member)) {
+            int cookie = 0;
+            char *app_name = NULL, *reason = NULL;
+            int r = sd_bus_message_read(m, "ss", &app_name, &reason); 
+            if (r < 0) { 
+                WARN("Failed to parse parameters: %s\n", strerror(-r));
+            } else {
+                create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason);
+            }
+        } else if (!strcmp(member, sc_vtable[2].x.method.member)) {
+            drop_inhibit(NULL, sd_bus_message_get_sender(m), false);
+        }
+    }
 }
 
 /*
