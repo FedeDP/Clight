@@ -68,6 +68,10 @@ int idle_client_stop(char *client) {
     return call(NULL, NULL, &args, NULL);
 }
 
+int idle_client_reset(char *client, int timeout) {
+    return idle_client_stop(client) + idle_client_start(client, timeout);
+}
+
 int idle_client_destroy(char *client) {
     VALIDATE_CLIENT(client);
     

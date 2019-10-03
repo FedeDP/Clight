@@ -18,12 +18,14 @@ typedef struct {
 } lock_t;
 
 /** org.freedesktop.ScreenSaver spec implementation **/
+static int start_inhibit_monitor(void);
 static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int create_inhibit(int *cookie, const char *key, const char *app_name, const char *reason);
 static int drop_inhibit(int *cookie, const char *key, bool force);
 static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_simulate_activity(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 /** Clight bus api **/
@@ -146,6 +148,7 @@ static const sd_bus_vtable sc_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_METHOD("Inhibit", "ss", "u", method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("UnInhibit", "u", NULL, method_uninhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("SimulateUserActivity", NULL, NULL, method_simulate_activity, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD_WITH_OFFSET("GetActive", NULL, "b", method_get_inhibit, offsetof(state_t, inhibited), SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
@@ -163,18 +166,20 @@ DECLARE_MSG(loc_req, LOCATION_REQ);
 DECLARE_MSG(contrib_req, CONTRIB_REQ);
 DECLARE_MSG(sunrise_req, SUNRISE_REQ);
 DECLARE_MSG(sunset_req, SUNSET_REQ);
+DECLARE_MSG(simulate_req, SIMULATE_REQ);
 
 static map_t *lock_map;
-static sd_bus *userbus;
-// this is used to keep curve points data lingering around in set_curve
-static sd_bus_message *curve_message;
+static sd_bus *userbus, *monbus;
+static sd_bus_message *curve_message; // this is used to keep curve points data lingering around in set_curve
+static sd_bus_slot *lock_slot;
 
 MODULE("INTERFACE");
 
 static void init(void) {
     const char conf_path[] = "/org/clight/clight/Conf";
     const char conf_to_path[] = "/org/clight/clight/Conf/Timeouts";
-    const char sc_path[] = "/org/freedesktop/ScreenSaver";
+    const char sc_path_full[] = "/org/freedesktop/ScreenSaver";
+    const char sc_path[] = "/ScreenSaver";
     const char conf_interface[] = "org.clight.clight.Conf";
     
     userbus = get_user_bus();
@@ -203,12 +208,27 @@ static void init(void) {
                                   conf_to_vtable,
                                   &conf);
     
+    /* 
+     * ScreenSaver implementation: 
+     * take both /ScreenSaver and /org/freedesktop/ScreenSaver paths 
+     * as they're both used by applications.
+     * Eg: chromium/libreoffice use full path, while vlc uses /ScreenSaver
+     * 
+     * Avoid checking for errors!!
+     */
     sd_bus_add_object_vtable(userbus,
                                 NULL,
                                 sc_path,
                                 sc_interface,
                                 sc_vtable,
                                 &state);
+    
+    sd_bus_add_object_vtable(userbus,
+                             NULL,
+                             sc_path_full,
+                             sc_interface,
+                             sc_vtable,
+                             &state);
     
     if (r < 0) {
         WARN("Could not create %s dbus interface: %s\n", bus_interface, strerror(-r));
@@ -223,9 +243,10 @@ static void init(void) {
             /** org.freedesktop.ScreenSaver API **/
             if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
                 WARN("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
-            } else {
-                USERBUS_ARG(args, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameOwnerChanged");
-                add_match(&args, NULL, on_bus_name_changed);
+                INFO("Fallback at monitoring requests to %s name owner.\n", sc_interface);
+                if (start_inhibit_monitor() != 0) {
+                    WARN("Failed to register %s inhibition monitor.\n", sc_interface);
+                }
             }
             lock_map = map_new(true, free);
             /**                                 **/
@@ -248,13 +269,38 @@ static bool evaluate() {
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case FD_UPD:
+    case FD_UPD: {
+        sd_bus *b = (sd_bus *)msg->fd_msg->userptr;
+        int r;
+        do {
+            sd_bus_message *m = NULL;
+            r = sd_bus_process(b, &m);
+            if (m && sd_bus_message_get_member(m)) {
+                const char *member = sd_bus_message_get_member(m);
+                if (!strcmp(member, "Inhibit")) {
+                    int cookie = 0;
+                    char *app_name = NULL, *reason = NULL;
+                    int r = sd_bus_message_read(m, "ss", &app_name, &reason); 
+                    if (r < 0) { 
+                        WARN("Failed to parse parameters: %s\n", strerror(-r));
+                    } else {
+                        create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason);
+                    }
+                } else if (!strcmp(member, "UnInhibit")) {
+                    drop_inhibit(NULL, sd_bus_message_get_sender(m), false);
+                }
+            }
+            sd_bus_message_unref(m);
+        } while (r > 0);
+        break;
+    }
+    case SYSTEM_UPD:
+        break;
+    default:
         if (userbus) {
             DEBUG("Emitting %s property\n", msg->ps_msg->topic);
             sd_bus_emit_properties_changed(userbus, object_path, bus_interface, msg->ps_msg->topic, NULL);
         }
-        break;
-    default:
         break;
     }
 }
@@ -265,11 +311,76 @@ static void destroy(void) {
         sd_bus_release_name(userbus, sc_interface);
         userbus = sd_bus_flush_close_unref(userbus);
     }
+    if (monbus) {
+        monbus = sd_bus_flush_close_unref(monbus);
+    }
     map_free(lock_map);
     curve_message = sd_bus_message_unref(curve_message);
 }
 
 /** org.freedesktop.ScreenSaver spec implementation: https://people.freedesktop.org/~hadess/idle-inhibition-spec/re01.html **/
+
+/* 
+ * Fallback to monitoring org.freedesktop.ScreenSaver bus name to receive Inhibit/UnhInhibit notifications
+ * when org.freedesktop.ScreenSaver name could not be owned by Clight (ie: there is some other app that is owning it).
+ * 
+ * Stolen from: https://github.com/systemd/systemd/blob/master/src/busctl/busctl.c#L1203 (busctl monitor)
+ */
+static int start_inhibit_monitor(void) {
+    int r = sd_bus_new(&monbus);
+    if (r < 0) {
+        WARN("Failed to create monitor: %m\n");
+        return r;
+    }
+    
+    r = sd_bus_set_monitor(monbus, true);
+    if (r < 0) {
+        WARN("Failed to set monitor mode: %m\n");
+        return r;
+    }
+    
+    r = sd_bus_negotiate_creds(monbus, true, _SD_BUS_CREDS_ALL);
+    if (r < 0) {
+        WARN("Failed to enable credentials: %m\n");
+        return r;
+    }
+    
+    r = sd_bus_negotiate_timestamp(monbus, true);
+    if (r < 0) {
+        WARN("Failed to enable timestamps: %m\n");
+        return r;
+    }
+    
+    r = sd_bus_negotiate_fds(monbus, true);
+    if (r < 0) {
+        WARN("Failed to enable fds: %m\n");
+        return r;
+    }
+    
+    r = sd_bus_set_bus_client(monbus, true);
+    if (r < 0) {
+        WARN("Failed to set bus client: %m\n");
+        return r;
+    }
+    
+    /* Set --user address */
+    const char *addr = NULL;
+    sd_bus_get_address(userbus, &addr);
+    sd_bus_set_address(monbus, addr);
+    
+    sd_bus_start(monbus);
+    
+    USERBUS_ARG(args, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus.Monitoring", "BecomeMonitor");
+    args.bus = monbus;
+    
+    r = call(NULL, "", &args, "asu", 1, "destination='org.freedesktop.ScreenSaver'", 0);
+    if (r == 0) {
+        sd_bus_process(monbus, NULL);
+        int fd = sd_bus_get_fd(monbus);
+        m_register_fd(dup(fd), true, monbus);
+    }
+    return r;
+}
 
 /*
  * org.freedesktop.ScreenSaver spec:
@@ -309,6 +420,10 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
                 inhibit_req.inhibit.old = false;
                 inhibit_req.inhibit.new = true;
                 M_PUB(&inhibit_req);
+
+                /* Start listening on NameOwnerChanged signals */                
+                USERBUS_ARG(args, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameOwnerChanged");
+                add_match(&args, &lock_slot, on_bus_name_changed);
             }
         } else {
             return -1;
@@ -345,6 +460,9 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
                 inhibit_req.inhibit.old = true;
                 inhibit_req.inhibit.new = false;
                 M_PUB(&inhibit_req);
+                
+                /* Stop listening on NameOwnerChanged signals */
+                lock_slot = sd_bus_slot_unref(lock_slot);
             }
         }
         return 0;
@@ -394,6 +512,11 @@ static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret
     }
     sd_bus_error_set_errno(ret_error, EINVAL);
     return -EINVAL;
+}
+
+static int method_simulate_activity(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    M_PUB(&simulate_req);
+    return sd_bus_reply_method_return(m, NULL);
 }
 
 static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {

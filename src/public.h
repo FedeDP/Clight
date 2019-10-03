@@ -92,6 +92,7 @@ enum mod_msg_types {
     CURVE_REQ,          // Publish to set a new backlight curve for given ac state
     NO_AUTOCALIB_REQ,   // Publish to set a new no_autocalib value for BACKLIGHT
     CONTRIB_REQ,        // Publish to set a new screen-emitted compensation value
+    SIMULATE_REQ,       // Publish to simulate user activity (resetting both dimmer and dpms timeouts)
     MSGS_SIZE
 };
 

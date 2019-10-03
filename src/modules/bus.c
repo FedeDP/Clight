@@ -1,6 +1,6 @@
 #include "bus.h"
 
-#define GET_BUS(a)  sd_bus *tmp = a->type == USER_BUS ? userbus : sysbus; if (!tmp) { return -1; }
+#define GET_BUS(a)  sd_bus *tmp = a->bus; if (!tmp) { tmp = a->type == USER_BUS ? userbus : sysbus; } if (!tmp) { return -1; }
 
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int r, sd_bus_error *err, const char *caller);
@@ -88,28 +88,27 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         sd_bus_message_appendv(m, signature, args);
 #else
         int i = 0;
+        int size_array = 0;
         while (signature[i] != '\0') {
             switch (signature[i]) {
-                case SD_BUS_TYPE_STRING: {
+                case SD_BUS_TYPE_STRING:
+                case SD_BUS_TYPE_OBJECT_PATH:{
                     char *val = va_arg(args, char *);
                     r = sd_bus_message_append_basic(m, signature[i], val);
+                    break;
                 }
-                break;
-
                 case SD_BUS_TYPE_INT32:
                 case SD_BUS_TYPE_UINT32:
                 case SD_BUS_TYPE_BOOLEAN: {
                     int val = va_arg(args, int);
                     r = sd_bus_message_append_basic(m, signature[i], &val);
+                    break;
                 }
-                break;
-
                 case SD_BUS_TYPE_DOUBLE: {
                     double val = va_arg(args, double);
                     r = sd_bus_message_append_basic(m, signature[i], &val);
+                    break;
                 }
-                break;
-
                 case SD_BUS_TYPE_STRUCT_BEGIN: {
                     char *ptr = strchr(signature + i, SD_BUS_TYPE_STRUCT_END);
                     if (ptr) {
@@ -119,11 +118,17 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
                     }
                     break;
                 }
-
                 case SD_BUS_TYPE_STRUCT_END:
                     r = sd_bus_message_close_container(m);
                     break;
-
+                case SD_BUS_TYPE_ARRAY: {
+                    char type[5] = {0};
+                    i++;
+                    strncpy(type, &signature[i], 1);
+                    r = sd_bus_message_open_container(m, SD_BUS_TYPE_ARRAY, type);
+                    size_array = va_arg(args, int) + 1; // + 1 because size_array-- below
+                    break;
+                }
                 default:
                     WARN("Wrong signature in bus call: %c.\n", signature[i]);
                     break;
@@ -132,7 +137,18 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
             if (check_err(r, &error, a->caller)) {
                 goto finish;
             }
-            i++;
+            
+            /* If inside an array, decrement array counter */
+            if (size_array) {
+                if (--size_array == 0) {
+                    r = sd_bus_message_close_container(m);
+                }
+            }
+            
+            /* Only change signature if we are not in an array */
+            if (!size_array) {
+                i++;
+            }
         }
 #endif
         va_end(args);

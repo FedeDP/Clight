@@ -30,6 +30,7 @@ const char *topics[] = {
     "ReqCapture",
     "ReqCurve",
     "ReqAutocalib",
-    "ReqContrib"
+    "ReqContrib",
+    "ReqSimulate"
 };
 _Static_assert(sizeof(topics) / sizeof(*topics) == MSGS_SIZE, "Undefined topic.");

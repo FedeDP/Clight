@@ -6,7 +6,7 @@
 #define CLIGHTD_SERVICE "org.clightd.clightd"
 
 /* Bus types */
-enum bus_type { SYSTEM_BUS, USER_BUS };
+enum bus_type { SYSTEM_BUS, USER_BUS, MON_BUS };
 
 /*
  * Object wrapper for bus calls
@@ -18,6 +18,7 @@ struct bus_args {
     const char *member;
     enum bus_type type;
     const char *caller;
+    sd_bus *bus;
 };
 
 #define BUS_ARG(name, ...)      struct bus_args name = {__VA_ARGS__, __func__};

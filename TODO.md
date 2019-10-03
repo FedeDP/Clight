@@ -129,6 +129,9 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Eventually drop power management api/configs ... (?)
 - [x] Drop enum pm_states { PM_OFF, PM_ON, PM_FORCED_ON }
 - [x] Drop no_inhibit
+- [x] Monitor message stream if org.freedesktop.ScreenSaver could not be registered
+- [x] Provide both /org/freedesktop/ScreenSaver and /ScreenSaver paths as they both seem to be used
+- [x] Provide a SimulateUserActivity method
 
 #### Inhibition (#81)
 - [x] New conf to inhibit automatic calibration too (together with dimmer) on Screensaver inhibition enabled inhibit_autocalib = true
@@ -159,6 +162,8 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Fix 20s timeout on start? Geoclue is super-slow...PR was merged and will be available with next release!: https://gitlab.freedesktop.org/geoclue/geoclue/merge_requests/50
 - [x] Move log file too in XDG_DATA_HOME, to avoid cluttering filesystem (#99)
 - [x] Mention new log file place in wiki pages
+- [x] Fix bus call() method with libsystemd < 234
+- [x] Fix INTERFACE receive() callback to actually emit bus properties
 
 #### DOC/WIKI updates
 - [x] Drop API wiki page about Modules bus interface
@@ -170,6 +175,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Update API wiki dropping NoInhibit (#76)
 - [x] Update API wiki with new Load/Unload functions
 - [ ] Update API wiki with new SensorSettings writable property
+- [ ] Update API wiki with new SimulateUserActivity method
 
 ### 4.X
 

@@ -1,5 +1,6 @@
 #include "idler.h"
 
+static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdata);
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void upower_timeout_callback(void);
 static void inhibit_callback(void);
@@ -17,6 +18,7 @@ static void init(void) {
         M_SUB(UPOWER_UPD);
         M_SUB(INHIBIT_UPD);
         M_SUB(DPMS_TO_REQ);
+        M_SUB(SIMULATE_REQ);
     } else {
         WARN("Failed to init.\n");
         m_poisonpill(self());
@@ -33,32 +35,63 @@ static bool evaluate(void) {
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-        case UPOWER_UPD:
-            upower_timeout_callback();
-            break;
-        case INHIBIT_UPD:
-            inhibit_callback();
-            break;
-        case DPMS_TO_REQ: {
-            timeout_upd *up = (timeout_upd *)MSG_DATA();
-            if (VALIDATE_REQ(up)) {
-                conf.dpms_timeout[up->state] = up->new;
-                if (up->state == state.ac_state) {
-                    upower_timeout_callback();
-                }
+    case UPOWER_UPD:
+        upower_timeout_callback();
+        break;
+    case INHIBIT_UPD:
+        inhibit_callback();
+        break;
+    case DPMS_TO_REQ: {
+        timeout_upd *up = (timeout_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            conf.dpms_timeout[up->state] = up->new;
+            if (up->state == state.ac_state) {
+                upower_timeout_callback();
             }
-            break;
         }
-        default:
-            break;
+        break;
+    }
+    case SIMULATE_REQ: {
+        /* Validation is useless here; only for coherence */
+        if (VALIDATE_REQ((void *)msg->ps_msg->message)) {
+            idle_client_reset(client, conf.dpms_timeout[state.ac_state]);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case UPOWER_UPD:
+        upower_timeout_callback();
+        break;
+    case INHIBIT_UPD:
+        inhibit_callback();
+        break;
+    case DPMS_TO_REQ: {
+        timeout_upd *up = (timeout_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            conf.dpms_timeout[up->state] = up->new;
+            if (up->state == state.ac_state) {
+                upower_timeout_callback();
+            }
+        }
+        break;
+    }
+    default:
+        /* SIMULATE_REQ is not handled while inhibited */
+        break;
     }
 }
 
 static void destroy(void) {
+    idle_client_destroy(client);
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
-    idle_client_destroy(client);
 }
 
 static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
@@ -92,8 +125,10 @@ static void inhibit_callback(void) {
     if (!state.inhibited) {
         DEBUG("Being resumed.\n");
         idle_client_start(client, conf.dpms_timeout[state.ac_state]);
+        m_unbecome();
     } else {
         DEBUG("Being paused.\n");
         idle_client_stop(client);
+        m_become(inhibited);
     }
 }
