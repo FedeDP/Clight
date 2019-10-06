@@ -224,11 +224,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
 static void init_kbd_backlight(void) {
     SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
     int r = call(&max_kbd_backlight, "i", &kbd_args, NULL);
-    if (r) {
-        INFO("Keyboard backlight calibration unsupported.\n");
-    } else {
-        INFO("Keyboard backlight calibration enabled.\n");
-    }
+    DEBUG("Keyboard backlight calibration %s.\n", r ? "unsupported" : "supported");
 }
 
 static int is_sensor_available(void) {
