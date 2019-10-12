@@ -4,7 +4,8 @@
  * Small example custom module for Clight.
  * 
  * It just hooks on INHIBIT state updates and:
- * -> when entering INHIBIT state (eg: start watching a movie), sets 100% backlight and disable automatic calibration.
+ * -> when entering INHIBIT state (eg: start watching a movie), sets 100% backlight and disable automatic calibration;
+ * it can switch off your keyboard backlight too, if you wish (just uncomment proper lines).
  * -> when leaving INHIBIT state, triggers a new backlight calibration and re-enables automatic calibration
  **/
 
@@ -21,11 +22,16 @@ CLIGHT_MODULE("INHIBIT_BL");
 DECLARE_MSG(bl_req, BL_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(calib_req, NO_AUTOCALIB_REQ);
+// Uncomment to switch off kbd backlight while inhibited 
+// DECLARE_MSG(kbd_bl_req, KBD_BL_REQ);
 
 static void init(void) {
     capture_req.capture.reset_timer = false; // avoid resetting clight internal BACKLIGHT timer
     bl_req.bl.new = 1.0;    // 100% screen backlight
     bl_req.bl.smooth = -1;  // use conf values
+    
+    // Uncomment to switch off kbd backlight while inhibited 
+    // kbd_bl_req.new = 0.0;
     
     /* Subscribe to inhibit state */
     M_SUB(INHIBIT_UPD);
@@ -39,6 +45,8 @@ static void receive(const msg_t *msg, const void *userdata) {
         if (up->new) {
             M_PUB(&calib_req);      // stop backlight autocalibration
             M_PUB(&bl_req);         // set 100% screen backlight
+            // Uncomment to switch off kbd backlight while inhibited
+            // M_PUB(&kbd_bl_req);     // set 0% kbd backlight
             INFO("We are now inhibited! Set 100%% screen backlight.\n");
         } else {
             INFO("We're not inhibited anymore. Do a quick backlight calibration.\n");

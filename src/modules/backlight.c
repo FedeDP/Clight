@@ -81,7 +81,9 @@ static void init(void) {
          * Cannot publish a BL_REQ as BACKLIGHT get paused.
          */
         set_backlight_level(1.0, false, 0, 0);
-        set_keyboard_level(0.0);
+        if (!conf.no_keyboard_bl) {
+            set_keyboard_level(0.0);
+        }
         pause_mod(AUTOCALIB);
     }
 }
@@ -263,16 +265,18 @@ static void set_new_backlight(const double perc) {
 
     set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
     
-    /*
-     * keyboard backlight follows opposite curve:
-     * on high ambient brightness, it must be very low (off)
-     * on low ambient brightness, it must be turned on
-     */
-    set_keyboard_level(1.0 - new_br_pct);
+    if (!conf.no_keyboard_bl) {
+        /*
+         * keyboard backlight follows opposite curve:
+         * on high ambient brightness, it must be very low (off)
+         * on low ambient brightness, it must be turned on
+         */
+        set_keyboard_level(1.0 - new_br_pct);
+    }
 }
 
 static void set_keyboard_level(const double level) {
-    if (max_kbd_backlight > 0 && !conf.no_keyboard_bl) {
+    if (max_kbd_backlight > 0) {
         SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
 
         kbd_msg.bl.old = state.current_kbd_pct;
