@@ -31,7 +31,7 @@ static void init(void) {
     bl_req.bl.smooth = -1;  // use conf values
     
     // Uncomment to switch off kbd backlight while inhibited 
-    // kbd_bl_req.new = 0.0;
+    // kbd_bl_req.bl.new = 0.0;
     
     /* Subscribe to inhibit state */
     M_SUB(INHIBIT_UPD);
