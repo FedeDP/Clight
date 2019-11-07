@@ -164,6 +164,9 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Mention new log file place in wiki pages
 - [x] Fix bus call() method with libsystemd < 234
 - [x] Fix INTERFACE receive() callback to actually emit bus properties
+- [x] Fix: stop calling upower_check in upower.c::evaluate(); call it inside init() to avoid continuously calling it; moreover, stop UPOWER module if upower_check fails.
+- [x] Fix: if location module fails to init, stop gamma too (and fallback state.time = DAY)
+- [ ] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
 
 #### DOC/WIKI updates
 - [x] Drop API wiki page about Modules bus interface

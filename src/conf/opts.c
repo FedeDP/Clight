@@ -183,6 +183,7 @@ static void check_clightd_features(void) {
     if (r < 0) {
         WARN("Clightd service could not be introspected. Automatic modules detection won't work.\n");
     } else {
+        /* Check only optional build time features */
         if (!conf.no_gamma && !strstr(service_list, "<node name=\"Gamma\"/>")) {
             conf.no_gamma = true;
             WARN("GAMMA forcefully disabled as Clightd was built without gamma support.\n");

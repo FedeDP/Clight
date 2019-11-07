@@ -27,14 +27,29 @@ DECLARE_MSG(temp_msg, TEMP_UPD);
 MODULE("GAMMA");
 
 static void init(void) {
-    M_SUB(BL_UPD);
-    M_SUB(LOC_UPD);
-    M_SUB(TEMP_REQ);
-    M_SUB(SUNRISE_REQ);
-    M_SUB(SUNSET_REQ);
-    
-    gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    m_register_fd(gamma_fd, true, NULL);
+    if (state.current_loc.lat == LAT_UNDEFINED + 1) {
+        /*
+         * We have been notified by LOCATION that neither
+         * Geoclue (not installed) nor location cache file
+         * could give us any location.
+         * Assume DAY daytime and kill GAMMA.
+         */
+        WARN("Failed to retrieve user location; fallback to DAY daytime.\n");
+        state.day_time = DAY;
+        /* Reset real undefined values */
+        state.current_loc.lat = LAT_UNDEFINED;
+        state.current_loc.lon = LON_UNDEFINED;
+        m_poisonpill(self());
+    } else {
+        M_SUB(BL_UPD);
+        M_SUB(LOC_UPD);
+        M_SUB(TEMP_REQ);
+        M_SUB(SUNRISE_REQ);
+        M_SUB(SUNSET_REQ);
+
+        gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+        m_register_fd(gamma_fd, true, NULL);
+    }
 }
 
 static bool check(void) {

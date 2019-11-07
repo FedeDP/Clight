@@ -36,7 +36,11 @@ static void init(void) {
         m_register_fd(fd, true, NULL);
     } else {
         WARN("Failed to init.\n");
-        load_cache_location();
+        if (load_cache_location() != 0) {
+            /* small trick to notify GAMMA to stop as no location could be retrieved */
+            state.current_loc.lat = LAT_UNDEFINED + 1;
+            state.current_loc.lon = LON_UNDEFINED + 1;
+        }
         m_poisonpill(self());
     }
 }
