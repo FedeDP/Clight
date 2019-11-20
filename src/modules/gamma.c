@@ -12,10 +12,9 @@ static void ambient_callback(void);
 static void location_callback(void);
 static void interface_callback(temp_upd *req);
 
-static enum day_events target_event;               // which event are we targeting?
-static time_t last_t;                          // last time_t check_gamma() was called
+static enum day_events target_event;           // which event are we targeting?
 static int event_time_range;                   // variable that holds minutes in advance/after an event to enter/leave EVENT state
-static int long_transitioning;                 // are we inside a long transition?
+static bool long_transitioning;                // are we inside a long transition?
 static int gamma_fd;
 
 DECLARE_MSG(time_msg, DAYTIME_UPD);
@@ -105,6 +104,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 }
 
 static void check_gamma(void) {
+    static time_t last_t;                          // last time_t check_gamma() was called
     const time_t t = time(NULL);
     const enum day_states old_state = state.day_time;
     const int old_in_event = state.in_event;
@@ -137,7 +137,7 @@ static void check_gamma(void) {
         || tm_now.tm_year != tm_old.tm_year)) {
 
         INFO("Long transition ended.\n");
-        long_transitioning = 0;
+        long_transitioning = false;
     }
     
     /* If we switched time, emit signal */
@@ -164,12 +164,12 @@ static void check_gamma(void) {
     if (!long_transitioning && !conf.ambient_gamma) {
         set_temp(conf.temp[state.day_time], &t, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
     }
-    
+
     /* desired gamma temp has been set. Set new GAMMA timer */
-    time_t next = state.day_events[target_event] + event_time_range;
+    const time_t next = state.day_events[target_event] + event_time_range;
     INFO("Next alarm due to: %s", ctime(&next));
     set_timeout(next - t, 0, gamma_fd, 0);
-    
+
     last_t = t;
 }
 
@@ -184,10 +184,7 @@ static void check_gamma(void) {
  */
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day) {
     time_t t;
-    
-    time_t old_events[2];
-    old_events[SUNRISE] = state.day_events[SUNRISE];
-    old_events[SUNSET] = state.day_events[SUNSET];
+    const time_t old_events[SIZE_EVENTS] = { state.day_events[SUNRISE], state.day_events[SUNSET] };
 
     /* only every new day, after today's last event (ie: sunset + event_duration) */
     if (*now + 1 >= state.day_events[SUNSET] + conf.event_duration) {
@@ -307,9 +304,9 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         /* force gamma_trans_timeout to 10s (in ms) */
         timeout = GAMMA_LONG_TRANS_TIMEOUT * 1000;
         
-        long_transitioning = 1;
+        long_transitioning = true;
     } else {
-        long_transitioning = 0;
+        long_transitioning = false;
     }
     
     int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);

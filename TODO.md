@@ -166,7 +166,6 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Fix INTERFACE receive() callback to actually emit bus properties
 - [x] Fix: stop calling upower_check in upower.c::evaluate(); call it inside init() to avoid continuously calling it; moreover, stop UPOWER module if upower_check fails.
 - [x] Fix: if location module fails to init, stop gamma too (and fallback state.time = DAY)
-- [ ] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
 
 #### DOC/WIKI updates
 - [x] Drop API wiki page about Modules bus interface
@@ -179,6 +178,14 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Update API wiki with new Load/Unload functions
 - [ ] Update API wiki with new SensorSettings writable property
 - [x] Update API wiki with new SimulateUserActivity method
+
+### 4.1
+- [ ] Improve BACKLIGHT inter-operability with external tools: dimmer should avoid using clight current bl as it may be changed from external tools
+- [ ] Add a way to store/reload backlight/gamma settings at clight start/stop
+- [ ] Add a new ON_CRITICAL ac state for battery level with a configurable threshold
+- [ ] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
+- [ ] Fix GAMMA implementation after hibernation (?) -> may be subscribe to logind "PrepareForSleep" signal and call check_gamma on wake up?
+This may even lead to cleaner code in GAMMA.
 
 ### 4.X
 
