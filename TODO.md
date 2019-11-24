@@ -176,7 +176,7 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [x] Update API wiki for inhibit_autocalib (#81)
 - [x] Update API wiki dropping NoInhibit (#76)
 - [x] Update API wiki with new Load/Unload functions
-- [ ] Update API wiki with new SensorSettings writable property
+- [x] Update API wiki with new SensorSettings writable property
 - [x] Update API wiki with new SimulateUserActivity method
 
 ### 4.1
