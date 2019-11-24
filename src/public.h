@@ -14,7 +14,7 @@
 
 /** PubSub Macros **/
 
-#define ASSERT_MSG(type);           _Static_assert(type >= 0 && type < MSGS_SIZE, "Wrong MSG type.");
+#define ASSERT_MSG(type);           _Static_assert(type >= LOC_UPD && type < MSGS_SIZE, "Wrong MSG type.");
 
 #define MSG_TYPE()                  msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type : SYSTEM_UPD) : FD_UPD
 #define MSG_DATA()                  ((uint8_t *)msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding

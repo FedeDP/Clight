@@ -9,7 +9,7 @@ static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
-static void location_callback(void);
+static void reset_gamma(void);
 static void interface_callback(temp_upd *req);
 
 static enum day_events target_event;           // which event are we targeting?
@@ -63,7 +63,7 @@ static bool evaluate(void) {
 }
 
 static void destroy(void) {
-    /* Skeleton function needed for modules interface */
+
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
@@ -73,7 +73,8 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         check_gamma();
         break;
     case LOC_UPD:
-        location_callback();
+        reset_gamma();
+        DEBUG("New position received. Updating sunrise and sunset times.\n");
         break;
     case BL_UPD:
         ambient_callback();
@@ -87,7 +88,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             } else {
                 strncpy(conf.day_events[SUNSET], up->event, sizeof(conf.day_events[SUNSET]));
             }
-            location_callback();
+            reset_gamma();
         }
         break;
     }
@@ -105,6 +106,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void check_gamma(void) {
     static time_t last_t;                          // last time_t check_gamma() was called
+    
     const time_t t = time(NULL);
     const enum day_states old_state = state.day_time;
     const int old_in_event = state.in_event;
@@ -140,6 +142,8 @@ static void check_gamma(void) {
         long_transitioning = false;
     }
     
+    /** Check which messages should be published **/
+    
     /* If we switched time, emit signal */
     if (old_state != state.day_time) {
         time_msg.day_time.old = old_state;
@@ -153,6 +157,8 @@ static void check_gamma(void) {
         in_ev_msg.day_time.new = state.in_event;
         M_PUB(&in_ev_msg);
     }
+    
+    /**                                 **/
 
     /*
      * Forcefully set correct gamma every time
@@ -197,7 +203,6 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
                  */
                 return get_gamma_events(now, lat, lon, ++day);
             }
-            
             state.day_events[SUNSET] = t;
         } else {
             state.day_events[SUNSET] = -1;
@@ -340,11 +345,10 @@ static void ambient_callback(void) {
     }
 }
 
-static void location_callback(void) {
+static void reset_gamma(void) {
     /* Updated GAMMA module sunrise/sunset for new location */
     state.day_events[SUNSET] = 0; // to force get_gamma_events to recheck sunrise and sunset for today
     set_timeout(0, 1, gamma_fd, 0);
-    DEBUG("New position received. Updating sunrise and sunset times.\n");
 }
 
 static void interface_callback(temp_upd *req) {

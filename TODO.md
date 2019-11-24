@@ -184,8 +184,6 @@ Eg: on new location we should send a message with new lat and lon and LOCATION m
 - [ ] Add a way to store/reload backlight/gamma settings at clight start/stop
 - [ ] Add a new ON_CRITICAL ac state for battery level with a configurable threshold
 - [ ] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
-- [ ] Fix GAMMA implementation after hibernation (?) -> may be subscribe to logind "PrepareForSleep" signal and call check_gamma on wake up?
-This may even lead to cleaner code in GAMMA.
 
 ### 4.X
 
