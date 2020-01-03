@@ -1,8 +1,9 @@
 ### 4.1
 - [ ] Improve BACKLIGHT inter-operability with external tools: dimmer should avoid using clight current bl as it may be changed from external tools
 - [ ] Add a way to store/reload backlight/gamma settings at clight start/stop
-- [ ] Add a new ON_CRITICAL ac state for battery level with a configurable threshold
 - [ ] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
+- [ ] Improvement: allow to pause backlight calib on battery (already supported for dpms/dimmer and screen)
+- [ ] Improvement: allow users to use different number of captures for each AC state (allow users to set <= 0 captures to disable calib on ac state too)
 
 ### 4.X
 

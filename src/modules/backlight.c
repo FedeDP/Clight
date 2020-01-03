@@ -25,7 +25,7 @@ static void resume_mod(enum backlight_pause type);
 
 static int sensor_available;
 static int max_kbd_backlight;
-static int bl_fd;
+static int bl_fd = -1;
 static int paused;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
 static sd_bus_slot *slot;
 

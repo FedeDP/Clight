@@ -9,20 +9,25 @@ static void pause_screen(bool pause);
 MODULE("SCREEN");
 
 static double *screen_br;
-static int screen_ctr, screen_fd;
+static int screen_ctr, screen_fd = -1;
 
 DECLARE_MSG(screen_msg, SCR_BL_UPD);
 
 static void init(void) {
     screen_br = calloc(conf.screen_samples, sizeof(double));
+    if (screen_br) {
+        M_SUB(CONTRIB_REQ);
+        M_SUB(SCR_TO_REQ);
+        M_SUB(UPOWER_UPD);
+        M_SUB(DISPLAY_UPD);
     
-    M_SUB(CONTRIB_REQ);
-    M_SUB(SCR_TO_REQ);
-    M_SUB(UPOWER_UPD);
-    M_SUB(DISPLAY_UPD);
-    
-    screen_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    m_register_fd(screen_fd, false, NULL);
+        /* Start paused if screen timeout for current ac state is <= 0 */
+        screen_fd = start_timer(CLOCK_BOOTTIME, 0, conf.screen_timeout[state.ac_state] > 0);
+        m_register_fd(screen_fd, false, NULL);
+    } else {
+        WARN("Failed to init.\n");
+        m_poisonpill(self());
+    }
 }
 
 static bool check(void) {
@@ -48,22 +53,23 @@ static void destroy(void) {
 
 static void get_screen_brightness(bool compute) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
-    call(&screen_br[screen_ctr], "d", &args, "ss", state.display, state.xauthority);
     
-    screen_ctr = (screen_ctr + 1) % conf.screen_samples;
+    if (call(&screen_br[screen_ctr], "d", &args, "ss", state.display, state.xauthority) == 0) {
+        screen_ctr = (screen_ctr + 1) % conf.screen_samples;
     
-    if (compute) {
-        screen_msg.bl.old = state.screen_comp;
-        state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
-        if (screen_msg.bl.old != state.screen_comp) {
-            screen_msg.bl.new = state.screen_comp;
-            M_PUB(&screen_msg);
+        if (compute) {
+            screen_msg.bl.old = state.screen_comp;
+            state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
+            if (screen_msg.bl.old != state.screen_comp) {
+                screen_msg.bl.new = state.screen_comp;
+                M_PUB(&screen_msg);
+            }
+            DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
+        } else if (screen_ctr + 1 == conf.screen_samples) {
+            /* Bucket filled! Start computing! */
+            DEBUG("Start compensating for screen-emitted brightness.\n");
+            m_become(computing);
         }
-        DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
-    } else if (screen_ctr + 1 == conf.screen_samples) {
-        /* Bucket filled! Start computing! */
-        DEBUG("Start compensating for screen-emitted brightness.\n");
-        m_become(computing);
     }
     set_timeout(conf.screen_timeout[state.ac_state], 0, screen_fd, 0);
 }

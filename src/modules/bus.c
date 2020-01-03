@@ -3,7 +3,7 @@
 #define GET_BUS(a)  sd_bus *tmp = a->bus; if (!tmp) { tmp = a->type == USER_BUS ? userbus : sysbus; } if (!tmp) { return -1; }
 
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
-static int check_err(int r, sd_bus_error *err, const char *caller);
+static int check_err(int *r, sd_bus_error *err, const char *caller);
 
 static sd_bus *sysbus, *userbus;
 
@@ -71,12 +71,12 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
     GET_BUS(a);
 
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
-    if (check_err(r, &error, a->caller)) {
+    if (check_err(&r, &error, a->caller)) {
         goto finish;
     }
 
     r = sd_bus_message_set_expect_reply(m, userptr != NULL);
-    if (check_err(r, &error, a->caller)) {
+    if (check_err(&r, &error, a->caller)) {
         goto finish;
     }
 
@@ -134,7 +134,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
                     break;
             }
 
-            if (check_err(r, &error, a->caller)) {
+            if (check_err(&r, &error, a->caller)) {
                 goto finish;
             }
             
@@ -156,7 +156,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
     /* Check if we need to wait for a response message */
     if (userptr != NULL) {
         r = sd_bus_call(tmp, m, 0, &error, &reply);
-        if (check_err(r, &error, a->caller)) {
+        if (check_err(&r, &error, a->caller)) {
             goto finish;
         }
 
@@ -183,11 +183,10 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         } else {
             r = sd_bus_message_read(reply, userptr_type, userptr);
         }
-        r = check_err(r, &error, a->caller);
     } else {
         r = sd_bus_send(tmp, m, NULL);
-        r = check_err(r, &error, a->caller);
     }
+    check_err(&r, &error, a->caller);
 
 finish:
     free_bus_structs(&error, m, reply);
@@ -207,7 +206,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
     snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
     int r = sd_bus_add_match(tmp, slot, match, cb, NULL);
 #endif
-    return check_err(r, NULL, a->caller);
+    return check_err(&r, NULL, a->caller);
 }
 
 /*
@@ -229,7 +228,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
             WARN("Wrong signature in bus call: %c.\n", type);
             break;
     }
-    r = check_err(r, &error, a->caller);
+    check_err(&r, &error, a->caller);
     free_bus_structs(&error, NULL, NULL);
     return r;
 }
@@ -243,7 +242,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr, int 
     GET_BUS(a);
 
     int r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
-    if (check_err(r, &error, a->caller)) {
+    if (check_err(&r, &error, a->caller)) {
         goto finish;
     }
     if (!strcmp(type, "o") || !strcmp(type, "s")) {
@@ -255,7 +254,7 @@ int get_property(const struct bus_args *a, const char *type, void *userptr, int 
     } else {
         r = sd_bus_message_read(m, type, userptr);
     }
-    r = check_err(r, NULL, a->caller);
+    check_err(&r, NULL, a->caller);
 
 finish:
     free_bus_structs(&error, m, NULL);
@@ -274,12 +273,14 @@ static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_messag
     }
 }
 
-static int check_err(int r, sd_bus_error *err, const char *caller) {
-    if (r < 0) {
-        DEBUG("%s(): %s\n", caller, err && err->message ? err->message : strerror(-r));
+static int check_err(int *r, sd_bus_error *err, const char *caller) {
+    if (*r < 0) {
+        DEBUG("%s(): %s\n", caller, err && err->message ? err->message : strerror(-*r));
     }
+    
     /* -1 on error, 0 ok */
-    return -(r < 0);
+    *r = -(*r < 0);
+    return *r;
 }
 
 sd_bus *get_user_bus(void) {
