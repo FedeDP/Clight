@@ -239,12 +239,12 @@ static int is_sensor_available(void) {
 
 static void do_capture(bool reset_timer) {
     if (!capture_frames_brightness()) {
-        /* Account for screen-emitted brightness */
-        state.ambient_br -= state.screen_comp;
         if (state.ambient_br > conf.shutter_threshold) {
-            set_new_backlight(state.ambient_br * 10);
+            /* Account for screen-emitted brightness */
+            const double compensated_br = state.ambient_br - state.screen_comp;
+            set_new_backlight(compensated_br * 10);
             if (state.screen_comp > 0.0) {
-                INFO("Ambient brightness: %.3lf (%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
+                INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
             } else {
                 INFO("Ambient brightness: %.3lf -> Backlight pct: %.3lf.\n", state.ambient_br, state.current_bl_pct);
             }
