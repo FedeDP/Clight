@@ -5,8 +5,9 @@
 - [ ] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
 - [ ] Improvement: allow to pause backlight calib on battery (already supported for dpms/dimmer and screen)
 - [ ] Improvement: allow users to use different number of captures for each AC state (allow users to set <= 0 captures to disable calib on ac state too)
-- [x] Bugfix: clogged capture detection should be moved before screen-emitted-brightness compensation
 - [x] Bugfix: screen-emitted-brightness compensation should not directly change state.ambient_br
+- [x] Bugfix: properly clamp compensated_br between 0 and 1 before setting new backlight
+- [x] Bugfix: Properly set 0.0 backlight level if shutter_threshold is 0.0 (>= instead of >)
 
 #### Generic
 - [ ] Add a way to store/reload backlight/gamma settings at clight start/stop

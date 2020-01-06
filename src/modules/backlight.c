@@ -239,17 +239,19 @@ static int is_sensor_available(void) {
 
 static void do_capture(bool reset_timer) {
     if (!capture_frames_brightness()) {
-        if (state.ambient_br > conf.shutter_threshold) {
-            /* Account for screen-emitted brightness */
-            const double compensated_br = state.ambient_br - state.screen_comp;
+        /* Account for screen-emitted brightness */
+        const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
+        if (compensated_br >= conf.shutter_threshold) {
             set_new_backlight(compensated_br * 10);
             if (state.screen_comp > 0.0) {
                 INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
             } else {
                 INFO("Ambient brightness: %.3lf -> Backlight pct: %.3lf.\n", state.ambient_br, state.current_bl_pct);
             }
+        } else if (state.screen_comp > 0.0) {
+            INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Clogged capture detected.\n", state.ambient_br, state.screen_comp);
         } else {
-            INFO("Ambient brightness: %.3lf. Clogged capture detected.\n", state.ambient_br);
+            INFO("Ambient brightness: %.3lf -> Clogged capture detected.\n", state.ambient_br);
         }
     }
 
