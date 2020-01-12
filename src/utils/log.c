@@ -48,7 +48,7 @@ void log_conf(void) {
         fprintf(log_file, "* Inhibit autocalibration:\t\t%s\n", conf.inhibit_autocalib ? "Enabled" : "Disabled");
         fprintf(log_file, "* Keyboard backlight:\t\t%s\n", conf.no_keyboard_bl ? "Disabled" : "Enabled");
         fprintf(log_file, "* Number of captures:\t\t%d\n", conf.num_captures);
-        fprintf(log_file, "* Webcam device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
+        fprintf(log_file, "* Sensor device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
         fprintf(log_file, "* Ambient gamma:\t\t%s\n", conf.ambient_gamma ? "Enabled" : "Disabled");
