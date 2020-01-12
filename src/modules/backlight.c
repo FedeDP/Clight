@@ -316,7 +316,7 @@ static int capture_frames_brightness(void) {
     if (!r) {
         amb_msg.bl.old = state.ambient_br;
         state.ambient_br = compute_average(intensity, conf.num_captures);
-        DEBUG("Average frames brightness: %lf.\n", state.ambient_br);
+        DEBUG("Captured ambient brightness: %lf.\n", state.ambient_br);
         amb_msg.bl.new = state.ambient_br;
         M_PUB(&amb_msg);
     }
