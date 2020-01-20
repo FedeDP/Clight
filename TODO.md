@@ -1,15 +1,20 @@
 ### 4.1
 
 #### BACKLIGHT
-- [ ] Improve inter-operability with external tools: dimmer should avoid using clight current bl as it can be changed by external tools
 - [ ] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
-- [ ] Improvement: allow to pause backlight calib on battery (already supported for dpms/dimmer and screen)
-- [ ] Improvement: allow users to use different number of captures for each AC state (allow users to set <= 0 captures to disable calib on ac state too)
+- [ ] Improvement: allow to pause backlight calib on battery (already supported for dpms/dimmer and screen) by setting timeout <= 0
+- [ ] Improvement: allow users to use different number of captures for each AC state
+- [ ] Improvement: switch off keyboard backlight above certain ambient brightness threshold (#112)
+- [ ] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
+
 - [x] Bugfix: screen-emitted-brightness compensation should not directly change state.ambient_br
 - [x] Bugfix: properly clamp compensated_br between 0 and 1 before setting new backlight
 - [x] Bugfix: Properly set 0.0 backlight level if shutter_threshold is 0.0 (>= instead of >)
 
+### 4.2
+
 #### Generic
+- [ ] Improve inter-operability with external tools: dimmer should avoid using clight current bl as it can be changed by external tools
 - [ ] Add a way to store/reload backlight/gamma settings at clight start/stop
 
 ### 4.X
