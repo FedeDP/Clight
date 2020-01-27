@@ -33,25 +33,22 @@ double compute_average(double *intensity, int num) {
  * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C
  */
 void polynomialfit(enum ac_states s) {
-    gsl_multifit_linear_workspace *ws;
-    gsl_matrix *cov, *X;
-    gsl_vector *y, *c;
     double chisq;
     int i, j;
 
-    X = gsl_matrix_alloc(conf.num_points[s], DEGREE);
-    y = gsl_vector_alloc(conf.num_points[s]);
-    c = gsl_vector_alloc(DEGREE);
-    cov = gsl_matrix_alloc(DEGREE, DEGREE);
+    gsl_matrix *X = gsl_matrix_alloc(conf.num_points[s], DEGREE);
+    gsl_vector *y = gsl_vector_alloc(conf.num_points[s]);
+    gsl_vector *c = gsl_vector_alloc(DEGREE);
+    gsl_matrix *cov = gsl_matrix_alloc(DEGREE, DEGREE);
 
-    for(i=0; i < conf.num_points[s]; i++) {
-        for(j=0; j < DEGREE; j++) {
+    for(i = 0; i < conf.num_points[s]; i++) {
+        for(j = 0; j < DEGREE; j++) {
             gsl_matrix_set(X, i, j, pow(i, j));
         }
         gsl_vector_set(y, i, conf.regression_points[s][i]);
     }
 
-    ws = gsl_multifit_linear_alloc(conf.num_points[s], DEGREE);
+    gsl_multifit_linear_workspace *ws = gsl_multifit_linear_alloc(conf.num_points[s], DEGREE);
     gsl_multifit_linear(X, y, c, cov, &chisq, ws);
 
     /* store results */

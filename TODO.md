@@ -10,6 +10,7 @@
 - [x] Bugfix: screen-emitted-brightness compensation should not directly change state.ambient_br
 - [x] Bugfix: properly clamp compensated_br between 0 and 1 before setting new backlight
 - [x] Bugfix: Properly set 0.0 backlight level if shutter_threshold is 0.0 (>= instead of >)
+- [x] Bugfix: set_new_backlight should take current ambient_br * conf.num_points (that is no more fixed to 10!)
 
 ### 4.2
 

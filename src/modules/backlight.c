@@ -242,7 +242,7 @@ static void do_capture(bool reset_timer) {
         /* Account for screen-emitted brightness */
         const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
         if (compensated_br >= conf.shutter_threshold) {
-            set_new_backlight(compensated_br * 10);
+            set_new_backlight(compensated_br * conf.num_points[state.ac_state]);
             if (state.screen_comp > 0.0) {
                 INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
             } else {
