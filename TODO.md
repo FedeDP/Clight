@@ -5,7 +5,7 @@
 - [ ] Improvement: allow to pause backlight calib on battery (already supported for dpms/dimmer and screen) by setting timeout <= 0
 - [ ] Improvement: allow users to use different number of captures for each AC state
 - [ ] Improvement: switch off keyboard backlight above certain ambient brightness threshold (#112)
-- [ ] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
+- [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
 
 - [x] Bugfix: screen-emitted-brightness compensation should not directly change state.ambient_br
 - [x] Bugfix: properly clamp compensated_br between 0 and 1 before setting new backlight
