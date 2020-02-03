@@ -26,7 +26,7 @@ static void resume_mod(enum backlight_pause type);
 static int sensor_available;
 static int max_kbd_backlight;
 static int bl_fd = -1;
-static int paused;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
+static int paused_state;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
 static sd_bus_slot *slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
@@ -172,6 +172,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 }
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
+    DEBUG("Received event %d\n", MSG_TYPE());
     /* In paused state we have deregistered our fd, thus we can only receive PubSub messages */
     switch (MSG_TYPE()) {
     case DISPLAY_UPD:
@@ -422,19 +423,20 @@ static void on_inbhibit_update(void) {
 }
 
 static void pause_mod(enum backlight_pause type) {
-    int old_paused = paused;
-    paused |= type;
-    if (old_paused == UNPAUSED && paused != UNPAUSED) {
+    int old_paused = paused_state;
+    paused_state |= type;
+    if (old_paused == UNPAUSED && paused_state != UNPAUSED) {
         m_become(paused);
         /* Properly deregister our fd while paused */
-        m_deregister_fd(bl_fd);
+        int ret = m_deregister_fd(bl_fd);
+        DEBUG("Deregistered with ret: %d\n", ret);
     }
 }
 
 static void resume_mod(enum backlight_pause type) {
-    int old_paused = paused;
-    paused &= ~type;
-    if (old_paused != UNPAUSED && paused == UNPAUSED) {
+    int old_paused = paused_state;
+    paused_state &= ~type;
+    if (old_paused != UNPAUSED && paused_state == UNPAUSED) {
         m_unbecome();
         /* Register back our fd on resume */
         m_register_fd(bl_fd, false, NULL);
