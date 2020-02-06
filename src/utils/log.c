@@ -52,7 +52,7 @@ void log_conf(void) {
         fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][DAY], conf.timeout[ON_BATTERY][DAY]);
         fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][NIGHT], conf.timeout[ON_BATTERY][NIGHT]);
         fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.timeout[ON_AC][SIZE_STATES], conf.timeout[ON_BATTERY][SIZE_STATES]);
-        fprintf(log_file, "* Captures:\t\t%d\n", conf.num_captures);
+        fprintf(log_file, "* Captures:\t\tAC %d\tBATT %d\n", conf.num_captures[ON_AC], conf.num_captures[ON_BATTERY]);
         fprintf(log_file, "* Sensor device:\t\t%s\n", strlen(conf.dev_name) ? conf.dev_name : "Unset");
         fprintf(log_file, "* Sensor settings:\t\t%s\n", strlen(conf.dev_opts) ? conf.dev_opts : "Unset");
         fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.screen_path) ? conf.screen_path : "Unset");
@@ -60,6 +60,8 @@ void log_conf(void) {
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
         fprintf(log_file, "* Autocalibration:\t\t%s\n", conf.no_auto_calib ? "Disabled" : "Enabled");
         fprintf(log_file, "* Inhibit autocalibration:\t\t%s\n", conf.inhibit_autocalib ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", conf.inhibit_on_lid_closed ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Dim keyboard:\t\t%s\n", conf.dim_kbd ? "Enabled" : "Disabled");
         
         fprintf(log_file, "\n### GAMMA ###\n");
         fprintf(log_file, "* Enabled:\t\t%s\n", conf.no_gamma ? "false" : "true");
@@ -100,7 +102,8 @@ void log_conf(void) {
         fprintf(log_file, "* Samples:\t\t%d\n", conf.screen_samples);
         
         fprintf(log_file, "\n### GENERIC ###\n");
-        fprintf(log_file, "* Verbose (debugging):\t\t%s\n\n", conf.verbose ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Verbose (debug):\t\t%s\n\n", conf.verbose ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Inhibit docked:\t\t%s\n\n", conf.inhibit_docked ? "Enabled" : "Disabled");
         
         fflush(log_file);
     }

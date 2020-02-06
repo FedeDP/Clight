@@ -24,12 +24,12 @@
 
 /* Struct that holds global config as passed through cmdline args/config file reading */
 typedef struct {
-    int num_captures;                       // number of frame captured for each screen backlight compute
+    int num_captures[SIZE_AC];              // number of frame captured for each screen backlight compute
     int timeout[SIZE_AC][SIZE_STATES + 1];  // timeout between captures for each ac_state and time state (day/night + during event)
-    char dev_name[PATH_MAX + 1];            // video device (eg: /dev/video0) to be used for captures
+    char dev_name[PATH_MAX + 1];            // sensor device used for captures
     char dev_opts[NAME_MAX + 1];            // sensor capture options
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
-    int temp[SIZE_STATES];                  // screen temperature for each state
+    int temp[SIZE_STATES];                  // screen temperature for each daytime
     loc_t loc;                              // user location as loaded by config
     char day_events[SIZE_EVENTS][10];       // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
@@ -54,9 +54,12 @@ typedef struct {
     int gamma_long_transition;              // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
     int inhibit_autocalib;                  // whether to inhibit backlight autocalibration too when Screensaver inhibition is enabled
+    int inhibit_on_lid_closed;              // whether clight should inhibit autocalibration on lid closed
+    int inhibit_docked;                     // whether to manage "docked" states as inhibitions
     int screen_timeout[SIZE_AC];            // screen timeouts
     double screen_contrib;                  // how much does screen-emitted brightness affect ambient brightness (eg 0.1)
     int screen_samples;                     // number of samples used to compute average screen-emitted brightness
+    int dim_kbd;                            // whether DPMS/Dimmer should switch keyboard off
     int no_gamma;
     int no_backlight;
     int no_dimmer;
@@ -67,10 +70,11 @@ typedef struct {
 /* Global state of program */
 typedef struct {
     int quit;                               // should we quit?
-    enum day_states day_time;                       // whether it is day or night time
+    enum day_states day_time;               // whether it is day or night time
     int in_event;                           // Whether we are in a TIME event +- conf.event_duration
-    time_t day_events[SIZE_EVENTS];             // today events (sunrise/sunset)
+    time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)
     enum ac_states ac_state;                // is laptop on battery?
+    enum lid_states lid_state;               // current lid state
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters
     char *xauthority;                       // xauthority env variable
     char *display;                          // DISPLAY env variable

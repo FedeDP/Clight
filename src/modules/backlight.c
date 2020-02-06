@@ -1,7 +1,7 @@
 #include "bus.h"
 #include "my_math.h"
 
-enum backlight_pause { UNPAUSED = 0, DISPLAY = 1, SENSOR = 2, AUTOCALIB = 4, INHIBIT = 8 };
+enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, INHIBIT = 0x08, LID = 0x10 };
 
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static void init_kbd_backlight(void);
@@ -20,13 +20,14 @@ static void time_callback(int old_val, int is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_current_timeout(void);
 static void on_inbhibit_update(void);
+static void on_lid_update(void);
 static void pause_mod(enum backlight_pause type);
 static void resume_mod(enum backlight_pause type);
 
 static int sensor_available;
 static int max_kbd_backlight;
 static int bl_fd = -1;
-static int paused_state;              // counter of how many sources are pausing BACKLIGHT (state.display_state, sensor_available, conf.no_auto_calib)
+static int paused_state;
 static sd_bus_slot *slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
@@ -45,6 +46,7 @@ static void init(void) {
 
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);
+    M_SUB(LID_UPD);
     M_SUB(INHIBIT_UPD);
     M_SUB(DAYTIME_UPD);
     M_SUB(IN_EVENT_UPD);
@@ -67,7 +69,7 @@ static void init(void) {
 
     sensor_available = is_sensor_available();
     
-    bl_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
     m_register_fd(bl_fd, false, NULL);
     if (!sensor_available) {
         pause_mod(SENSOR);
@@ -126,6 +128,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case INHIBIT_UPD:
         on_inbhibit_update();
         break;
+    case LID_UPD:
+        on_lid_update();
+        break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         interface_timeout_callback(up);
@@ -172,7 +177,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 }
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
-    DEBUG("Received event %d\n", MSG_TYPE());
     /* In paused state we have deregistered our fd, thus we can only receive PubSub messages */
     switch (MSG_TYPE()) {
     case DISPLAY_UPD:
@@ -180,6 +184,9 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         break;
     case INHIBIT_UPD:
         on_inbhibit_update();
+        break;
+    case LID_UPD:
+        on_lid_update();
         break;
     case CURVE_REQ: {
         curve_upd *up = (curve_upd *)MSG_DATA();
@@ -312,21 +319,22 @@ static void set_backlight_level(const double pct, const int is_smooth, const dou
 
 static int capture_frames_brightness(void) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Capture");
-    double intensity[conf.num_captures];
-    int r = call(intensity, "sad", &args, "sis", conf.dev_name, conf.num_captures, conf.dev_opts);
+    double *intensity = malloc(conf.num_captures[state.ac_state] * sizeof(double));
+    int r = call(intensity, "sad", &args, "sis", conf.dev_name, conf.num_captures[state.ac_state], conf.dev_opts);
     if (!r) {
         amb_msg.bl.old = state.ambient_br;
-        state.ambient_br = compute_average(intensity, conf.num_captures);
+        state.ambient_br = compute_average(intensity, conf.num_captures[state.ac_state]);
         DEBUG("Captured ambient brightness: %lf.\n", state.ambient_br);
         amb_msg.bl.new = state.ambient_br;
         M_PUB(&amb_msg);
     }
+    free(intensity);
     return r;
 }
 
 /* Callback on upower ac state changed signal */
 static void upower_callback(void) {
-    set_timeout(0, 1, bl_fd, 0);
+    set_timeout(0, get_current_timeout() > 0, bl_fd, 0);
 }
 
 /* Callback on "NoAutoCalib" bus exposed writable property */
@@ -362,10 +370,24 @@ static void interface_timeout_callback(timeout_upd *up) {
 
 /* Callback on state.display_state changes */
 static void dimmed_callback(void) {
+    static double old_kbd_level = 0.0;
+    
     if (state.display_state) {
         pause_mod(DISPLAY);
+
+        /* Switch off keyboard if requested */
+        if (conf.dim_kbd) {
+            old_kbd_level = state.current_kbd_pct;
+            set_keyboard_level(0.0);
+        }
     } else {
         resume_mod(DISPLAY);
+        
+        /* Reset keyboard backlight level if needed */
+        if (old_kbd_level != 0.0) {
+            set_keyboard_level(old_kbd_level);
+            old_kbd_level = 0.0;
+        }
     }
 }
 
@@ -422,14 +444,21 @@ static void on_inbhibit_update(void) {
     }
 }
 
+static void on_lid_update(void) {
+    if (conf.inhibit_on_lid_closed && state.lid_state == CLOSED) {
+        pause_mod(LID);
+    } else {
+        resume_mod(LID);
+    }
+}
+
 static void pause_mod(enum backlight_pause type) {
     int old_paused = paused_state;
     paused_state |= type;
     if (old_paused == UNPAUSED && paused_state != UNPAUSED) {
         m_become(paused);
         /* Properly deregister our fd while paused */
-        int ret = m_deregister_fd(bl_fd);
-        DEBUG("Deregistered with ret: %d\n", ret);
+        m_deregister_fd(bl_fd);
     }
 }
 

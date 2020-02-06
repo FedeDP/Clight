@@ -35,7 +35,6 @@ int read_config(enum CONFIG file, char *config_file) {
 
     config_init(&cfg);
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
-        config_lookup_int(&cfg, "captures", &conf.num_captures);
         config_lookup_bool(&cfg, "no_smooth_backlight_transition", &conf.no_smooth_backlight);
         config_lookup_bool(&cfg, "no_smooth_gamma_transition", &conf.no_smooth_gamma);
         config_lookup_float(&cfg, "backlight_trans_step", &conf.backlight_trans_step);
@@ -60,7 +59,10 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_float(&cfg, "screen_contrib", &conf.screen_contrib);
         config_lookup_int(&cfg, "screen_samples", &conf.screen_samples);
         config_lookup_bool(&cfg, "inhibit_autocalib", &conf.inhibit_autocalib);
-
+        config_lookup_bool(&cfg, "inhibit_on_lid_closed", &conf.inhibit_on_lid_closed);
+        config_lookup_bool(&cfg, "inhibit_docked", &conf.inhibit_docked);
+        config_lookup_bool(&cfg, "dim_kbd", &conf.dim_kbd);
+        
         if (config_lookup_string(&cfg, "sensor_devname", &sensor_dev) == CONFIG_TRUE) {
             strncpy(conf.dev_name, sensor_dev, sizeof(conf.dev_name) - 1);
         }
@@ -77,9 +79,20 @@ int read_config(enum CONFIG file, char *config_file) {
             strncpy(conf.day_events[SUNSET], sunset, sizeof(conf.day_events[SUNSET]) - 1);
         }
 
-        config_setting_t *points, *root, *timeouts, *gamma;
+        config_setting_t *captures, *points, *root, *timeouts, *gamma;
         root = config_root_setting(&cfg);
 
+        /* Load no_smooth_dimmer options */
+        if ((captures = config_setting_get_member(root, "captures"))) {
+            if (config_setting_length(captures) == SIZE_AC) {
+                for (int i = 0; i < SIZE_AC; i++) {
+                    conf.num_captures[i] = config_setting_get_float_elem(captures, i);
+                }
+            } else {
+                WARN("Wrong number of 'captures' array elements.\n");
+            }
+        }
+        
         /* Load no_smooth_dimmer options */
         if ((points = config_setting_get_member(root, "no_smooth_dimmer_transition"))) {
             if (config_setting_length(points) == SIZE_DIM) {
@@ -87,7 +100,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.no_smooth_dimmer[i] = config_setting_get_float_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of no_smooth_dimmer_transition array elements.\n");
+                WARN("Wrong number of 'no_smooth_dimmer_transition' array elements.\n");
             }
         }
         
@@ -98,7 +111,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.dimmer_trans_step[i] = config_setting_get_float_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of dimmer_trans_steps array elements.\n");
+                WARN("Wrong number of 'dimmer_trans_steps' array elements.\n");
             }
         }
         
@@ -109,7 +122,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.dimmer_trans_timeout[i] = config_setting_get_int_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of dimmer_trans_timeouts array elements.\n");
+                WARN("Wrong number of 'dimmer_trans_timeouts' array elements.\n");
             }
         }
         
@@ -123,7 +136,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.regression_points[ON_AC][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of ac_backlight_regression_points array elements.\n");
+                WARN("Wrong number of 'ac_backlight_regression_points' array elements.\n");
             }
         }
 
@@ -136,7 +149,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.regression_points[ON_BATTERY][i] = config_setting_get_float_elem(points, i);
                 }
             } else {
-                WARN("Wrong number of batt_backlight_regression_points array elements.\n");
+                WARN("Wrong number of 'batt_backlight_regression_points' array elements.\n");
             }
         }
 
@@ -147,7 +160,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.dpms_timeout[i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
-                WARN("Wrong number of dpms_timeouts array elements.\n");
+                WARN("Wrong number of 'dpms_timeouts' array elements.\n");
             }
         }
 
@@ -158,7 +171,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.timeout[ON_AC][i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
-                WARN("Wrong number of ac_capture_timeouts array elements.\n");
+                WARN("Wrong number of 'ac_capture_timeouts' array elements.\n");
             }
         }
 
@@ -169,7 +182,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.timeout[ON_BATTERY][i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
-                WARN("Wrong number of batt_capture_timeouts array elements.\n");
+                WARN("Wrong number of 'batt_capture_timeouts' array elements.\n");
             }
         }
 
@@ -180,7 +193,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.dimmer_timeout[i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
-                WARN("Wrong number of dimmer_timeouts array elements.\n");
+                WARN("Wrong number of 'dimmer_timeouts' array elements.\n");
             }
         }
 
@@ -191,7 +204,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.temp[i] = config_setting_get_int_elem(gamma, i);
                 }
             } else {
-                WARN("Wrong number of gamma_temp array elements.\n");
+                WARN("Wrong number of 'gamma_temp' array elements.\n");
             }
         }
         
@@ -201,7 +214,7 @@ int read_config(enum CONFIG file, char *config_file) {
                     conf.screen_timeout[i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
-                WARN("Wrong number of screen_timeouts array elements.\n");
+                WARN("Wrong number of 'screen_timeouts' array elements.\n");
             }
         }
 
@@ -227,9 +240,12 @@ int store_config(enum CONFIG file) {
     config_init(&cfg);
 
     config_setting_t *root = config_root_setting(&cfg);
-    config_setting_t *setting = config_setting_add(root, "captures", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, conf.num_captures);
-
+    
+    config_setting_t *setting = config_setting_add(root, "captures", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_AC; i++) {
+        config_setting_set_int_elem(setting, -1, conf.num_captures[i]);
+    }
+    
     setting = config_setting_add(root, "no_smooth_backlight_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.no_smooth_backlight);
 
@@ -293,7 +309,16 @@ int store_config(enum CONFIG file) {
     
     setting = config_setting_add(root, "inhibit_autocalib", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.inhibit_autocalib);
-
+    
+    setting = config_setting_add(root, "inhibit_on_lid_closed", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.inhibit_on_lid_closed);
+    
+    setting = config_setting_add(root, "inhibit_docked", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.inhibit_docked);
+    
+    setting = config_setting_add(root, "dim_kbd", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.dim_kbd);
+    
     setting = config_setting_add(root, "sensor_devname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, conf.dev_name);
     

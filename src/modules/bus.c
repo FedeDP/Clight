@@ -161,7 +161,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         }
 
         /*
-         * Fix for new Clightd interface for CaptureSensor and IsSensorAvailable:
+         * Fix for new Clightd interface for Sensor.Capture and Sensor.IsAvailable:
          * they will now return used interface too. We don't need it.
          */
         if (strlen(userptr_type) > 1 && !strcmp(a->service, CLIGHTD_SERVICE)) {

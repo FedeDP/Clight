@@ -25,7 +25,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             state.inhibited = up->new;
             inh_msg.inhibit.new = state.inhibited;
             M_PUB(&inh_msg);
-            INFO("ScreenSaver inhibition %s.\n", state.inhibited ? "enabled" : "disabled");
+            INFO("Clight inhibition %s: '%s'.\n", state.inhibited ? "enabled" : "disabled", 
+                 up->reason ? up->reason : "no reason specified.");
+            free((void *)up->reason);
         }
         break;
     }

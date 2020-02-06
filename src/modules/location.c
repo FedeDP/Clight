@@ -199,7 +199,7 @@ static int geoclue_client_start(void) {
     set_property(&time_args, 'u', &(unsigned int) { LOC_TIME_THRS });
     set_property(&thres_args, 'u', &(unsigned int) { LOC_DISTANCE_THRS });
     set_property(&accuracy_args, 'u', &(unsigned int) { 2 }); // https://www.freedesktop.org/software/geoclue/docs/geoclue-gclue-enums.html#GClueAccuracyLevel -> GCLUE_ACCURACY_LEVEL_CITY
-    return call(NULL, "", &call_args, NULL);
+    return call(NULL, NULL, &call_args, NULL);
 }
 
 /*
@@ -207,10 +207,10 @@ static int geoclue_client_start(void) {
  */
 static void geoclue_client_delete(void) {
     SYSBUS_ARG(stop_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop");
-    call(NULL, "", &stop_args, NULL);
+    call(NULL, NULL, &stop_args, NULL);
 
     SYSBUS_ARG(del_args, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "DeleteClient");
-    call(NULL, "", &del_args, "o", client);
+    call(NULL, NULL, &del_args, "o", client);
 }
 
 static void cache_location(void) {

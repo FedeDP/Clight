@@ -133,6 +133,14 @@ bool validate_display(display_upd *up) {
     return false;
 }
 
+bool validate_lid(lid_upd *up) {
+    if (state.lid_state != up->new) {
+        return true;
+    }
+    WARN("Failed to validate lid request.\n");
+    return false;
+}
+
 bool validate_nothing(void *up) {
     return true;
 }

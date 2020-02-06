@@ -69,6 +69,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(state_t, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(state_t, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("AcState", "i", NULL, offsetof(state_t, ac_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("LidState", "i", NULL, offsetof(state_t, lid_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Inhibited", "b", NULL, offsetof(state_t, inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("BlPct", "d", NULL, offsetof(state_t, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("KbdPct", "d", NULL, offsetof(state_t, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -97,18 +98,22 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(conf_t, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(conf_t, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitAutoCalib", "b", NULL, NULL, offsetof(conf_t, inhibit_autocalib), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitAutoCalibOnLidClosed", "b", NULL, NULL, offsetof(conf_t, inhibit_on_lid_closed), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitDocked", "b", NULL, NULL, offsetof(conf_t, inhibit_docked), 0),
     SD_BUS_WRITABLE_PROPERTY("NoKbdCalib", "b", NULL, NULL, offsetof(conf_t, no_keyboard_bl), 0),
     SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(conf_t, ambient_gamma), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothBacklight", "b", NULL, NULL, offsetof(conf_t, no_smooth_backlight), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerEnter", "b", NULL, NULL, offsetof(conf_t, no_smooth_dimmer[ENTER]), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothDimmerExit", "b", NULL, NULL, offsetof(conf_t, no_smooth_dimmer[EXIT]), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothGamma", "b", NULL, NULL, offsetof(conf_t, no_smooth_gamma), 0),
-    SD_BUS_WRITABLE_PROPERTY("NumCaptures", "i", NULL, NULL, offsetof(conf_t, num_captures), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcNumCaptures", "i", NULL, NULL, offsetof(conf_t, num_captures[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattNumCaptures", "i", NULL, NULL, offsetof(conf_t, num_captures[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("SensorName", "s", NULL, NULL, offsetof(conf_t, dev_name), 0),
     SD_BUS_WRITABLE_PROPERTY("SensorSettings", "s", NULL, NULL, offsetof(conf_t, dev_opts), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(conf_t, screen_path), 0),
     SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(conf_t, event_duration), 0),
     SD_BUS_WRITABLE_PROPERTY("DimmerPct", "d", NULL, NULL, offsetof(conf_t, dimmer_pct), 0),
+    SD_BUS_WRITABLE_PROPERTY("DimKbd", "b", NULL, NULL, offsetof(conf_t, dim_kbd), 0),
     SD_BUS_WRITABLE_PROPERTY("Verbose", "b", NULL, NULL, offsetof(conf_t, verbose), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightTransStep", "d", NULL, NULL, offsetof(conf_t, backlight_trans_step), 0),
     SD_BUS_WRITABLE_PROPERTY("DimmerTransStepEnter", "d", NULL, NULL, offsetof(conf_t, dimmer_trans_step[ENTER]), 0),
@@ -362,7 +367,7 @@ static int start_inhibit_monitor(void) {
     USERBUS_ARG(args, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus.Monitoring", "BecomeMonitor");
     args.bus = monbus;
     
-    r = call(NULL, "", &args, "asu", 1, "destination='org.freedesktop.ScreenSaver'", 0);
+    r = call(NULL, NULL, &args, "asu", 1, "destination='org.freedesktop.ScreenSaver'", 0);
     if (r == 0) {
         sd_bus_process(monbus, NULL);
         int fd = sd_bus_get_fd(monbus);
@@ -426,6 +431,7 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
             if (map_length(lock_map) == 1) {
                 inhibit_req.inhibit.old = false;
                 inhibit_req.inhibit.new = true;
+                inhibit_req.inhibit.reason = strdup(reason);
                 M_PUB(&inhibit_req);
 
                 /* Start listening on NameOwnerChanged signals */                
@@ -466,6 +472,7 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
             if (map_length(lock_map) == 0) {
                 inhibit_req.inhibit.old = true;
                 inhibit_req.inhibit.new = false;
+                inhibit_req.inhibit.reason = NULL;
                 M_PUB(&inhibit_req);
                 
                 /* Stop listening on NameOwnerChanged signals */

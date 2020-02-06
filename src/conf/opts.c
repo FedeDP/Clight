@@ -13,7 +13,8 @@ static void check_conf(void);
  */
 void init_opts(int argc, char *argv[]) {    
     /* BACKLIGHT */
-    conf.num_captures = 5;
+    conf.num_captures[ON_AC] = 5;
+    conf.num_captures[ON_BATTERY] = 5;
     conf.timeout[ON_AC][DAY] = 10 * 60;
     conf.timeout[ON_AC][NIGHT] = 45 * 60;
     conf.timeout[ON_AC][IN_EVENT] = 5 * 60;
@@ -245,33 +246,13 @@ static void check_conf(void) {
     /* Disable any not built feature in Clightd */
     check_clightd_features();
     
-    if (conf.timeout[ON_AC][DAY] <= 0) {
-        WARN("Wrong day timeout on AC value. Resetting default value.\n");
-        conf.timeout[ON_AC][DAY] = 10 * 60;
+    if (conf.num_captures[ON_AC] < 1 || conf.num_captures[ON_AC] > 20) {
+        WARN("Wrong AC frames value. Resetting default value.\n");
+        conf.num_captures[ON_AC] = 5;
     }
-    if (conf.timeout[ON_AC][NIGHT] <= 0) {
-        WARN("Wrong night timeout on AC value. Resetting default value.\n");
-        conf.timeout[ON_AC][NIGHT] = 45 * 60;
-    }
-    if (conf.timeout[ON_AC][IN_EVENT] <= 0) {
-        WARN("Wrong event timeout on AC value. Resetting default value.\n");
-        conf.timeout[ON_AC][IN_EVENT] = 5 * 60;
-    }
-    if (conf.timeout[ON_BATTERY][DAY] <= 0) {
-        WARN("Wrong day timeout on BATT value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][DAY] = 20 * 60;
-    }
-    if (conf.timeout[ON_BATTERY][NIGHT] <= 0) {
-        WARN("Wrong night timeout on BATT value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][NIGHT] = 90 * 60;
-    }
-    if (conf.timeout[ON_BATTERY][IN_EVENT] <= 0) {
-        WARN("Wrong event timeout on BATT value. Resetting default value.\n");
-        conf.timeout[ON_BATTERY][IN_EVENT] = 10 * 60;
-    }
-    if (conf.num_captures < 1 || conf.num_captures > 20) {
-        WARN("Wrong frames value. Resetting default value.\n");
-        conf.num_captures = 5;
+    if (conf.num_captures[ON_BATTERY] < 1 || conf.num_captures[ON_BATTERY] > 20) {
+        WARN("Wrong BATT frames value. Resetting default value.\n");
+        conf.num_captures[ON_BATTERY] = 5;
     }
     if (conf.temp[DAY] < 1000 || conf.temp[DAY] > 10000) {
         WARN("Wrong daily temp value. Resetting default value.\n");
