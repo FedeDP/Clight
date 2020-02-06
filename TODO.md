@@ -1,7 +1,7 @@
 ## 4.1
 
 ### Backlight
-- [x] Improvement: switch off keyboard backlight on dpms /dimmer? Maybe new conf option?
+- [x] Improvement: switch off keyboard backlight on dpms/dimmer? Maybe new conf option?
 - [x] Improvement: allow to pause backlight calib on battery (already supported for dpms/dimmer and screen) by setting timeout <= 0
 - [x] Improvement: allow users to use different number of captures for each AC state (?)
 - [ ] Improvement: switch off keyboard backlight above certain ambient brightness threshold (#112)

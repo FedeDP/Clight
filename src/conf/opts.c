@@ -102,7 +102,7 @@ void init_opts(int argc, char *argv[]) {
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size) {
     poptContext pc;
     const struct poptOption po[] = {
-        {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.num_captures, 100, "Frames taken for each capture, Between 1 and 20", NULL},
+        {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, NULL, 7, "Frames taken for each capture, Between 1 and 20", NULL},
         {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to webcam device. If empty, first matching device is used", "video0"},
         {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to backlight syspath. If empty, first matching device is used", "intel_backlight"},
         {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.no_smooth_backlight, 100, "Disable smooth backlight transitions", NULL},
@@ -158,6 +158,10 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
                 exit(EXIT_SUCCESS);
             case 6:
                 strncpy(conf_file, str, size);
+                break;
+            case 7:
+                conf.num_captures[ON_AC] = atoi(str);
+                conf.num_captures[ON_BATTERY] = atoi(str);
                 break;
             default:
                 break;
