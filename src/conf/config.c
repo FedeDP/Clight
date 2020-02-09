@@ -58,8 +58,7 @@ int read_config(enum CONFIG file, char *config_file) {
         config_lookup_bool(&cfg, "no_screen", &conf.no_screen);
         config_lookup_float(&cfg, "screen_contrib", &conf.screen_contrib);
         config_lookup_int(&cfg, "screen_samples", &conf.screen_samples);
-        config_lookup_bool(&cfg, "inhibit_autocalib", &conf.inhibit_autocalib);
-        config_lookup_bool(&cfg, "inhibit_on_lid_closed", &conf.inhibit_on_lid_closed);
+        config_lookup_bool(&cfg, "inhibit_calib_on_lid_closed", &conf.inhibit_calib_on_lid_closed);
         config_lookup_bool(&cfg, "inhibit_docked", &conf.inhibit_docked);
         config_lookup_bool(&cfg, "dim_kbd", &conf.dim_kbd);
         
@@ -307,11 +306,8 @@ int store_config(enum CONFIG file) {
     setting = config_setting_add(root, "no_kdb_backlight", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.no_keyboard_bl);
     
-    setting = config_setting_add(root, "inhibit_autocalib", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, conf.inhibit_autocalib);
-    
-    setting = config_setting_add(root, "inhibit_on_lid_closed", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, conf.inhibit_on_lid_closed);
+    setting = config_setting_add(root, "inhibit_calib_on_lid_closed", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.inhibit_calib_on_lid_closed);
     
     setting = config_setting_add(root, "inhibit_docked", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.inhibit_docked);

@@ -59,8 +59,7 @@ void log_conf(void) {
         fprintf(log_file, "* Keyboard backlight:\t\t%s\n", conf.no_keyboard_bl ? "Disabled" : "Enabled");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.shutter_threshold);
         fprintf(log_file, "* Autocalibration:\t\t%s\n", conf.no_auto_calib ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Inhibit autocalibration:\t\t%s\n", conf.inhibit_autocalib ? "Enabled" : "Disabled");
-        fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", conf.inhibit_on_lid_closed ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", conf.inhibit_calib_on_lid_closed ? "Enabled" : "Disabled");
         fprintf(log_file, "* Dim keyboard:\t\t%s\n", conf.dim_kbd ? "Enabled" : "Disabled");
         
         fprintf(log_file, "\n### GAMMA ###\n");

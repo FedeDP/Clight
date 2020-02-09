@@ -1,7 +1,7 @@
 #include "bus.h"
 #include "my_math.h"
 
-enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, INHIBIT = 0x08, LID = 0x10 };
+enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, LID = 0x08 };
 
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static void init_kbd_backlight(void);
@@ -19,7 +19,6 @@ static void dimmed_callback(void);
 static void time_callback(int old_val, int is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_current_timeout(void);
-static void on_inbhibit_update(void);
 static void on_lid_update(void);
 static void pause_mod(enum backlight_pause type);
 static void resume_mod(enum backlight_pause type);
@@ -47,7 +46,6 @@ static void init(void) {
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);
     M_SUB(LID_UPD);
-    M_SUB(INHIBIT_UPD);
     M_SUB(DAYTIME_UPD);
     M_SUB(IN_EVENT_UPD);
     M_SUB(BL_TO_REQ);
@@ -125,9 +123,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         time_callback(up->old, MSG_TYPE() == IN_EVENT_UPD);
         break;
     }
-    case INHIBIT_UPD:
-        on_inbhibit_update();
-        break;
     case LID_UPD:
         on_lid_update();
         break;
@@ -181,9 +176,6 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     switch (MSG_TYPE()) {
     case DISPLAY_UPD:
         dimmed_callback();
-        break;
-    case INHIBIT_UPD:
-        on_inbhibit_update();
         break;
     case LID_UPD:
         on_lid_update();
@@ -408,7 +400,7 @@ static void time_callback(int old_val, int is_event) {
 }
 
 /* Callback on SensorChanged clightd signal */
-static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+static int on_sensor_change(sd_bus_message *m, UNUSED void *userdata, sd_bus_error *ret_error) {
     int new_sensor_avail = is_sensor_available();
     if (new_sensor_avail != sensor_available) {
         sensor_available = new_sensor_avail;
@@ -430,22 +422,8 @@ static inline int get_current_timeout(void) {
     return conf.timeout[state.ac_state][state.day_time];
 }
 
-static void on_inbhibit_update(void) {
-    if (conf.inhibit_autocalib && state.inhibited) {
-        pause_mod(INHIBIT);
-    } else {
-        /* 
-         * Always resume: this is needed
-         * in case INTERFACE disables conf.inhibit_autocalib
-         * while we are inhibited.
-         * Note that it won't do anything if we were not inhibited.
-         */
-        resume_mod(INHIBIT);
-    }
-}
-
 static void on_lid_update(void) {
-    if (conf.inhibit_on_lid_closed && state.lid_state == CLOSED) {
+    if (conf.inhibit_calib_on_lid_closed && state.lid_state) {
         pause_mod(LID);
     } else {
         resume_mod(LID);

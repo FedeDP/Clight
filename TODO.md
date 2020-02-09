@@ -9,6 +9,7 @@
 - [x] Bugfix: properly clamp compensated_br between 0 and 1 before setting new backlight
 - [x] Bugfix: Properly set 0.0 backlight level if shutter_threshold is 0.0 (>= instead of >)
 - [x] Bugfix: set_new_backlight should take current ambient_br * conf.num_points (that is no more fixed to 10!)
+- [x] Drop inhibit_autocalib (to be demanded to inhibit_bl custom module)
 
 ### UPower
 - [x] Improvement: only start Upower module on laptops -> "LidIsPresent" property?
