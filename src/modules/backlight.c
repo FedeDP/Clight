@@ -4,6 +4,7 @@
 enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, LID = 0x08 };
 
 static void receive_paused(const msg_t *const msg, const void* userdata);
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void init_kbd_backlight(void);
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer);
@@ -39,7 +40,7 @@ MODULE("BACKLIGHT");
 static void init(void) {
     capture_req.capture.reset_timer = true;
     
-    /* Compute polynomial best-fit parameters */
+    /* Compute polynomial best-fit parameters for each loaded sensor config */
     polynomialfit(ON_AC);
     polynomialfit(ON_BATTERY);
 
@@ -72,7 +73,7 @@ static void init(void) {
     if (!sensor_available) {
         pause_mod(SENSOR);
     }
-    if (conf.no_auto_calib) {
+    if (conf.bl_conf.no_auto_calib) {
         /*
          * If automatic calibration is disabled, we need to ensure to start
          * from a well known backlight level for DIMMER to correctly work.
@@ -81,7 +82,7 @@ static void init(void) {
          * Cannot publish a BL_REQ as BACKLIGHT get paused.
          */
         set_backlight_level(1.0, false, 0, 0);
-        if (!conf.no_keyboard_bl) {
+        if (!conf.bl_conf.no_keyboard_bl) {
             set_keyboard_level(0.0);
         }
         pause_mod(AUTOCALIB);
@@ -93,7 +94,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.no_backlight && state.day_time != -1 && state.ac_state != -1;
+    return !conf.bl_conf.no_backlight && state.day_time != -1 && state.ac_state != -1;
 }
 
 static void destroy(void) {
@@ -128,7 +129,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
-        interface_timeout_callback(up);
+        if (VALIDATE_REQ(up)) {
+            interface_timeout_callback(up);
+        }
         break;
     }
     case CAPTURE_REQ: {
@@ -174,16 +177,25 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     /* In paused state we have deregistered our fd, thus we can only receive PubSub messages */
     switch (MSG_TYPE()) {
+    case UPOWER_UPD:
+        upower_callback();
+        break;    
     case DISPLAY_UPD:
         dimmed_callback();
         break;
+    case IN_EVENT_UPD:
+    case DAYTIME_UPD: {
+        daytime_upd *up = (daytime_upd *)MSG_DATA();
+        time_callback(up->old, MSG_TYPE() == IN_EVENT_UPD);
+        break;
+    }
     case LID_UPD:
         on_lid_update();
         break;
-    case CURVE_REQ: {
-        curve_upd *up = (curve_upd *)MSG_DATA();
+    case BL_TO_REQ: {
+        timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            interface_curve_callback(up);
+            interface_timeout_callback(up);
         }
         break;
     }
@@ -192,6 +204,13 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         /* In paused state check that we're not dimmed/dpms and sensor is available */
         if (VALIDATE_REQ(up) && !state.display_state && sensor_available) {
             do_capture(up->reset_timer);
+        }
+        break;
+    }
+    case CURVE_REQ: {
+        curve_upd *up = (curve_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            interface_curve_callback(up);
         }
         break;
     }
@@ -223,17 +242,49 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     }
 }
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {    
+    int r = -EINVAL;
+    if (!strcmp(member, "GetMaxBrightness")) {
+        r = sd_bus_message_read(reply, "i", &max_kbd_backlight);
+    } else if (!strcmp(member, "IsAvailable")) {        
+        const char *sensor = NULL;
+        r = sd_bus_message_read(reply, "sb", &sensor, userdata);
+        int is_avail = *((int *)userdata);
+        if (r >= 0 && is_avail) {
+            DEBUG("Sensor '%s' is now available.\n", sensor);
+        }
+    } else if (!strcmp(member, "SetAll")) {
+        r = sd_bus_message_read(reply, "b", userdata);
+    } else if (!strcmp(member, "Capture")) {
+        const char *sensor = NULL;
+        const double *intensity = NULL;
+        size_t length = 0;
+        r = sd_bus_message_read(reply, "s", &sensor);
+        r += sd_bus_message_read_array(reply, 'd', (const void **)&intensity, &length);
+        if (r >= 0) {
+            const int num_captures = length / sizeof(double);
+            amb_msg.bl.old = state.ambient_br;
+            state.ambient_br = compute_average(intensity, num_captures);
+            DEBUG("Captured [%d/%d] from '%s'. Ambient brightness: %lf.\n", num_captures, 
+                  conf.sens_conf.num_captures[state.ac_state], 
+                  sensor, state.ambient_br);
+            amb_msg.bl.new = state.ambient_br;
+            M_PUB(&amb_msg);
+        }
+    }
+    return r;
+}
+
 static void init_kbd_backlight(void) {
-    SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
-    int r = call(&max_kbd_backlight, "i", &kbd_args, NULL);
+    SYSBUS_ARG_REPLY(kbd_args, parse_bus_reply, NULL, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
+    int r = call(&kbd_args, NULL);
     DEBUG("Keyboard backlight calibration %s.\n", r ? "unsupported" : "supported");
 }
 
 static int is_sensor_available(void) {
     int available = 0;
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "IsAvailable");
-
-    int r = call(&available, "sb", &args, "s", conf.dev_name);
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, &available, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "IsAvailable");
+    int r = call(&args, "s", conf.sens_conf.dev_name);
     return r == 0 && available;
 }
 
@@ -241,8 +292,8 @@ static void do_capture(bool reset_timer) {
     if (!capture_frames_brightness()) {
         /* Account for screen-emitted brightness */
         const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
-        if (compensated_br >= conf.shutter_threshold) {
-            set_new_backlight(compensated_br * (conf.num_points[state.ac_state] - 1));
+        if (compensated_br >= conf.bl_conf.shutter_threshold) {
+            set_new_backlight(compensated_br * (conf.sens_conf.num_points[state.ac_state] - 1));
             if (state.screen_comp > 0.0) {
                 INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
             } else {
@@ -262,12 +313,15 @@ static void do_capture(bool reset_timer) {
 
 static void set_new_backlight(const double perc) {
     /* y = a0 + a1x + a2x^2 */
-    const double b = state.fit_parameters[state.ac_state][0] + state.fit_parameters[state.ac_state][1] * perc + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
+    const double b = state.fit_parameters[state.ac_state][0] 
+                    + state.fit_parameters[state.ac_state][1] * perc 
+                    + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     const double new_br_pct =  clamp(b, 1, 0);
 
-    set_backlight_level(new_br_pct, !conf.no_smooth_backlight, conf.backlight_trans_step, conf.backlight_trans_timeout);
+    set_backlight_level(new_br_pct, !conf.bl_conf.no_smooth_backlight, 
+                        conf.bl_conf.backlight_trans_step, conf.bl_conf.backlight_trans_timeout);
     
-    if (!conf.no_keyboard_bl) {
+    if (!conf.bl_conf.no_keyboard_bl) {
         /*
          * keyboard backlight follows opposite curve:
          * on high ambient brightness, it must be very low (off)
@@ -284,7 +338,7 @@ static void set_keyboard_level(const double level) {
         kbd_msg.bl.old = state.current_kbd_pct;
         /* We actually need to pass an int to variadic bus() call */
         const int new_kbd_br = round(level * max_kbd_backlight);
-        if (call(NULL, NULL, &kbd_args, "i", new_kbd_br) == 0) {
+        if (call(&kbd_args, NULL, "i", new_kbd_br) == 0) {
             state.current_kbd_pct = level;
             kbd_msg.bl.new = state.current_kbd_pct;
             M_PUB(&kbd_msg);
@@ -293,11 +347,11 @@ static void set_keyboard_level(const double level) {
 }
 
 static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
-
+    int ok = 0;
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
+    
     /* Set backlight on both internal monitor (in case of laptop) and external ones */
-    int ok;
-    int r = call(&ok, "b", &args, "d(bdu)s", pct, is_smooth, step, timeout, conf.screen_path);
+    int r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, conf.bl_conf.screen_path);
     if (!r && ok) {
         bl_msg.bl.old = state.current_bl_pct;
         state.current_bl_pct = pct;
@@ -310,18 +364,10 @@ static void set_backlight_level(const double pct, const int is_smooth, const dou
 }
 
 static int capture_frames_brightness(void) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Capture");
-    double *intensity = malloc(conf.num_captures[state.ac_state] * sizeof(double));
-    int r = call(intensity, "sad", &args, "sis", conf.dev_name, conf.num_captures[state.ac_state], conf.dev_opts);
-    if (!r) {
-        amb_msg.bl.old = state.ambient_br;
-        state.ambient_br = compute_average(intensity, conf.num_captures[state.ac_state]);
-        DEBUG("Captured ambient brightness: %lf.\n", state.ambient_br);
-        amb_msg.bl.new = state.ambient_br;
-        M_PUB(&amb_msg);
-    }
-    free(intensity);
-    return r;
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Capture");
+    return call(&args, "sis", conf.sens_conf.dev_name, 
+                conf.sens_conf.num_captures[state.ac_state], 
+                conf.sens_conf.dev_opts);
 }
 
 /* Callback on upower ac state changed signal */
@@ -332,8 +378,8 @@ static void upower_callback(void) {
 /* Callback on "NoAutoCalib" bus exposed writable property */
 static void interface_autocalib_callback(bool new_val) {
     INFO("Backlight autocalibration %s.\n", new_val ? "disabled" : "enabled");
-    conf.no_auto_calib = new_val;
-    if (conf.no_auto_calib) {
+    conf.bl_conf.no_auto_calib = new_val;
+    if (conf.bl_conf.no_auto_calib) {
         pause_mod(AUTOCALIB);
     } else {
         resume_mod(AUTOCALIB);
@@ -342,17 +388,21 @@ static void interface_autocalib_callback(bool new_val) {
 
 /* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
 static void interface_curve_callback(curve_upd *up) {
-    memcpy(conf.regression_points[up->state], up->regression_points, up->num_points * sizeof(double));
-    conf.num_points[up->state] = up->num_points;
+    memcpy(conf.sens_conf.regression_points[up->state], 
+           up->regression_points, up->num_points * sizeof(double));
+    conf.sens_conf.num_points[up->state] = up->num_points;
     polynomialfit(up->state);
 }
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(timeout_upd *up) {
-    if (up->state >= ON_AC && up->state < SIZE_AC && up->daytime >= DAY && up->daytime < SIZE_STATES) {
+    /* Validate request: BACKLIGHT is the only module that require valued daytime */
+    if (up->daytime >= DAY && up->daytime < SIZE_STATES) {
         const int old = get_current_timeout();
-        conf.timeout[up->state][up->daytime] = up->new;
-        if (up->state == state.ac_state && (up->daytime == state.day_time || (state.in_event && up->daytime == IN_EVENT))) {
+        conf.bl_conf.timeout[up->state][up->daytime] = up->new;
+        if (up->state == state.ac_state && 
+            (up->daytime == state.day_time || (state.in_event && up->daytime == IN_EVENT))) {
+            
             reset_timer(bl_fd, old, get_current_timeout());
         }
     } else {
@@ -368,7 +418,7 @@ static void dimmed_callback(void) {
         pause_mod(DISPLAY);
 
         /* Switch off keyboard if requested */
-        if (conf.dim_kbd) {
+        if (conf.bl_conf.dim_kbd) {
             old_kbd_level = state.current_kbd_pct;
             set_keyboard_level(0.0);
         }
@@ -388,19 +438,19 @@ static void time_callback(int old_val, int is_event) {
     int old_timeout;
     if (!is_event) {
         /* A state.time change happened, react! */
-        old_timeout = conf.timeout[state.ac_state][old_val];
+        old_timeout = conf.bl_conf.timeout[state.ac_state][old_val];
     } else {
         /* A state.in_event change happened, react!
          * If state.in_event is now true, it means we were in state.time timeout.
          * Else, an event ended, thus we were IN_EVENT.
          */
-        old_timeout = conf.timeout[state.ac_state][state.in_event ? state.day_time : IN_EVENT];
+        old_timeout = conf.bl_conf.timeout[state.ac_state][state.in_event ? state.day_time : IN_EVENT];
     }
     reset_timer(bl_fd, old_timeout, get_current_timeout());
 }
 
 /* Callback on SensorChanged clightd signal */
-static int on_sensor_change(sd_bus_message *m, UNUSED void *userdata, sd_bus_error *ret_error) {
+static int on_sensor_change(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     int new_sensor_avail = is_sensor_available();
     if (new_sensor_avail != sensor_available) {
         sensor_available = new_sensor_avail;
@@ -417,13 +467,13 @@ static int on_sensor_change(sd_bus_message *m, UNUSED void *userdata, sd_bus_err
 
 static inline int get_current_timeout(void) {
     if (state.in_event) {
-        return conf.timeout[state.ac_state][IN_EVENT];
+        return conf.bl_conf.timeout[state.ac_state][IN_EVENT];
     }
-    return conf.timeout[state.ac_state][state.day_time];
+    return conf.bl_conf.timeout[state.ac_state][state.day_time];
 }
 
 static void on_lid_update(void) {
-    if (conf.inhibit_calib_on_lid_closed && state.lid_state) {
+    if (conf.bl_conf.inhibit_calib_on_lid_closed && state.lid_state) {
         pause_mod(LID);
     } else {
         resume_mod(LID);

@@ -65,7 +65,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 /*
  * Call a method on bus and store its result of type userptr_type in userptr.
  */
-int call(void *userptr, const char *userptr_type, const struct bus_args *a, const char *signature, ...) {
+int call(const bus_args *a, const char *signature, ...) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
     GET_BUS(a);
@@ -75,7 +75,7 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         goto finish;
     }
 
-    r = sd_bus_message_set_expect_reply(m, userptr != NULL);
+    r = sd_bus_message_set_expect_reply(m, a->reply_cb != NULL);
     if (check_err(&r, &error, a->caller)) {
         goto finish;
     }
@@ -154,35 +154,12 @@ int call(void *userptr, const char *userptr_type, const struct bus_args *a, cons
         va_end(args);
     }
     /* Check if we need to wait for a response message */
-    if (userptr != NULL) {
+    if (a->reply_cb != NULL) {
         r = sd_bus_call(tmp, m, 0, &error, &reply);
         if (check_err(&r, &error, a->caller)) {
             goto finish;
         }
-
-        /*
-         * Fix for new Clightd interface for Sensor.Capture and Sensor.IsAvailable:
-         * they will now return used interface too. We don't need it.
-         */
-        if (strlen(userptr_type) > 1 && !strcmp(a->service, CLIGHTD_SERVICE)) {
-            const char *unused = NULL;
-            sd_bus_message_read(reply, "s", &unused);
-            userptr_type++;
-        }
-        if (userptr_type[0] == 'o' || userptr_type[0] == 's') {
-            const char *obj = NULL;
-            r = sd_bus_message_read(reply, &userptr_type[0], &obj);
-            if (r >= 0) {
-                strncpy(userptr, obj, PATH_MAX);
-            }
-        } else if (userptr_type[0] == 'a') {
-            const void *data = NULL;
-            size_t length;
-            r = sd_bus_message_read_array(reply, userptr_type[1], &data, &length);
-            memcpy(userptr, data, length);
-        } else {
-            r = sd_bus_message_read(reply, userptr_type, userptr);
-        }
+        r = a->reply_cb(reply, a->member, a->reply_userdata);
     } else {
         r = sd_bus_send(tmp, m, NULL);
     }
@@ -196,7 +173,7 @@ finish:
 /*
  * Add a match on bus on certain signal for cb callback
  */
-int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
+int add_match(const bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     GET_BUS(a);
 
 #if LIBSYSTEMD_VERSION >= 237
@@ -212,7 +189,7 @@ int add_match(const struct bus_args *a, sd_bus_slot **slot, sd_bus_message_handl
 /*
  * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
  */
-int set_property(const struct bus_args *a, const char type, const void *value) {
+int set_property(const bus_args *a, const char type, const void *value) {
     GET_BUS(a);
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int r = 0;
@@ -236,7 +213,7 @@ int set_property(const struct bus_args *a, const char type, const void *value) {
 /*
  * Get a property of type "type" with size "size" into userptr.
  */
-int get_property(const struct bus_args *a, const char *type, void *userptr, int size) {
+int get_property(const bus_args *a, const char *type, void *userptr, int size) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
     GET_BUS(a);

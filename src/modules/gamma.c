@@ -7,6 +7,7 @@ static void check_gamma(void);
 static void get_gamma_events(const time_t *now, const float lat, const float lon, int day);
 static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
 static void reset_gamma(void);
@@ -57,9 +58,9 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.no_gamma && 
+    return !conf.gamma_conf.no_gamma && 
            ((state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) ||
-           (strlen(conf.day_events[SUNRISE]) && strlen(conf.day_events[SUNSET])));
+           (strlen(conf.gamma_conf.day_events[SUNRISE]) && strlen(conf.gamma_conf.day_events[SUNSET])));
 }
 
 static void destroy(void) {
@@ -84,9 +85,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         evt_upd *up = (evt_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             if (MSG_TYPE() == SUNRISE_REQ) {
-                strncpy(conf.day_events[SUNRISE], up->event, sizeof(conf.day_events[SUNRISE]));
+                strncpy(conf.gamma_conf.day_events[SUNRISE], up->event, sizeof(conf.gamma_conf.day_events[SUNRISE]));
             } else {
-                strncpy(conf.day_events[SUNSET], up->event, sizeof(conf.day_events[SUNSET]));
+                strncpy(conf.gamma_conf.day_events[SUNSET], up->event, sizeof(conf.gamma_conf.day_events[SUNSET]));
             }
             reset_gamma();
         }
@@ -167,8 +168,9 @@ static void check_gamma(void) {
      * For long_transitioning, only call it when starting transition,
      * and at the end (to be sure to correctly set desired gamma and to avoid any sync issue)
      */
-    if (!long_transitioning && !conf.ambient_gamma) {
-        set_temp(conf.temp[state.day_time], &t, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout);
+    if (!long_transitioning && !conf.gamma_conf.ambient_gamma) {
+        set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth_gamma, 
+                 conf.gamma_conf.gamma_trans_step, conf.gamma_conf.gamma_trans_timeout);
     }
 
     /* desired gamma temp has been set. Set new GAMMA timer */
@@ -193,10 +195,10 @@ static void get_gamma_events(const time_t *now, const float lat, const float lon
     const time_t old_events[SIZE_EVENTS] = { state.day_events[SUNRISE], state.day_events[SUNSET] };
 
     /* only every new day, after today's last event (ie: sunset + event_duration) */
-    if (*now + 1 >= state.day_events[SUNSET] + conf.event_duration) {
+    if (*now + 1 >= state.day_events[SUNSET] + conf.gamma_conf.event_duration) {
         if (calculate_sunset(lat, lon, &t, day) == 0) {
             /* If today's sunset was before now, compute tomorrow */
-            if (*now + 1 >= t + conf.event_duration) {
+            if (*now + 1 >= t + conf.gamma_conf.event_duration) {
                 /*
                  * we're between today's sunset and tomorrow sunrise.
                  * rerun function with tomorrow.
@@ -259,7 +261,7 @@ static void check_next_event(const time_t *now) {
     } else {
         state.day_time = DAY;
     }
-    target_event = (*now + 1 < (state.day_events[SUNRISE] + conf.event_duration)) ? SUNRISE : SUNSET;    
+    target_event = (*now + 1 < (state.day_events[SUNRISE] + conf.gamma_conf.event_duration)) ? SUNRISE : SUNSET;    
 }
 
 /*
@@ -272,38 +274,46 @@ static void check_next_event(const time_t *now) {
  * 30mins after event to remove EVENT state.
  */
 static void check_state(const time_t *now) {
-    if (labs(state.day_events[target_event] - (*now + 1)) <= conf.event_duration) {
+    if (labs(state.day_events[target_event] - (*now + 1)) <= conf.gamma_conf.event_duration) {
         if (state.day_events[target_event] > *now + 1) {
             event_time_range = 0; // next timer is on next_event
         } else {
-            event_time_range = conf.event_duration; // next timer is when leaving event
+            event_time_range = conf.gamma_conf.event_duration; // next timer is when leaving event
         }
         state.in_event = 1;
         DEBUG("Currently inside an event.\n");
     } else {
-        event_time_range = -conf.event_duration; // next timer is entering next event
+        event_time_range = -conf.gamma_conf.event_duration; // next timer is entering next event
         state.in_event = 0;
     }
 }
 
+
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
+    int r = -EINVAL;
+    if (!strcmp(member, "Set")) {
+        r = sd_bus_message_read(reply, "b", userdata);
+    }
+    return r;
+}
+
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout) {
     int ok;
-    
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Set");
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Set");
     
     /* Compute long transition steps and timeouts (if outside of event, fallback to normal transition) */
-    if (conf.gamma_long_transition && now && state.in_event) {
+    if (conf.gamma_conf.gamma_long_transition && now && state.in_event) {
         smooth = 1;
         if (event_time_range == 0) {
             /* Remaining time in first half + second half of transition */
-            timeout = (state.day_events[target_event] - *now) + conf.event_duration;
-            temp = conf.temp[!state.day_time]; // use correct temp, ie the one for next event
+            timeout = (state.day_events[target_event] - *now) + conf.gamma_conf.event_duration;
+            temp = conf.gamma_conf.temp[!state.day_time]; // use correct temp, ie the one for next event
         } else {
             /* Remaining time in second half of transition */
-            timeout = conf.event_duration - (*now - state.day_events[target_event]);
+            timeout = conf.gamma_conf.event_duration - (*now - state.day_events[target_event]);
         }
         /* Temperature difference */
-        step = abs(conf.temp[DAY] - conf.temp[NIGHT]);        
+        step = abs(conf.gamma_conf.temp[DAY] - conf.gamma_conf.temp[NIGHT]);        
         /* Compute each step size with a gamma_trans_timeout of 10s */
         step /= (((double)timeout) / GAMMA_LONG_TRANS_TIMEOUT);
         /* force gamma_trans_timeout to 10s (in ms) */
@@ -314,7 +324,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         long_transitioning = false;
     }
     
-    int r = call(&ok, "b", &args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);
+    int r = call(&args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);
     if (!r && ok) {
         temp_msg.temp.old = state.current_temp;
         state.current_temp = temp;
@@ -324,7 +334,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         temp_msg.temp.timeout = timeout;
         temp_msg.temp.daytime = state.day_time;
         M_PUB(&temp_msg);
-        if (!long_transitioning && conf.no_smooth_gamma) {
+        if (!long_transitioning && conf.gamma_conf.no_smooth_gamma) {
             INFO("%d gamma temp set.\n", temp);
         } else {
             INFO("%s transition to %d gamma temp started.\n", long_transitioning ? "Long" : "Normal", temp);
@@ -333,15 +343,18 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
 }
 
 static void ambient_callback(void) {
-    if (conf.ambient_gamma) {
+    if (conf.gamma_conf.ambient_gamma) {
         /* 
          * Note that conf.temp is not constant (it can be changed through bus api),
          * thus we have to always compute these ones.
          */
-        const int diff = abs(conf.temp[DAY] - conf.temp[NIGHT]);
-        const int min_temp = conf.temp[NIGHT] < conf.temp[DAY] ? conf.temp[NIGHT] : conf.temp[DAY]; 
+        const int diff = abs(conf.gamma_conf.temp[DAY] - conf.gamma_conf.temp[NIGHT]);
+        const int min_temp = conf.gamma_conf.temp[NIGHT] < conf.gamma_conf.temp[DAY] ? 
+                            conf.gamma_conf.temp[NIGHT] : conf.gamma_conf.temp[DAY]; 
+        
         const int ambient_temp = (diff * state.current_bl_pct) + min_temp;
-        set_temp(ambient_temp, NULL, !conf.no_smooth_gamma, conf.gamma_trans_step, conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
+        set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth_gamma, 
+                 conf.gamma_conf.gamma_trans_step, conf.gamma_conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
     }
 }
 
@@ -352,8 +365,8 @@ static void reset_gamma(void) {
 }
 
 static void interface_callback(temp_upd *req) {
-    conf.temp[req->daytime] = req->new;
-    if (!conf.ambient_gamma && req->daytime == state.day_time) {
-        set_temp(conf.temp[req->daytime], NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
+    conf.gamma_conf.temp[req->daytime] = req->new;
+    if (!conf.gamma_conf.ambient_gamma && req->daytime == state.day_time) {
+        set_temp(req->new, NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
     }
 }

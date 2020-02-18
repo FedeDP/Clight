@@ -19,7 +19,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.no_dimmer || !conf.no_dpms;
+    return !conf.dim_conf.no_dimmer || !conf.dpms_conf.no_dpms;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
@@ -34,7 +34,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 state.display_state |= DISPLAY_DIMMED;
                 DEBUG("Entering dimmed state...\n");
                 old_pct = state.current_bl_pct;
-                dim_backlight(conf.dimmer_pct);
+                dim_backlight(conf.dim_conf.dimmer_pct);
             } else if (up->new == DISPLAY_OFF) {
                 state.display_state |= DISPLAY_OFF;
                 DEBUG("Entering dpms state...\n");
@@ -73,13 +73,13 @@ static void dim_backlight(const double pct) {
     if (pct >= state.current_bl_pct) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
-        publish_bl_req(pct, !conf.no_smooth_dimmer[ENTER], conf.dimmer_trans_step[ENTER], conf.dimmer_trans_timeout[ENTER]);
+        publish_bl_req(pct, !conf.dim_conf.no_smooth_dimmer[ENTER], conf.dim_conf.dimmer_trans_step[ENTER], conf.dim_conf.dimmer_trans_timeout[ENTER]);
     }
 }
 
 /* restore previous backlight level */
 static void restore_backlight(const double pct) {
-    publish_bl_req(pct, !conf.no_smooth_dimmer[EXIT], conf.dimmer_trans_step[EXIT], conf.dimmer_trans_timeout[EXIT]);
+    publish_bl_req(pct, !conf.dim_conf.no_smooth_dimmer[EXIT], conf.dim_conf.dimmer_trans_step[EXIT], conf.dim_conf.dimmer_trans_timeout[EXIT]);
 }
 
 static void publish_bl_req(const double pct, const bool smooth, const double step, const int to) {
@@ -92,5 +92,5 @@ static void publish_bl_req(const double pct, const bool smooth, const double ste
 
 static void set_dpms(bool enable) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Set");
-    call(NULL, NULL, &args, "ssi", state.display, state.xauthority, enable);
+    call(&args, "ssi", state.display, state.xauthority, enable);
 }

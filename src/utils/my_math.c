@@ -24,7 +24,7 @@ double radToDeg(double angleRad) {
 /*
  * Compute mean and normalize between 0-1
  */
-double compute_average(double *intensity, int num) {
+double compute_average(const double *intensity, int num) {
     double mean = gsl_stats_mean(intensity, 1, num);
     return mean;
 }
@@ -36,19 +36,19 @@ void polynomialfit(enum ac_states s) {
     double chisq;
     int i, j;
 
-    gsl_matrix *X = gsl_matrix_alloc(conf.num_points[s], DEGREE);
-    gsl_vector *y = gsl_vector_alloc(conf.num_points[s]);
+    gsl_matrix *X = gsl_matrix_alloc(conf.sens_conf.num_points[s], DEGREE);
+    gsl_vector *y = gsl_vector_alloc(conf.sens_conf.num_points[s]);
     gsl_vector *c = gsl_vector_alloc(DEGREE);
     gsl_matrix *cov = gsl_matrix_alloc(DEGREE, DEGREE);
 
-    for(i = 0; i < conf.num_points[s]; i++) {
+    for(i = 0; i < conf.sens_conf.num_points[s]; i++) {
         for(j = 0; j < DEGREE; j++) {
             gsl_matrix_set(X, i, j, pow(i, j));
         }
-        gsl_vector_set(y, i, conf.regression_points[s][i]);
+        gsl_vector_set(y, i, conf.sens_conf.regression_points[s][i]);
     }
 
-    gsl_multifit_linear_workspace *ws = gsl_multifit_linear_alloc(conf.num_points[s], DEGREE);
+    gsl_multifit_linear_workspace *ws = gsl_multifit_linear_alloc(conf.sens_conf.num_points[s], DEGREE);
     gsl_multifit_linear(X, y, c, cov, &chisq, ws);
 
     /* store results */
@@ -98,8 +98,8 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     timeinfo->tm_sec = 0;
 
     /* If user provided a sunrise/sunset time, use them */
-    if (strlen(conf.day_events[event]) > 0) {
-        strptime(conf.day_events[event], "%R", timeinfo);
+    if (strlen(conf.gamma_conf.day_events[event]) > 0) {
+        strptime(conf.gamma_conf.day_events[event], "%R", timeinfo);
         *tt = mktime(timeinfo);
         return 0;
     }

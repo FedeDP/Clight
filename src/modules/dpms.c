@@ -13,7 +13,7 @@ DECLARE_MSG(display_req, DISPLAY_REQ);
 MODULE("DPMS");
 
 static void init(void) {
-    int r = idle_init(client, &slot, conf.dpms_timeout[state.ac_state], on_new_idle);
+    int r = idle_init(client, &slot, conf.dpms_conf.dpms_timeout[state.ac_state], on_new_idle);
     if (r == 0) {
         M_SUB(UPOWER_UPD);
         M_SUB(INHIBIT_UPD);
@@ -30,7 +30,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.no_dpms && state.ac_state != -1;
+    return !conf.dpms_conf.no_dpms && state.ac_state != -1;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
@@ -44,7 +44,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case DPMS_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            conf.dpms_timeout[up->state] = up->new;
+            conf.dpms_conf.dpms_timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
                 upower_timeout_callback();
             }
@@ -54,7 +54,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case SIMULATE_REQ: {
         /* Validation is useless here; only for coherence */
         if (VALIDATE_REQ((void *)msg->ps_msg->message)) {
-            idle_client_reset(client, conf.dpms_timeout[state.ac_state]);
+            idle_client_reset(client, conf.dpms_conf.dpms_timeout[state.ac_state]);
         }
         break;
     }
@@ -74,7 +74,7 @@ static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdat
     case DPMS_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            conf.dpms_timeout[up->state] = up->new;
+            conf.dpms_conf.dpms_timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
                 upower_timeout_callback();
             }
@@ -114,7 +114,7 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
 
 /* Reset dimmer timeout */
 static void upower_timeout_callback(void) {
-    idle_set_timeout(client, conf.dpms_timeout[state.ac_state]);
+    idle_set_timeout(client, conf.dpms_conf.dpms_timeout[state.ac_state]);
 }
 
 /*
@@ -124,7 +124,7 @@ static void upower_timeout_callback(void) {
 static void inhibit_callback(void) {
     if (!state.inhibited) {
         DEBUG("Being resumed.\n");
-        idle_client_start(client, conf.dpms_timeout[state.ac_state]);
+        idle_client_start(client, conf.dpms_conf.dpms_timeout[state.ac_state]);
         m_unbecome();
     } else {
         DEBUG("Being paused.\n");

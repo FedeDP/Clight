@@ -10,6 +10,18 @@
 - [x] Bugfix: Properly set 0.0 backlight level if shutter_threshold is 0.0 (>= instead of >)
 - [x] Bugfix: set_new_backlight should take current ambient_br * conf.num_points (that is no more fixed to 10!)
 - [x] Drop inhibit_autocalib (to be demanded to inhibit_bl custom module)
+- [x] Bugfix: correctly manage pubsub messages when in paused state
+
+### New Conf file layout
+
+- [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }
+- [x] Split sensor-related settings from conf_t
+- [x] Move number of captures to sensor specific settings?
+- [x] Update log_conf
+- [ ] Split check_conf() in check_bl_conf... etc etc
+- [x] Fix INTERFACE: expose Conf/Backlight, conf/Gamma etc etc??
+- [x] Rename interface conf names as they are now in different paths thus we can duplicate them
+- [ ] Rename conf_t fields (they can now be repeated inside each module conf struct, eg: no_gamma/no_backlight -> bool disabled)
 
 ### UPower
 - [x] Improvement: only start Upower module on laptops -> "LidIsPresent" property?
@@ -22,9 +34,15 @@
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
 - [x] Improvement: add a "reason" field to inhibit_requests type
-- [ ] Improvement: improve bus::call() function
-- [ ] Improvement: actually read sensor_devname reported by clightd Capture call; this way users can check from DBus API which sensor has been used
+- [x] Improvement: improve bus::call() function
+- [x] Improvement: actually read sensor_devname reported by clightd Capture call; this way users can check from log which sensor has been used
 - [ ] Bugfix: fix #106
+- [x] Rework conf_t struct
+- [x] Use DEBUG loglevel instead of WARN in validations. Not that useful in production
+
+- [ ] 2 new modules: Sensor and External.
+- [ ] Sensor is responsible for sensor captures; backlight will subscribe to AMBIENT_BR_UPD messages
+- [ ] External will load external modules; it will receive load_msgs(path) -> LOAD_REQ
 
 ## 4.2
 

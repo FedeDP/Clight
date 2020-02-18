@@ -33,6 +33,6 @@ const char *topics[] = {
     "ReqContrib",
     "ReqSimulate",
     "LidState",
-    "ReqLid"
+    "ReqLid",
 };
 _Static_assert(sizeof(topics) / sizeof(*topics) == MSGS_SIZE, "Undefined topic.");
