@@ -45,10 +45,10 @@ void log_conf(void) {
         fprintf(log_file, "Starting options:\n");
         
         fprintf(log_file, "\n### BACKLIGHT ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.bl_conf.no_backlight ? "false" : "true");
-        fprintf(log_file, "* Smooth trans:\t\t%s\n", conf.bl_conf.no_smooth_backlight ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Smooth steps:\t\t%.2lf\n", conf.bl_conf.backlight_trans_step);
-        fprintf(log_file, "* Smooth timeout:\t\t%d\n", conf.bl_conf.backlight_trans_timeout);
+        fprintf(log_file, "* Enabled:\t\t%s\n", conf.bl_conf.disabled ? "false" : "true");
+        fprintf(log_file, "* Smooth trans:\t\t%s\n", conf.bl_conf.no_smooth ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Smooth steps:\t\t%.2lf\n", conf.bl_conf.trans_step);
+        fprintf(log_file, "* Smooth timeout:\t\t%d\n", conf.bl_conf.trans_timeout);
         fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.bl_conf.timeout[ON_AC][DAY], conf.bl_conf.timeout[ON_BATTERY][DAY]);
         fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.bl_conf.timeout[ON_AC][NIGHT], conf.bl_conf.timeout[ON_BATTERY][NIGHT]);
         fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.bl_conf.timeout[ON_AC][SIZE_STATES], conf.bl_conf.timeout[ON_BATTERY][SIZE_STATES]);
@@ -56,14 +56,14 @@ void log_conf(void) {
         fprintf(log_file, "* Keyboard backlight:\t\t%s\n", conf.bl_conf.no_keyboard_bl ? "Disabled" : "Enabled");
         fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.bl_conf.shutter_threshold);
         fprintf(log_file, "* Autocalibration:\t\t%s\n", conf.bl_conf.no_auto_calib ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", conf.bl_conf.inhibit_calib_on_lid_closed ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", conf.bl_conf.inhibit_on_lid_closed ? "Enabled" : "Disabled");
         fprintf(log_file, "* Dim keyboard:\t\t%s\n", conf.bl_conf.dim_kbd ? "Enabled" : "Disabled");
         
         fprintf(log_file, "\n### GAMMA ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.gamma_conf.no_gamma ? "false" : "true");
-        fprintf(log_file, "* Smooth trans:\t\t%s\n", conf.gamma_conf.no_smooth_gamma ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Smooth steps:\t\t%d\n", conf.gamma_conf.gamma_trans_step);
-        fprintf(log_file, "* Smooth timeout:\t\t%d\n", conf.gamma_conf.gamma_trans_timeout);
+        fprintf(log_file, "* Enabled:\t\t%s\n", conf.gamma_conf.disabled ? "false" : "true");
+        fprintf(log_file, "* Smooth trans:\t\t%s\n", conf.gamma_conf.no_smooth ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Smooth steps:\t\t%d\n", conf.gamma_conf.trans_step);
+        fprintf(log_file, "* Smooth timeout:\t\t%d\n", conf.gamma_conf.trans_timeout);
         fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.gamma_conf.temp[DAY]);
         fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.gamma_conf.temp[NIGHT]);
         if (conf.gamma_conf.loc.lat != LAT_UNDEFINED && conf.gamma_conf.loc.lon != LON_UNDEFINED) {
@@ -74,28 +74,28 @@ void log_conf(void) {
         fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(conf.gamma_conf.day_events[SUNRISE]) ? conf.gamma_conf.day_events[SUNRISE] : "Unset");
         fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(conf.gamma_conf.day_events[SUNSET]) ? conf.gamma_conf.day_events[SUNSET] : "Unset");
         fprintf(log_file, "* Event duration:\t\t%d\n", conf.gamma_conf.event_duration);
-        fprintf(log_file, "* Long transition:\t\t%s\n", conf.gamma_conf.gamma_long_transition ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Long transition:\t\t%s\n", conf.gamma_conf.long_transition ? "Enabled" : "Disabled");
         fprintf(log_file, "* Ambient gamma:\t\t%s\n", conf.gamma_conf.ambient_gamma ? "Enabled" : "Disabled");
         
         fprintf(log_file, "\n### DIMMER ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.dim_conf.no_dimmer ? "false" : "true");
+        fprintf(log_file, "* Enabled:\t\t%s\n", conf.dim_conf.disabled ? "false" : "true");
         fprintf(log_file, "* Smooth trans:\t\tENTER: %s, EXIT: %s\n", 
-                conf.dim_conf.no_smooth_dimmer[ENTER] ? "Disabled" : "Enabled",
-                conf.dim_conf.no_smooth_dimmer[EXIT] ? "Disabled" : "Enabled");
-        fprintf(log_file, "* Smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", conf.dim_conf.dimmer_trans_step[ENTER], conf.dim_conf.dimmer_trans_step[EXIT]);
-        fprintf(log_file, "* Smooth timeout:\t\tENTER: %d, EXIT: %d\n", conf.dim_conf.dimmer_trans_timeout[ENTER], conf.dim_conf.dimmer_trans_timeout[EXIT]);
-        fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.dim_conf.dimmer_timeout[ON_AC], conf.dim_conf.dimmer_timeout[ON_BATTERY]);
-        fprintf(log_file, "* Backlight pct:\t\t%.2lf\n", conf.dim_conf.dimmer_pct);
+                conf.dim_conf.no_smooth[ENTER] ? "Disabled" : "Enabled",
+                conf.dim_conf.no_smooth[EXIT] ? "Disabled" : "Enabled");
+        fprintf(log_file, "* Smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_step[EXIT]);
+        fprintf(log_file, "* Smooth timeout:\t\tENTER: %d, EXIT: %d\n", conf.dim_conf.trans_timeout[ENTER], conf.dim_conf.trans_timeout[EXIT]);
+        fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.dim_conf.timeout[ON_AC], conf.dim_conf.timeout[ON_BATTERY]);
+        fprintf(log_file, "* Backlight pct:\t\t%.2lf\n", conf.dim_conf.dimmed_pct);
         
         fprintf(log_file, "\n### DPMS ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.dpms_conf.no_dpms ? "false" : "true");
-        fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.dpms_conf.dpms_timeout[ON_AC], conf.dpms_conf.dpms_timeout[ON_BATTERY]);
+        fprintf(log_file, "* Enabled:\t\t%s\n", conf.dpms_conf.disabled ? "false" : "true");
+        fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.dpms_conf.timeout[ON_AC], conf.dpms_conf.timeout[ON_BATTERY]);
         
         fprintf(log_file, "\n### SCREEN ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.screen_conf.no_screen ? "false" : "true");
-        fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.screen_conf.screen_timeout[ON_AC], conf.screen_conf.screen_timeout[ON_BATTERY]);
-        fprintf(log_file, "* Contrib:\t\t%.2lf\n", conf.screen_conf.screen_contrib);
-        fprintf(log_file, "* Samples:\t\t%d\n", conf.screen_conf.screen_samples);
+        fprintf(log_file, "* Enabled:\t\t%s\n", conf.screen_conf.disabled ? "false" : "true");
+        fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.screen_conf.timeout[ON_AC], conf.screen_conf.timeout[ON_BATTERY]);
+        fprintf(log_file, "* Contrib:\t\t%.2lf\n", conf.screen_conf.contrib);
+        fprintf(log_file, "* Samples:\t\t%d\n", conf.screen_conf.samples);
         
         fprintf(log_file, "\n### SENSOR ###\n");
         fprintf(log_file, "* Captures:\t\tAC %d\tBATT %d\n", conf.sens_conf.num_captures[ON_AC], conf.sens_conf.num_captures[ON_BATTERY]);

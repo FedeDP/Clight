@@ -58,7 +58,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.gamma_conf.no_gamma && 
+    return !conf.gamma_conf.disabled && 
            ((state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) ||
            (strlen(conf.gamma_conf.day_events[SUNRISE]) && strlen(conf.gamma_conf.day_events[SUNSET])));
 }
@@ -169,8 +169,8 @@ static void check_gamma(void) {
      * and at the end (to be sure to correctly set desired gamma and to avoid any sync issue)
      */
     if (!long_transitioning && !conf.gamma_conf.ambient_gamma) {
-        set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth_gamma, 
-                 conf.gamma_conf.gamma_trans_step, conf.gamma_conf.gamma_trans_timeout);
+        set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth, 
+                 conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
     }
 
     /* desired gamma temp has been set. Set new GAMMA timer */
@@ -302,7 +302,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
     SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Set");
     
     /* Compute long transition steps and timeouts (if outside of event, fallback to normal transition) */
-    if (conf.gamma_conf.gamma_long_transition && now && state.in_event) {
+    if (conf.gamma_conf.long_transition && now && state.in_event) {
         smooth = 1;
         if (event_time_range == 0) {
             /* Remaining time in first half + second half of transition */
@@ -334,7 +334,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         temp_msg.temp.timeout = timeout;
         temp_msg.temp.daytime = state.day_time;
         M_PUB(&temp_msg);
-        if (!long_transitioning && conf.gamma_conf.no_smooth_gamma) {
+        if (!long_transitioning && conf.gamma_conf.no_smooth) {
             INFO("%d gamma temp set.\n", temp);
         } else {
             INFO("%s transition to %d gamma temp started.\n", long_transitioning ? "Long" : "Normal", temp);
@@ -353,8 +353,8 @@ static void ambient_callback(void) {
                             conf.gamma_conf.temp[NIGHT] : conf.gamma_conf.temp[DAY]; 
         
         const int ambient_temp = (diff * state.current_bl_pct) + min_temp;
-        set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth_gamma, 
-                 conf.gamma_conf.gamma_trans_step, conf.gamma_conf.gamma_trans_timeout); // force refresh (passing NULL time_t*)
+        set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth, 
+                 conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout); // force refresh (passing NULL time_t*)
     }
 }
 

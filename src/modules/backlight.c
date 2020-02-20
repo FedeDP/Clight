@@ -94,7 +94,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.bl_conf.no_backlight && state.day_time != -1 && state.ac_state != -1;
+    return !conf.bl_conf.disabled && state.day_time != -1 && state.ac_state != -1;
 }
 
 static void destroy(void) {
@@ -318,8 +318,8 @@ static void set_new_backlight(const double perc) {
                     + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
     const double new_br_pct =  clamp(b, 1, 0);
 
-    set_backlight_level(new_br_pct, !conf.bl_conf.no_smooth_backlight, 
-                        conf.bl_conf.backlight_trans_step, conf.bl_conf.backlight_trans_timeout);
+    set_backlight_level(new_br_pct, !conf.bl_conf.no_smooth, 
+                        conf.bl_conf.trans_step, conf.bl_conf.trans_timeout);
     
     if (!conf.bl_conf.no_keyboard_bl) {
         /*
@@ -473,7 +473,7 @@ static inline int get_current_timeout(void) {
 }
 
 static void on_lid_update(void) {
-    if (conf.bl_conf.inhibit_calib_on_lid_closed && state.lid_state) {
+    if (conf.bl_conf.inhibit_on_lid_closed && state.lid_state) {
         pause_mod(LID);
     } else {
         resume_mod(LID);

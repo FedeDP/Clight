@@ -43,7 +43,7 @@ bool validate_inhibit(inhibit_upd *up) {
 }
 
 bool validate_contrib(contrib_upd *up) {
-    if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_conf.screen_contrib != up->new) {
+    if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_conf.contrib != up->new) {
         return true;   
     }
     DEBUG("Failed to validate contrib request.\n");
@@ -68,9 +68,9 @@ bool validate_temp(temp_upd *up) {
     }
     
     if (up->smooth == -1) {
-        up->smooth = !conf.gamma_conf.no_smooth_gamma;
-        up->step = conf.gamma_conf.gamma_trans_step;
-        up->timeout = conf.gamma_conf.gamma_trans_timeout;
+        up->smooth = !conf.gamma_conf.no_smooth;
+        up->step = conf.gamma_conf.trans_step;
+        up->timeout = conf.gamma_conf.trans_timeout;
     }
     
     /* Validate new temp: check clighd limits */
@@ -108,9 +108,9 @@ bool validate_curve(curve_upd *up) {
 
 bool validate_backlight(bl_upd *up) {
     if (up->smooth == -1) {
-        up->smooth = !conf.bl_conf.no_smooth_backlight;
-        up->step = conf.bl_conf.backlight_trans_step;
-        up->timeout = conf.bl_conf.backlight_trans_timeout;
+        up->smooth = !conf.bl_conf.no_smooth;
+        up->step = conf.bl_conf.trans_step;
+        up->timeout = conf.bl_conf.trans_timeout;
     }
     
     if (up->new >= 0.0 && up->new <= 1.0) {

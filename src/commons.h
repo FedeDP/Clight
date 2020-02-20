@@ -31,51 +31,56 @@ typedef struct {
 } sensor_conf_t;
 
 typedef struct {
-    int no_backlight;
+    int disabled;
     int timeout[SIZE_AC][SIZE_STATES + 1];
     char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
-    int no_smooth_backlight;                // disable smooth backlight changes for BACKLIGHT module
-    double backlight_trans_step;            // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
-    int backlight_trans_timeout;            // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
+    int no_smooth;                          // disable smooth backlight changes for BACKLIGHT module
+    double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
+    int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
     int no_keyboard_bl;                     // disable keyboard backlight automatic calibration (where supported)
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
-    int inhibit_calib_on_lid_closed;        // whether clight should inhibit autocalibration on lid closed
+    int inhibit_on_lid_closed;              // whether clight should inhibit autocalibration on lid closed
     int dim_kbd;                            // whether DPMS/Dimmer should switch keyboard off
 } bl_conf_t;
 
+// typedef struct {
+//     char screen_id[PATH_MAX + 1];                       // screen syspath (eg: /sys/class/backlight/intel_backlight)
+//     double regression_points[SIZE_AC][MAX_SIZE_POINTS]; // points used for regression through libgsl
+// } mon_conf_t;
+
 typedef struct {
-    int no_gamma;
+    int disabled;
     int temp[SIZE_STATES];                  // screen temperature for each daytime
     char day_events[SIZE_EVENTS][10];       // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
-    int no_smooth_gamma;                    // disable smooth gamma changes
-    int gamma_trans_step;                   // every gamma transition step value, used when smooth GAMMA transitions are enabled
-    int gamma_trans_timeout;                // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
-    int gamma_long_transition;              // flag to enable a very long smooth transition for gamma (redshift-like)
+    int no_smooth;                          // disable smooth gamma changes
+    int trans_step;                         // every gamma transition step value, used when smooth GAMMA transitions are enabled
+    int trans_timeout;                      // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
+    int long_transition;                    // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
     loc_t loc;                              // user location as loaded by config
 } gamma_conf_t;
 
 typedef struct {
-    int no_dimmer;
-    double dimmer_pct;                      // pct of max backlight to be used while dimming
-    int dimmer_timeout[SIZE_AC];            // dimmer timeout
-    int no_smooth_dimmer[SIZE_DIM];         // disable smooth backlight changes for DIMMER module
-    double dimmer_trans_step[SIZE_DIM];     // every backlight transition step value (in pct), used when smooth DIMMER transitions are enabled
-    int dimmer_trans_timeout[SIZE_DIM];     // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
+    int disabled;
+    double dimmed_pct;                      // pct of max backlight to be used while dimming
+    int timeout[SIZE_AC];                   // dimmer timeout
+    int no_smooth[SIZE_DIM];                // disable smooth backlight changes for DIMMER module
+    double trans_step[SIZE_DIM];            // every backlight transition step value (in pct), used when smooth DIMMER transitions are enabled
+    int trans_timeout[SIZE_DIM];            // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
 } dimmer_conf_t;
 
 typedef struct {
-    int no_dpms;
-    int dpms_timeout[SIZE_AC];              // dpms timeouts
+    int disabled;
+    int timeout[SIZE_AC];                   // dpms timeouts
 } dpms_conf_t;
 
 typedef struct {
-    int no_screen;
-    int screen_timeout[SIZE_AC];            // screen timeouts
-    double screen_contrib;                  // how much does screen-emitted brightness affect ambient brightness (eg 0.1)
-    int screen_samples;                     // number of samples used to compute average screen-emitted brightness
+    int disabled;
+    int timeout[SIZE_AC];                   // screen timeouts
+    double contrib;                         // how much does screen-emitted brightness affect ambient brightness (eg 0.1)
+    int samples;                            // number of samples used to compute average screen-emitted brightness
 } screen_conf_t;
 
 /* Struct that holds global config as passed through cmdline args/config file reading */

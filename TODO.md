@@ -18,10 +18,10 @@
 - [x] Split sensor-related settings from conf_t
 - [x] Move number of captures to sensor specific settings?
 - [x] Update log_conf
-- [ ] Split check_conf() in check_bl_conf... etc etc
+- [x] Split check_conf() in check_bl_conf... etc etc
 - [x] Fix INTERFACE: expose Conf/Backlight, conf/Gamma etc etc??
 - [x] Rename interface conf names as they are now in different paths thus we can duplicate them
-- [ ] Rename conf_t fields (they can now be repeated inside each module conf struct, eg: no_gamma/no_backlight -> bool disabled)
+- [x] Rename conf_t fields (they can now be repeated inside each module conf struct, eg: no_gamma/no_backlight -> bool disabled)
 
 ### UPower
 - [x] Improvement: only start Upower module on laptops -> "LidIsPresent" property?
@@ -30,6 +30,10 @@
 - [x] Improvement: add a new "LidClosed" signal 
 - [x] Use LidClosed signal to eventually pause calibration -> eg: inhibit_on_lid_closed = true BACKLIGHT conf. Only if !docked obviously. 
 - [x] Expose LidClosed property through dbus interface
+
+### BACKLIGHT multiple-monitors curves
+- [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
+- [ ] If any conf file is found in /etc/clight/mon.d/, avoid calling SetAll, and just call Set on each serial.
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
@@ -40,18 +44,10 @@
 - [x] Rework conf_t struct
 - [x] Use DEBUG loglevel instead of WARN in validations. Not that useful in production
 
-- [ ] 2 new modules: Sensor and External.
-- [ ] Sensor is responsible for sensor captures; backlight will subscribe to AMBIENT_BR_UPD messages
-- [ ] External will load external modules; it will receive load_msgs(path) -> LOAD_REQ
+- [ ] Add a SENSOR module that will subscribe to CAPTURE_REQ messages and deliver capture_upd messages? This way, BACKLIGHT will be only doing backlight related things (ie: changing backlight levels)
 
 ## 4.2
 
 ### Generic
 - [ ] Improve inter-operability with external tools: dimmer should avoid using clight current bl as it can be changed by external tools
 - [ ] Add a way to store/reload backlight/gamma settings at clight start/stop
-
-## 4.X
-
-### BACKLIGHT multiple-monitors curves
-- [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
-- [ ] If any conf file is found in /etc/clight/mon.d/, avoid calling SetAll, and just call Set on each serial.

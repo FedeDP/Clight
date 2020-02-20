@@ -39,10 +39,10 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_t *bl = config_lookup(cfg, "backlight");
     if (bl) {
         const char *screendev;
-        config_setting_lookup_bool(bl, "disabled", &bl_conf->no_backlight);
-        config_setting_lookup_bool(bl, "no_smooth_transition", &bl_conf->no_smooth_backlight);
-        config_setting_lookup_float(bl, "trans_step", &bl_conf->backlight_trans_step);
-        config_setting_lookup_int(bl, "trans_timeout", &bl_conf->backlight_trans_timeout);
+        config_setting_lookup_bool(bl, "disabled", &bl_conf->disabled);
+        config_setting_lookup_bool(bl, "no_smooth_transition", &bl_conf->no_smooth);
+        config_setting_lookup_float(bl, "trans_step", &bl_conf->trans_step);
+        config_setting_lookup_int(bl, "trans_timeout", &bl_conf->trans_timeout);
         config_setting_lookup_float(bl, "shutter_threshold", &bl_conf->shutter_threshold);
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
         config_setting_lookup_bool(bl, "no_kdb", &bl_conf->no_keyboard_bl);
@@ -50,7 +50,7 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         if (config_setting_lookup_string(bl, "screen_sysname", &screendev) == CONFIG_TRUE) {
             strncpy(bl_conf->screen_path, screendev, sizeof(bl_conf->screen_path) - 1);
         }
-        config_setting_lookup_bool(bl, "inhibit_on_lid_closed", &bl_conf->inhibit_calib_on_lid_closed);
+        config_setting_lookup_bool(bl, "inhibit_on_lid_closed", &bl_conf->inhibit_on_lid_closed);
         
         config_setting_t *timeouts;
         
@@ -137,14 +137,14 @@ static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     if (gamma) {
         const char *sunrise, *sunset;
         
-        config_setting_lookup_bool(gamma, "disabled", &gamma_conf->no_gamma);
-        config_setting_lookup_bool(gamma, "no_smooth_transition", &gamma_conf->no_smooth_gamma);
-        config_setting_lookup_int(gamma, "trans_step", &gamma_conf->gamma_trans_step);
-        config_setting_lookup_int(gamma, "trans_timeout", &gamma_conf->gamma_trans_timeout);
+        config_setting_lookup_bool(gamma, "disabled", &gamma_conf->disabled);
+        config_setting_lookup_bool(gamma, "no_smooth_transition", &gamma_conf->no_smooth);
+        config_setting_lookup_int(gamma, "trans_step", &gamma_conf->trans_step);
+        config_setting_lookup_int(gamma, "trans_timeout", &gamma_conf->trans_timeout);
         config_setting_lookup_float(gamma, "latitude", &gamma_conf->loc.lat);
         config_setting_lookup_float(gamma, "longitude", &gamma_conf->loc.lon);
         config_setting_lookup_int(gamma, "event_duration", &gamma_conf->event_duration);
-        config_setting_lookup_bool(gamma, "long_transition", &gamma_conf->gamma_long_transition);
+        config_setting_lookup_bool(gamma, "long_transition", &gamma_conf->long_transition);
         config_setting_lookup_bool(gamma, "ambient_gamma", &gamma_conf->ambient_gamma);
         
         if (config_setting_lookup_string(gamma, "sunrise", &sunrise) == CONFIG_TRUE) {
@@ -169,15 +169,15 @@ static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
 static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
     config_setting_t *dim = config_lookup(cfg, "dimmer");
     if (dim) {
-        config_setting_lookup_bool(dim, "disabled", &dim_conf->no_dimmer);
-        config_setting_lookup_float(dim, "dimmed_pct", &dim_conf->dimmer_pct);
+        config_setting_lookup_bool(dim, "disabled", &dim_conf->disabled);
+        config_setting_lookup_float(dim, "dimmed_pct", &dim_conf->dimmed_pct);
         
         config_setting_t *points, *timeouts;
         /* Load no_smooth_dimmer options */
         if ((points = config_setting_get_member(dim, "no_smooth_transition"))) {
             if (config_setting_length(points) == SIZE_DIM) {
                 for (int i = 0; i < SIZE_DIM; i++) {
-                    dim_conf->no_smooth_dimmer[i] = config_setting_get_float_elem(points, i);
+                    dim_conf->no_smooth[i] = config_setting_get_float_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'no_smooth_transition' array elements.\n");
@@ -188,7 +188,7 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
         if ((points = config_setting_get_member(dim, "trans_steps"))) {
             if (config_setting_length(points) == SIZE_DIM) {
                 for (int i = 0; i < SIZE_DIM; i++) {
-                    dim_conf->dimmer_trans_step[i] = config_setting_get_float_elem(points, i);
+                    dim_conf->trans_step[i] = config_setting_get_float_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'trans_steps' array elements.\n");
@@ -199,7 +199,7 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
         if ((points = config_setting_get_member(dim, "trans_timeouts"))) {
             if (config_setting_length(points) == SIZE_DIM) {
                 for (int i = 0; i < SIZE_DIM; i++) {
-                    dim_conf->dimmer_trans_timeout[i] = config_setting_get_int_elem(points, i);
+                    dim_conf->trans_timeout[i] = config_setting_get_int_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'trans_timeouts' array elements.\n");
@@ -210,7 +210,7 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
         if ((timeouts = config_setting_get_member(dim, "timeouts"))) {
             if (config_setting_length(timeouts) == SIZE_AC) {
                 for (int i = 0; i < SIZE_AC; i++) {
-                    dim_conf->dimmer_timeout[i] = config_setting_get_int_elem(timeouts, i);
+                    dim_conf->timeout[i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'timeouts' array elements.\n");
@@ -222,7 +222,7 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
 static void load_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf) {
     config_setting_t *dpms = config_lookup(cfg, "dpms");
     if (dpms) {
-        config_setting_lookup_bool(dpms, "disabled", &dpms_conf->no_dpms);
+        config_setting_lookup_bool(dpms, "disabled", &dpms_conf->disabled);
         
         config_setting_t *timeouts;
         
@@ -230,7 +230,7 @@ static void load_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf) {
         if ((timeouts = config_setting_get_member(dpms, "timeouts"))) {
             if (config_setting_length(timeouts) == SIZE_AC) {
                 for (int i = 0; i < SIZE_AC; i++) {
-                    dpms_conf->dpms_timeout[i] = config_setting_get_int_elem(timeouts, i);
+                    dpms_conf->timeout[i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
                 WARN("Wrong number of dpms 'timeouts' array elements.\n");
@@ -242,15 +242,15 @@ static void load_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf) {
 static void load_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
     config_setting_t *screen = config_lookup(cfg, "screen");
     if (screen) {
-        config_setting_lookup_bool(screen, "disabled", &screen_conf->no_screen);
-        config_setting_lookup_float(screen, "contrib", &screen_conf->screen_contrib);
-        config_setting_lookup_int(screen, "num_samples", &screen_conf->screen_samples);
+        config_setting_lookup_bool(screen, "disabled", &screen_conf->disabled);
+        config_setting_lookup_float(screen, "contrib", &screen_conf->contrib);
+        config_setting_lookup_int(screen, "num_samples", &screen_conf->samples);
         
         config_setting_t *timeouts;
         if ((timeouts = config_setting_get_member(screen, "timeouts"))) {
             if (config_setting_length(timeouts) == SIZE_AC) {
                 for (int i = 0; i < SIZE_AC; i++) {
-                    screen_conf->screen_timeout[i] = config_setting_get_int_elem(timeouts, i);
+                    screen_conf->timeout[i] = config_setting_get_int_elem(timeouts, i);
                 }
             } else {
                 WARN("Wrong number of screen 'timeouts' array elements.\n");
@@ -296,13 +296,13 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_t *bl = config_setting_add(cfg->root, "backlight", CONFIG_TYPE_GROUP);
     
     config_setting_t *setting = config_setting_add(bl, "no_smooth_transition", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, bl_conf->no_smooth_backlight);
+    config_setting_set_bool(setting, bl_conf->no_smooth);
     
     setting = config_setting_add(bl, "trans_step", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, bl_conf->backlight_trans_step);
+    config_setting_set_float(setting, bl_conf->trans_step);
     
     setting = config_setting_add(bl, "trans_timeout", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, bl_conf->backlight_trans_timeout);
+    config_setting_set_int(setting, bl_conf->trans_timeout);
     
     
     setting = config_setting_add(bl, "no_auto_calibration", CONFIG_TYPE_BOOL);
@@ -312,7 +312,7 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_set_bool(setting, bl_conf->no_keyboard_bl);
     
     setting = config_setting_add(bl, "inhibit_on_lid_closed", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, bl_conf->inhibit_calib_on_lid_closed);
+    config_setting_set_bool(setting, bl_conf->inhibit_on_lid_closed);
     
     setting = config_setting_add(bl, "dim_kbd", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->dim_kbd);
@@ -363,16 +363,16 @@ static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     config_setting_t *gamma = config_setting_add(cfg->root, "gamma", CONFIG_TYPE_GROUP);
     
     config_setting_t *setting = config_setting_add(gamma, "no_smooth_transition", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, gamma_conf->no_smooth_gamma);
+    config_setting_set_bool(setting, gamma_conf->no_smooth);
     
     setting = config_setting_add(gamma, "trans_step", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, gamma_conf->gamma_trans_step);
+    config_setting_set_int(setting, gamma_conf->trans_step);
     
     setting = config_setting_add(gamma, "trans_timeout", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, gamma_conf->gamma_trans_timeout);
+    config_setting_set_int(setting, gamma_conf->trans_timeout);
     
     setting = config_setting_add(gamma, "long_transition", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, gamma_conf->gamma_long_transition);
+    config_setting_set_bool(setting, gamma_conf->long_transition);
     
     setting = config_setting_add(gamma, "ambient_gamma", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, gamma_conf->ambient_gamma);
@@ -404,25 +404,25 @@ static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
     
     config_setting_t *setting = config_setting_add(dimmer, "no_smooth_transition", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_DIM; i++) {
-        config_setting_set_bool_elem(setting, -1, dim_conf->no_smooth_dimmer[i]);
+        config_setting_set_bool_elem(setting, -1, dim_conf->no_smooth[i]);
     }
     
     setting = config_setting_add(dimmer, "trans_steps", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_DIM; i++) {
-        config_setting_set_float_elem(setting, -1, dim_conf->dimmer_trans_step[i]);
+        config_setting_set_float_elem(setting, -1, dim_conf->trans_step[i]);
     }
     
     setting = config_setting_add(dimmer, "trans_timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_DIM; i++) {
-        config_setting_set_int_elem(setting, -1, dim_conf->dimmer_trans_timeout[i]);
+        config_setting_set_int_elem(setting, -1, dim_conf->trans_timeout[i]);
     }
     
     setting = config_setting_add(dimmer, "dimmed_pct", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, dim_conf->dimmer_pct);
+    config_setting_set_float(setting, dim_conf->dimmed_pct);
     
     setting = config_setting_add(dimmer, "timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_AC; i++) {
-        config_setting_set_int_elem(setting, -1, dim_conf->dimmer_timeout[i]);
+        config_setting_set_int_elem(setting, -1, dim_conf->timeout[i]);
     }
 }
 
@@ -431,7 +431,7 @@ static void store_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf) {
     
     config_setting_t *setting = config_setting_add(dpms, "timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_AC; i++) {
-        config_setting_set_int_elem(setting, -1, dpms_conf->dpms_timeout[i]);
+        config_setting_set_int_elem(setting, -1, dpms_conf->timeout[i]);
     }
 }
 
@@ -439,14 +439,14 @@ static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
     config_setting_t *screen = config_setting_add(cfg->root, "screen", CONFIG_TYPE_GROUP);
     
     config_setting_t *setting = config_setting_add(screen, "num_samples", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, screen_conf->screen_samples);
+    config_setting_set_int(setting, screen_conf->samples);
     
     setting = config_setting_add(screen, "contrib", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, screen_conf->screen_contrib);
+    config_setting_set_float(setting, screen_conf->contrib);
     
     setting = config_setting_add(screen, "timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_AC; i++) {
-        config_setting_set_int_elem(setting, -1, screen_conf->screen_timeout[i]);
+        config_setting_set_int_elem(setting, -1, screen_conf->timeout[i]);
     }
 }
 

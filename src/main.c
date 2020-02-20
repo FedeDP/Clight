@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     state.quit = setjmp(state.quit_buf);
     if (!state.quit) {
         init(argc, argv);
-        if (conf.bl_conf.no_backlight && conf.dim_conf.no_dimmer && conf.dpms_conf.no_dpms && conf.gamma_conf.no_gamma) {
+        if (conf.bl_conf.disabled && conf.dim_conf.disabled && conf.dpms_conf.disabled && conf.gamma_conf.disabled) {
             WARN("No functional module running. Leaving...\n");
         } else {
             modules_loop();
@@ -93,7 +93,7 @@ static void init(int argc, char *argv[]) {
 static void init_state(void) {
     strncpy(state.version, VERSION, sizeof(state.version));
     memcpy(&state.current_loc, &conf.gamma_conf.loc, sizeof(loc_t));
-    if (!conf.gamma_conf.no_gamma) {
+    if (!conf.gamma_conf.disabled) {
         /* Initial value -> undefined; if GAMMA is disabled instead assume DAY */
         state.day_time = -1;
     } else {

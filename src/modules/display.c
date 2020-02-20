@@ -19,7 +19,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.dim_conf.no_dimmer || !conf.dpms_conf.no_dpms;
+    return !conf.dim_conf.disabled || !conf.dpms_conf.disabled;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
@@ -34,7 +34,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 state.display_state |= DISPLAY_DIMMED;
                 DEBUG("Entering dimmed state...\n");
                 old_pct = state.current_bl_pct;
-                dim_backlight(conf.dim_conf.dimmer_pct);
+                dim_backlight(conf.dim_conf.dimmed_pct);
             } else if (up->new == DISPLAY_OFF) {
                 state.display_state |= DISPLAY_OFF;
                 DEBUG("Entering dpms state...\n");
@@ -73,13 +73,13 @@ static void dim_backlight(const double pct) {
     if (pct >= state.current_bl_pct) {
         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
     } else {
-        publish_bl_req(pct, !conf.dim_conf.no_smooth_dimmer[ENTER], conf.dim_conf.dimmer_trans_step[ENTER], conf.dim_conf.dimmer_trans_timeout[ENTER]);
+        publish_bl_req(pct, !conf.dim_conf.no_smooth[ENTER], conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_timeout[ENTER]);
     }
 }
 
 /* restore previous backlight level */
 static void restore_backlight(const double pct) {
-    publish_bl_req(pct, !conf.dim_conf.no_smooth_dimmer[EXIT], conf.dim_conf.dimmer_trans_step[EXIT], conf.dim_conf.dimmer_trans_timeout[EXIT]);
+    publish_bl_req(pct, !conf.dim_conf.no_smooth[EXIT], conf.dim_conf.trans_step[EXIT], conf.dim_conf.trans_timeout[EXIT]);
 }
 
 static void publish_bl_req(const double pct, const bool smooth, const double step, const int to) {

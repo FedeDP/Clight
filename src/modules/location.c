@@ -56,7 +56,7 @@ static bool evaluate(void) {
      * Only start when no location and no fixed times for both events are specified in conf
      * AND GAMMA is enabled
      */
-    return  !conf.gamma_conf.no_gamma && 
+    return  !conf.gamma_conf.disabled && 
             (conf.gamma_conf.loc.lat == LAT_UNDEFINED || conf.gamma_conf.loc.lon == LON_UNDEFINED) && 
             (!strlen(conf.gamma_conf.day_events[SUNRISE]) || !strlen(conf.gamma_conf.day_events[SUNSET]));
 }
