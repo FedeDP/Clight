@@ -27,8 +27,8 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             M_PUB(&inh_msg);
             INFO("Clight inhibition %s: '%s'.\n", state.inhibited ? "enabled" : "disabled", 
                  up->reason ? up->reason : "no reason specified.");
-            free((void *)up->reason);
         }
+        free((void *)up->reason);
         break;
     }
     default:
