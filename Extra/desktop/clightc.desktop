@@ -4,7 +4,7 @@ Name=Clight
 GenericName=Quick screen backlight calibration
 Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Calibrate
 Comment=Recalibrate your screen backlight!
-Icon=clight.svg
+Icon=clight
 Categories=System
 Actions=Inhibit;Uninhibit;PauseCalib;ResumeCalib
 
