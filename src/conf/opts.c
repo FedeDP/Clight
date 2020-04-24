@@ -384,14 +384,16 @@ static void check_dpms_conf(dpms_conf_t *dpms_conf) {
         dpms_conf->disabled = true;
     }
     
-    if (dpms_conf->timeout[ON_AC] <= conf.dim_conf.timeout[ON_AC]) {
-        WARN("DPMS AC timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
-        dpms_conf->timeout[ON_AC] = 900;
-    }
-    
-    if (dpms_conf->timeout[ON_BATTERY] <= conf.dim_conf.timeout[ON_BATTERY]) {
-        WARN("DPMS BATT timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
-        dpms_conf->timeout[ON_BATTERY] = 300;
+    if (!conf.dim_conf.disabled) {
+        if (dpms_conf->timeout[ON_AC] <= conf.dim_conf.timeout[ON_AC]) {
+            WARN("DPMS AC timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+            dpms_conf->timeout[ON_AC] = 900;
+        }
+        
+        if (dpms_conf->timeout[ON_BATTERY] <= conf.dim_conf.timeout[ON_BATTERY]) {
+            WARN("DPMS BATT timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+            dpms_conf->timeout[ON_BATTERY] = 300;
+        }
     }
 }
 
