@@ -45,7 +45,7 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         config_setting_lookup_int(bl, "trans_timeout", &bl_conf->trans_timeout);
         config_setting_lookup_float(bl, "shutter_threshold", &bl_conf->shutter_threshold);
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
-        config_setting_lookup_bool(bl, "no_kdb", &bl_conf->no_keyboard_bl);
+        config_setting_lookup_bool(bl, "no_kbd", &bl_conf->no_keyboard_bl);
         config_setting_lookup_bool(bl, "dim_kbd", &bl_conf->dim_kbd);
         if (config_setting_lookup_string(bl, "screen_sysname", &screendev) == CONFIG_TRUE) {
             strncpy(bl_conf->screen_path, screendev, sizeof(bl_conf->screen_path) - 1);
@@ -308,7 +308,7 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     setting = config_setting_add(bl, "no_auto_calibration", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_auto_calib);
     
-    setting = config_setting_add(bl, "no_kdb", CONFIG_TYPE_BOOL);
+    setting = config_setting_add(bl, "no_kbd", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_keyboard_bl);
     
     setting = config_setting_add(bl, "inhibit_on_lid_closed", CONFIG_TYPE_BOOL);
