@@ -97,7 +97,7 @@ static void init_screen_opts(screen_conf_t *screen_conf) {
  * and parse cmdline args through popt lib.
  * Finally, check configuration values and log it.
  */
-void init_opts(int argc, char *argv[]) {        
+void init_opts(int argc, char *argv[]) {
     init_backlight_opts(&conf.bl_conf);
     init_sens_opts(&conf.sens_conf);
     init_gamma_opts(&conf.gamma_conf);
@@ -430,10 +430,20 @@ static void check_conf(void) {
     /* Disable any not built-in feature in Clightd */
     check_clightd_features();
     
-    check_bl_conf(&conf.bl_conf);
-    check_sens_conf(&conf.sens_conf);
-    check_gamma_conf(&conf.gamma_conf);
-    check_dim_conf(&conf.dim_conf);
-    check_dpms_conf(&conf.dpms_conf);
-    check_screen_conf(&conf.screen_conf);
+    if (!conf.bl_conf.disabled) {
+        check_bl_conf(&conf.bl_conf);
+        check_sens_conf(&conf.sens_conf);
+    }
+    if (!conf.gamma_conf.disabled) {
+        check_gamma_conf(&conf.gamma_conf);
+    }
+    if (!conf.dim_conf.disabled) {
+        check_dim_conf(&conf.dim_conf);
+    }
+    if (!conf.dpms_conf.disabled) {
+        check_dpms_conf(&conf.dpms_conf);
+    }
+    if (!conf.screen_conf.disabled) {
+        check_screen_conf(&conf.screen_conf);
+    }
 }
