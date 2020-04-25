@@ -31,23 +31,22 @@
 - [x] Use LidClosed signal to eventually pause calibration -> eg: inhibit_on_lid_closed = true BACKLIGHT conf. Only if !docked obviously. 
 - [x] Expose LidClosed property through dbus interface
 
-### BACKLIGHT multiple-monitors curves
-- [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
-- [ ] If any conf file is found in /etc/clight/mon.d/, avoid calling SetAll, and just call Set on each serial.
-
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
 - [x] Improvement: add a "reason" field to inhibit_requests type
 - [x] Improvement: improve bus::call() function
 - [x] Improvement: actually read sensor_devname reported by clightd Capture call; this way users can check from log which sensor has been used
 - [ ] Bugfix: fix #106
+- [ ] Bugfix: fix #120
 - [x] Rework conf_t struct
 - [x] Use DEBUG loglevel instead of WARN in validations. Not that useful in production
-
-- [ ] Add a SENSOR module that will subscribe to CAPTURE_REQ messages and deliver capture_upd messages? This way, BACKLIGHT will be only doing backlight related things (ie: changing backlight levels)
 
 ## 4.2
 
 ### Generic
 - [ ] Improve inter-operability with external tools: dimmer should avoid using clight current bl as it can be changed by external tools
 - [ ] Add a way to store/reload backlight/gamma settings at clight start/stop
+
+### BACKLIGHT multiple-monitors curves
+- [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
+- [ ] If any conf file is found in /etc/clight/mon.d/, avoid calling SetAll, and just call Set on each serial.
