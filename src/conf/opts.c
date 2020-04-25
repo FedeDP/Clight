@@ -294,10 +294,8 @@ static void check_sens_conf(sensor_conf_t *sens_conf) {
 static void check_gamma_conf(gamma_conf_t *gamma_conf) {
     /* GAMMA requires X */
     if (!state.display || !state.xauthority) {
-        if (!gamma_conf->disabled) {
-            INFO("Disabling GAMMA on non-X environment.\n");
-            gamma_conf->disabled = true;
-        }
+        INFO("Disabling GAMMA on non-X environment.\n");
+        gamma_conf->disabled = true;
     }
     
     if (conf.bl_conf.disabled && gamma_conf->ambient_gamma) {
@@ -348,7 +346,7 @@ static void check_gamma_conf(gamma_conf_t *gamma_conf) {
 }
 
 static void check_dim_conf(dimmer_conf_t *dim_conf) {
-    if (conf.bl_conf.disabled && !dim_conf->disabled) {
+    if (conf.bl_conf.disabled) {
         INFO("Disabling DIMMER as BACKLIGHT is disabled.\n");
         dim_conf->disabled = true;
     }
@@ -379,7 +377,7 @@ static void check_dim_conf(dimmer_conf_t *dim_conf) {
 
 static void check_dpms_conf(dpms_conf_t *dpms_conf) {
     /* DPMS does not work in wayland */
-    if (state.wl_display && !conf.dpms_conf.disabled) {
+    if (state.wl_display) {
         INFO("Disabling DPMS in wayland environment.\n");
         dpms_conf->disabled = true;
     }
@@ -400,13 +398,11 @@ static void check_dpms_conf(dpms_conf_t *dpms_conf) {
 static void check_screen_conf(screen_conf_t *screen_conf) {
     /* SCREEN requires X */
     if (!state.display || !state.xauthority) {
-        if (!screen_conf->disabled) {
-            INFO("Disabling SCREEN on non-X environment.\n");
-            screen_conf->disabled = true;
-        }
+        INFO("Disabling SCREEN on non-X environment.\n");
+        screen_conf->disabled = true;
     }
     
-    if (conf.bl_conf.disabled && !screen_conf->disabled) {
+    if (conf.bl_conf.disabled) {
         INFO("Disabling SCREEN as BACKLIGHT is disabled.\n");
         screen_conf->disabled = true;
     }
