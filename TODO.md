@@ -12,6 +12,9 @@
 - [x] Drop inhibit_autocalib (to be demanded to inhibit_bl custom module)
 - [x] Bugfix: correctly manage pubsub messages when in paused state
 
+### DPMS
+- [x] Make sure to actually restore DISPLAY_ON state from DPMS module if DIMMER is disabled. Fix #120
+
 ### New Conf file layout
 
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }

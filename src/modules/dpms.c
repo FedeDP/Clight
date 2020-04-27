@@ -100,15 +100,23 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
     /* Unused in requests! */
     display_req.display.old = state.display_state;
     sd_bus_message_read(m, "b", &idle);
-    if (idle) {
-        display_req.display.new = DISPLAY_OFF;
-        M_PUB(&display_req);
-    }
+    
     /* 
      * We only manage a single request for display on. 
      * Manage it only for DIMMER as we may leave DIMMED state 
      * without leaving DPMS state, but not the contrary.
+     * 
+     * But, if DIMMER is disable (ie: only DPMS is enabled)
+     * make sure to actually restore DISPLAY ON state.
      */
+    if (idle) {
+        display_req.display.new = DISPLAY_OFF;
+        M_PUB(&display_req);
+    } else if (conf.dim_conf.disabled) {
+        display_req.display.new = DISPLAY_ON;
+        M_PUB(&display_req);
+    }
+    
     return 0;
 }
 
