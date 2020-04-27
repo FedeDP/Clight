@@ -39,8 +39,7 @@
 - [x] Improvement: add a "reason" field to inhibit_requests type
 - [x] Improvement: improve bus::call() function
 - [x] Improvement: actually read sensor_devname reported by clightd Capture call; this way users can check from log which sensor has been used
-- [ ] Bugfix: fix #106
-- [ ] Bugfix: fix #120
+- [ ] Bugfix: fix #106 (?)
 - [x] Rework conf_t struct
 - [x] Use DEBUG loglevel instead of WARN in validations. Not that useful in production
 
