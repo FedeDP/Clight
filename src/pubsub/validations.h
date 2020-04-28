@@ -14,6 +14,7 @@
     curve_upd *: validate_curve, \
     bl_upd *: validate_backlight, \
     display_upd *: validate_display, \
+    lid_upd *: validate_lid, \
     default: validate_nothing)(X)
 
 bool validate_loc(loc_upd *up);
@@ -27,4 +28,5 @@ bool validate_autocalib(calib_upd *up);
 bool validate_curve(curve_upd *up);
 bool validate_backlight(bl_upd *up);
 bool validate_display(display_upd *up);
+bool validate_lid(lid_upd *up);
 bool validate_nothing(void *up);

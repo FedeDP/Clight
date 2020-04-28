@@ -6,7 +6,7 @@ bool validate_loc(loc_upd *up) {
         
         return true;
     }
-    WARN("Failed to validate location request.\n");
+    DEBUG("Failed to validate location request.\n");
     return false;
 }
 
@@ -14,7 +14,7 @@ bool validate_upower(upower_upd *up) {
     if (state.ac_state != up->new && up->new >= ON_AC && up->new < SIZE_AC) {
         return true;
     }
-    WARN("Failed to validate upower request.\n");
+    DEBUG("Failed to validate upower request.\n");
     return false;
 }
 
@@ -30,7 +30,7 @@ bool validate_timeout(timeout_upd *up) {
     if (up->state >= ON_AC && up->state < SIZE_AC) {
         return true;
     }
-    WARN("Failed to validate timeout request.\n");
+    DEBUG("Failed to validate timeout request.\n");
     return false;
 }
 
@@ -38,27 +38,27 @@ bool validate_inhibit(inhibit_upd *up) {
     if (state.inhibited != up->new) {
         return true;
     }
-    WARN("Failed to validate inhibit request.\n");
+    DEBUG("Failed to validate inhibit request.\n");
     return false;
 }
 
 bool validate_contrib(contrib_upd *up) {
-    if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_contrib != up->new) {
+    if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_conf.contrib != up->new) {
         return true;   
     }
-    WARN("Failed to validate contrib request.\n");
+    DEBUG("Failed to validate contrib request.\n");
     return false;
 }
 
 bool validate_evt(evt_upd *up) {
     struct tm timeinfo;
     if (strlen(up->event) && 
-        strlen(up->event) < sizeof(conf.day_events[SUNRISE]) &&
+        strlen(up->event) < sizeof(conf.gamma_conf.day_events[SUNRISE]) &&
         strptime(up->event, "%R", &timeinfo)) {
      
         return true;
     }
-    WARN("Failed to validate sunrise/sunset request.\n");
+    DEBUG("Failed to validate sunrise/sunset request.\n");
     return false;
 }
 
@@ -68,27 +68,27 @@ bool validate_temp(temp_upd *up) {
     }
     
     if (up->smooth == -1) {
-        up->smooth = !conf.no_smooth_gamma;
-        up->step = conf.gamma_trans_step;
-        up->timeout = conf.gamma_trans_timeout;
+        up->smooth = !conf.gamma_conf.no_smooth;
+        up->step = conf.gamma_conf.trans_step;
+        up->timeout = conf.gamma_conf.trans_timeout;
     }
     
     /* Validate new temp: check clighd limits */
     if (up->new >= 1000 && up->new <= 10000 && 
         up->daytime >= DAY && up->daytime < SIZE_STATES &&
-        up->new != conf.temp[up->daytime]) {
+        up->new != conf.gamma_conf.temp[up->daytime]) {
      
         return true;
     }
-    WARN("Failed to validate temperature request.\n");
+    DEBUG("Failed to validate temperature request.\n");
     return false;
 }
 
 bool validate_autocalib(calib_upd *up) {
-    if (conf.no_auto_calib != up->new) {
+    if (conf.bl_conf.no_auto_calib != up->new) {
         return true;
     }
-    WARN("Failed to validate autocalib request.\n");
+    DEBUG("Failed to validate autocalib request.\n");
     return false;
 }
 
@@ -102,21 +102,21 @@ bool validate_curve(curve_upd *up) {
      
         return true;
     }
-    WARN("Failed to validate curve request.\n");
+    DEBUG("Failed to validate curve request.\n");
     return false;
 }
 
 bool validate_backlight(bl_upd *up) {
     if (up->smooth == -1) {
-        up->smooth = !conf.no_smooth_backlight;
-        up->step = conf.backlight_trans_step;
-        up->timeout = conf.backlight_trans_timeout;
+        up->smooth = !conf.bl_conf.no_smooth;
+        up->step = conf.bl_conf.trans_step;
+        up->timeout = conf.bl_conf.trans_timeout;
     }
     
     if (up->new >= 0.0 && up->new <= 1.0) {
         return true;
     }
-    WARN("Failed to validate backlight level request.\n");
+    DEBUG("Failed to validate backlight level request.\n");
     return false;
 }
 
@@ -129,7 +129,15 @@ bool validate_display(display_upd *up) {
         
         return true;
     }
-    WARN("Failed to validate display state request.\n");
+    DEBUG("Failed to validate display state request.\n");
+    return false;
+}
+
+bool validate_lid(lid_upd *up) {
+    if (state.lid_state != up->new) {
+        return true;
+    }
+    DEBUG("Failed to validate lid request.\n");
     return false;
 }
 

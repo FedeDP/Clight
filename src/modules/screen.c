@@ -1,6 +1,7 @@
 #include "bus.h"
 #include "my_math.h"
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void get_screen_brightness(bool compute);
 static void receive_computing(const msg_t *msg, const void *userdata);
 static void timeout_callback(int old_val, bool is_computing);
@@ -14,7 +15,7 @@ static int screen_ctr, screen_fd = -1;
 DECLARE_MSG(screen_msg, SCR_BL_UPD);
 
 static void init(void) {
-    screen_br = calloc(conf.screen_samples, sizeof(double));
+    screen_br = calloc(conf.screen_conf.samples, sizeof(double));
     if (screen_br) {
         M_SUB(CONTRIB_REQ);
         M_SUB(SCR_TO_REQ);
@@ -22,7 +23,7 @@ static void init(void) {
         M_SUB(DISPLAY_UPD);
     
         /* Start paused if screen timeout for current ac state is <= 0 */
-        screen_fd = start_timer(CLOCK_BOOTTIME, 0, conf.screen_timeout[state.ac_state] > 0);
+        screen_fd = start_timer(CLOCK_BOOTTIME, 0, conf.screen_conf.timeout[state.ac_state] > 0);
         m_register_fd(screen_fd, false, NULL);
     } else {
         WARN("Failed to init.\n");
@@ -37,9 +38,9 @@ static bool check(void) {
 
 static bool evaluate(void) {
             /* Only when SCREEN module is enabled */
-    return !conf.no_screen && 
+    return !conf.screen_conf.disabled && 
             /* SCREEN configurations have meaningful values */
-            conf.screen_contrib > 0 && conf.screen_samples > 0 &&
+            conf.screen_conf.contrib > 0 && conf.screen_conf.samples > 0 &&
             /* After UPower */
             state.ac_state != -1;
 }
@@ -51,27 +52,35 @@ static void destroy(void) {
     }
 }
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
+    int r = -EINVAL;
+    if (!strcmp(member, "GetEmittedBrightness")) {
+        r = sd_bus_message_read(reply, "d", &screen_br[screen_ctr]);
+    }
+    return r;
+}
+
 static void get_screen_brightness(bool compute) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
     
-    if (call(&screen_br[screen_ctr], "d", &args, "ss", state.display, state.xauthority) == 0) {
-        screen_ctr = (screen_ctr + 1) % conf.screen_samples;
+    if (call(&args, "ss", state.display, state.xauthority) == 0) {
+        screen_ctr = (screen_ctr + 1) % conf.screen_conf.samples;
     
         if (compute) {
             screen_msg.bl.old = state.screen_comp;
-            state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
+            state.screen_comp = compute_average(screen_br, conf.screen_conf.samples) * conf.screen_conf.contrib;
             if (screen_msg.bl.old != state.screen_comp) {
                 screen_msg.bl.new = state.screen_comp;
                 M_PUB(&screen_msg);
             }
             DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
-        } else if (screen_ctr + 1 == conf.screen_samples) {
+        } else if (screen_ctr + 1 == conf.screen_conf.samples) {
             /* Bucket filled! Start computing! */
             DEBUG("Start compensating for screen-emitted brightness.\n");
             m_become(computing);
         }
     }
-    set_timeout(conf.screen_timeout[state.ac_state], 0, screen_fd, 0);
+    set_timeout(conf.screen_conf.timeout[state.ac_state], 0, screen_fd, 0);
 }
 
 static void receive(const msg_t *msg, UNUSED const void *userdata) {
@@ -82,7 +91,7 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
         break;
     case UPOWER_UPD: {
         upower_upd *up = (upower_upd *)MSG_DATA();
-        timeout_callback(conf.screen_timeout[up->old], false);
+        timeout_callback(conf.screen_conf.timeout[up->old], false);
         break;
     }
     case DISPLAY_UPD:
@@ -91,8 +100,8 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
     case SCR_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            const int old = conf.screen_timeout[up->state];
-            conf.screen_timeout[up->state] = up->new;
+            const int old = conf.screen_conf.timeout[up->state];
+            conf.screen_conf.timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
                 timeout_callback(old, false);
             }
@@ -102,7 +111,7 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
     case CONTRIB_REQ: {
         contrib_upd *up = (contrib_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            conf.screen_contrib = up->new;
+            conf.screen_conf.contrib = up->new;
         }
         break;
     }
@@ -119,7 +128,7 @@ static void receive_computing(const msg_t *msg, UNUSED const void *userdata) {
         break;
     case UPOWER_UPD: {
         upower_upd *up = (upower_upd *)MSG_DATA();
-        timeout_callback(conf.screen_timeout[up->old], true);
+        timeout_callback(conf.screen_conf.timeout[up->old], true);
         break;
     }
     case DISPLAY_UPD:
@@ -128,8 +137,8 @@ static void receive_computing(const msg_t *msg, UNUSED const void *userdata) {
     case SCR_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            const int old = conf.screen_timeout[up->state];
-            conf.screen_timeout[up->state] = up->new;
+            const int old = conf.screen_conf.timeout[up->state];
+            conf.screen_conf.timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
                 timeout_callback(old, true);
             }
@@ -139,11 +148,11 @@ static void receive_computing(const msg_t *msg, UNUSED const void *userdata) {
     case CONTRIB_REQ: {
         contrib_upd *up = (contrib_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            const double old = conf.screen_contrib;
-            conf.screen_contrib = up->new;
+            const double old = conf.screen_conf.contrib;
+            conf.screen_conf.contrib = up->new;
             /* Recompute current screen compensation */
             screen_msg.bl.old = state.screen_comp;
-            state.screen_comp = compute_average(screen_br, conf.screen_samples) * conf.screen_contrib;
+            state.screen_comp = compute_average(screen_br, conf.screen_conf.samples) * conf.screen_conf.contrib;
             if (screen_msg.bl.old != state.screen_comp) {
                 screen_msg.bl.new = state.screen_comp;
                 M_PUB(&screen_msg);
@@ -161,16 +170,16 @@ static void receive_computing(const msg_t *msg, UNUSED const void *userdata) {
 }
 
 static void timeout_callback(int old_val, bool is_computing) {
-    reset_timer(screen_fd, old_val, conf.screen_timeout[state.ac_state]);
+    reset_timer(screen_fd, old_val, conf.screen_conf.timeout[state.ac_state]);
     /* 
      * A paused timeout has been set; this means user does not want 
      * SCREEN to work in current AC state.
      * Avoid keeping alive old state.screen_comp that won't be never updated,
      * and reset all screen_br values.
      */
-    if (conf.screen_timeout[state.ac_state] <= 0) {
+    if (conf.screen_conf.timeout[state.ac_state] <= 0) {
         state.screen_comp = 0.0;
-        memset(screen_br, 0, conf.screen_samples * sizeof(double));
+        memset(screen_br, 0, conf.screen_conf.samples * sizeof(double));
         screen_ctr = 0;
         
         if (is_computing) {
@@ -181,7 +190,7 @@ static void timeout_callback(int old_val, bool is_computing) {
 
 static void pause_screen(bool pause) {
     if (pause) {
-        /* Stop capturing snapshots while dimmed or dpms or conf.screen_contrib is 0 */
+        /* Stop capturing snapshots while dimmed or dpms or conf.screen_conf.screen_contrib is 0 */
         m_deregister_fd(screen_fd);
     } else {
         /* Resume capturing */

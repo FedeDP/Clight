@@ -6,6 +6,7 @@
 static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int geoclue_get_client(void);
 static int geoclue_hook_update(void);
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -55,9 +56,9 @@ static bool evaluate(void) {
      * Only start when no location and no fixed times for both events are specified in conf
      * AND GAMMA is enabled
      */
-    return  !conf.no_gamma && 
-            (conf.loc.lat == LAT_UNDEFINED || conf.loc.lon == LON_UNDEFINED) && 
-            (!strlen(conf.day_events[SUNRISE]) || !strlen(conf.day_events[SUNSET]));
+    return  !conf.gamma_conf.disabled && 
+            (conf.gamma_conf.loc.lat == LAT_UNDEFINED || conf.gamma_conf.loc.lon == LON_UNDEFINED) && 
+            (!strlen(conf.gamma_conf.day_events[SUNRISE]) || !strlen(conf.gamma_conf.day_events[SUNSET]));
 }
 
 /*
@@ -145,12 +146,24 @@ end:
     return -(r < 0);  // - 1 on error
 }
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
+    int r = -EINVAL;
+    if (!strcmp(member, "GetClient")) {
+        const char *cl = NULL;
+        r = sd_bus_message_read(reply, "o", &cl);
+        if (r >= 0 && cl) {
+            strncpy(client, cl, PATH_MAX);
+        }
+    }
+    return r;
+}
+
 /*
  * Store Client object path in client (static) global var
  */
 static int geoclue_get_client(void) {
-    SYSBUS_ARG(args, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient");
-    return call(client, "o", &args, NULL);
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient");
+    return call(&args, NULL);
 }
 
 /*
@@ -167,7 +180,7 @@ static int geoclue_hook_update(void) {
  */
 static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     /* Only if no conf location is set */
-    if (conf.loc.lat == LAT_UNDEFINED && conf.loc.lon == LON_UNDEFINED) {
+    if (conf.gamma_conf.loc.lat == LAT_UNDEFINED && conf.gamma_conf.loc.lon == LON_UNDEFINED) {
         const char *new_location, *old_location;
         sd_bus_message_read(m, "oo", &old_location, &new_location);
 
@@ -199,7 +212,7 @@ static int geoclue_client_start(void) {
     set_property(&time_args, 'u', &(unsigned int) { LOC_TIME_THRS });
     set_property(&thres_args, 'u', &(unsigned int) { LOC_DISTANCE_THRS });
     set_property(&accuracy_args, 'u', &(unsigned int) { 2 }); // https://www.freedesktop.org/software/geoclue/docs/geoclue-gclue-enums.html#GClueAccuracyLevel -> GCLUE_ACCURACY_LEVEL_CITY
-    return call(NULL, "", &call_args, NULL);
+    return call(&call_args, NULL);
 }
 
 /*
@@ -207,10 +220,10 @@ static int geoclue_client_start(void) {
  */
 static void geoclue_client_delete(void) {
     SYSBUS_ARG(stop_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Stop");
-    call(NULL, "", &stop_args, NULL);
+    call(&stop_args, NULL);
 
     SYSBUS_ARG(del_args, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "DeleteClient");
-    call(NULL, "", &del_args, "o", client);
+    call(&del_args, "o", client);
 }
 
 static void cache_location(void) {

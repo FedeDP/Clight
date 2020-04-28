@@ -2,6 +2,7 @@
 
 #define VALIDATE_CLIENT(client) do { if (!client || !strlen(client)) return -1; } while (0);
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int idle_get_client(char *client);
 static int idle_hook_update(char *client, sd_bus_slot **slot, sd_bus_message_handler_t handler);
 
@@ -24,9 +25,21 @@ end:
     return -(r < 0);  // - 1 on error
 }
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
+    int r = -EINVAL;
+    if (!strcmp(member, "GetClient")) {
+        const char *cl;
+        r = sd_bus_message_read(reply, "o", &cl);
+        if (r >= 0 && cl) {
+            strncpy((char *)userdata, cl, PATH_MAX);
+        }
+    }
+    return r;
+}
+
 static int idle_get_client(char *client) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Idle", "org.clightd.clightd.Idle", "GetClient");
-    return call(client, "o", &args, NULL);
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, client, CLIGHTD_SERVICE, "/org/clightd/clightd/Idle", "org.clightd.clightd.Idle", "GetClient");
+    return call(&args, NULL);
 }
 
 static int idle_hook_update(char *client, sd_bus_slot **slot, sd_bus_message_handler_t handler) {
@@ -56,7 +69,7 @@ int idle_client_start(char *client, int timeout) {
     
     if (timeout > 0) {
         SYSBUS_ARG(args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Start");
-        return call(NULL, NULL, &args, NULL);
+        return call(&args, NULL);
     }
     return 0;
 }
@@ -65,7 +78,7 @@ int idle_client_stop(char *client) {
     VALIDATE_CLIENT(client);
     
     SYSBUS_ARG(args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Stop");
-    return call(NULL, NULL, &args, NULL);
+    return call(&args, NULL);
 }
 
 int idle_client_reset(char *client, int timeout) {
@@ -79,5 +92,5 @@ int idle_client_destroy(char *client) {
     idle_client_stop(client);
 
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Idle", "org.clightd.clightd.Idle", "DestroyClient");
-    return call(NULL, NULL, &args, "o", client);
+    return call(&args, "o", client);
 }

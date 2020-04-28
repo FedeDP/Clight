@@ -56,6 +56,9 @@ enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };
 /* Dimming transition states */
 enum dim_trans { ENTER, EXIT, SIZE_DIM };
 
+/* Lid states */
+enum lid_states { OPEN, CLOSED, DOCKED, SIZE_LID };
+
 /* Type of pubsub messages */
 
 /* You should only subscribe on _UPD, and publish on _REQ */
@@ -93,6 +96,8 @@ enum mod_msg_types {
     NO_AUTOCALIB_REQ,   // Publish to set a new no_autocalib value for BACKLIGHT
     CONTRIB_REQ,        // Publish to set a new screen-emitted compensation value
     SIMULATE_REQ,       // Publish to simulate user activity (resetting both dimmer and dpms timeouts)
+    LID_UPD,            // Subscribe to receive new lid states
+    LID_REQ,            // Publish to set a new lid state
     MSGS_SIZE
 };
 
@@ -114,8 +119,14 @@ typedef struct {
 } upower_upd;
 
 typedef struct {
+    enum lid_states old;         // Valued in updates. Useless for requests 
+    enum lid_states new;         // Mandatory for requests. Valued in updates
+} lid_upd;
+
+typedef struct {
     bool old;                   // Valued in updates. Useless for requests 
     bool new;                   // Mandatory for requests. Valued in updates
+    const char *reason;         // Optional for requests. NULL in updates. Must be heap-allocated. Freed by INHIBIT.
 } inhibit_upd;
 
 typedef struct {
@@ -185,6 +196,7 @@ typedef struct {
     union {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
+        lid_upd lid;            /* LID_UPD/LID_REQ */
         inhibit_upd inhibit;    /* INHIBIT_UPD/INHIBIT_REQ */
         display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
         daytime_upd day_time;   /* TIME_UPD/IN_EVENT_UPD */
