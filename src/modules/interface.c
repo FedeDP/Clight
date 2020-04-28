@@ -455,16 +455,21 @@ static int start_inhibit_monitor(void) {
 static void inhibit_parse_msg(sd_bus_message *m) {
     if (sd_bus_message_get_member(m)) {
         const char *member = sd_bus_message_get_member(m);
-        if (!strcmp(member, sc_vtable[1].x.method.member)) {
+        const char *signature = sd_bus_message_get_signature(m, false);
+        if (!strcmp(member, sc_vtable[1].x.method.member) 
+            && !strcmp(signature, sc_vtable[1].x.method.signature)) {
+    
             int cookie = 0;
             char *app_name = NULL, *reason = NULL;
             int r = sd_bus_message_read(m, "ss", &app_name, &reason); 
-            if (r < 0) { 
+            if (r < 0) {
                 WARN("Failed to parse parameters: %s\n", strerror(-r));
             } else {
                 create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason);
             }
-        } else if (!strcmp(member, sc_vtable[2].x.method.member)) {
+        } else if (!strcmp(member, sc_vtable[2].x.method.member) 
+            && !strcmp(signature, sc_vtable[2].x.method.signature)) {
+            
             drop_inhibit(NULL, sd_bus_message_get_sender(m), false);
         }
     }
@@ -503,14 +508,13 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
             map_put(lock_map, key, l);
 
             DEBUG("New ScreenSaver inhibition held by %s: %s. Cookie: %d\n", app_name, reason, l->cookie);
+            inhibit_req.inhibit.old = state.inhibited;
+            inhibit_req.inhibit.new = true;
+            inhibit_req.inhibit.reason = strdup(reason);
+            M_PUB(&inhibit_req);
 
             if (map_length(lock_map) == 1) {
-                inhibit_req.inhibit.old = false;
-                inhibit_req.inhibit.new = true;
-                inhibit_req.inhibit.reason = strdup(reason);
-                M_PUB(&inhibit_req);
-
-                /* Start listening on NameOwnerChanged signals */                
+                /* Start listening on NameOwnerChanged signals */
                 USERBUS_ARG(args, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameOwnerChanged");
                 add_match(&args, &lock_slot, on_bus_name_changed);
             }
@@ -544,13 +548,12 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
         }
         if (l->refs == 0 && map_remove(lock_map, key) == MAP_OK) {
             DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", c);
-
+            inhibit_req.inhibit.old = state.inhibited;
+            inhibit_req.inhibit.new = false;
+            inhibit_req.inhibit.reason = NULL;
+            M_PUB(&inhibit_req);
+            
             if (map_length(lock_map) == 0) {
-                inhibit_req.inhibit.old = true;
-                inhibit_req.inhibit.new = false;
-                inhibit_req.inhibit.reason = NULL;
-                M_PUB(&inhibit_req);
-                
                 /* Stop listening on NameOwnerChanged signals */
                 lock_slot = sd_bus_slot_unref(lock_slot);
             }

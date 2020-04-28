@@ -26,6 +26,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             /* Drop an inhibition from our counter */
             if (!up->new) {
                 inhibition_ctr--;
+                INFO("Clight inhibition released.\n");
             }
             
             if (up->new || inhibition_ctr == 0) {
@@ -34,12 +35,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 inh_msg.inhibit.new = state.inhibited;
                 M_PUB(&inh_msg);
             }
-            INFO("A Clight inhibition has been %s: '%s'.\n", state.inhibited ? "enabled" : "disabled", 
-                 up->reason ? up->reason : "no reason specified.");
         }
         /* Count currently held inhibitions */
         if (up->new) {
             inhibition_ctr++;
+            INFO("New Clight inhibition held: '%s'.\n", up->reason ? up->reason : "no reason specified.");
         }
         free((void *)up->reason);
         break;

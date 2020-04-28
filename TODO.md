@@ -17,6 +17,7 @@
 
 ### Inhibition
 - [x] Fix support for multiple inhibition sources; eg: both "docked" and "ScreenSaver" are inhibiting clight. When ScreenSaver drops its inhibition, state is set back to not inhibited.
+- [x] Fix "Failed to parse parameters: No such device or address" message
 
 ### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }
@@ -44,6 +45,7 @@
 - [ ] Bugfix: fix #106 (?)
 - [x] Rework conf_t struct
 - [x] Use DEBUG loglevel instead of WARN in validations. Not that useful in production
+- [ ] Check with valgrind
 
 ## 4.2
 
