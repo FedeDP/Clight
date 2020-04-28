@@ -15,8 +15,10 @@
 ### DPMS
 - [x] Make sure to actually restore DISPLAY_ON state from DPMS module if DIMMER is disabled. Fix #120
 
-### New Conf file layout
+### Inhibition
+- [x] Fix support for multiple inhibition sources; eg: both "docked" and "ScreenSaver" are inhibiting clight. When ScreenSaver drops its inhibition, state is set back to not inhibited.
 
+### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }
 - [x] Split sensor-related settings from conf_t
 - [x] Move number of captures to sensor specific settings?
