@@ -1,6 +1,7 @@
 # Clight
 
 [![builds.sr.ht status](https://builds.sr.ht/~fededp/clight.svg)](https://builds.sr.ht/~fededp/clight?)
+[![Packaging status](https://repology.org/badge/vertical-allrepos/clight.svg)](https://repology.org/project/clight/versions)
 
 Clight is a C user daemon utility that aims to fully manage your display.  
 It will automagically change screen backlight level to match ambient brightness, as computed by capturing frames from webcam.  

@@ -2,6 +2,14 @@
 #include <sys/stat.h>
 #include "commons.h"
 
+static void log_bl_conf(bl_conf_t *bl_conf);
+static void log_sens_conf(sensor_conf_t *sens_conf);
+static void log_kbd_conf(kbd_conf_t *kbd_conf);
+static void log_gamma_conf(gamma_conf_t *gamma_conf);
+static void log_dim_conf(dimmer_conf_t *dim_conf);
+static void log_dpms_conf(dpms_conf_t *dpms_conf);
+static void log_scr_conf(screen_conf_t *screen_conf);
+
 static FILE *log_file;
 
 void open_log(void) {
@@ -31,6 +39,81 @@ void open_log(void) {
     }
 }
 
+static void log_bl_conf(bl_conf_t *bl_conf) {
+    fprintf(log_file, "\n### BACKLIGHT ###\n");
+    fprintf(log_file, "* Enabled:\t\t%s\n", bl_conf->disabled ? "false" : "true");
+    fprintf(log_file, "* Smooth trans:\t\t%s\n", bl_conf->no_smooth ? "Disabled" : "Enabled");
+    fprintf(log_file, "* Smooth steps:\t\t%.2lf\n", bl_conf->trans_step);
+    fprintf(log_file, "* Smooth timeout:\t\t%d\n", bl_conf->trans_timeout);
+    fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][DAY], bl_conf->timeout[ON_BATTERY][DAY]);
+    fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][NIGHT], bl_conf->timeout[ON_BATTERY][NIGHT]);
+    fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][SIZE_STATES], bl_conf->timeout[ON_BATTERY][SIZE_STATES]);
+    fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(bl_conf->screen_path) ? bl_conf->screen_path : "Unset");
+    fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", bl_conf->shutter_threshold);
+    fprintf(log_file, "* Autocalibration:\t\t%s\n", bl_conf->no_auto_calib ? "Disabled" : "Enabled");
+    fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", bl_conf->inhibit_on_lid_closed ? "Enabled" : "Disabled");
+}
+
+static void log_sens_conf(sensor_conf_t *sens_conf) {
+    fprintf(log_file, "\n### SENSOR ###\n");
+    fprintf(log_file, "* Captures:\t\tAC %d\tBATT %d\n", sens_conf->num_captures[ON_AC], sens_conf->num_captures[ON_BATTERY]);
+    fprintf(log_file, "* Device:\t\t%s\n", strlen(sens_conf->dev_name) ? sens_conf->dev_name : "Unset");
+    fprintf(log_file, "* Settings:\t\t%s\n", strlen(sens_conf->dev_opts) ? sens_conf->dev_opts : "Unset");
+}
+
+static void log_kbd_conf(kbd_conf_t *kbd_conf) {
+    fprintf(log_file, "\n### KEYBOARD ###\n");
+    fprintf(log_file, "* Enabled:\t\t%s\n", kbd_conf->disabled ? "Disabled" : "Enabled");
+    fprintf(log_file, "* Dim:\t\t%s\n", kbd_conf->dim ? "Enabled" : "Disabled");
+    fprintf(log_file, "* Threshold:\t\t%.2lf\n", kbd_conf->amb_br_thres);
+}
+
+static void log_gamma_conf(gamma_conf_t *gamma_conf) {
+    fprintf(log_file, "\n### GAMMA ###\n");
+    fprintf(log_file, "* Enabled:\t\t%s\n", gamma_conf->disabled ? "false" : "true");
+    fprintf(log_file, "* Smooth trans:\t\t%s\n", gamma_conf->no_smooth ? "Disabled" : "Enabled");
+    fprintf(log_file, "* Smooth steps:\t\t%d\n", gamma_conf->trans_step);
+    fprintf(log_file, "* Smooth timeout:\t\t%d\n", gamma_conf->trans_timeout);
+    fprintf(log_file, "* Daily screen temp:\t\t%d\n", gamma_conf->temp[DAY]);
+    fprintf(log_file, "* Nightly screen temp:\t\t%d\n", gamma_conf->temp[NIGHT]);
+    if (gamma_conf->loc.lat != LAT_UNDEFINED && gamma_conf->loc.lon != LON_UNDEFINED) {
+        fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", gamma_conf->loc.lat, gamma_conf->loc.lon);
+    } else {
+        fprintf(log_file, "* User position:\t\tUnset\n");
+    }
+    fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(gamma_conf->day_events[SUNRISE]) ? gamma_conf->day_events[SUNRISE] : "Unset");
+    fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(gamma_conf->day_events[SUNSET]) ? gamma_conf->day_events[SUNSET] : "Unset");
+    fprintf(log_file, "* Event duration:\t\t%d\n", gamma_conf->event_duration);
+    fprintf(log_file, "* Long transition:\t\t%s\n", gamma_conf->long_transition ? "Enabled" : "Disabled");
+    fprintf(log_file, "* Ambient gamma:\t\t%s\n", gamma_conf->ambient_gamma ? "Enabled" : "Disabled");
+}
+
+static void log_dim_conf(dimmer_conf_t *dim_conf) {
+    fprintf(log_file, "\n### DIMMER ###\n");
+    fprintf(log_file, "* Enabled:\t\t%s\n", dim_conf->disabled ? "false" : "true");
+    fprintf(log_file, "* Smooth trans:\t\tENTER: %s, EXIT: %s\n", 
+            dim_conf->no_smooth[ENTER] ? "Disabled" : "Enabled",
+            dim_conf->no_smooth[EXIT] ? "Disabled" : "Enabled");
+    fprintf(log_file, "* Smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", dim_conf->trans_step[ENTER], dim_conf->trans_step[EXIT]);
+    fprintf(log_file, "* Smooth timeout:\t\tENTER: %d, EXIT: %d\n", dim_conf->trans_timeout[ENTER], dim_conf->trans_timeout[EXIT]);
+    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", dim_conf->timeout[ON_AC], dim_conf->timeout[ON_BATTERY]);
+    fprintf(log_file, "* Backlight pct:\t\t%.2lf\n", dim_conf->dimmed_pct);
+}
+
+static void log_dpms_conf(dpms_conf_t *dpms_conf) {
+    fprintf(log_file, "\n### DPMS ###\n");
+    fprintf(log_file, "* Enabled:\t\t%s\n", dpms_conf->disabled ? "false" : "true");
+    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", dpms_conf->timeout[ON_AC], dpms_conf->timeout[ON_BATTERY]);
+}
+
+static void log_scr_conf(screen_conf_t *screen_conf) {
+    fprintf(log_file, "\n### SCREEN ###\n");
+    fprintf(log_file, "* Enabled:\t\t%s\n", screen_conf->disabled ? "false" : "true");
+    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", screen_conf->timeout[ON_AC], screen_conf->timeout[ON_BATTERY]);
+    fprintf(log_file, "* Contrib:\t\t%.2lf\n", screen_conf->contrib);
+    fprintf(log_file, "* Samples:\t\t%d\n", screen_conf->samples);
+}
+
 void log_conf(void) {
     if (log_file) {
         time_t t = time(NULL);
@@ -46,81 +129,34 @@ void log_conf(void) {
         
         fprintf(log_file, "\n### GENERIC ###\n");
         fprintf(log_file, "* Verbose (debug):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
-        fprintf(log_file, "* Inhibit docked:\t\t%s\n\n", conf.inhibit_docked ? "Enabled" : "Disabled");
+        fprintf(log_file, "* Inhibit docked:\t\t%s\n", conf.inhibit_docked ? "Enabled" : "Disabled");
         
-        fprintf(log_file, "\n### BACKLIGHT ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.bl_conf.disabled ? "false" : "true");
         if (!conf.bl_conf.disabled) {
-            fprintf(log_file, "* Smooth trans:\t\t%s\n", conf.bl_conf.no_smooth ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Smooth steps:\t\t%.2lf\n", conf.bl_conf.trans_step);
-            fprintf(log_file, "* Smooth timeout:\t\t%d\n", conf.bl_conf.trans_timeout);
-            fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", conf.bl_conf.timeout[ON_AC][DAY], conf.bl_conf.timeout[ON_BATTERY][DAY]);
-            fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", conf.bl_conf.timeout[ON_AC][NIGHT], conf.bl_conf.timeout[ON_BATTERY][NIGHT]);
-            fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", conf.bl_conf.timeout[ON_AC][SIZE_STATES], conf.bl_conf.timeout[ON_BATTERY][SIZE_STATES]);
-            fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(conf.bl_conf.screen_path) ? conf.bl_conf.screen_path : "Unset");
-            fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", conf.bl_conf.shutter_threshold);
-            fprintf(log_file, "* Autocalibration:\t\t%s\n", conf.bl_conf.no_auto_calib ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", conf.bl_conf.inhibit_on_lid_closed ? "Enabled" : "Disabled");
-            
-            fprintf(log_file, "\n### SENSOR ###\n");
-            fprintf(log_file, "* Captures:\t\tAC %d\tBATT %d\n", conf.sens_conf.num_captures[ON_AC], conf.sens_conf.num_captures[ON_BATTERY]);
-            fprintf(log_file, "* Device:\t\t%s\n", strlen(conf.sens_conf.dev_name) ? conf.sens_conf.dev_name : "Unset");
-            fprintf(log_file, "* Settings:\t\t%s\n", strlen(conf.sens_conf.dev_opts) ? conf.sens_conf.dev_opts : "Unset");
+            log_bl_conf(&conf.bl_conf);
+            log_sens_conf(&conf.sens_conf);
         }
         
-        fprintf(log_file, "\n### KEYBOARD ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.kbd_conf.disabled ? "Disabled" : "Enabled");
         if (!conf.kbd_conf.disabled) {
-            fprintf(log_file, "* Dim:\t\t%s\n", conf.kbd_conf.dim ? "Enabled" : "Disabled");
-            fprintf(log_file, "* Threshold:\t\t%.2lf\n", conf.kbd_conf.amb_br_thres);
+            log_kbd_conf(&conf.kbd_conf);
         }
         
-        fprintf(log_file, "\n### GAMMA ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.gamma_conf.disabled ? "false" : "true");
         if (!conf.gamma_conf.disabled) {
-            fprintf(log_file, "* Smooth trans:\t\t%s\n", conf.gamma_conf.no_smooth ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Smooth steps:\t\t%d\n", conf.gamma_conf.trans_step);
-            fprintf(log_file, "* Smooth timeout:\t\t%d\n", conf.gamma_conf.trans_timeout);
-            fprintf(log_file, "* Daily screen temp:\t\t%d\n", conf.gamma_conf.temp[DAY]);
-            fprintf(log_file, "* Nightly screen temp:\t\t%d\n", conf.gamma_conf.temp[NIGHT]);
-            if (conf.gamma_conf.loc.lat != LAT_UNDEFINED && conf.gamma_conf.loc.lon != LON_UNDEFINED) {
-                fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", conf.gamma_conf.loc.lat, conf.gamma_conf.loc.lon);
-            } else {
-                fprintf(log_file, "* User position:\t\tUnset\n");
-            }
-            fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(conf.gamma_conf.day_events[SUNRISE]) ? conf.gamma_conf.day_events[SUNRISE] : "Unset");
-            fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(conf.gamma_conf.day_events[SUNSET]) ? conf.gamma_conf.day_events[SUNSET] : "Unset");
-            fprintf(log_file, "* Event duration:\t\t%d\n", conf.gamma_conf.event_duration);
-            fprintf(log_file, "* Long transition:\t\t%s\n", conf.gamma_conf.long_transition ? "Enabled" : "Disabled");
-            fprintf(log_file, "* Ambient gamma:\t\t%s\n", conf.gamma_conf.ambient_gamma ? "Enabled" : "Disabled");
+           log_gamma_conf(&conf.gamma_conf);
         }
         
-        fprintf(log_file, "\n### DIMMER ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.dim_conf.disabled ? "false" : "true");
         if (!conf.dim_conf.disabled) {
-            fprintf(log_file, "* Smooth trans:\t\tENTER: %s, EXIT: %s\n", 
-                    conf.dim_conf.no_smooth[ENTER] ? "Disabled" : "Enabled",
-                    conf.dim_conf.no_smooth[EXIT] ? "Disabled" : "Enabled");
-            fprintf(log_file, "* Smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_step[EXIT]);
-            fprintf(log_file, "* Smooth timeout:\t\tENTER: %d, EXIT: %d\n", conf.dim_conf.trans_timeout[ENTER], conf.dim_conf.trans_timeout[EXIT]);
-            fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.dim_conf.timeout[ON_AC], conf.dim_conf.timeout[ON_BATTERY]);
-            fprintf(log_file, "* Backlight pct:\t\t%.2lf\n", conf.dim_conf.dimmed_pct);
+            log_dim_conf(&conf.dim_conf);
         }
         
-        fprintf(log_file, "\n### DPMS ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.dpms_conf.disabled ? "false" : "true");
         if (!conf.dpms_conf.disabled) {
-            fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.dpms_conf.timeout[ON_AC], conf.dpms_conf.timeout[ON_BATTERY]);
+           log_dpms_conf(&conf.dpms_conf);
         }
         
-        fprintf(log_file, "\n### SCREEN ###\n");
-        fprintf(log_file, "* Enabled:\t\t%s\n", conf.screen_conf.disabled ? "false" : "true");
         if (!conf.screen_conf.disabled) {
-            fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", conf.screen_conf.timeout[ON_AC], conf.screen_conf.timeout[ON_BATTERY]);
-            fprintf(log_file, "* Contrib:\t\t%.2lf\n", conf.screen_conf.contrib);
-            fprintf(log_file, "* Samples:\t\t%d\n", conf.screen_conf.samples);
+           log_scr_conf(&conf.screen_conf);
         }
         
+        fprintf(log_file, "\n");
         fflush(log_file);
     }
 }

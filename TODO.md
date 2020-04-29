@@ -49,7 +49,7 @@
 - [ ] Bugfix: fix #106 (?)
 - [x] Rework conf_t struct
 - [x] Use DEBUG loglevel instead of WARN in validations. Not that useful in production
-- [ ] Check with valgrind
+- [x] Check with valgrind
 - [x] Double check to not use any variable from disabled modules
 - [x] Avoid logging disabled modules conf as it is not checked
 - [x] Avoid creating disabled modules conf interafce
