@@ -38,16 +38,15 @@ typedef struct {
     double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
     int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
-    int no_keyboard_bl;                     // disable keyboard backlight automatic calibration (where supported)
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
     int inhibit_on_lid_closed;              // whether clight should inhibit autocalibration on lid closed
-    int dim_kbd;                            // whether DPMS/Dimmer should switch keyboard off
 } bl_conf_t;
 
-// typedef struct {
-//     char screen_id[PATH_MAX + 1];                       // screen syspath (eg: /sys/class/backlight/intel_backlight)
-//     double regression_points[SIZE_AC][MAX_SIZE_POINTS]; // points used for regression through libgsl
-// } mon_conf_t;
+typedef struct {
+    int disabled;                           // disable keyboard backlight automatic calibration (where supported)
+    int dim;                                // whether DPMS/Dimmer should switch keyboard off
+    double amb_br_thres;                    // Ambient brightness high threshold 
+} kbd_conf_t;
 
 typedef struct {
     int disabled;
@@ -87,6 +86,7 @@ typedef struct {
 typedef struct {
     bl_conf_t bl_conf;
     sensor_conf_t sens_conf;
+    kbd_conf_t kbd_conf;
     gamma_conf_t gamma_conf;
     dimmer_conf_t dim_conf;
     dpms_conf_t dpms_conf;

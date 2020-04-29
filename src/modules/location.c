@@ -179,20 +179,17 @@ static int geoclue_hook_update(void) {
  * then retrieve latitude and longitude from that object and store them in our conf struct.
  */
 static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
-    /* Only if no conf location is set */
-    if (conf.gamma_conf.loc.lat == LAT_UNDEFINED && conf.gamma_conf.loc.lon == LON_UNDEFINED) {
-        const char *new_location, *old_location;
-        sd_bus_message_read(m, "oo", &old_location, &new_location);
+    const char *new_location;
+    sd_bus_message_read(m, "oo", NULL, &new_location);
 
-        double new_lat, new_lon;
+    double new_lat, new_lon;
     
-        SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
-        SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
-        int r = get_property(&lat_args, "d", &new_lat, sizeof(new_lat)) + 
-                get_property(&lon_args, "d", &new_lon, sizeof(new_lon));
-        if (!r) {
-            publish_location(new_lat, new_lon, &loc_req);
-        }
+    SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
+    SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
+    int r = get_property(&lat_args, "d", &new_lat, sizeof(new_lat)) + 
+            get_property(&lon_args, "d", &new_lon, sizeof(new_lon));
+    if (!r) {
+        publish_location(new_lat, new_lon, &loc_req);
     }
     return 0;
 }

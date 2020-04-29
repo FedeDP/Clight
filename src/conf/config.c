@@ -5,6 +5,7 @@ static void init_config_file(enum CONFIG file, char *filename);
 
 static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf);
+static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf);
 static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
 static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf);
 static void load_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf);
@@ -12,6 +13,7 @@ static void load_screen_settings(config_t *cfg, screen_conf_t *screen_conf);
 
 static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf);
+static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf);
 static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
 static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf);
 static void store_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf);
@@ -45,8 +47,6 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         config_setting_lookup_int(bl, "trans_timeout", &bl_conf->trans_timeout);
         config_setting_lookup_float(bl, "shutter_threshold", &bl_conf->shutter_threshold);
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
-        config_setting_lookup_bool(bl, "no_kbd", &bl_conf->no_keyboard_bl);
-        config_setting_lookup_bool(bl, "dim_kbd", &bl_conf->dim_kbd);
         if (config_setting_lookup_string(bl, "screen_sysname", &screendev) == CONFIG_TRUE) {
             strncpy(bl_conf->screen_path, screendev, sizeof(bl_conf->screen_path) - 1);
         }
@@ -129,6 +129,15 @@ static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf) {
                 WARN("Wrong number of sensor 'batt_regression_points' array elements.\n");
             }
         }
+    }
+}
+
+static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
+    config_setting_t *kbd = config_lookup(cfg, "keyboard");
+    if (kbd) {
+        config_setting_lookup_bool(kbd, "disabled", &kbd_conf->disabled);
+        config_setting_lookup_bool(kbd, "dim", &kbd_conf->dim);
+        config_setting_lookup_float(kbd, "ambient_br_thresh", &kbd_conf->amb_br_thres);
     }
 }
 
@@ -278,6 +287,7 @@ int read_config(enum CONFIG file, char *config_file) {
         
         load_backlight_settings(&cfg, &conf.bl_conf);
         load_sensor_settings(&cfg, &conf.sens_conf);
+        load_kbd_settings(&cfg, &conf.kbd_conf);
         load_gamma_settings(&cfg, &conf.gamma_conf);
         load_dimmer_settings(&cfg, &conf.dim_conf);
         load_dpms_settings(&cfg, &conf.dpms_conf);
@@ -308,14 +318,8 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     setting = config_setting_add(bl, "no_auto_calibration", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_auto_calib);
     
-    setting = config_setting_add(bl, "no_kbd", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, bl_conf->no_keyboard_bl);
-    
     setting = config_setting_add(bl, "inhibit_on_lid_closed", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->inhibit_on_lid_closed);
-    
-    setting = config_setting_add(bl, "dim_kbd", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, bl_conf->dim_kbd);
     
     setting = config_setting_add(bl, "screen_sysname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, bl_conf->screen_path);
@@ -357,6 +361,19 @@ static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf) {
     for (int i = 0; i < sens_conf->num_points[ON_BATTERY]; i++) {
         config_setting_set_float_elem(setting, -1, sens_conf->regression_points[ON_BATTERY][i]);
     }
+}
+
+static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
+    config_setting_t *kbd = config_setting_add(cfg->root, "keyboard", CONFIG_TYPE_GROUP);
+    
+    config_setting_t *setting = config_setting_add(kbd, "disabled", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, kbd_conf->disabled);
+    
+    setting = config_setting_add(kbd, "dim", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, kbd_conf->dim);
+    
+    setting = config_setting_add(kbd, "ambient_br_thresh", CONFIG_TYPE_FLOAT);
+    config_setting_set_float(setting, kbd_conf->amb_br_thres);
 }
 
 static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
@@ -469,6 +486,7 @@ int store_config(enum CONFIG file) {
     
     store_backlight_settings(&cfg, &conf.bl_conf);
     store_sensors_settings(&cfg, &conf.sens_conf);
+    store_kbd_settings(&cfg, &conf.kbd_conf);
     store_gamma_settings(&cfg, &conf.gamma_conf);
     store_dimmer_settings(&cfg, &conf.dim_conf);
     store_dpms_settings(&cfg, &conf.dpms_conf);

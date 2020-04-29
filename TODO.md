@@ -4,13 +4,17 @@
 - [x] Improvement: switch off keyboard backlight on dpms/dimmer? Maybe new conf option?
 - [x] Improvement: allow to pause backlight calib on battery (already supported for dpms/dimmer and screen) by setting timeout <= 0
 - [x] Improvement: allow users to use different number of captures for each AC state (?)
-- [ ] Improvement: switch off keyboard backlight above certain ambient brightness threshold (#112)
 - [x] Bugfix: screen-emitted-brightness compensation should not directly change state.ambient_br
 - [x] Bugfix: properly clamp compensated_br between 0 and 1 before setting new backlight
 - [x] Bugfix: Properly set 0.0 backlight level if shutter_threshold is 0.0 (>= instead of >)
 - [x] Bugfix: set_new_backlight should take current ambient_br * conf.num_points (that is no more fixed to 10!)
 - [x] Drop inhibit_autocalib (to be demanded to inhibit_bl custom module)
 - [x] Bugfix: correctly manage pubsub messages when in paused state
+
+### Keyboard
+- [x] Split keyboard settings from backlight
+- [x] Improvement: switch off keyboard backlight above certain ambient brightness threshold (#112)
+- [x] Extract new Keyboard module
 
 ### DPMS
 - [x] Make sure to actually restore DISPLAY_ON state from DPMS module if DIMMER is disabled. Fix #120
@@ -46,6 +50,9 @@
 - [x] Rework conf_t struct
 - [x] Use DEBUG loglevel instead of WARN in validations. Not that useful in production
 - [ ] Check with valgrind
+- [x] Double check to not use any variable from disabled modules
+- [x] Avoid logging disabled modules conf as it is not checked
+- [x] Avoid creating disabled modules conf interafce
 
 ## 4.2
 

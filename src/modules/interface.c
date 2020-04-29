@@ -98,9 +98,7 @@ static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(bl_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, inhibit_on_lid_closed), 0),
-    SD_BUS_WRITABLE_PROPERTY("DisableKbdCalib", "b", NULL, NULL, offsetof(bl_conf_t, no_keyboard_bl), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(bl_conf_t, screen_path), 0),
-    SD_BUS_WRITABLE_PROPERTY("DimKbd", "b", NULL, NULL, offsetof(bl_conf_t, dim_kbd), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth), 0),
     SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),
     SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, trans_timeout), 0),
@@ -122,6 +120,14 @@ static const sd_bus_vtable conf_sens_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("BattCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, regression_points[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, regression_points[ON_BATTERY]), 0),
+    SD_BUS_VTABLE_END
+};
+
+static const sd_bus_vtable conf_kbd_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(kbd_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
+    SD_BUS_WRITABLE_PROPERTY("AmbBrThresh", "d", NULL, NULL, offsetof(kbd_conf_t, amb_br_thres), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -210,6 +216,7 @@ static void init(void) {
     const char conf_path[] = "/org/clight/clight/Conf";
     const char conf_bl_path[] = "/org/clight/clight/Conf/Backlight";
     const char conf_sens_path[] = "/org/clight/clight/Conf/Sensor";
+    const char conf_kbd_path[] = "/org/clight/clight/Conf/Kbd";
     const char conf_gamma_path[] = "/org/clight/clight/Conf/Gamma";
     const char conf_dim_path[] = "/org/clight/clight/Conf/Dimmer";
     const char conf_dpms_path[] = "/org/clight/clight/Conf/Dpms";
@@ -219,6 +226,7 @@ static void init(void) {
     const char conf_interface[] = "org.clight.clight.Conf";
     const char conf_bl_interface[] = "org.clight.clight.Conf.Backlight";
     const char conf_sens_interface[] = "org.clight.clight.Conf.Sensor";
+    const char conf_kbd_interface[] = "org.clight.clight.Conf.Kbd";
     const char conf_gamma_interface[] = "org.clight.clight.Conf.Gamma";
     const char conf_dim_interface[] = "org.clight.clight.Conf.Dimmer";
     const char conf_dpms_interface[] = "org.clight.clight.Conf.Dpms";
@@ -243,52 +251,72 @@ static void init(void) {
                                 &conf);
 
     /* Conf/Backlight interface */
-    r += sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  conf_bl_path,
-                                  conf_bl_interface,
-                                  conf_bl_vtable,
-                                  &conf.bl_conf);
+    if (!conf.bl_conf.disabled) {
+        r += sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    conf_bl_path,
+                                    conf_bl_interface,
+                                    conf_bl_vtable,
+                                    &conf.bl_conf);
 
-    /* Conf/Sensor interface */
-    r += sd_bus_add_object_vtable(userbus,
-                                NULL,
-                                conf_sens_path,
-                                conf_sens_interface,
-                                conf_sens_vtable,
-                                &conf.sens_conf);
-
+        /* Conf/Sensor interface */
+        r += sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    conf_sens_path,
+                                    conf_sens_interface,
+                                    conf_sens_vtable,
+                                    &conf.sens_conf);
+    }
+    
+    /* Conf/Kbd interface */
+    if (!conf.kbd_conf.disabled) {
+        r += sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    conf_kbd_path,
+                                    conf_kbd_interface,
+                                    conf_kbd_vtable,
+                                    &conf.kbd_conf);
+    }
+    
     /* Conf/Gamma interface */
-    r += sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  conf_gamma_path,
-                                  conf_gamma_interface,
-                                  conf_gamma_vtable,
-                                  &conf.gamma_conf);
-
+    if (!conf.gamma_conf.disabled) {
+        r += sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    conf_gamma_path,
+                                    conf_gamma_interface,
+                                    conf_gamma_vtable,
+                                    &conf.gamma_conf);
+    }
+    
     /* Conf/Dimmer interface */
-    r += sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  conf_dim_path,
-                                  conf_dim_interface,
-                                  conf_dimmer_vtable,
-                                  &conf.dim_conf);
-
+    if (!conf.dim_conf.disabled) {
+        r += sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    conf_dim_path,
+                                    conf_dim_interface,
+                                    conf_dimmer_vtable,
+                                    &conf.dim_conf);
+    }
+    
     /* Conf/Dpms interface */
-    r += sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  conf_dpms_path,
-                                  conf_dpms_interface,
-                                  conf_dpms_vtable,
-                                  &conf.dpms_conf);
-
+    if (!conf.dpms_conf.disabled) {
+        r += sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    conf_dpms_path,
+                                    conf_dpms_interface,
+                                    conf_dpms_vtable,
+                                    &conf.dpms_conf);
+    }
+    
     /* Conf/Screen interface */
-    r += sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  conf_screen_path,
-                                  conf_screen_interface,
-                                  conf_screen_vtable,
-                                  &conf.screen_conf);
+    if (!conf.screen_conf.disabled) {
+        r += sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    conf_screen_path,
+                                    conf_screen_interface,
+                                    conf_screen_vtable,
+                                    &conf.screen_conf);
+    }
     
     /* 
      * ScreenSaver implementation: 
@@ -708,7 +736,7 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
 
     VALIDATE_PARAMS(value, "(dd)", &loc_req.loc.new.lat, &loc_req.loc.new.lon);
 
-    INFO("New location from BUS api: %.2lf %.2lf\n", loc_req.loc.new.lat, loc_req.loc.new.lat);
+    DEBUG("New location from BUS api: %.2lf %.2lf\n", loc_req.loc.new.lat, loc_req.loc.new.lat);
     M_PUB(&loc_req);
     return r;
 }

@@ -3,6 +3,7 @@
 
 static void init_backlight_opts(bl_conf_t *bl_conf);
 static void init_sens_opts(sensor_conf_t *sens_conf);
+static void init_kbd_opts(kbd_conf_t *kbd_conf);
 static void init_gamma_opts(gamma_conf_t *gamma_conf);
 static void init_dimmer_opts(dimmer_conf_t *dim_conf);
 static void init_dpms_opts(dpms_conf_t *dpms_conf);
@@ -12,6 +13,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 static void check_clightd_features(void);
 static void check_bl_conf(bl_conf_t *bl_conf);
 static void check_sens_conf(sensor_conf_t *sens_conf);
+static void check_kbd_conf(kbd_conf_t *kbd_conf);
 static void check_gamma_conf(gamma_conf_t *gamma_conf);
 static void check_dim_conf(dimmer_conf_t *dim_conf);
 static void check_dpms_conf(dpms_conf_t *dpms_conf);
@@ -59,6 +61,10 @@ static void init_sens_opts(sensor_conf_t *sens_conf) {
            DEF_SIZE_POINTS * sizeof(double));
 }
 
+static void init_kbd_opts(kbd_conf_t *kbd_conf) {
+    kbd_conf->amb_br_thres = 1.0;
+}
+
 static void init_gamma_opts(gamma_conf_t *gamma_conf) {
     gamma_conf->temp[DAY] = 6500;
     gamma_conf->temp[NIGHT] = 4000;
@@ -100,6 +106,7 @@ static void init_screen_opts(screen_conf_t *screen_conf) {
 void init_opts(int argc, char *argv[]) {
     init_backlight_opts(&conf.bl_conf);
     init_sens_opts(&conf.sens_conf);
+    init_kbd_opts(&conf.kbd_conf);
     init_gamma_opts(&conf.gamma_conf);
     init_dimmer_opts(&conf.dim_conf);
     init_dpms_opts(&conf.dpms_conf);
@@ -145,10 +152,10 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"no-dpms", 0, POPT_ARG_NONE, &conf.dpms_conf.disabled, 100, "Disable dpms tool", NULL},
         {"no-backlight", 0, POPT_ARG_NONE, &conf.bl_conf.disabled, 100, "Disable backlight module", NULL},
         {"no-screen", 0, POPT_ARG_NONE, &conf.screen_conf.disabled, 100, "Disable screen module", NULL},
+        {"no-kbd", 0, POPT_ARG_NONE, &conf.kbd_conf.disabled, 100, "Disable keyboard backlight calibration", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dim_conf.dimmed_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"no-auto-calib", 0, POPT_ARG_NONE, &conf.bl_conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
-        {"no-kbd-backlight", 0, POPT_ARG_NONE, &conf.bl_conf.no_keyboard_bl, 100, "Disable keyboard backlight calibration", NULL},
         {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.bl_conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
         {"conf-file", 'c', POPT_ARG_STRING, NULL, 6, "Specify a conf file to be parsed", NULL},
@@ -291,6 +298,18 @@ static void check_sens_conf(sensor_conf_t *sens_conf) {
     }
 }
 
+static void check_kbd_conf(kbd_conf_t *kbd_conf) {
+    if (kbd_conf->amb_br_thres > 1.0) {
+        WARN("Wrong amb_br_thres value. Resetting default value.\n");
+        kbd_conf->amb_br_thres = 1.0;
+    }
+    
+    if (kbd_conf->amb_br_thres <= 0.0) {
+        INFO("Disabling KEYBOARD as requested amb_br_thres is <= 0.\n");
+        kbd_conf->disabled = true;
+    }
+}
+
 static void check_gamma_conf(gamma_conf_t *gamma_conf) {
     /* GAMMA requires X */
     if (!state.display || !state.xauthority) {
@@ -430,6 +449,11 @@ static void check_conf(void) {
         check_bl_conf(&conf.bl_conf);
         check_sens_conf(&conf.sens_conf);
     }
+    
+    if (!conf.kbd_conf.disabled) {
+        check_kbd_conf(&conf.kbd_conf);
+    }
+    
     if (!conf.gamma_conf.disabled) {
         check_gamma_conf(&conf.gamma_conf);
     }

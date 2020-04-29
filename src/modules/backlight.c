@@ -5,12 +5,10 @@ enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 
 
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
-static void init_kbd_backlight(void);
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer);
 static void set_new_backlight(const double perc);
 static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout);
-static void set_keyboard_level(const double level);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_autocalib_callback(bool new_val);
@@ -25,13 +23,11 @@ static void pause_mod(enum backlight_pause type);
 static void resume_mod(enum backlight_pause type);
 
 static int sensor_available;
-static int max_kbd_backlight;
 static int bl_fd = -1;
 static int paused_state;
 static sd_bus_slot *slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
-DECLARE_MSG(kbd_msg, KBD_BL_UPD);
 DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 
@@ -54,17 +50,10 @@ static void init(void) {
     M_SUB(CURVE_REQ);
     M_SUB(NO_AUTOCALIB_REQ);
     M_SUB(BL_REQ);
-    M_SUB(KBD_BL_REQ);
 
     /* We do not fail if this fails */
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
     add_match(&args, &slot, on_sensor_change);
-    
-    /* 
-     * This only initializes kbd backlight, 
-     * but it won't use it if it is disabled
-     */
-    init_kbd_backlight();
 
     sensor_available = is_sensor_available();
     
@@ -82,9 +71,6 @@ static void init(void) {
          * Cannot publish a BL_REQ as BACKLIGHT get paused.
          */
         set_backlight_level(1.0, false, 0, 0);
-        if (!conf.bl_conf.no_keyboard_bl) {
-            set_keyboard_level(0.0);
-        }
         pause_mod(AUTOCALIB);
     }
 }
@@ -162,13 +148,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         }
         break;
     }
-    case KBD_BL_REQ: {
-        bl_upd *up = (bl_upd *)MSG_DATA();
-        if (VALIDATE_REQ(up)) {
-            set_keyboard_level(up->new);
-        }
-        break;
-    }
     default:
         break;
     }
@@ -229,14 +208,6 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         }
         break;
     }
-    case KBD_BL_REQ: {
-        /* In paused state check that we're not dimmed/dpms */
-        bl_upd *up = (bl_upd *)MSG_DATA();
-        if (VALIDATE_REQ(up) && !state.display_state) {
-            set_keyboard_level(up->new);
-        }
-        break;
-    }
     default:
         break;
     }
@@ -244,9 +215,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {    
     int r = -EINVAL;
-    if (!strcmp(member, "GetMaxBrightness")) {
-        r = sd_bus_message_read(reply, "i", &max_kbd_backlight);
-    } else if (!strcmp(member, "IsAvailable")) {        
+    if (!strcmp(member, "IsAvailable")) {        
         const char *sensor = NULL;
         r = sd_bus_message_read(reply, "sb", &sensor, userdata);
         int is_avail = *((int *)userdata);
@@ -273,12 +242,6 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
         }
     }
     return r;
-}
-
-static void init_kbd_backlight(void) {
-    SYSBUS_ARG_REPLY(kbd_args, parse_bus_reply, NULL, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "GetMaxBrightness");
-    int r = call(&kbd_args, NULL);
-    DEBUG("Keyboard backlight calibration %s.\n", r ? "unsupported" : "supported");
 }
 
 static int is_sensor_available(void) {
@@ -320,30 +283,6 @@ static void set_new_backlight(const double perc) {
 
     set_backlight_level(new_br_pct, !conf.bl_conf.no_smooth, 
                         conf.bl_conf.trans_step, conf.bl_conf.trans_timeout);
-    
-    if (!conf.bl_conf.no_keyboard_bl) {
-        /*
-         * keyboard backlight follows opposite curve:
-         * on high ambient brightness, it must be very low (off)
-         * on low ambient brightness, it must be turned on
-         */
-        set_keyboard_level(1.0 - new_br_pct);
-    }
-}
-
-static void set_keyboard_level(const double level) {
-    if (max_kbd_backlight > 0) {
-        SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
-
-        kbd_msg.bl.old = state.current_kbd_pct;
-        /* We actually need to pass an int to variadic bus() call */
-        const int new_kbd_br = round(level * max_kbd_backlight);
-        if (call(&kbd_args, NULL, "i", new_kbd_br) == 0) {
-            state.current_kbd_pct = level;
-            kbd_msg.bl.new = state.current_kbd_pct;
-            M_PUB(&kbd_msg);
-        }
-    }
 }
 
 static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
@@ -412,24 +351,10 @@ static void interface_timeout_callback(timeout_upd *up) {
 
 /* Callback on state.display_state changes */
 static void dimmed_callback(void) {
-    static double old_kbd_level = 0.0;
-    
     if (state.display_state) {
         pause_mod(DISPLAY);
-
-        /* Switch off keyboard if requested */
-        if (conf.bl_conf.dim_kbd) {
-            old_kbd_level = state.current_kbd_pct;
-            set_keyboard_level(0.0);
-        }
     } else {
         resume_mod(DISPLAY);
-        
-        /* Reset keyboard backlight level if needed */
-        if (old_kbd_level != 0.0) {
-            set_keyboard_level(old_kbd_level);
-            old_kbd_level = 0.0;
-        }
     }
 }
 
