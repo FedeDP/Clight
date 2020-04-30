@@ -53,6 +53,7 @@
 - [x] Double check to not use any variable from disabled modules
 - [x] Avoid logging disabled modules conf as it is not checked
 - [x] Avoid creating disabled modules conf interafce
+- [x] Kill clight on bus disconnection (ENOTCONN/ECONNRESET errnos)
 
 ## 4.2
 
