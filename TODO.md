@@ -10,6 +10,7 @@
 - [x] Bugfix: set_new_backlight should take current ambient_br * conf.num_points (that is no more fixed to 10!)
 - [x] Drop inhibit_autocalib (to be demanded to inhibit_bl custom module)
 - [x] Bugfix: correctly manage pubsub messages when in paused state
+- [x] Properly support new Clightd API that only returns number of captures successfully retrieved
 
 ### Keyboard
 - [x] Split keyboard settings from backlight
@@ -22,6 +23,8 @@
 ### Inhibition
 - [x] Fix support for multiple inhibition sources; eg: both "docked" and "ScreenSaver" are inhibiting clight. When ScreenSaver drops its inhibition, state is set back to not inhibited.
 - [x] Fix "Failed to parse parameters: No such device or address" message
+- [x] Log both app name and reason during inhibit; log only app name during Uninhibit
+- [x] Add a force option to inhibit_upd msg requests, used by clight Inhibit "false" dbus interface, to forcefully remove any inhibiton
 
 ### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }

@@ -213,9 +213,9 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     }
 }
 
-static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {    
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     int r = -EINVAL;
-    if (!strcmp(member, "IsAvailable")) {        
+    if (!strcmp(member, "IsAvailable")) {
         const char *sensor = NULL;
         r = sd_bus_message_read(reply, "sb", &sensor, userdata);
         int is_avail = *((int *)userdata);

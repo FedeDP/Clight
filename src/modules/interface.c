@@ -15,9 +15,12 @@
 typedef struct {
     int cookie;
     int refs;
+    const char *app;
+    const char *reason;
 } lock_t;
 
 /** org.freedesktop.ScreenSaver spec implementation **/
+static void lock_dtor(void *data);
 static int start_inhibit_monitor(void);
 static void inhibit_parse_msg(sd_bus_message *m);
 static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
@@ -358,7 +361,7 @@ static void init(void) {
                     WARN("Failed to register %s inhibition monitor.\n", sc_interface);
                 }
             }
-            lock_map = map_new(true, free);
+            lock_map = map_new(true, lock_dtor);
             /**                                 **/
         }
     }
@@ -414,6 +417,13 @@ static void destroy(void) {
     }
     map_free(lock_map);
     curve_message = sd_bus_message_unref(curve_message);
+}
+
+static void lock_dtor(void *data) {
+    lock_t *l = (lock_t *)data;
+    free((void *)l->app);
+    free((void *)l->reason);
+    free(l);
 }
 
 /** org.freedesktop.ScreenSaver spec implementation: https://people.freedesktop.org/~hadess/idle-inhibition-spec/re01.html **/
@@ -533,11 +543,14 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
             }
             l->cookie = *cookie;
             l->refs = 1;
+            l->app = strdup(app_name);
+            l->reason = strdup(reason);
             map_put(lock_map, key, l);
 
-            DEBUG("New ScreenSaver inhibition held by %s: %s. Cookie: %d\n", app_name, reason, l->cookie);
             inhibit_req.inhibit.old = state.inhibited;
             inhibit_req.inhibit.new = true;
+            inhibit_req.inhibit.force = false;
+            inhibit_req.inhibit.app_name = strdup(app_name);
             inhibit_req.inhibit.reason = strdup(reason);
             M_PUB(&inhibit_req);
 
@@ -568,19 +581,21 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
     }
 
     if (l) {
-        const int c = l->cookie;
         if (!force) {
             l->refs--;
         } else {
             l->refs = 0;
         }
-        if (l->refs == 0 && map_remove(lock_map, key) == MAP_OK) {
-            DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", c);
+        if (l->refs == 0) {
+            DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", l->cookie);
             inhibit_req.inhibit.old = state.inhibited;
             inhibit_req.inhibit.new = false;
-            inhibit_req.inhibit.reason = NULL;
+            inhibit_req.inhibit.force = !strcmp(key, CLIGHT_INH_KEY); // forcefully disable inhibition for Clight INTERFACE Inhibit "false"
+            inhibit_req.inhibit.app_name = strdup(l->app);
+            inhibit_req.inhibit.reason = strdup(l->reason);
             M_PUB(&inhibit_req);
             
+            map_remove(lock_map, key);
             if (map_length(lock_map) == 0) {
                 /* Stop listening on NameOwnerChanged signals */
                 lock_slot = sd_bus_slot_unref(lock_slot);
