@@ -134,7 +134,10 @@ bool validate_display(display_upd *up) {
 }
 
 bool validate_lid(lid_upd *up) {
-    if (state.lid_state != up->new) {
+    if (up->new >= OPEN &&
+        up->new <= DOCKED &&
+        state.lid_state != up->new) {
+        
         return true;
     }
     DEBUG("Failed to validate lid request.\n");

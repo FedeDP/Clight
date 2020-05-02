@@ -54,9 +54,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         lid_upd *up = (lid_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             if (up->new != DOCKED) {
-                INFO("Lid %s.\n", up->new == CLOSED ? "closed" : "opened");
+                DEBUG("Lid %s.\n", up->new == CLOSED ? "closed" : "opened");
             } else {
-                INFO("Laptop docked.\n");
+                DEBUG("Laptop docked.\n");
             }
             // publish lid before storing new lid state as state.lid_closed is sent as "old" parameter
             publish_lid(up->new, &lid_msg);
