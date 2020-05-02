@@ -45,9 +45,10 @@
 - [x] Use LidClosed signal to eventually pause calibration -> eg: inhibit_on_lid_closed = true BACKLIGHT conf. Only if !docked obviously. 
 - [x] Expose LidClosed property through dbus interface
 - [ ] Sometimes LidState remains closed when lid is open while an external monitor is connected
+- [ ] Properly manage docked state since clight start (ie: if laptop boots up docked)
 
 ### Geoclue
-- [ ] Fix geoclue once more... -> it seems setting TimeThreshold and DistanceThreshold breaks geoclue... investigate further
+- [x] Fix geoclue once more... -> it seems setting TimeThreshold and DistanceThreshold breaks geoclue...
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file

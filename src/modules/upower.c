@@ -19,8 +19,9 @@ MODULE("UPOWER");
 
 static void init(void) {
     if (upower_check() != 0 || upower_init() != 0) {
-        /* Upower not available. Let's assume ON_AC! */
+        /* Upower not available. Let's assume ON_AC and LID OPEN! */
         state.ac_state = ON_AC;
+        state.lid_state = OPEN;
         INFO("Failed to retrieve AC state; fallback to connected.\n");
         m_poisonpill(self());
     } else {
