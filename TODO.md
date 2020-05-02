@@ -25,6 +25,7 @@
 - [x] Fix "Failed to parse parameters: No such device or address" message
 - [x] Log both app name and reason during inhibit; log only app name during Uninhibit
 - [x] Add a force option to inhibit_upd msg requests, used by clight Inhibit "false" dbus interface, to forcefully remove any inhibiton
+- [x] Default to "Clight" as appname, when NULL
 
 ### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }
@@ -43,6 +44,10 @@
 - [x] Improvement: add a new "LidClosed" signal 
 - [x] Use LidClosed signal to eventually pause calibration -> eg: inhibit_on_lid_closed = true BACKLIGHT conf. Only if !docked obviously. 
 - [x] Expose LidClosed property through dbus interface
+- [ ] Sometimes LidState remains closed when lid is open while an external monitor is connected
+
+### Geoclue
+- [ ] Fix geoclue once more... -> it seems setting TimeThreshold and DistanceThreshold breaks geoclue... investigate further
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
