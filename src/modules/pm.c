@@ -5,6 +5,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 static void on_pm_req(pm_upd *up);
 
 DECLARE_MSG(pm_req, PM_REQ);
+DECLARE_MSG(pm_msg, PM_UPD);
 
 MODULE("PM");
 
@@ -78,6 +79,8 @@ static void on_pm_req(pm_upd *up) {
                               "Inhibit");
             if (call(&pm_args, "ss", "Clight", "PM inhibition.") == 0) {
                 INFO("Holding PowerManagement inhibition.\n");
+                pm_msg.pm.new = true;
+                M_PUB(&pm_msg);
             }
         } else if (!up->new && pm_inh_token != -1) {
             USERBUS_ARG(pm_args,
@@ -88,6 +91,8 @@ static void on_pm_req(pm_upd *up) {
             if (call(&pm_args, "u", pm_inh_token) == 0) {
                 INFO("Released PowerManagement inhibition.\n");
                 pm_inh_token = -1;
+                pm_msg.pm.new = false;
+                M_PUB(&pm_msg);
             }
         }
     }
