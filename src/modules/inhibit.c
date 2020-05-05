@@ -48,10 +48,10 @@ static void on_inhibit_req(inhibit_upd *up) {
         if (!up->new) {
             if (!up->force) {
                 inhibition_ctr--;
-                INFO("Clight inhibition released by '%s'.\n", up->app_name ? up->app_name : "Clight");
+                INFO("ScreenSaver inhibition released by '%s'.\n", up->app_name ? up->app_name : "Clight");
             } else {
                 inhibition_ctr = 0;
-                INFO("Clight inhibition forcefully cleared by '%s'.\n", up->app_name ? up->app_name : "Clight");
+                INFO("ScreenSaver inhibition forcefully cleared by '%s'.\n", up->app_name ? up->app_name : "Clight");
             }
         }
         
@@ -65,7 +65,7 @@ static void on_inhibit_req(inhibit_upd *up) {
     /* Count currently held inhibitions */
     if (up->new) {
         inhibition_ctr++;
-        INFO("New Clight inhibition held by '%s': '%s'\n", 
+        INFO("New ScreenSaver inhibition held by '%s': '%s'\n", 
              up->app_name ? up->app_name : "Clight",
              up->reason ? up->reason : "no reason specified.");
     }
