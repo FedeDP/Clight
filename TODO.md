@@ -29,12 +29,13 @@
 - [x] Default to "Clight" as appname, when NULL
 - [x] Only start INHIBIT if dimmer or dpms are enabled
 - [x] DO not create/listen to ScreenSaver dbus interface requests if inhibit module is not started
-- [ ] Move inhibit related config away in config and add a struct
+- [x] Move inhibit related config away in config and add a struct
 
 ### PM
-- [ ] Add a new PowerManagement module to suppress org.freedesktop.PowerManagement on inhibition (inhibit_pm=true)
-- [ ] It subscribes to pm_req messages, and publishes pm_upd messages
-- [ ] Is it only started if inhibit is started
+- [x] Add a new PowerManagement module to suppress org.freedesktop.PowerManagement on inhibition (inhibit_pm=true)
+- [x] It subscribes to pm_req messages, and publishes pm_upd messages
+- [x] Is it only started if inhibit is started
+- [x] PM inhibition must be released when clight leaves, as clight is not pm inhibition server but just a client
 
 ### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }

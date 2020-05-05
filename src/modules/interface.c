@@ -90,7 +90,6 @@ static const sd_bus_vtable clight_vtable[] = {
 
 static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("InhibitDocked", "b", NULL, NULL, offsetof(conf_t, inhibit_docked), 0),
     SD_BUS_WRITABLE_PROPERTY("Verbose", "b", NULL, NULL, offsetof(conf_t, verbose), 0),
     SD_BUS_METHOD("Store", NULL, NULL, method_store_conf, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
@@ -100,7 +99,7 @@ static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(bl_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
-    SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, inhibit_on_lid_closed), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(bl_conf_t, screen_path), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth), 0),
     SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),
@@ -184,6 +183,13 @@ static const sd_bus_vtable conf_screen_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
+static const sd_bus_vtable conf_inh_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitDocked", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_docked), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitPM", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_pm), 0),
+    SD_BUS_VTABLE_END
+};
+
 static const sd_bus_vtable sc_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_METHOD("Inhibit", "ss", "u", method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -212,7 +218,6 @@ static map_t *lock_map;
 static sd_bus *userbus, *monbus;
 static sd_bus_message *curve_message; // this is used to keep curve points data lingering around in set_curve
 static sd_bus_slot *lock_slot;
-static bool start_screensaver_api;  // Whether ScreenSaver api has been started
 
 MODULE("INTERFACE");
 
@@ -225,6 +230,7 @@ static void init(void) {
     const char conf_dim_path[] = "/org/clight/clight/Conf/Dimmer";
     const char conf_dpms_path[] = "/org/clight/clight/Conf/Dpms";
     const char conf_screen_path[] = "/org/clight/clight/Conf/Screen";
+    const char conf_inh_path[] = "/org/clight/clight/Conf/Inhibit"; 
     const char sc_path_full[] = "/org/freedesktop/ScreenSaver";
     const char sc_path[] = "/ScreenSaver";
     const char conf_interface[] = "org.clight.clight.Conf";
@@ -235,9 +241,7 @@ static void init(void) {
     const char conf_dim_interface[] = "org.clight.clight.Conf.Dimmer";
     const char conf_dpms_interface[] = "org.clight.clight.Conf.Dpms";
     const char conf_screen_interface[] = "org.clight.clight.Conf.Screen";
-    
-    /* Only if INHIBIT module is present, ie: or DPMS or DIMMER are enabled */
-    start_screensaver_api = !conf.dim_conf.disabled || !conf.dpms_conf.disabled;
+    const char conf_inh_interface[] = "org.clight.clight.Conf.Inhibit";
     
     userbus = get_user_bus();
     
@@ -325,28 +329,35 @@ static void init(void) {
                                     &conf.screen_conf);
     }
     
-    if (start_screensaver_api) {
-        /*
-        * ScreenSaver implementation:
-        * take both /ScreenSaver and /org/freedesktop/ScreenSaver paths
-        * as they're both used by applications.
-        * Eg: chromium/libreoffice use full path, while vlc uses /ScreenSaver
-        *
-        * Avoid checking for errors!!
-        */
-        sd_bus_add_object_vtable(userbus,
+    if (!conf.inh_conf.disabled) {
+        r += sd_bus_add_object_vtable(userbus,
+                                      NULL,
+                                      conf_inh_path,
+                                      conf_inh_interface,
+                                      conf_inh_vtable,
+                                      &conf.inh_conf);
+
+            /*
+            * ScreenSaver implementation:
+            * take both /ScreenSaver and /org/freedesktop/ScreenSaver paths
+            * as they're both used by applications.
+            * Eg: chromium/libreoffice use full path, while vlc uses /ScreenSaver
+            *
+            * Avoid checking for errors!!
+            */
+            sd_bus_add_object_vtable(userbus,
+                                        NULL,
+                                        sc_path,
+                                        sc_interface,
+                                        sc_vtable,
+                                        &state);
+
+            sd_bus_add_object_vtable(userbus,
                                     NULL,
-                                    sc_path,
+                                    sc_path_full,
                                     sc_interface,
                                     sc_vtable,
                                     &state);
-
-        sd_bus_add_object_vtable(userbus,
-                                NULL,
-                                sc_path_full,
-                                sc_interface,
-                                sc_vtable,
-                                &state);
     }
 
     if (r < 0) {
@@ -360,7 +371,7 @@ static void init(void) {
             m_subscribe("^[^Req].*");
             
             /** org.freedesktop.ScreenSaver API **/
-            if (start_screensaver_api) {
+            if (!conf.inh_conf.disabled) {
                 if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
                     WARN("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
                     INFO("Fallback at monitoring requests to %s name owner.\n", sc_interface);
@@ -417,7 +428,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 static void destroy(void) {
     if (userbus) {
         sd_bus_release_name(userbus, bus_interface);
-        if (start_screensaver_api) {
+        if (!conf.inh_conf.disabled) {
             sd_bus_release_name(userbus, sc_interface);
         }
         userbus = sd_bus_flush_close_unref(userbus);
@@ -504,21 +515,32 @@ static void inhibit_parse_msg(sd_bus_message *m) {
     if (sd_bus_message_get_member(m)) {
         const char *member = sd_bus_message_get_member(m);
         const char *signature = sd_bus_message_get_signature(m, false);
-        if (!strcmp(member, sc_vtable[1].x.method.member) 
-            && !strcmp(signature, sc_vtable[1].x.method.signature)) {
-    
-            int cookie = 0;
-            char *app_name = NULL, *reason = NULL;
-            int r = sd_bus_message_read(m, "ss", &app_name, &reason); 
-            if (r < 0) {
-                WARN("Failed to parse parameters: %s\n", strerror(-r));
-            } else {
-                create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason);
+        const char *interface = sd_bus_message_get_interface(m);
+        
+        for (int i = 1; i <= 2; i++) {
+            if (!strcmp(interface, sc_interface)
+                && !strcmp(member, sc_vtable[i].x.method.member)
+                && !strcmp(signature, sc_vtable[i].x.method.signature)) {
+                
+                switch (i) {
+                case 1: { // Inhibit!!
+                    int cookie = 0;
+                    char *app_name = NULL, *reason = NULL;
+                    int r = sd_bus_message_read(m, "ss", &app_name, &reason); 
+                    if (r < 0) {
+                        WARN("Failed to parse parameters: %s\n", strerror(-r));
+                    } else {
+                        create_inhibit(&cookie, sd_bus_message_get_sender(m), app_name, reason);
+                    }
+                    break;
+                }
+                case 2: // UnInhibit!!
+                    drop_inhibit(NULL, sd_bus_message_get_sender(m), false);
+                    break;
+                default:
+                    break;
+                }
             }
-        } else if (!strcmp(member, sc_vtable[2].x.method.member) 
-            && !strcmp(signature, sc_vtable[2].x.method.signature)) {
-            
-            drop_inhibit(NULL, sd_bus_message_get_sender(m), false);
         }
     }
 }
@@ -620,16 +642,20 @@ static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error
     int inhibit;
     VALIDATE_PARAMS(m, "b", &inhibit);
     
-    int ret = 0;
-    if (inhibit) {
-        int cookie = CLIGHT_COOKIE;
-        ret = create_inhibit(&cookie, CLIGHT_INH_KEY, "Clight", "user requested");
-    } else {
-        ret = drop_inhibit(NULL, CLIGHT_INH_KEY, true);
-    }
+    if (!conf.inh_conf.disabled) {
+        int ret = 0;
+        if (inhibit) {
+            int cookie = CLIGHT_COOKIE;
+            ret = create_inhibit(&cookie, CLIGHT_INH_KEY, "Clight", "user requested");
+        } else {
+            ret = drop_inhibit(NULL, CLIGHT_INH_KEY, true);
+        }
 
-    if (ret == 0) {
-        return sd_bus_reply_method_return(m, NULL);
+        if (ret == 0) {
+            return sd_bus_reply_method_return(m, NULL);
+        }
+    } else {
+        WARN("Inhibit module is disabled.\n");
     }
     sd_bus_error_set_errno(ret_error, EINVAL);
     return -EINVAL;

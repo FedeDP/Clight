@@ -405,7 +405,7 @@ static inline int get_current_timeout(void) {
 }
 
 static void on_lid_update(void) {
-    if (conf.bl_conf.inhibit_on_lid_closed && state.lid_state) {
+    if (conf.bl_conf.pause_on_lid_closed && state.lid_state) {
         pause_mod(LID);
     } else {
         resume_mod(LID);

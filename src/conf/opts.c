@@ -18,6 +18,7 @@ static void check_gamma_conf(gamma_conf_t *gamma_conf);
 static void check_dim_conf(dimmer_conf_t *dim_conf);
 static void check_dpms_conf(dpms_conf_t *dpms_conf);
 static void check_screen_conf(screen_conf_t *screen_conf);
+static void check_inh_conf(inh_conf_t *inh_conf);
 static void check_conf(void);
 
 static void init_backlight_opts(bl_conf_t *bl_conf) {
@@ -437,6 +438,15 @@ static void check_screen_conf(screen_conf_t *screen_conf) {
     }
 }
 
+static void check_inh_conf(inh_conf_t *inh_conf) {
+    if (conf.dim_conf.disabled && conf.dpms_conf.disabled) {
+        DEBUG("Inhibit module is not needed. Disabling.\n");
+        inh_conf->disabled = true;
+        inh_conf->inhibit_docked = false;
+        inh_conf->inhibit_pm = false;
+    }
+}
+
 /*
  * It does all needed checks to correctly reset default values
  * in case of wrong options set.
@@ -444,16 +454,13 @@ static void check_screen_conf(screen_conf_t *screen_conf) {
 static void check_conf(void) {
     /* Disable any not built-in feature in Clightd */
     check_clightd_features();
-    
     if (!conf.bl_conf.disabled) {
         check_bl_conf(&conf.bl_conf);
         check_sens_conf(&conf.sens_conf);
     }
-    
     if (!conf.kbd_conf.disabled) {
         check_kbd_conf(&conf.kbd_conf);
     }
-    
     if (!conf.gamma_conf.disabled) {
         check_gamma_conf(&conf.gamma_conf);
     }
@@ -466,4 +473,5 @@ static void check_conf(void) {
     if (!conf.screen_conf.disabled) {
         check_screen_conf(&conf.screen_conf);
     }
+    check_inh_conf(&conf.inh_conf);
 }

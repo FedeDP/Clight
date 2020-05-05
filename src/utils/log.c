@@ -9,6 +9,7 @@ static void log_gamma_conf(gamma_conf_t *gamma_conf);
 static void log_dim_conf(dimmer_conf_t *dim_conf);
 static void log_dpms_conf(dpms_conf_t *dpms_conf);
 static void log_scr_conf(screen_conf_t *screen_conf);
+static void log_inh_conf(inh_conf_t *inh_conf);
 
 static FILE *log_file;
 
@@ -51,7 +52,7 @@ static void log_bl_conf(bl_conf_t *bl_conf) {
     fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(bl_conf->screen_path) ? bl_conf->screen_path : "Unset");
     fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", bl_conf->shutter_threshold);
     fprintf(log_file, "* Autocalibration:\t\t%s\n", bl_conf->no_auto_calib ? "Disabled" : "Enabled");
-    fprintf(log_file, "* Inhibit on lid closed:\t\t%s\n", bl_conf->inhibit_on_lid_closed ? "Enabled" : "Disabled");
+    fprintf(log_file, "* Pause on lid closed:\t\t%s\n", bl_conf->pause_on_lid_closed ? "Enabled" : "Disabled");
 }
 
 static void log_sens_conf(sensor_conf_t *sens_conf) {
@@ -114,6 +115,12 @@ static void log_scr_conf(screen_conf_t *screen_conf) {
     fprintf(log_file, "* Samples:\t\t%d\n", screen_conf->samples);
 }
 
+static void log_inh_conf(inh_conf_t *inh_conf) {
+    fprintf(log_file, "\n### INHIBIT ###\n");
+    fprintf(log_file, "* Docked:\t\t%s\n", inh_conf->inhibit_docked ? "Disabled" : "Enabled");
+    fprintf(log_file, "* PowerManagement:\t\t%s\n", inh_conf->inhibit_pm ? "Enabled" : "Disabled");
+}
+
 void log_conf(void) {
     if (log_file) {
         time_t t = time(NULL);
@@ -129,7 +136,6 @@ void log_conf(void) {
         
         fprintf(log_file, "\n### GENERIC ###\n");
         fprintf(log_file, "* Verbose (debug):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
-        fprintf(log_file, "* Inhibit docked:\t\t%s\n", conf.inhibit_docked ? "Enabled" : "Disabled");
         
         if (!conf.bl_conf.disabled) {
             log_bl_conf(&conf.bl_conf);
@@ -154,6 +160,10 @@ void log_conf(void) {
         
         if (!conf.screen_conf.disabled) {
            log_scr_conf(&conf.screen_conf);
+        }
+        
+        if (!conf.inh_conf.disabled) {
+            log_inh_conf(&conf.inh_conf);
         }
         
         fprintf(log_file, "\n");

@@ -10,6 +10,7 @@ static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
 static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf);
 static void load_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf);
 static void load_screen_settings(config_t *cfg, screen_conf_t *screen_conf);
+static void load_inh_settings(config_t *cfg, inh_conf_t *inh_conf);
 
 static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf);
@@ -18,6 +19,7 @@ static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
 static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf);
 static void store_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf);
 static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf);
+static void store_inh_settings(config_t *cfg, inh_conf_t *inh_conf);
 
 static void init_config_file(enum CONFIG file, char *filename) {
     int len = 0;
@@ -50,7 +52,7 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         if (config_setting_lookup_string(bl, "screen_sysname", &screendev) == CONFIG_TRUE) {
             strncpy(bl_conf->screen_path, screendev, sizeof(bl_conf->screen_path) - 1);
         }
-        config_setting_lookup_bool(bl, "inhibit_on_lid_closed", &bl_conf->inhibit_on_lid_closed);
+        config_setting_lookup_bool(bl, "pause_on_lid_closed", &bl_conf->pause_on_lid_closed);
         
         config_setting_t *timeouts;
         
@@ -268,6 +270,14 @@ static void load_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
     }
 }
 
+static void load_inh_settings(config_t *cfg, inh_conf_t *inh_conf) {
+    config_setting_t *kbd = config_lookup(cfg, "inhibit");
+    if (kbd) {
+        config_setting_lookup_bool(kbd, "inhibit_docked", &inh_conf->inhibit_docked);
+        config_setting_lookup_bool(kbd, "inhibit_pm", &inh_conf->inhibit_pm);
+    }
+}
+
 int read_config(enum CONFIG file, char *config_file) {
     int r = 0;
     config_t cfg;
@@ -283,7 +293,6 @@ int read_config(enum CONFIG file, char *config_file) {
     config_init(&cfg);
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
-        config_lookup_bool(&cfg, "inhibit_docked", &conf.inhibit_docked);
         
         load_backlight_settings(&cfg, &conf.bl_conf);
         load_sensor_settings(&cfg, &conf.sens_conf);
@@ -292,6 +301,7 @@ int read_config(enum CONFIG file, char *config_file) {
         load_dimmer_settings(&cfg, &conf.dim_conf);
         load_dpms_settings(&cfg, &conf.dpms_conf);
         load_screen_settings(&cfg, &conf.screen_conf);
+        load_inh_settings(&cfg, &conf.inh_conf);
     } else {
         WARN("Config file: %s at line %d.\n",
              config_error_text(&cfg),
@@ -318,8 +328,8 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     setting = config_setting_add(bl, "no_auto_calibration", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_auto_calib);
     
-    setting = config_setting_add(bl, "inhibit_on_lid_closed", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, bl_conf->inhibit_on_lid_closed);
+    setting = config_setting_add(bl, "pause_on_lid_closed", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, bl_conf->pause_on_lid_closed);
     
     setting = config_setting_add(bl, "screen_sysname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, bl_conf->screen_path);
@@ -467,6 +477,16 @@ static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
     }
 }
 
+static void store_inh_settings(config_t *cfg, inh_conf_t *inh_conf) {
+    config_setting_t *kbd = config_setting_add(cfg->root, "inhibit", CONFIG_TYPE_GROUP);
+    
+    config_setting_t *setting = config_setting_add(kbd, "inhibit_docked", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, inh_conf->inhibit_docked);
+    
+    setting = config_setting_add(kbd, "inhibit_pm", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, inh_conf->inhibit_pm);
+}
+
 int store_config(enum CONFIG file) {
     int r = 0;
     config_t cfg;
@@ -481,9 +501,6 @@ int store_config(enum CONFIG file) {
     config_setting_t *setting = config_setting_add(cfg.root, "verbose", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.verbose);
     
-    setting = config_setting_add(cfg.root, "inhibit_docked", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, conf.inhibit_docked);
-    
     store_backlight_settings(&cfg, &conf.bl_conf);
     store_sensors_settings(&cfg, &conf.sens_conf);
     store_kbd_settings(&cfg, &conf.kbd_conf);
@@ -491,7 +508,8 @@ int store_config(enum CONFIG file) {
     store_dimmer_settings(&cfg, &conf.dim_conf);
     store_dpms_settings(&cfg, &conf.dpms_conf);
     store_screen_settings(&cfg, &conf.screen_conf);
-
+    store_inh_settings(&cfg, &conf.inh_conf);
+    
     if (config_write_file(&cfg, config_file) != CONFIG_TRUE) {
         WARN("Failed to write new config to file.\n");
         r = -1;

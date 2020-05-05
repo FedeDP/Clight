@@ -39,7 +39,7 @@ typedef struct {
     int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
-    int inhibit_on_lid_closed;              // whether clight should inhibit autocalibration on lid closed
+    int pause_on_lid_closed;              // whether clight should inhibit autocalibration on lid closed
 } bl_conf_t;
 
 typedef struct {
@@ -82,6 +82,12 @@ typedef struct {
     int samples;                            // number of samples used to compute average screen-emitted brightness
 } screen_conf_t;
 
+typedef struct {
+    int disabled;
+    int inhibit_docked;                     // whether to manage "docked" states as inhibitions. Requires UPower.
+    int inhibit_pm;                         // whether handle inhibition suppressing powermanagement too
+} inh_conf_t;
+
 /* Struct that holds global config as passed through cmdline args/config file reading */
 typedef struct {
     bl_conf_t bl_conf;
@@ -91,8 +97,8 @@ typedef struct {
     dimmer_conf_t dim_conf;
     dpms_conf_t dpms_conf;
     screen_conf_t screen_conf;
+    inh_conf_t inh_conf;
     int verbose;                            // whether verbose mode is enabled
-    int inhibit_docked;                     // whether to manage "docked" states as inhibitions. Requires UPower.
 } conf_t;
 
 /* Global state of program */

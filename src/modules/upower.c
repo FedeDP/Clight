@@ -91,7 +91,7 @@ static int upower_check(void) {
             r += get_property(&lid_close_args, "b", &state.lid_state, sizeof(state.lid_state));
 
             /* Check initial docked state too! */
-            if (conf.inhibit_docked) {
+            if (state.lid_state && conf.inh_conf.inhibit_docked) {
                 SYSBUS_ARG(docked_args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Docked");
                 
                 bool docked;
@@ -135,11 +135,11 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
     if (!r && state.ac_state != ac_state) {
         publish_upower(ac_state, &upower_req);
     }
-    
+
     enum lid_states lid_state;
     r = get_property(&lid_close_args, "b", &lid_state, sizeof(lid_state));
     if (!r && !!state.lid_state != lid_state) {
-        if (conf.inhibit_docked) {
+        if (conf.inh_conf.inhibit_docked) {
             
             /* 
              * Only if lid is closed: check for DOCKED state (if inhibit_docked is enabled)

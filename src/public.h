@@ -98,6 +98,8 @@ enum mod_msg_types {
     SIMULATE_REQ,       // Publish to simulate user activity (resetting both dimmer and dpms timeouts)
     LID_UPD,            // Subscribe to receive new lid states
     LID_REQ,            // Publish to set a new lid state
+    PM_UPD,             // Subscribe to receive new PowerManagement inhibition states
+    PM_REQ,             // Publish to set a new PowerManagement inhibition state
     MSGS_SIZE
 };
 
@@ -130,6 +132,10 @@ typedef struct {
     const char *app_name;       // Optional for requests. NULL in updates. Must be heap-allocated. Freed by INHIBIT.
     const char *reason;         // Optional for requests. NULL in updates. Must be heap-allocated. Freed by INHIBIT.
 } inhibit_upd;
+
+typedef struct {
+    bool new;                   // Mandatory for requests. Valued in updates
+} pm_upd;
 
 typedef struct {
     enum display_states old;    // Valued in updates
@@ -200,6 +206,7 @@ typedef struct {
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
         lid_upd lid;            /* LID_UPD/LID_REQ */
         inhibit_upd inhibit;    /* INHIBIT_UPD/INHIBIT_REQ */
+        pm_upd pm;              /* PM_UPD/PM_REQ */
         display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
         daytime_upd day_time;   /* TIME_UPD/IN_EVENT_UPD */
         evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ */

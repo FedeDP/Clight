@@ -23,7 +23,7 @@ static bool check(void) {
 }
 
 static bool evaluate() {
-    return (!conf.dim_conf.disabled || !conf.dpms_conf.disabled) && state.lid_state != -1; // start once we have a lid state, to check for DOCKED state
+    return !conf.inh_conf.disabled && state.lid_state != -1; // start once we have a lid state, to check for DOCKED state
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
