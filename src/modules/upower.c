@@ -89,6 +89,17 @@ static int upower_check(void) {
             
             r = get_property(&batt_args, "b", &state.ac_state, sizeof(state.ac_state));
             r += get_property(&lid_close_args, "b", &state.lid_state, sizeof(state.lid_state));
+
+            /* Check initial docked state too! */
+            if (conf.inhibit_docked) {
+                SYSBUS_ARG(docked_args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Docked");
+                
+                bool docked;
+                r = get_property(&docked_args, "b", &docked, sizeof(docked));
+                if (!r) {
+                    state.lid_state += docked;
+                }
+            }
         } else {
             INFO("Not a laptop device. Killing UPower module.\n");
             r = -1;
@@ -129,14 +140,20 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
     r = get_property(&lid_close_args, "b", &lid_state, sizeof(lid_state));
     if (!r && !!state.lid_state != lid_state) {
         if (conf.inhibit_docked) {
-            SYSBUS_ARG(docked_args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Docked");
             
-            bool docked;
-            int r = get_property(&docked_args, "b", &docked, sizeof(docked));
-            if (!r && docked != (state.lid_state == DOCKED)) {
-                lid_state += docked;
-                publish_inh(docked, &inh_req);
+            /* 
+             * Only if lid is closed: check for DOCKED state (if inhibit_docked is enabled)
+             */
+            bool docked = false;
+            if (lid_state) {
+                SYSBUS_ARG(docked_args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Docked");
+                
+                r = get_property(&docked_args, "b", &docked, sizeof(docked));
+                if (!r) {
+                    lid_state += docked;
+                }
             }
+            publish_inh(docked, &inh_req);
         }
         publish_lid(lid_state, &lid_req);
     }
@@ -158,6 +175,6 @@ static void publish_lid(bool new, message_t *up) {
 static void publish_inh(bool new, message_t *up) {
     up->inhibit.old = state.inhibited;
     up->inhibit.new = new;
-    up->inhibit.reason = strdup("Docked laptop");
+    up->inhibit.reason = strdup("Docked laptop.");
     M_PUB(up);
 }

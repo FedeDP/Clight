@@ -11,6 +11,7 @@
 - [x] Drop inhibit_autocalib (to be demanded to inhibit_bl custom module)
 - [x] Bugfix: correctly manage pubsub messages when in paused state
 - [x] Properly support new Clightd API that only returns number of captures successfully retrieved
+- [ ] Expose 2 methods from dbus api: Increment/Decrement (#125)
 
 ### Keyboard
 - [x] Split keyboard settings from backlight
@@ -26,6 +27,14 @@
 - [x] Log both app name and reason during inhibit; log only app name during Uninhibit
 - [x] Add a force option to inhibit_upd msg requests, used by clight Inhibit "false" dbus interface, to forcefully remove any inhibiton
 - [x] Default to "Clight" as appname, when NULL
+- [x] Only start INHIBIT if dimmer or dpms are enabled
+- [x] DO not create/listen to ScreenSaver dbus interface requests if inhibit module is not started
+- [ ] Move inhibit related config away in config and add a struct
+
+### PM
+- [ ] Add a new PowerManagement module to suppress org.freedesktop.PowerManagement on inhibition (inhibit_pm=true)
+- [ ] It subscribes to pm_req messages, and publishes pm_upd messages
+- [ ] Is it only started if inhibit is started
 
 ### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }
@@ -44,8 +53,10 @@
 - [x] Improvement: add a new "LidClosed" signal 
 - [x] Use LidClosed signal to eventually pause calibration -> eg: inhibit_on_lid_closed = true BACKLIGHT conf. Only if !docked obviously. 
 - [x] Expose LidClosed property through dbus interface
-- [ ] Sometimes LidState remains closed when lid is open while an external monitor is connected
-- [ ] Properly manage docked state since clight start (ie: if laptop boots up docked)
+- [x] Sometimes LidState remains closed when lid is open while an external monitor is connected
+- [x] Properly manage lid state since clight start (ie: if laptop boots up docked)
+- - [x] For backlight (if laptop starts closed)
+- - [x] For dimmer/dpms inhibit (if laptop starts docked)
 
 ### Geoclue
 - [x] Fix geoclue once more... -> it seems setting TimeThreshold and DistanceThreshold breaks geoclue...
@@ -63,6 +74,7 @@
 - [x] Avoid logging disabled modules conf as it is not checked
 - [x] Avoid creating disabled modules conf interafce
 - [x] Kill clight on bus disconnection (ENOTCONN/ECONNRESET errnos)
+- [ ] Explicit in custom modules DOC which modules are always available and which not
 
 ## 4.2
 

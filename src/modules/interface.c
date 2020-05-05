@@ -212,6 +212,7 @@ static map_t *lock_map;
 static sd_bus *userbus, *monbus;
 static sd_bus_message *curve_message; // this is used to keep curve points data lingering around in set_curve
 static sd_bus_slot *lock_slot;
+static bool start_screensaver_api;  // Whether ScreenSaver api has been started
 
 MODULE("INTERFACE");
 
@@ -234,6 +235,9 @@ static void init(void) {
     const char conf_dim_interface[] = "org.clight.clight.Conf.Dimmer";
     const char conf_dpms_interface[] = "org.clight.clight.Conf.Dpms";
     const char conf_screen_interface[] = "org.clight.clight.Conf.Screen";
+    
+    /* Only if INHIBIT module is present, ie: or DPMS or DIMMER are enabled */
+    start_screensaver_api = !conf.dim_conf.disabled || !conf.dpms_conf.disabled;
     
     userbus = get_user_bus();
     
@@ -321,28 +325,30 @@ static void init(void) {
                                     &conf.screen_conf);
     }
     
-    /* 
-     * ScreenSaver implementation: 
-     * take both /ScreenSaver and /org/freedesktop/ScreenSaver paths 
-     * as they're both used by applications.
-     * Eg: chromium/libreoffice use full path, while vlc uses /ScreenSaver
-     * 
-     * Avoid checking for errors!!
-     */
-    sd_bus_add_object_vtable(userbus,
+    if (start_screensaver_api) {
+        /*
+        * ScreenSaver implementation:
+        * take both /ScreenSaver and /org/freedesktop/ScreenSaver paths
+        * as they're both used by applications.
+        * Eg: chromium/libreoffice use full path, while vlc uses /ScreenSaver
+        *
+        * Avoid checking for errors!!
+        */
+        sd_bus_add_object_vtable(userbus,
+                                    NULL,
+                                    sc_path,
+                                    sc_interface,
+                                    sc_vtable,
+                                    &state);
+
+        sd_bus_add_object_vtable(userbus,
                                 NULL,
-                                sc_path,
+                                sc_path_full,
                                 sc_interface,
                                 sc_vtable,
                                 &state);
-    
-    sd_bus_add_object_vtable(userbus,
-                             NULL,
-                             sc_path_full,
-                             sc_interface,
-                             sc_vtable,
-                             &state);
-    
+    }
+
     if (r < 0) {
         WARN("Could not create %s dbus interface: %s\n", bus_interface, strerror(-r));
     } else {
@@ -354,14 +360,16 @@ static void init(void) {
             m_subscribe("^[^Req].*");
             
             /** org.freedesktop.ScreenSaver API **/
-            if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
-                WARN("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
-                INFO("Fallback at monitoring requests to %s name owner.\n", sc_interface);
-                if (start_inhibit_monitor() != 0) {
-                    WARN("Failed to register %s inhibition monitor.\n", sc_interface);
+            if (start_screensaver_api) {
+                if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
+                    WARN("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
+                    INFO("Fallback at monitoring requests to %s name owner.\n", sc_interface);
+                    if (start_inhibit_monitor() != 0) {
+                        WARN("Failed to register %s inhibition monitor.\n", sc_interface);
+                    }
                 }
+                lock_map = map_new(true, lock_dtor);
             }
-            lock_map = map_new(true, lock_dtor);
             /**                                 **/
         }
     }
@@ -409,7 +417,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 static void destroy(void) {
     if (userbus) {
         sd_bus_release_name(userbus, bus_interface);
-        sd_bus_release_name(userbus, sc_interface);
+        if (start_screensaver_api) {
+            sd_bus_release_name(userbus, sc_interface);
+        }
         userbus = sd_bus_flush_close_unref(userbus);
     }
     if (monbus) {

@@ -19,6 +19,11 @@ static void init(void) {
         M_SUB(INHIBIT_UPD);
         M_SUB(DIMMER_TO_REQ);
         M_SUB(SIMULATE_REQ);
+        
+        /* Properly manage INHIBIT state since start */
+        if (state.inhibited) {
+            inhibit_callback();
+        }
     } else {
         WARN("Failed to init.\n");
         m_poisonpill(self());

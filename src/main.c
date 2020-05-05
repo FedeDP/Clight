@@ -101,10 +101,12 @@ static void init_state(void) {
     }
     
     /* 
-     * Initial state -> undefined; UPower will set this as soon as it is available, 
-     * or to ON_AC if UPower is not available 
+     * Initial state -> undefined; 
+     * UPower will set these as soon as it is available, 
+     * or defaults ON_AC/OPEN where not unavailable.
      */
     state.ac_state = -1;
+    state.lid_state = -1;
 }
 
 /*

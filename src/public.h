@@ -65,7 +65,7 @@ enum lid_states { OPEN, CLOSED, DOCKED, SIZE_LID };
 enum mod_msg_types {
     SYSTEM_UPD = -2,    // Used internally by Clight
     FD_UPD = -1,        // Used internally by Clight
-    LOC_UPD,            // Subscribe to receive new locations
+    LOC_UPD,            // Subscribe to receive new locations.
     UPOWER_UPD,         // Subscribe to receive new AC states
     INHIBIT_UPD,        // Subscribe to receive new PowerManagement states
     DISPLAY_UPD,        // Subscribe to receive new display states (on/dimmed/off)

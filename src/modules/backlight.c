@@ -73,6 +73,13 @@ static void init(void) {
         set_backlight_level(1.0, false, 0, 0);
         pause_mod(AUTOCALIB);
     }
+    if (state.lid_state) {
+        /* 
+         * If we start with closed lid,
+         * pause backlight calibration if configured.
+         */
+        on_lid_update();
+    }
 }
 
 static bool check(void) {
@@ -80,7 +87,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.bl_conf.disabled && state.day_time != -1 && state.ac_state != -1;
+    return !conf.bl_conf.disabled && state.day_time != -1 && state.ac_state != -1 && state.lid_state != -1;
 }
 
 static void destroy(void) {
