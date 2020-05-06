@@ -134,6 +134,7 @@ typedef struct {
 } inhibit_upd;
 
 typedef struct {
+    bool old;                   // Valued in updates. Useless for requests
     bool new;                   // Mandatory for requests. Valued in updates
 } pm_upd;
 

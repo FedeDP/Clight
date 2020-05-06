@@ -36,6 +36,10 @@
 - [x] It subscribes to pm_req messages, and publishes pm_upd messages
 - [x] Is it only started if inhibit is started
 - [x] PM inhibition must be released when clight leaves, as clight is not pm inhibition server but just a client
+- [x] Expose PMInhibited property on bus
+
+### Bus
+- [ ] Expose BUS_REQ to make dbus call
 
 ### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }

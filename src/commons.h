@@ -119,6 +119,7 @@ typedef struct {
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
     enum display_states display_state;      // current display state
     bool inhibited;                         // whether screensaver inhibition is enabled
+    bool pm_inhibited;                      // whether pm_inhibition is enabled
     loc_t current_loc;                      // current user location
     double screen_comp;                     // current screen-emitted brightness compensation
     jmp_buf quit_buf;                       // quit jump called by longjmp

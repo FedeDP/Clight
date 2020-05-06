@@ -79,6 +79,8 @@ static void on_pm_req(pm_upd *up) {
                               "Inhibit");
             if (call(&pm_args, "ss", "Clight", "PM inhibition.") == 0) {
                 INFO("Holding PowerManagement inhibition.\n");
+                state.pm_inhibited = true;
+                pm_msg.pm.old = false;
                 pm_msg.pm.new = true;
                 M_PUB(&pm_msg);
             }
@@ -91,6 +93,8 @@ static void on_pm_req(pm_upd *up) {
             if (call(&pm_args, "u", pm_inh_token) == 0) {
                 INFO("Released PowerManagement inhibition.\n");
                 pm_inh_token = -1;
+                state.pm_inhibited = false;
+                pm_msg.pm.old = true;
                 pm_msg.pm.new = false;
                 M_PUB(&pm_msg);
             }
