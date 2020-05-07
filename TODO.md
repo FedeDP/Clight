@@ -11,7 +11,7 @@
 - [x] Drop inhibit_autocalib (to be demanded to inhibit_bl custom module)
 - [x] Bugfix: correctly manage pubsub messages when in paused state
 - [x] Properly support new Clightd API that only returns number of captures successfully retrieved
-- [ ] Expose 2 methods from dbus api: Increment/Decrement (#125)
+- [x] Expose 2 methods from dbus api: Increment/Decrement (#125)
 
 ### Keyboard
 - [x] Split keyboard settings from backlight
@@ -20,6 +20,7 @@
 
 ### DPMS
 - [x] Make sure to actually restore DISPLAY_ON state from DPMS module if DIMMER is disabled. Fix #120
+- [x] Always send DISPLAY_ON request even if DIMMER is enabled: validations code will drop it (it is now a DEBUG)
 
 ### Inhibition
 - [x] Fix support for multiple inhibition sources; eg: both "docked" and "ScreenSaver" are inhibiting clight. When ScreenSaver drops its inhibition, state is set back to not inhibited.
@@ -63,8 +64,9 @@
 - - [x] For backlight (if laptop starts closed)
 - - [x] For dimmer/dpms inhibit (if laptop starts docked)
 
-### Geoclue
+### Location
 - [x] Fix geoclue once more... -> it seems setting TimeThreshold and DistanceThreshold breaks geoclue...
+- [x] Restore get_distance() old function and use it to validate new location request. It is useful as we may have multiple location sources (eg: cache file and geoclue)
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file

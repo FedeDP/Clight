@@ -27,6 +27,7 @@ static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED 
 static int create_inhibit(int *cookie, const char *key, const char *app_name, const char *reason);
 static int drop_inhibit(int *cookie, const char *key, bool force);
 static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_clight_changebl(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_uninhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_simulate_activity(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -84,6 +85,8 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("ScreenComp", "d", NULL, offsetof(state_t, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_clight_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("IncBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("DecBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Load", "s", NULL, method_load, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Unload", "s", NULL, method_unload, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
@@ -201,6 +204,7 @@ static const sd_bus_vtable sc_vtable[] = {
 };
 
 DECLARE_MSG(bl_to_req, BL_TO_REQ);
+DECLARE_MSG(bl_req, BL_REQ);
 DECLARE_MSG(dimmer_to_req, DIMMER_TO_REQ);
 DECLARE_MSG(dpms_to_req, DPMS_TO_REQ);
 DECLARE_MSG(scr_to_req, SCR_TO_REQ);
@@ -657,6 +661,31 @@ static int method_clight_inhibit(sd_bus_message *m, void *userdata, sd_bus_error
         }
     } else {
         WARN("Inhibit module is disabled.\n");
+    }
+    sd_bus_error_set_errno(ret_error, EINVAL);
+    return -EINVAL;
+}
+
+static int method_clight_changebl(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    double change_pct;
+    VALIDATE_PARAMS(m, "d", &change_pct);
+    
+    if (change_pct > 0.0 && change_pct < 1.0) {
+        bl_req.bl.smooth = -1;
+        
+        if (!strcmp(sd_bus_message_get_member(m), "IncBl")) {
+            bl_req.bl.new = state.current_bl_pct + change_pct;
+            if (bl_req.bl.new > 1.0) {
+                bl_req.bl.new = 1.0;
+            }
+        } else {
+            bl_req.bl.new = state.current_bl_pct - change_pct;
+            if (bl_req.bl.new < 0.0) {
+                bl_req.bl.new = 0.0;
+            }
+        }
+        M_PUB(&bl_req);
+        return sd_bus_reply_method_return(m, NULL);
     }
     sd_bus_error_set_errno(ret_error, EINVAL);
     return -EINVAL;

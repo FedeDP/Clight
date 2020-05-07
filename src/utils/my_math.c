@@ -177,3 +177,16 @@ int calculate_sunrise(const float lat, const float lng, time_t *tt, int tomorrow
 int calculate_sunset(const float lat, const float lng, time_t *tt, int tomorrow) {
     return calculate_sunrise_sunset(lat, lng, tt, SUNSET, tomorrow);
 }
+
+/*
+ * Get distance between 2 locations
+ */
+double get_distance(loc_t *loc1, loc_t *loc2) {
+    double theta = loc1->lon - loc2->lon;
+    double dist = sin(degToRad(loc1->lat)) * sin(degToRad(loc2->lat)) + cos(degToRad(loc1->lat)) * cos(degToRad(loc2->lat)) * cos(degToRad(theta));
+    dist = acos(dist);
+    dist = radToDeg(dist);
+    dist *= 60 * 1.1515;
+    DEBUG("Loc distance: %.2lf,%.2lf -> %.2lf,%.2lf : %.2lf km.\n", loc1->lat, loc1->lon, loc2->lat, loc2->lon, dist);
+    return dist;
+}

@@ -87,7 +87,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             // publish location before storing new location as state.current_loc is sent as "old" parameter
             publish_location(l->new.lat, l->new.lon, &loc_msg);
             memcpy(&state.current_loc, &l->new, sizeof(loc_t));
-        } 
+        }
         break;
     }
     default:
