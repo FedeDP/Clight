@@ -24,7 +24,8 @@ static bool evaluate(void) {
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     static double old_pct = -1.0;
-    
+    static bool dim_skipped = false;
+
     switch (MSG_TYPE()) {
     case DISPLAY_REQ: {
         display_upd *up = (display_upd *)MSG_DATA();
@@ -34,7 +35,13 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 state.display_state |= DISPLAY_DIMMED;
                 DEBUG("Entering dimmed state...\n");
                 old_pct = state.current_bl_pct;
-                dim_backlight(conf.dim_conf.dimmed_pct);
+                /* Don't touch backlight if a lower level is already set */
+                if (conf.dim_conf.dimmed_pct >= old_pct) {
+                    dim_skipped = true;
+                    DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
+                } else {
+                    dim_backlight(conf.dim_conf.dimmed_pct);
+                }
             } else if (up->new == DISPLAY_OFF) {
                 state.display_state |= DISPLAY_OFF;
                 DEBUG("Entering dpms state...\n");
@@ -49,7 +56,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                     state.display_state &= ~DISPLAY_DIMMED;
                     DEBUG("Leaving dimmed state...\n");
                     if (old_pct >= 0.0) {
-                        restore_backlight(old_pct);
+                        if (dim_skipped) {
+                            dim_skipped = false;
+                        } else {
+                            restore_backlight(old_pct);
+                        }
                         old_pct = -1.0;
                     }
                 }
@@ -69,12 +80,7 @@ static void destroy(void) {
 }
 
 static void dim_backlight(const double pct) {
-    /* Don't touch backlight if a lower level is already set */
-    if (pct >= state.current_bl_pct) {
-        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
-    } else {
-        publish_bl_req(pct, !conf.dim_conf.no_smooth[ENTER], conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_timeout[ENTER]);
-    }
+    publish_bl_req(pct, !conf.dim_conf.no_smooth[ENTER], conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_timeout[ENTER]);
 }
 
 /* restore previous backlight level */
