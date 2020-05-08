@@ -36,7 +36,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return true;
+    return !conf.wizard;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {

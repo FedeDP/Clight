@@ -12,6 +12,9 @@
 - [x] Bugfix: correctly manage pubsub messages when in paused state
 - [x] Properly support new Clightd API that only returns number of captures successfully retrieved
 - [x] Expose 2 methods from dbus api: Increment/Decrement (#125)
+- [x] Expose SensAvailable state property
+- [x] Rename "Calibrate" method to "Capture"
+- [x] Capture method to take 2 booleans, exposing capture_upd fields
 
 ### Keyboard
 - [x] Split keyboard settings from backlight
@@ -67,6 +70,9 @@
 ### Location
 - [x] Fix geoclue once more... -> it seems setting TimeThreshold and DistanceThreshold breaks geoclue...
 - [x] Restore get_distance() old function and use it to validate new location request. It is useful as we may have multiple location sources (eg: cache file and geoclue)
+
+### Wizard
+- [x] Add an initial calibration wizard
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file

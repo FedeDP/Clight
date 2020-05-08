@@ -6,13 +6,13 @@ enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int is_sensor_available(void);
-static void do_capture(bool reset_timer);
+static void do_capture(bool reset_timer, bool capture_only);
 static void set_new_backlight(const double perc);
 static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_autocalib_callback(bool new_val);
-static void interface_curve_callback(curve_upd *up);
+static void interface_curve_callback(double *regr_points, int num_points, enum ac_states s);
 static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
 static void time_callback(int old_val, int is_event);
@@ -22,7 +22,6 @@ static void on_lid_update(void);
 static void pause_mod(enum backlight_pause type);
 static void resume_mod(enum backlight_pause type);
 
-static int sensor_available;
 static int bl_fd = -1;
 static int paused_state;
 static sd_bus_slot *slot;
@@ -30,6 +29,7 @@ static sd_bus_slot *slot;
 DECLARE_MSG(bl_msg, BL_UPD);
 DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
+DECLARE_MSG(sens_msg, SENS_UPD);
 
 MODULE("BACKLIGHT");
 
@@ -37,8 +37,8 @@ static void init(void) {
     capture_req.capture.reset_timer = true;
     
     /* Compute polynomial best-fit parameters for each loaded sensor config */
-    polynomialfit(ON_AC);
-    polynomialfit(ON_BATTERY);
+    interface_curve_callback(NULL, 0, ON_AC);
+    interface_curve_callback(NULL, 0, ON_BATTERY);
 
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);
@@ -55,11 +55,11 @@ static void init(void) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
     add_match(&args, &slot, on_sensor_change);
 
-    sensor_available = is_sensor_available();
+    state.sens_avail = is_sensor_available();
     
     bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
     m_register_fd(bl_fd, false, NULL);
-    if (!sensor_available) {
+    if (!state.sens_avail) {
         pause_mod(SENSOR);
     }
     if (conf.bl_conf.no_auto_calib) {
@@ -130,14 +130,14 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case CAPTURE_REQ: {
         capture_upd *up = (capture_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            do_capture(up->reset_timer);
+            do_capture(up->reset_timer, up->capture_only);
         }
         break;
     }
     case CURVE_REQ: {
         curve_upd *up = (curve_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            interface_curve_callback(up);
+            interface_curve_callback(up->regression_points, up->num_points, up->state);
         }
         break;
     }
@@ -188,15 +188,15 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     case CAPTURE_REQ: {
         capture_upd *up = (capture_upd *)MSG_DATA();
         /* In paused state check that we're not dimmed/dpms and sensor is available */
-        if (VALIDATE_REQ(up) && !state.display_state && sensor_available) {
-            do_capture(up->reset_timer);
+        if (VALIDATE_REQ(up) && !state.display_state && state.sens_avail) {
+            do_capture(up->reset_timer, up->capture_only);
         }
         break;
     }
     case CURVE_REQ: {
         curve_upd *up = (curve_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
-            interface_curve_callback(up);
+            interface_curve_callback(up->regression_points, up->num_points, up->state);
         }
         break;
     }
@@ -258,8 +258,8 @@ static int is_sensor_available(void) {
     return r == 0 && available;
 }
 
-static void do_capture(bool reset_timer) {
-    if (!capture_frames_brightness()) {
+static void do_capture(bool reset_timer, bool capture_only) {
+    if (!capture_frames_brightness() && !capture_only) {
         /* Account for screen-emitted brightness */
         const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
         if (compensated_br >= conf.bl_conf.shutter_threshold) {
@@ -333,11 +333,17 @@ static void interface_autocalib_callback(bool new_val) {
 }
 
 /* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
-static void interface_curve_callback(curve_upd *up) {
-    memcpy(conf.sens_conf.regression_points[up->state], 
-           up->regression_points, up->num_points * sizeof(double));
-    conf.sens_conf.num_points[up->state] = up->num_points;
-    polynomialfit(up->state);
+static void interface_curve_callback(double *regr_points, int num_points, enum ac_states s) {
+    if (regr_points) {
+        memcpy(conf.sens_conf.regression_points[s], 
+           regr_points, num_points * sizeof(double));
+        conf.sens_conf.num_points[s] = num_points;
+    }
+    polynomialfit(NULL, conf.sens_conf.regression_points[s], 
+                  state.fit_parameters[s], conf.sens_conf.num_points[s]);
+    
+    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", state.fit_parameters[s][0],
+          state.fit_parameters[s][1], state.fit_parameters[s][2]);
 }
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
@@ -384,9 +390,12 @@ static void time_callback(int old_val, int is_event) {
 /* Callback on SensorChanged clightd signal */
 static int on_sensor_change(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     int new_sensor_avail = is_sensor_available();
-    if (new_sensor_avail != sensor_available) {
-        sensor_available = new_sensor_avail;
-        if (sensor_available) {
+    if (new_sensor_avail != state.sens_avail) {
+        sens_msg.sens.old = state.sens_avail;
+        sens_msg.sens.new = new_sensor_avail;
+        M_PUB(&sens_msg);
+        state.sens_avail = new_sensor_avail;
+        if (state.sens_avail) {
             DEBUG("Resumed as a sensor is now available.\n");
             resume_mod(SENSOR);
         } else {

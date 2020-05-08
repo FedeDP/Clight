@@ -74,20 +74,22 @@ static void init(int argc, char *argv[]) {
     init_opts(argc, argv);
     log_conf();
     
-    /* We want any error while checking Clightd required version to be logged AFTER conf logging */
-    check_clightd_version();
-    
-    init_state();
-    /* 
-     * Load user custom modules after opening log (thus this information is logged).
-     * Note that local (ie: placed in $HOME) modules have higher priority,
-     * thus one can override a global module (placed in /usr/share/clight/modules.d/)
-     * by creating a module with same name in $HOME.
-     * 
-     * Clight internal modules cannot be overriden.
-     */
-    load_user_modules(LOCAL);
-    load_user_modules(GLOBAL);
+    if (!conf.wizard) {
+        /* We want any error while checking Clightd required version to be logged AFTER conf logging */
+        check_clightd_version();
+        
+        init_state();
+        /* 
+        * Load user custom modules after opening log (thus this information is logged).
+        * Note that local (ie: placed in $HOME) modules have higher priority,
+        * thus one can override a global module (placed in /usr/share/clight/modules.d/)
+        * by creating a module with same name in $HOME.
+        * 
+        * Clight internal modules cannot be overriden.
+        */
+        load_user_modules(LOCAL);
+        load_user_modules(GLOBAL);
+    }
 }
 
 static void init_state(void) {

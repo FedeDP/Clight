@@ -99,7 +99,8 @@ enum mod_msg_types {
     LID_UPD,            // Subscribe to receive new lid states
     LID_REQ,            // Publish to set a new lid state
     PM_UPD,             // Subscribe to receive new PowerManagement inhibition states
-    PM_REQ,             // Publish to set a new PowerManagement inhibition state
+    PM_REQ,             // Publish to set a new PowerManagement inhibition state,
+    SENS_UPD,           // Subscribe to receive "SensorAvail" states
     MSGS_SIZE
 };
 
@@ -186,6 +187,7 @@ typedef struct {
 
 typedef struct {
     bool reset_timer;           // Mandatory for requests. Whether to reset BACKLIGHT module internal capture timer after the capture
+    bool capture_only;          // Mandatory for requests. Whether clight should update backlight after capture.
 } capture_upd;
 
 typedef struct {
@@ -199,6 +201,11 @@ typedef struct {
 typedef struct {
     double new;                 // Mandatory for requests
 } contrib_upd;
+
+typedef struct {
+    bool old;                   // Valued in updates. No requests available
+    bool new;                   // Valued in updates. No requests available
+} sens_upd;
 
 typedef struct {
     const enum mod_msg_types type;
@@ -218,6 +225,7 @@ typedef struct {
         bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
         contrib_upd contrib;    /* CONTRIB_REQ */
         capture_upd capture;    /* CAPTURE_REQ */
+        sens_upd sens;          /* SENS_UPD */
     };
 } message_t;
 

@@ -36,7 +36,7 @@ static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *r
 /** Clight bus api **/
 static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
                        sd_bus_message *reply, void *userdata, sd_bus_error *error);
-static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_load(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -77,13 +77,14 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("LidState", "i", NULL, offsetof(state_t, lid_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Inhibited", "b", NULL, offsetof(state_t, inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("PmInhibited", "b", NULL, offsetof(state_t, pm_inhibited), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("SensorAvail", "b", NULL, offsetof(state_t, sens_avail), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("BlPct", "d", NULL, offsetof(state_t, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("KbdPct", "d", NULL, offsetof(state_t, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("AmbientBr", "d", NULL, offsetof(state_t, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Temp", "i", NULL, offsetof(state_t, current_temp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(state_t, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("ScreenComp", "d", NULL, offsetof(state_t, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_METHOD("Calibrate", NULL, NULL, method_calibrate, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Capture", "bb", NULL, method_capture, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_clight_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("IncBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("DecBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -401,7 +402,7 @@ static bool check(void) {
 }
 
 static bool evaluate() {
-    return true;
+    return !conf.wizard;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
@@ -732,8 +733,8 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
     return sd_bus_message_append(reply, "s", userdata);
 }
                        
-static int method_calibrate(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    capture_req.capture.reset_timer = false;
+static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    VALIDATE_PARAMS(m, "u", &capture_req.capture.reset_timer, &capture_req.capture.capture_only);
     M_PUB(&capture_req);
     return sd_bus_reply_method_return(m, NULL);
 }

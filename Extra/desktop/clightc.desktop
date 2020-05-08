@@ -2,7 +2,7 @@
 Type=Application
 Name=Clight
 GenericName=Quick screen backlight calibration
-Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Calibrate
+Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Capture "bb" false false
 Comment=Recalibrate your screen backlight!
 Icon=clight
 Categories=System

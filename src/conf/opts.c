@@ -162,6 +162,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"conf-file", 'c', POPT_ARG_STRING, NULL, 6, "Specify a conf file to be parsed", NULL},
         {"gamma-long-transition", 0, POPT_ARG_NONE, &conf.gamma_conf.long_transition, 100, "Enable a very long smooth transition for gamma (redshift-like)", NULL },
         {"ambient-gamma", 0, POPT_ARG_NONE, &conf.gamma_conf.ambient_gamma, 100, "Enable screen temperature matching ambient brightness instead of time based.", NULL },
+        {"wizard", 'w', POPT_ARG_NONE, &conf.wizard, 100, "Enable wizard mode.", NULL},
         POPT_AUTOHELP
         POPT_TABLEEND
     };
@@ -452,8 +453,18 @@ static void check_inh_conf(inh_conf_t *inh_conf) {
  * in case of wrong options set.
  */
 static void check_conf(void) {
-    /* Disable any not built-in feature in Clightd */
-    check_clightd_features();
+    /* Wizard mode; disable everything except backlight */
+    if (conf.wizard) {
+        conf.bl_conf.no_auto_calib = true;
+        conf.kbd_conf.disabled = true;
+        conf.gamma_conf.disabled = true;
+        conf.dim_conf.disabled = true;
+        conf.dpms_conf.disabled = true;
+        conf.screen_conf.disabled = true;
+    } else {
+        /* Disable any not built-in feature in Clightd */
+        check_clightd_features();
+    }
     if (!conf.bl_conf.disabled) {
         check_bl_conf(&conf.bl_conf);
         check_sens_conf(&conf.sens_conf);

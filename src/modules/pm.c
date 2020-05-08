@@ -1,5 +1,4 @@
 #include "bus.h"
-#include <module/queue.h>
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void on_pm_req(pm_upd *up);

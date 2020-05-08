@@ -18,7 +18,7 @@
 #define LAT_UNDEFINED 91.0                  // Undefined (ie: unset) value for latitude
 #define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
 #define MINIMUM_CLIGHTD_VERSION_MAJ 4       // Clightd minimum required maj version
-#define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version
+#define MINIMUM_CLIGHTD_VERSION_MIN 1       // Clightd minimum required min version
 
 /** Generic structs **/
 
@@ -99,6 +99,7 @@ typedef struct {
     screen_conf_t screen_conf;
     inh_conf_t inh_conf;
     int verbose;                            // whether verbose mode is enabled
+    int wizard;                             // whether wizard mode is enabled
 } conf_t;
 
 /* Global state of program */
@@ -108,7 +109,7 @@ typedef struct {
     int in_event;                           // Whether we are in a TIME event +- conf.event_duration
     time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)
     enum ac_states ac_state;                // is laptop on battery?
-    enum lid_states lid_state;               // current lid state
+    enum lid_states lid_state;              // current lid state
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters for each sensor, for each AC state
     char *xauthority;                       // xauthority env variable
     char *display;                          // DISPLAY env variable
@@ -120,6 +121,7 @@ typedef struct {
     enum display_states display_state;      // current display state
     bool inhibited;                         // whether screensaver inhibition is enabled
     bool pm_inhibited;                      // whether pm_inhibition is enabled
+    bool sens_avail;                        // whether a sensor is currently available
     loc_t current_loc;                      // current user location
     double screen_comp;                     // current screen-emitted brightness compensation
     jmp_buf quit_buf;                       // quit jump called by longjmp
