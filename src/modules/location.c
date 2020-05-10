@@ -105,9 +105,6 @@ static void init_cache_file(void) {
     }
 }
 
-/*
- * Init geoclue, then checks if a location is already available.
- */
 static int geoclue_init(void) {
     int r = geoclue_get_client();
     if (r < 0) {
@@ -123,7 +120,6 @@ end:
     if (r < 0) {
         WARN("Geoclue2 appears to be unsupported.\n");
     }
-    /* In case of geoclue2 error, do not leave. Just disable this module */
     return -(r < 0);  // - 1 on error
 }
 

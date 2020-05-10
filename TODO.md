@@ -92,6 +92,7 @@
 - [x] Drop "Disabled" from dbus INTERFACE as now disabled modules are not exposed
 - [ ] Notify custom modules about initial state; right now they are only receiving "changes" updates
 - [ ] Explicit in custom modules DOC which modules are always available and which not
+- [x] Less verbose log (inhibit and pm modules DEBUG)
 
 ## 4.2
 
