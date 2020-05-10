@@ -22,22 +22,14 @@ MODULE("LOCATION");
 
 static void init(void) {
     init_cache_file();
-    int r = geoclue_init();
-    if (r == 0) {
+    int r = load_cache_location();
+    if (geoclue_init() == 0) {
         M_SUB(LOCATION_REQ);
-        
-        /*
-         * timeout after 3s to check if geoclue2 gave us
-         * any location. Otherwise, attempt to load it from cache
-         */
-        int fd = start_timer(CLOCK_MONOTONIC, 3, 0);
-        m_register_fd(fd, true, NULL);
     } else {
         WARN("Failed to init.\n");
-        if (load_cache_location() != 0) {
-            /* small trick to notify GAMMA to stop as no location could be retrieved */
-            state.current_loc.lat = LAT_UNDEFINED + 1;
-            state.current_loc.lon = LON_UNDEFINED + 1;
+        if (r != 0) {
+            /* No location provider. Assume DAY */
+            state.day_time = DAY;
         }
         m_poisonpill(self());
     }
@@ -74,12 +66,6 @@ static void destroy(void) {
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case FD_UPD:
-        read_timer(msg->fd_msg->fd);
-        if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
-            load_cache_location();
-        }
-        break;
     case LOCATION_REQ: {
         loc_upd *l = (loc_upd *)MSG_DATA();
         if (VALIDATE_REQ(l)) {

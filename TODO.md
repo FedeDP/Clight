@@ -70,9 +70,11 @@
 ### Location
 - [x] Fix geoclue once more... -> it seems setting TimeThreshold and DistanceThreshold breaks geoclue...
 - [x] Restore get_distance() old function and use it to validate new location request. It is useful as we may have multiple location sources (eg: cache file and geoclue)
+- [x] Immediately load cache location without 3s timer
 
 ### Wizard
 - [x] Add an initial calibration wizard
+- [x] Add new -w flag to clight bash completion script 
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
@@ -87,6 +89,7 @@
 - [x] Avoid logging disabled modules conf as it is not checked
 - [x] Avoid creating disabled modules conf interafce
 - [x] Kill clight on bus disconnection (ENOTCONN/ECONNRESET errnos)
+- [x] Drop "Disabled" from dbus INTERFACE as now disabled modules are not exposed
 - [ ] Explicit in custom modules DOC which modules are always available and which not
 
 ## 4.2

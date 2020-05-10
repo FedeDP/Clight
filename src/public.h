@@ -50,9 +50,6 @@ enum ac_states { ON_AC, ON_BATTERY, SIZE_AC };
 /* Display states */
 enum display_states { DISPLAY_ON, DISPLAY_DIMMED, DISPLAY_OFF, DISPLAY_SIZE };
 
-/* Quit values */
-enum quit_values { NO_QUIT, NORM_QUIT, ERR_QUIT };
-
 /* Dimming transition states */
 enum dim_trans { ENTER, EXIT, SIZE_DIM };
 

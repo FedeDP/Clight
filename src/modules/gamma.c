@@ -27,18 +27,13 @@ DECLARE_MSG(temp_msg, TEMP_UPD);
 MODULE("GAMMA");
 
 static void init(void) {
-    if (state.current_loc.lat == LAT_UNDEFINED + 1) {
+    if (state.day_time != -1) {
         /*
          * We have been notified by LOCATION that neither
          * Geoclue (not installed) nor location cache file
          * could give us any location.
-         * Assume DAY daytime and kill GAMMA.
          */
-        WARN("Failed to retrieve user location; fallback to DAY daytime.\n");
-        state.day_time = DAY;
-        /* Reset real undefined values */
-        state.current_loc.lat = LAT_UNDEFINED;
-        state.current_loc.lon = LON_UNDEFINED;
+        WARN("No location provider found; fallback to DAY daytime.\n");
         m_poisonpill(self());
     } else {
         M_SUB(BL_UPD);
@@ -58,8 +53,9 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.gamma_conf.disabled && 
-           ((state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) ||
+    return !conf.gamma_conf.disabled &&
+           (state.day_time != -1 ||
+           (state.current_loc.lat != LAT_UNDEFINED && state.current_loc.lon != LON_UNDEFINED) ||
            (strlen(conf.gamma_conf.day_events[SUNRISE]) && strlen(conf.gamma_conf.day_events[SUNSET])));
 }
 
@@ -280,11 +276,11 @@ static void check_state(const time_t *now) {
         } else {
             event_time_range = conf.gamma_conf.event_duration; // next timer is when leaving event
         }
-        state.in_event = 1;
+        state.in_event = true;
         DEBUG("Currently inside an event.\n");
     } else {
         event_time_range = -conf.gamma_conf.event_duration; // next timer is entering next event
-        state.in_event = 0;
+        state.in_event = false;
     }
 }
 

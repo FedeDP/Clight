@@ -22,7 +22,6 @@
  * END_COMMON_COPYRIGHT_HEADER */
 
 #include <glob.h>
-#include <module/modules_easy.h>
 #include "opts.h"
 
 static void init(int argc, char *argv[]);
@@ -43,17 +42,15 @@ void modules_pre_start(void) {
 } 
 
 int main(int argc, char *argv[]) {
-    state.quit = setjmp(state.quit_buf);
-    if (!state.quit) {
-        init(argc, argv);
-        if (conf.bl_conf.disabled && conf.dim_conf.disabled && conf.dpms_conf.disabled && conf.gamma_conf.disabled) {
-            WARN("No functional module running. Leaving...\n");
-        } else {
-            modules_loop();
-        }
+    int ret = EXIT_SUCCESS;
+    init(argc, argv);
+    if (conf.bl_conf.disabled && conf.dim_conf.disabled && conf.dpms_conf.disabled && conf.gamma_conf.disabled) {
+        WARN("No functional module running. Leaving...\n");
+    } else {
+        ret = modules_loop();
     }
     close_log();
-    return state.quit == NORM_QUIT ? EXIT_SUCCESS : EXIT_FAILURE;
+    return ret;
 }
 
 /*

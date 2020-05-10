@@ -1,6 +1,5 @@
 #include "bus.h"
 #include "my_math.h"
-#include <module/modules_easy.h>
 
 static void receive_capturing(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_calibrating(const msg_t *const msg, UNUSED const void* userdata);

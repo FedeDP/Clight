@@ -9,6 +9,7 @@
 #include "public.h"
 #include "validations.h"
 #include "log.h"
+#include <module/modules_easy.h>
 
 #define UNUSED __attribute__((unused))
 #define MAX_SIZE_POINTS 50                  // max number of points used for polynomial regression
@@ -104,9 +105,8 @@ typedef struct {
 
 /* Global state of program */
 typedef struct {
-    int quit;                               // should we quit?
     enum day_states day_time;               // whether it is day or night time
-    int in_event;                           // Whether we are in a TIME event +- conf.event_duration
+    bool in_event;                          // Whether we are in a TIME event +- conf.event_duration
     time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)
     enum ac_states ac_state;                // is laptop on battery?
     enum lid_states lid_state;              // current lid state
@@ -124,7 +124,6 @@ typedef struct {
     bool sens_avail;                        // whether a sensor is currently available
     loc_t current_loc;                      // current user location
     double screen_comp;                     // current screen-emitted brightness compensation
-    jmp_buf quit_buf;                       // quit jump called by longjmp
     char clightd_version[32];               // Clightd found version
     char version[32];                       // Clight version
 } state_t;
@@ -133,6 +132,3 @@ typedef struct {
 
 extern state_t state;
 extern conf_t conf;
-
-/* Initialized by backlight.c */
-extern const char *sensor_names[];

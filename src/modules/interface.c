@@ -102,7 +102,6 @@ static const sd_bus_vtable conf_vtable[] = {
 
 static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(bl_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(bl_conf_t, screen_path), 0),
@@ -132,7 +131,6 @@ static const sd_bus_vtable conf_sens_vtable[] = {
 
 static const sd_bus_vtable conf_kbd_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(kbd_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
     SD_BUS_WRITABLE_PROPERTY("AmbBrThresh", "d", NULL, NULL, offsetof(kbd_conf_t, amb_br_thres), 0),
     SD_BUS_VTABLE_END
@@ -140,7 +138,6 @@ static const sd_bus_vtable conf_kbd_vtable[] = {
 
 static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(gamma_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(gamma_conf_t, day_events[SUNRISE]), 0),
     SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(gamma_conf_t, day_events[SUNSET]), 0),
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(gamma_conf_t, loc), 0),
@@ -157,7 +154,6 @@ static const sd_bus_vtable conf_gamma_vtable[] = {
 
 static const sd_bus_vtable conf_dimmer_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(dimmer_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothEnter", "b", NULL, NULL, offsetof(dimmer_conf_t, no_smooth[ENTER]), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmoothExit", "b", NULL, NULL, offsetof(dimmer_conf_t, no_smooth[EXIT]), 0),
     SD_BUS_WRITABLE_PROPERTY("DimmedPct", "d", NULL, NULL, offsetof(dimmer_conf_t, dimmed_pct), 0),
@@ -172,7 +168,6 @@ static const sd_bus_vtable conf_dimmer_vtable[] = {
 
 static const sd_bus_vtable conf_dpms_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(dpms_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(dpms_conf_t, timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(dpms_conf_t, timeout[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END
@@ -180,7 +175,6 @@ static const sd_bus_vtable conf_dpms_vtable[] = {
 
 static const sd_bus_vtable conf_screen_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Disabled", "b", NULL, offsetof(screen_conf_t, disabled), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("NumSamples", "i", NULL, offsetof(screen_conf_t, samples), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("Contrib", "d", NULL, set_screen_contrib, offsetof(screen_conf_t, contrib), 0),
     SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(screen_conf_t, timeout[ON_AC]), 0),

@@ -1,4 +1,3 @@
-#include <module/modules_easy.h>
 #include <sys/signalfd.h>
 #include <signal.h>
 #include "commons.h"
@@ -48,7 +47,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             ERROR("An error occurred while getting signalfd data.\n");
         }
         INFO("Received %d. Leaving.\n", fdsi.ssi_signo);
-        modules_quit(NORM_QUIT);
+        modules_quit(EXIT_SUCCESS);
         break;
     }
     default:

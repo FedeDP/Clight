@@ -349,7 +349,7 @@ static void interface_curve_callback(double *regr_points, int num_points, enum a
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(timeout_upd *up) {
     /* Validate request: BACKLIGHT is the only module that require valued daytime */
-    if (up->daytime >= DAY && up->daytime < SIZE_STATES) {
+    if (up->daytime >= DAY && up->daytime <= SIZE_STATES) {
         const int old = get_current_timeout();
         conf.bl_conf.timeout[up->state][up->daytime] = up->new;
         if (up->state == state.ac_state && 
