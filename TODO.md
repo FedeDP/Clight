@@ -90,6 +90,7 @@
 - [x] Avoid creating disabled modules conf interafce
 - [x] Kill clight on bus disconnection (ENOTCONN/ECONNRESET errnos)
 - [x] Drop "Disabled" from dbus INTERFACE as now disabled modules are not exposed
+- [ ] Notify custom modules about initial state; right now they are only receiving "changes" updates
 - [ ] Explicit in custom modules DOC which modules are always available and which not
 
 ## 4.2

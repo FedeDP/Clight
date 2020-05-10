@@ -22,15 +22,13 @@ MODULE("LOCATION");
 
 static void init(void) {
     init_cache_file();
-    int r = load_cache_location();
     if (geoclue_init() == 0) {
         M_SUB(LOCATION_REQ);
+        load_cache_location();
     } else {
         WARN("Failed to init.\n");
-        if (r != 0) {
-            /* No location provider. Assume DAY */
-            state.day_time = DAY;
-        }
+        /* No location provider. Assume DAY */
+        state.day_time = DAY;
         m_poisonpill(self());
     }
 }
@@ -42,8 +40,8 @@ static bool check(void) {
 
 static bool evaluate(void) {
     /* 
-     * Only start when no location and no fixed times for both events are specified in conf
-     * AND GAMMA is enabled
+     * Only start when neither a location nor fixed times for both events 
+     * are specified in conf AND GAMMA is enabled
      */
     return  !conf.gamma_conf.disabled && 
             (conf.gamma_conf.loc.lat == LAT_UNDEFINED || conf.gamma_conf.loc.lon == LON_UNDEFINED) && 
@@ -88,7 +86,7 @@ static int load_cache_location(void) {
         double new_lat, new_lon;
         if (fscanf(f, "%lf %lf\n", &new_lat, &new_lon) == 2) {
             publish_location(new_lat, new_lon, &loc_req);
-            INFO("%.2lf %.2lf loaded from cache file!\n", new_lat, new_lon);
+            DEBUG("%.2lf %.2lf loaded from cache file!\n", new_lat, new_lon);
             ret = 0;
         }
         fclose(f);
