@@ -728,7 +728,7 @@ static int get_version(sd_bus *b, const char *path, const char *interface, const
 }
                        
 static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    VALIDATE_PARAMS(m, "u", &capture_req.capture.reset_timer, &capture_req.capture.capture_only);
+    VALIDATE_PARAMS(m, "bb", &capture_req.capture.reset_timer, &capture_req.capture.capture_only);
     M_PUB(&capture_req);
     return sd_bus_reply_method_return(m, NULL);
 }

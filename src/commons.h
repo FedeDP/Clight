@@ -105,24 +105,24 @@ typedef struct {
 
 /* Global state of program */
 typedef struct {
-    enum day_states day_time;               // whether it is day or night time
-    bool in_event;                          // Whether we are in a TIME event +- conf.event_duration
-    time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)
-    enum ac_states ac_state;                // is laptop on battery?
-    enum lid_states lid_state;              // current lid state
-    double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters for each sensor, for each AC state
-    char *xauthority;                       // xauthority env variable
-    char *display;                          // DISPLAY env variable
-    char *wl_display;                       // WAYLAND_DISPLAY env variable
-    double current_bl_pct;                  // current backlight pct
-    double current_kbd_pct;                 // current keyboard backlight pct
-    int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
-    double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
-    enum display_states display_state;      // current display state
     bool inhibited;                         // whether screensaver inhibition is enabled
     bool pm_inhibited;                      // whether pm_inhibition is enabled
     bool sens_avail;                        // whether a sensor is currently available
+    bool in_event;                          // Whether we are in a TIME event +- conf.event_duration
+    enum day_states day_time;               // whether it is day or night time
+    enum ac_states ac_state;                // is laptop on battery?
+    enum lid_states lid_state;              // current lid state
+    enum display_states display_state;      // current display state
+    int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
+    char *xauthority;                       // xauthority env variable
+    char *display;                          // DISPLAY env variable
+    char *wl_display;                       // WAYLAND_DISPLAY env variable
+    time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)
     loc_t current_loc;                      // current user location
+    double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters for each sensor, for each AC state
+    double current_bl_pct;                  // current backlight pct
+    double current_kbd_pct;                 // current keyboard backlight pct
+    double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
     double screen_comp;                     // current screen-emitted brightness compensation
     char clightd_version[32];               // Clightd found version
     char version[32];                       // Clight version
