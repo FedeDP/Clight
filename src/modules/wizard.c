@@ -46,8 +46,13 @@ static void init(void) {
     M_SUB(AMBIENT_BR_UPD);
     m_register_fd(STDIN_FILENO, false, NULL);
     INFO("Welcome to Clight wizard.\n");
-    INFO("Press ctrl-c to quit at any moment, discarding changes.\n");
-    INFO("\nStart? [Y/n]: > ");
+    if (!state.sens_avail) {
+        INFO("No sensors available. Plug it in and restart wizard.\n");
+        modules_quit(EXIT_FAILURE);
+    } else {
+        INFO("Press ctrl-c to quit at any moment, discarding changes.\n");
+        INFO("\nStart? [Y/n]: > ");
+    }
 }
 
 static bool check(void) {
@@ -55,10 +60,7 @@ static bool check(void) {
 }
 
 static bool evaluate() {
-    if (conf.wizard && !state.sens_avail) {
-        INFO("No sensors available. Plug it in or quit.\n");
-    }
-    return conf.wizard && state.sens_avail;
+    return conf.wizard;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {

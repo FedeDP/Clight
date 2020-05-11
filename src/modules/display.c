@@ -33,8 +33,10 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             if (up->new == DISPLAY_DIMMED) {
                 state.display_state |= DISPLAY_DIMMED;
                 DEBUG("Entering dimmed state...\n");
-                old_pct = conf.dim_conf.dimmed_pct >= state.current_bl_pct ? -1.0 : state.current_bl_pct;
-                dim_backlight(conf.dim_conf.dimmed_pct);
+                if (state.current_bl_pct > conf.dim_conf.dimmed_pct) {
+                    old_pct = state.current_bl_pct;
+                    dim_backlight(conf.dim_conf.dimmed_pct);
+                }
             } else if (up->new == DISPLAY_OFF) {
                 state.display_state |= DISPLAY_OFF;
                 DEBUG("Entering dpms state...\n");

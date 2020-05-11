@@ -54,7 +54,6 @@ static bool evaluate(void) {
 static void destroy(void) {
     if (strlen(client)) {
         geoclue_client_delete();
-        cache_location();
     }
     /* Destroy this match slot */
     if (slot) {
@@ -74,6 +73,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         }
         break;
     }
+    case SYSTEM_UPD:
+        if (msg->ps_msg->type == LOOP_STOPPED) {
+            cache_location();
+        }
+        break;
     default:
         break;
     }

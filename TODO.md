@@ -42,9 +42,6 @@
 - [x] PM inhibition must be released when clight leaves, as clight is not pm inhibition server but just a client
 - [x] Expose PMInhibited property on bus
 
-### Bus
-- [ ] Expose BUS_REQ to make dbus call
-
 ### New Conf file layout
 - [x] Use libconfig "groups" instead of new conf files eg: { Camera = ac_backlight_regression = [ ... ]; ... }
 - [x] Split sensor-related settings from conf_t
@@ -93,13 +90,17 @@
 - [ ] Notify custom modules about initial state; right now they are only receiving "changes" updates
 - [ ] Explicit in custom modules DOC which modules are always available and which not
 - [x] Less verbose log (inhibit and pm modules DEBUG)
+- [x] Fix: Properly leave Clight again if no clightd is found (or clightd minimum version is not satisfied)
+- [x] Fix: do not log anything in modules dtor as log has already been closed
 
 ## 4.2
 
-### Generic
-- [ ] Improve inter-operability with external tools: dimmer should avoid using clight current bl as it can be changed by external tools
-- [ ] Add a way to store/reload backlight/gamma settings at clight start/stop
+### Bus
+- [ ] Expose BUS_REQ to make dbus call from custom modules
 
 ### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
 - [ ] If any conf file is found in /etc/clight/mon.d/, avoid calling SetAll, and just call Set on each serial.
+
+### Backlight
+- [ ] Add a backlight Changed signal in Clightd? Then hook the signal to update state.current_bl. Easy for laptop's internal monitor; impossibile with ddcutil, but possible through ddcci-kernel-driver only for software changes, not hardware ones (ie: through monitor buttons)

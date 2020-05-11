@@ -80,7 +80,7 @@ static void on_pm_req(pm_upd *up) {
                 DEBUG("Holding PowerManagement inhibition.\n");
                 state.pm_inhibited = true;
                 pm_msg.pm.old = false;
-                pm_msg.pm.new = true;
+                pm_msg.pm.new = state.pm_inhibited;
                 M_PUB(&pm_msg);
             }
         } else if (!up->new && pm_inh_token != -1) {
@@ -94,7 +94,7 @@ static void on_pm_req(pm_upd *up) {
                 pm_inh_token = -1;
                 state.pm_inhibited = false;
                 pm_msg.pm.old = true;
-                pm_msg.pm.new = false;
+                pm_msg.pm.new = state.pm_inhibited;
                 M_PUB(&pm_msg);
             }
         }

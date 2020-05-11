@@ -173,7 +173,7 @@ static void check_gamma(void) {
     const time_t next = state.day_events[target_event] + event_time_range;
     INFO("Next alarm due to: %s", ctime(&next));
     set_timeout(next - t, 0, gamma_fd, 0);
-
+    
     last_t = t;
 }
 

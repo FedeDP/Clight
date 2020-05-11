@@ -104,19 +104,26 @@ typedef struct {
 } conf_t;
 
 /* Global state of program */
+
+/*
+ * Using INT for BOOLeans: https://dbus.freedesktop.org/doc/dbus-specification.html
+ * "BOOLEAN values are encoded in 32 bits (of which only the least significant bit is used)."
+ * 
+ * Where bool type is 1B large, using bool would break this convention.
+ */
 typedef struct {
-    bool inhibited;                         // whether screensaver inhibition is enabled
-    bool pm_inhibited;                      // whether pm_inhibition is enabled
-    bool sens_avail;                        // whether a sensor is currently available
-    bool in_event;                          // Whether we are in a TIME event +- conf.event_duration
+    int in_event;                           // Whether we are in a TIME event +- conf.event_duration
+    int inhibited;                          // whether screensaver inhibition is enabled
+    int pm_inhibited;                       // whether pm_inhibition is enabled
+    int sens_avail;                         // whether a sensor is currently available
     enum day_states day_time;               // whether it is day or night time
     enum ac_states ac_state;                // is laptop on battery?
     enum lid_states lid_state;              // current lid state
     enum display_states display_state;      // current display state
     int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
-    char *xauthority;                       // xauthority env variable
-    char *display;                          // DISPLAY env variable
-    char *wl_display;                       // WAYLAND_DISPLAY env variable
+    const char *xauthority;                 // xauthority env variable
+    const char *display;                    // DISPLAY env variable
+    const char *wl_display;                 // WAYLAND_DISPLAY env variable
     time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)
     loc_t current_loc;                      // current user location
     double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters for each sensor, for each AC state
