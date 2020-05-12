@@ -92,6 +92,7 @@
 - [x] Less verbose log (inhibit and pm modules DEBUG)
 - [x] Fix: Properly leave Clight again if no clightd is found (or clightd minimum version is not satisfied)
 - [x] Fix: do not log anything in modules dtor as log has already been closed
+- [x] Fix: public DEBUG macro uses internal conf
 
 ## 4.2
 

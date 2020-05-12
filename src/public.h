@@ -28,9 +28,9 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
-#define DEBUG(msg, ...) if (conf.verbose) log_message(__FILENAME__, __LINE__, 'D', msg, ##__VA_ARGS__)
-#define INFO(msg, ...) log_message(__FILENAME__, __LINE__, 'I', msg, ##__VA_ARGS__)
-#define WARN(msg, ...) log_message(__FILENAME__, __LINE__, 'W', msg, ##__VA_ARGS__)
+#define DEBUG(msg, ...) log_message(__FILENAME__, __LINE__, 'D', msg, ##__VA_ARGS__)
+#define INFO(msg, ...)  log_message(__FILENAME__, __LINE__, 'I', msg, ##__VA_ARGS__)
+#define WARN(msg, ...)  log_message(__FILENAME__, __LINE__, 'W', msg, ##__VA_ARGS__)
 
 /** Generic Enums **/
 

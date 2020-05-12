@@ -286,11 +286,7 @@ static void check_state(const time_t *now) {
 
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
-    int r = -EINVAL;
-    if (!strcmp(member, "Set")) {
-        r = sd_bus_message_read(reply, "b", userdata);
-    }
-    return r;
+    return sd_bus_message_read(reply, "b", userdata);
 }
 
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout) {
@@ -309,7 +305,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
             timeout = conf.gamma_conf.event_duration - (*now - state.day_events[target_event]);
         }
         /* Temperature difference */
-        step = abs(conf.gamma_conf.temp[DAY] - conf.gamma_conf.temp[NIGHT]);        
+        step = abs(conf.gamma_conf.temp[DAY] - conf.gamma_conf.temp[NIGHT]);
         /* Compute each step size with a gamma_trans_timeout of 10s */
         step /= (((double)timeout) / GAMMA_LONG_TRANS_TIMEOUT);
         /* force gamma_trans_timeout to 10s (in ms) */

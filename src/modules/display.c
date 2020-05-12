@@ -1,7 +1,5 @@
 #include "bus.h"
 
-static void dim_backlight(const double pct);
-static void restore_backlight(const double pct);
 static void publish_bl_req(const double pct, const bool smooth, const double step, const int to);
 static void set_dpms(bool enable);
 
@@ -35,7 +33,10 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 DEBUG("Entering dimmed state...\n");
                 if (state.current_bl_pct > conf.dim_conf.dimmed_pct) {
                     old_pct = state.current_bl_pct;
-                    dim_backlight(conf.dim_conf.dimmed_pct);
+                    publish_bl_req(conf.dim_conf.dimmed_pct, !conf.dim_conf.no_smooth[ENTER], 
+                                   conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_timeout[ENTER]);
+                } else {
+                    DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
                 }
             } else if (up->new == DISPLAY_OFF) {
                 state.display_state |= DISPLAY_OFF;
@@ -51,7 +52,8 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                     state.display_state &= ~DISPLAY_DIMMED;
                     DEBUG("Leaving dimmed state...\n");
                     if (old_pct >= 0.0) {
-                        restore_backlight(old_pct);
+                        publish_bl_req(old_pct, !conf.dim_conf.no_smooth[EXIT], 
+                                       conf.dim_conf.trans_step[EXIT], conf.dim_conf.trans_timeout[EXIT]);
                         old_pct = -1.0;
                     }
                 }
@@ -68,20 +70,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void destroy(void) {
 
-}
-
-static void dim_backlight(const double pct) {
-    /* Don't touch backlight if a lower level is already set */
-    if (pct >= state.current_bl_pct) {
-        DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
-    } else {
-        publish_bl_req(pct, !conf.dim_conf.no_smooth[ENTER], conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_timeout[ENTER]);
-    }
-}
-
-/* restore previous backlight level */
-static void restore_backlight(const double pct) {
-    publish_bl_req(pct, !conf.dim_conf.no_smooth[EXIT], conf.dim_conf.trans_step[EXIT], conf.dim_conf.trans_timeout[EXIT]);
 }
 
 static void publish_bl_req(const double pct, const bool smooth, const double step, const int to) {
