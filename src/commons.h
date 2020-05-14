@@ -21,6 +21,8 @@
 #define MINIMUM_CLIGHTD_VERSION_MAJ 4       // Clightd minimum required maj version
 #define MINIMUM_CLIGHTD_VERSION_MIN 1       // Clightd minimum required min version
 
+#define ON_LOOP_STARTED(fn)                 case SYSTEM_UPD: { if (msg->ps_msg->type == LOOP_STARTED) fn; break; }
+
 /** Generic structs **/
 
 typedef struct {
@@ -52,15 +54,18 @@ typedef struct {
 typedef struct {
     int disabled;
     int temp[SIZE_STATES];                  // screen temperature for each daytime
-    char day_events[SIZE_EVENTS][10];       // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
-    int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     int no_smooth;                          // disable smooth gamma changes
     int trans_step;                         // every gamma transition step value, used when smooth GAMMA transitions are enabled
     int trans_timeout;                      // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
     int long_transition;                    // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
-    loc_t loc;                              // user location as loaded by config
 } gamma_conf_t;
+
+typedef struct {
+    char day_events[SIZE_EVENTS][10];       // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
+    int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
+    loc_t loc;                              // user location as loaded by config
+} daytime_conf_t;
 
 typedef struct {
     int disabled;
@@ -95,6 +100,7 @@ typedef struct {
     sensor_conf_t sens_conf;
     kbd_conf_t kbd_conf;
     gamma_conf_t gamma_conf;
+    daytime_conf_t day_conf;
     dimmer_conf_t dim_conf;
     dpms_conf_t dpms_conf;
     screen_conf_t screen_conf;
@@ -120,6 +126,8 @@ typedef struct {
     enum ac_states ac_state;                // is laptop on battery?
     enum lid_states lid_state;              // current lid state
     enum display_states display_state;      // current display state
+    enum day_events next_event;             // next daytime event (SUNRISE or SUNSET)
+    int event_time_range;
     int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
     const char *xauthority;                 // xauthority env variable
     const char *display;                    // DISPLAY env variable

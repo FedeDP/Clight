@@ -97,19 +97,14 @@ static int init(int argc, char *argv[]) {
 
 static void init_state(void) {
     strncpy(state.version, VERSION, sizeof(state.version));
-    memcpy(&state.current_loc, &conf.gamma_conf.loc, sizeof(loc_t));
-    if (!conf.gamma_conf.disabled) {
-        /* Initial value -> undefined; if GAMMA is disabled instead assume DAY */
-        state.day_time = -1;
-    } else {
-        state.day_time = DAY;
-    }
+    memcpy(&state.current_loc, &conf.day_conf.loc, sizeof(loc_t));
     
     /* 
-     * Initial state -> undefined; 
-     * UPower will set these as soon as it is available, 
-     * or defaults ON_AC/OPEN where not unavailable.
+     * Initial states -> undefined; 
      */
+    state.sens_avail = -1;
+    state.next_event = -1;
+    state.day_time = -1;
     state.ac_state = -1;
     state.lid_state = -1;
 }

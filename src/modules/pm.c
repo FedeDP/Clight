@@ -15,12 +15,6 @@ static void init(void) {
     
     M_SUB(PM_REQ);
     M_SUB(INHIBIT_UPD);
-
-    /* Are we starting inhibited? React immediately! */
-    if (state.inhibited && conf.inh_conf.inhibit_pm) {
-        pm_req.pm.new = true;
-        on_pm_req(&pm_req.pm);
-    }
 }
 
 static bool check(void) {

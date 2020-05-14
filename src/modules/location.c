@@ -22,30 +22,21 @@ MODULE("LOCATION");
 
 static void init(void) {
     init_cache_file();
-    if (geoclue_init() == 0) {
-        M_SUB(LOCATION_REQ);
-        load_cache_location();
-    } else {
-        WARN("Failed to init.\n");
-        /* No location provider. Assume DAY */
-        state.day_time = DAY;
-        m_poisonpill(self());
-    }
+    M_SUB(LOCATION_REQ);
 }
 
 static bool check(void) {
-    /* It is only needed by GAMMA module that only works on X */
-    return state.display && state.xauthority;
+   return true;
 }
 
 static bool evaluate(void) {
     /* 
-     * Only start when neither a location nor fixed times for both events 
-     * are specified in conf AND GAMMA is enabled
+     * Only start when neither a location nor fixed times
+     * for both events are specified in conf
      */
-    return  !conf.gamma_conf.disabled && 
-            (conf.gamma_conf.loc.lat == LAT_UNDEFINED || conf.gamma_conf.loc.lon == LON_UNDEFINED) && 
-            (!strlen(conf.gamma_conf.day_events[SUNRISE]) || !strlen(conf.gamma_conf.day_events[SUNSET]));
+    return  !conf.wizard && 
+            ((conf.day_conf.loc.lat == LAT_UNDEFINED || conf.day_conf.loc.lon == LON_UNDEFINED) && 
+            (!strlen(conf.day_conf.day_events[SUNRISE]) || !strlen(conf.day_conf.day_events[SUNSET])));
 }
 
 /*
@@ -74,7 +65,15 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
     case SYSTEM_UPD:
-        if (msg->ps_msg->type == LOOP_STOPPED) {
+        if (msg->ps_msg->type == LOOP_STARTED) {
+            if (geoclue_init() == 0) {
+                load_cache_location();
+            } else {
+                WARN("Failed to init.\n");
+                publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
+                m_poisonpill(self());
+            }
+        } else if (msg->ps_msg->type == LOOP_STOPPED) {
             cache_location();
         }
         break;
@@ -90,7 +89,7 @@ static int load_cache_location(void) {
         double new_lat, new_lon;
         if (fscanf(f, "%lf %lf\n", &new_lat, &new_lon) == 2) {
             publish_location(new_lat, new_lon, &loc_req);
-            DEBUG("%.2lf %.2lf loaded from cache file!\n", new_lat, new_lon);
+            DEBUG("%.2lf %.2lf loaded from cache file.\n", new_lat, new_lon);
             ret = 0;
         }
         fclose(f);
@@ -170,6 +169,7 @@ static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNU
     int r = get_property(&lat_args, "d", &new_lat, sizeof(new_lat)) + 
             get_property(&lon_args, "d", &new_lon, sizeof(new_lon));
     if (!r) {
+        DEBUG("%.2lf %.2lf received from Geoclue2.\n", new_lat, new_lon);
         publish_location(new_lat, new_lon, &loc_req);
     }
     return 0;

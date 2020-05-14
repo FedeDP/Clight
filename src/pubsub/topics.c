@@ -36,6 +36,7 @@ const char *topics[] = {
     "ReqLid",
     "PmInhibited",
     "PmReq",
-    "SensorAvail"
+    "SensorAvail",
+    "NextEvent"
 };
 _Static_assert(sizeof(topics) / sizeof(*topics) == MSGS_SIZE, "Undefined topic.");

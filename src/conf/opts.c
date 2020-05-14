@@ -5,6 +5,7 @@ static void init_backlight_opts(bl_conf_t *bl_conf);
 static void init_sens_opts(sensor_conf_t *sens_conf);
 static void init_kbd_opts(kbd_conf_t *kbd_conf);
 static void init_gamma_opts(gamma_conf_t *gamma_conf);
+static void init_daytime_opts(daytime_conf_t *day_conf);
 static void init_dimmer_opts(dimmer_conf_t *dim_conf);
 static void init_dpms_opts(dpms_conf_t *dpms_conf);
 static void init_screen_opts(screen_conf_t *screen_conf);
@@ -15,6 +16,7 @@ static void check_bl_conf(bl_conf_t *bl_conf);
 static void check_sens_conf(sensor_conf_t *sens_conf);
 static void check_kbd_conf(kbd_conf_t *kbd_conf);
 static void check_gamma_conf(gamma_conf_t *gamma_conf);
+static void check_daytime_conf(daytime_conf_t *day_conf);
 static void check_dim_conf(dimmer_conf_t *dim_conf);
 static void check_dpms_conf(dpms_conf_t *dpms_conf);
 static void check_screen_conf(screen_conf_t *screen_conf);
@@ -69,11 +71,14 @@ static void init_kbd_opts(kbd_conf_t *kbd_conf) {
 static void init_gamma_opts(gamma_conf_t *gamma_conf) {
     gamma_conf->temp[DAY] = 6500;
     gamma_conf->temp[NIGHT] = 4000;
-    gamma_conf->event_duration = 30 * 60;
     gamma_conf->trans_step = 50;
     gamma_conf->trans_timeout = 300;
-    gamma_conf->loc.lat = LAT_UNDEFINED;
-    gamma_conf->loc.lon = LON_UNDEFINED;
+}
+
+static void init_daytime_opts(daytime_conf_t *day_conf) {
+    day_conf->event_duration = 30 * 60;
+    day_conf->loc.lat = LAT_UNDEFINED;
+    day_conf->loc.lon = LON_UNDEFINED;
 }
 
 static void init_dimmer_opts(dimmer_conf_t *dim_conf) {
@@ -109,6 +114,7 @@ int init_opts(int argc, char *argv[]) {
     init_sens_opts(&conf.sens_conf);
     init_kbd_opts(&conf.kbd_conf);
     init_gamma_opts(&conf.gamma_conf);
+    init_daytime_opts(&conf.day_conf);
     init_dimmer_opts(&conf.dim_conf);
     init_dpms_opts(&conf.dpms_conf);
     init_screen_opts(&conf.screen_conf);
@@ -145,8 +151,8 @@ static int parse_cmd(int argc, char *const argv[], char *conf_file, size_t size)
         {"no-dimmer-smooth-exit", 0, POPT_ARG_NONE, &conf.dim_conf.no_smooth[EXIT], 100, "Disable smooth dimmer transitions while leaving dimmed state", NULL},
         {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.gamma_conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
         {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.gamma_conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
-        {"lat", 0, POPT_ARG_DOUBLE, &conf.gamma_conf.loc.lat, 100, "Your desired latitude", NULL},
-        {"lon", 0, POPT_ARG_DOUBLE, &conf.gamma_conf.loc.lon, 100, "Your desired longitude", NULL},
+        {"lat", 0, POPT_ARG_DOUBLE, &conf.day_conf.loc.lat, 100, "Your desired latitude", NULL},
+        {"lon", 0, POPT_ARG_DOUBLE, &conf.day_conf.loc.lon, 100, "Your desired longitude", NULL},
         {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
         {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &conf.gamma_conf.disabled, 100, "Disable gamma correction tool", NULL},
@@ -180,10 +186,10 @@ static int parse_cmd(int argc, char *const argv[], char *conf_file, size_t size)
                 strncpy(conf.bl_conf.screen_path, str, sizeof(conf.bl_conf.screen_path) - 1);
                 break;
             case 3:
-                strncpy(conf.gamma_conf.day_events[SUNRISE], str, sizeof(conf.gamma_conf.day_events[SUNRISE]) - 1);
+                strncpy(conf.day_conf.day_events[SUNRISE], str, sizeof(conf.day_conf.day_events[SUNRISE]) - 1);
                 break;
             case 4:
-                strncpy(conf.gamma_conf.day_events[SUNSET], str, sizeof(conf.gamma_conf.day_events[SUNSET]) - 1);
+                strncpy(conf.day_conf.day_events[SUNSET], str, sizeof(conf.day_conf.day_events[SUNSET]) - 1);
                 break;
             case 5:
                 printf("%s: C daemon utility to automagically adjust screen backlight to match ambient brightness.\n"
@@ -336,20 +342,6 @@ static void check_gamma_conf(gamma_conf_t *gamma_conf) {
         WARN("Wrong nightly temp value. Resetting default value.\n");
         gamma_conf->temp[NIGHT] = 4000;
     }
-    if (gamma_conf->event_duration <= 0) {
-        WARN("Wrong event duration value. Resetting default value.\n");
-        gamma_conf->event_duration = 30 * 60;
-    }
-    
-    if (fabs(gamma_conf->loc.lat) > 90.0f && gamma_conf->loc.lat != LAT_UNDEFINED) {
-        WARN("Wrong latitude value. Resetting default value.\n");
-        gamma_conf->loc.lat = LAT_UNDEFINED;
-    }
-    if (fabs(gamma_conf->loc.lon) > 180.0f && gamma_conf->loc.lon != LON_UNDEFINED) {
-        WARN("Wrong longitude value. Resetting default value.\n");
-        gamma_conf->loc.lon = LON_UNDEFINED;
-    }
-    
     if (gamma_conf->trans_step <= 0) {
         WARN("Wrong gamma_trans_step value. Resetting default value.\n");
         gamma_conf->trans_step = 50;
@@ -359,13 +351,29 @@ static void check_gamma_conf(gamma_conf_t *gamma_conf) {
         WARN("Wrong gamma_trans_timeout value. Resetting default value.\n");
         gamma_conf->trans_timeout = 300;
     }
+}
+
+static void check_daytime_conf(daytime_conf_t *day_conf) {
+    if (day_conf->event_duration <= 0) {
+        WARN("Wrong event duration value. Resetting default value.\n");
+        day_conf->event_duration = 30 * 60;
+    }
+    
+    if (fabs(day_conf->loc.lat) > 90.0f && day_conf->loc.lat != LAT_UNDEFINED) {
+        WARN("Wrong latitude value. Resetting default value.\n");
+        day_conf->loc.lat = LAT_UNDEFINED;
+    }
+    if (fabs(day_conf->loc.lon) > 180.0f && day_conf->loc.lon != LON_UNDEFINED) {
+        WARN("Wrong longitude value. Resetting default value.\n");
+        day_conf->loc.lon = LON_UNDEFINED;
+    }
     
     for (int i = 0; i < SIZE_EVENTS; i++) {
         struct tm timeinfo;
-        if (strlen(gamma_conf->day_events[i]) && 
-            !strptime(gamma_conf->day_events[i], "%R", &timeinfo)) {
+        if (strlen(day_conf->day_events[i]) && 
+            !strptime(day_conf->day_events[i], "%R", &timeinfo)) {
             
-            memset(gamma_conf->day_events[i], 0, sizeof(gamma_conf->day_events[i]));
+            memset(day_conf->day_events[i], 0, sizeof(day_conf->day_events[i]));
         }
     }
 }
@@ -479,6 +487,7 @@ static void check_conf(void) {
     if (!conf.gamma_conf.disabled) {
         check_gamma_conf(&conf.gamma_conf);
     }
+    check_daytime_conf(&conf.day_conf);
     if (!conf.dim_conf.disabled) {
         check_dim_conf(&conf.dim_conf);
     }

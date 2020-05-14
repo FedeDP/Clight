@@ -55,7 +55,7 @@ bool validate_contrib(contrib_upd *up) {
 bool validate_evt(evt_upd *up) {
     struct tm timeinfo;
     if (strlen(up->event) && 
-        strlen(up->event) < sizeof(conf.gamma_conf.day_events[SUNRISE]) &&
+        strlen(up->event) < sizeof(conf.day_conf.day_events[SUNRISE]) &&
         strptime(up->event, "%R", &timeinfo)) {
      
         return true;
@@ -77,8 +77,7 @@ bool validate_temp(temp_upd *up) {
     
     /* Validate new temp: check clighd limits */
     if (up->new >= 1000 && up->new <= 10000 && 
-        up->daytime >= DAY && up->daytime < SIZE_STATES &&
-        up->new != conf.gamma_conf.temp[up->daytime]) {
+        up->daytime >= DAY && up->daytime < SIZE_STATES) {
      
         return true;
     }

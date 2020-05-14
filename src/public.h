@@ -98,6 +98,7 @@ enum mod_msg_types {
     PM_UPD,             // Subscribe to receive new PowerManagement inhibition states
     PM_REQ,             // Publish to set a new PowerManagement inhibition state,
     SENS_UPD,           // Subscribe to receive "SensorAvail" states
+    NEXT_DAYEVT_UPD,    // Subscribe to receive notifications about next day event (ie: sunrise or sunset)
     MSGS_SIZE
 };
 
@@ -154,7 +155,7 @@ typedef struct {
 typedef struct {
     enum day_events old;        // Valued in updates. Useless for requests
     enum day_events new;        // Valued in updates. Useless for requests
-    char event[10];             // Mandatory for requests. Empty on updates
+    char event[10];             // Mandatory for SUNRISE/SUNSET requests. Empty on updates
 } evt_upd;
 
 typedef struct {
@@ -214,7 +215,7 @@ typedef struct {
         pm_upd pm;              /* PM_UPD/PM_REQ */
         display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
         daytime_upd day_time;   /* TIME_UPD/IN_EVENT_UPD */
-        evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ */
+        evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ/NEXT_DAYEVT_UPD */
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ */
         curve_upd curve;        /* CURVE_REQ */

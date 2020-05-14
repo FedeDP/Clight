@@ -10,12 +10,6 @@ static int inhibition_ctr;
 
 static void init(void) {
     M_SUB(INHIBIT_REQ);
-
-    /* Are we starting DOCKED? Inhibit immediately! */
-    if (state.lid_state == DOCKED) {
-        inhibit_upd req = { false, true, false, NULL, strdup("Docked laptop.") };
-        on_inhibit_req(&req);
-    }
 }
 
 static bool check(void) {
@@ -23,7 +17,7 @@ static bool check(void) {
 }
 
 static bool evaluate() {
-    return !conf.inh_conf.disabled && state.lid_state != -1; // start once we have a lid state, to check for DOCKED state
+    return !conf.inh_conf.disabled;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {

@@ -70,6 +70,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("ClightdVersion", "s", get_version, offsetof(state_t, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(state_t, day_events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(state_t, day_events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("NextEvent", "i", NULL, offsetof(state_t, next_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("DayTime", "i", NULL, offsetof(state_t, day_time), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("InEvent", "b", NULL, offsetof(state_t, in_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("DisplayState", "i", NULL, offsetof(state_t, display_state), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -138,17 +139,22 @@ static const sd_bus_vtable conf_kbd_vtable[] = {
 
 static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(gamma_conf_t, day_events[SUNRISE]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(gamma_conf_t, day_events[SUNSET]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(gamma_conf_t, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(gamma_conf_t, ambient_gamma), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(gamma_conf_t, no_smooth), 0),
-    SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(gamma_conf_t, event_duration), 0),
     SD_BUS_WRITABLE_PROPERTY("TransStep", "i", NULL, NULL, offsetof(gamma_conf_t, trans_step), 0),
     SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(gamma_conf_t, trans_timeout), 0),
     SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("LongTransition", "b", NULL, NULL, offsetof(gamma_conf_t, long_transition), 0),
+    SD_BUS_VTABLE_END
+};
+
+static const sd_bus_vtable conf_daytime_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(daytime_conf_t, day_events[SUNRISE]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(daytime_conf_t, day_events[SUNSET]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(daytime_conf_t, loc), 0),
+    SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(daytime_conf_t, event_duration), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -227,6 +233,7 @@ static void init(void) {
     const char conf_sens_path[] = "/org/clight/clight/Conf/Sensor";
     const char conf_kbd_path[] = "/org/clight/clight/Conf/Kbd";
     const char conf_gamma_path[] = "/org/clight/clight/Conf/Gamma";
+    const char conf_daytime_path[] = "/org/clight/clight/Conf/Daytime";
     const char conf_dim_path[] = "/org/clight/clight/Conf/Dimmer";
     const char conf_dpms_path[] = "/org/clight/clight/Conf/Dpms";
     const char conf_screen_path[] = "/org/clight/clight/Conf/Screen";
@@ -238,6 +245,7 @@ static void init(void) {
     const char conf_sens_interface[] = "org.clight.clight.Conf.Sensor";
     const char conf_kbd_interface[] = "org.clight.clight.Conf.Kbd";
     const char conf_gamma_interface[] = "org.clight.clight.Conf.Gamma";
+    const char conf_daytime_interface[] = "org.clight.clight.Conf.Daytime";
     const char conf_dim_interface[] = "org.clight.clight.Conf.Dimmer";
     const char conf_dpms_interface[] = "org.clight.clight.Conf.Dpms";
     const char conf_screen_interface[] = "org.clight.clight.Conf.Screen";
@@ -298,6 +306,13 @@ static void init(void) {
                                     conf_gamma_vtable,
                                     &conf.gamma_conf);
     }
+    
+    r += sd_bus_add_object_vtable(userbus,
+                                  NULL,
+                                  conf_daytime_path,
+                                  conf_daytime_interface,
+                                  conf_daytime_vtable,
+                                  &conf.day_conf);
     
     /* Conf/Dimmer interface */
     if (!conf.dim_conf.disabled) {
@@ -897,7 +912,7 @@ static int set_event(sd_bus *bus, const char *path, const char *interface, const
     VALIDATE_PARAMS(value, "s", &event);
 
     message_t *msg = &sunrise_req;
-    if (userdata == &conf.gamma_conf.day_events[SUNSET]) {
+    if (userdata == &conf.day_conf.day_events[SUNSET]) {
         msg = &sunset_req;
     }
     strncpy(msg->event.event, event, sizeof(msg->event.event));

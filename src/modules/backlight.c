@@ -3,6 +3,7 @@
 
 enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, LID = 0x08 };
 
+static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int is_sensor_available(void);
@@ -35,6 +36,7 @@ MODULE("BACKLIGHT");
 
 static void init(void) {
     capture_req.capture.reset_timer = true;
+    capture_req.capture.capture_only = false;
     
     /* Compute polynomial best-fit parameters for each loaded sensor config */
     interface_curve_callback(NULL, 0, ON_AC);
@@ -50,36 +52,7 @@ static void init(void) {
     M_SUB(CURVE_REQ);
     M_SUB(NO_AUTOCALIB_REQ);
     M_SUB(BL_REQ);
-
-    /* We do not fail if this fails */
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
-    add_match(&args, &slot, on_sensor_change);
-
-    state.sens_avail = is_sensor_available();
-    
-    bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
-    m_register_fd(bl_fd, false, NULL);
-    if (!state.sens_avail) {
-        pause_mod(SENSOR);
-    }
-    if (conf.bl_conf.no_auto_calib) {
-        /*
-         * If automatic calibration is disabled, we need to ensure to start
-         * from a well known backlight level for DIMMER to correctly work.
-         * Force 100% backlight level.
-         *
-         * Cannot publish a BL_REQ as BACKLIGHT get paused.
-         */
-        set_backlight_level(1.0, false, 0, 0);
-        pause_mod(AUTOCALIB);
-    }
-    if (state.lid_state) {
-        /* 
-         * If we start with closed lid,
-         * pause backlight calibration if configured.
-         */
-        on_lid_update();
-    }
+    m_become(waiting_init);
 }
 
 static bool check(void) {
@@ -87,7 +60,7 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.bl_conf.disabled && state.day_time != -1 && state.ac_state != -1 && state.lid_state != -1;
+    return !conf.bl_conf.disabled;
 }
 
 static void destroy(void) {
@@ -96,6 +69,56 @@ static void destroy(void) {
     }
     if (bl_fd >= 0) {
         close(bl_fd);
+    }
+}
+
+static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata) {
+    static enum { UPOWER_STARTED = 1, LID_STARTED = 2, DAYTIME_STARTED = 4, ALL_STARTED = 7} ok = 0;
+    switch (MSG_TYPE()) {
+    case UPOWER_UPD:
+        ok |= UPOWER_STARTED;
+        break;
+    case LID_UPD:
+        ok |= LID_STARTED;
+        break;
+    case DAYTIME_UPD:
+        ok |= DAYTIME_STARTED;
+        break;
+    default:
+        break;
+    }
+    
+    /* Wait on each of these 3 messages before actually starting up */
+    if (ok == ALL_STARTED) {
+        /* We do not fail if this fails */
+        SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
+        add_match(&args, &slot, on_sensor_change);
+                
+        bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
+        m_register_fd(bl_fd, false, NULL);
+        
+        /* Eventually pause backlight if sensor is not available */
+        on_sensor_change(NULL, NULL, NULL);
+        
+        if (conf.bl_conf.no_auto_calib) {
+            /*
+             * If automatic calibration is disabled, we need to ensure to start
+             * from a well known backlight level for DIMMER to correctly work.
+             * Force 100% backlight level.
+             *
+             * Cannot publish a BL_REQ as BACKLIGHT get paused.
+             */
+            set_backlight_level(1.0, false, 0, 0);
+            pause_mod(AUTOCALIB);
+        }
+        if (state.lid_state) {
+            /* 
+             * If we start with closed lid,
+             * pause backlight calibration if configured.
+             */
+            on_lid_update();
+        }
+        m_unbecome();
     }
 }
 
@@ -388,7 +411,7 @@ static void time_callback(int old_val, int is_event) {
 }
 
 /* Callback on SensorChanged clightd signal */
-static int on_sensor_change(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+static int on_sensor_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     int new_sensor_avail = is_sensor_available();
     if (new_sensor_avail != state.sens_avail) {
         sens_msg.sens.old = state.sens_avail;

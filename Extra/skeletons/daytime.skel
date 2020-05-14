@@ -15,7 +15,7 @@
  * Place daytime in: $HOME/.local/share/clight/modules.d/ OR, globally, in /usr/share/clight/modules.d/
  */
 
-CLIGHT_MODULE("DAYTIME");
+CLIGHT_MODULE("NIGHTTHEME");
 
 static void init(void) {
     /* Suscribe to daytime updates */

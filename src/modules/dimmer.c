@@ -1,5 +1,6 @@
 #include "idler.h"
 
+static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata);
 static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdata);
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void upower_timeout_callback(void);
@@ -13,21 +14,11 @@ DECLARE_MSG(display_req, DISPLAY_REQ);
 MODULE("DIMMER");
 
 static void init(void) {
-    int r = idle_init(client, &slot, conf.dim_conf.timeout[state.ac_state], on_new_idle);
-    if (r == 0) {
-        M_SUB(UPOWER_UPD);
-        M_SUB(INHIBIT_UPD);
-        M_SUB(DIMMER_TO_REQ);
-        M_SUB(SIMULATE_REQ);
-        
-        /* Properly manage INHIBIT state since start */
-        if (state.inhibited) {
-            inhibit_callback();
-        }
-    } else {
-        WARN("Failed to init.\n");
-        m_poisonpill(self());
-    }
+    M_SUB(UPOWER_UPD);
+    M_SUB(INHIBIT_UPD);
+    M_SUB(DIMMER_TO_REQ);
+    M_SUB(SIMULATE_REQ);
+    m_become(waiting_acstate);
 }
 
 static bool check(void) {
@@ -35,7 +26,24 @@ static bool check(void) {
 }
 
 static bool evaluate(void) {
-    return !conf.dim_conf.disabled && state.ac_state != -1;
+    return !conf.dim_conf.disabled;
+}
+
+static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata) {
+    switch (MSG_TYPE()) {
+        case UPOWER_UPD: {
+            int r = idle_init(client, &slot, conf.dim_conf.timeout[state.ac_state], on_new_idle);
+            if (r != 0) {
+                WARN("Failed to init.\n");
+                m_poisonpill(self());
+            } else {
+                m_unbecome();
+            }
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {

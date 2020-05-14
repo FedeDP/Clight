@@ -69,9 +69,20 @@
 - [x] Restore get_distance() old function and use it to validate new location request. It is useful as we may have multiple location sources (eg: cache file and geoclue)
 - [x] Immediately load cache location without 3s timer
 
+### Gamma
+- [x] Split DAYTIME module from GAMMA: this way even with disabled gamma, clight can still have daytime informations if any location is provided
+- [x] Split DAYTIME related configs from gamma
+
 ### Wizard
 - [x] Add an initial calibration wizard
-- [x] Add new -w flag to clight bash completion script 
+- [x] Add new -w flag to clight bash completion script
+
+### Modules architecture
+- [x] Start all modules together; then let modules wait on proper condition before actually start doing things
+- - This way published messages are received by everyone!
+
+### Screen
+- [x] Pause SCREEN on lid closed and SENSOR not available too
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
@@ -87,7 +98,6 @@
 - [x] Avoid creating disabled modules conf interafce
 - [x] Kill clight on bus disconnection (ENOTCONN/ECONNRESET errnos)
 - [x] Drop "Disabled" from dbus INTERFACE as now disabled modules are not exposed
-- [ ] Notify custom modules about initial state; right now they are only receiving "changes" updates
 - [ ] Explicit in custom modules DOC which modules are always available and which not
 - [x] Less verbose log (inhibit and pm modules DEBUG)
 - [x] Fix: Properly leave Clight again if no clightd is found (or clightd minimum version is not satisfied)

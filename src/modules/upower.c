@@ -1,4 +1,4 @@
-#include "bus.h"
+    #include "bus.h"
 
 static int upower_check(void);
 static int upower_init(void);
@@ -18,17 +18,8 @@ DECLARE_MSG(inh_req, INHIBIT_REQ);
 MODULE("UPOWER");
 
 static void init(void) {
-    if (upower_check() != 0 || upower_init() != 0) {
-        /* Upower not available. Let's assume ON_AC and LID OPEN! */
-        state.ac_state = ON_AC;
-        state.lid_state = OPEN;
-        INFO("Failed to retrieve AC state; fallback to connected.\n");
-        m_poisonpill(self());
-    } else {
-        INFO("Initial AC state: %s.\n", state.ac_state == ON_AC ? "connected" : "disconnected");
-        M_SUB(UPOWER_REQ);
-        M_SUB(LID_REQ);
-    }
+    M_SUB(UPOWER_REQ);
+    M_SUB(LID_REQ);
 }
 
 static bool check(void) {
@@ -41,6 +32,17 @@ static bool evaluate(void) {
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
+    ON_LOOP_STARTED({
+        if (upower_check() != 0 || upower_init() != 0) {
+            /* Upower not available. Let's assume ON_AC and LID OPEN! */
+            publish_upower(ON_AC, &upower_msg);
+            state.ac_state = ON_AC;
+            publish_lid(OPEN, &lid_msg);
+            state.lid_state = OPEN;
+            WARN("Failed to retrieve AC state; fallback to ON_AC and OPEN lid.\n");
+            m_poisonpill(self());
+        }
+    });
     case UPOWER_REQ: {
         upower_upd *up = (upower_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -55,9 +57,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         lid_upd *up = (lid_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             if (up->new != DOCKED) {
-                DEBUG("Lid %s.\n", up->new == CLOSED ? "closed" : "opened");
+                INFO("Laptop lid %s.\n", up->new == CLOSED ? "closed" : "opened");
             } else {
-                DEBUG("Laptop docked.\n");
+                INFO("Laptop docked.\n");
             }
             // publish lid before storing new lid state as state.lid_closed is sent as "old" parameter
             publish_lid(up->new, &lid_msg);
@@ -83,23 +85,7 @@ static int upower_check(void) {
     int r = get_property(&lid_pres_args, "b", &is_laptop, sizeof(is_laptop));
     if (!r) {
         if (is_laptop) {
-            /* check initial AC state and lid state */
-            SYSBUS_ARG(batt_args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "OnBattery");
-            SYSBUS_ARG(lid_close_args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "LidIsClosed");
-            
-            r = get_property(&batt_args, "b", &state.ac_state, sizeof(state.ac_state));
-            r += get_property(&lid_close_args, "b", &state.lid_state, sizeof(state.lid_state));
-
-            /* Check initial docked state too! */
-            if (state.lid_state && conf.inh_conf.inhibit_docked) {
-                SYSBUS_ARG(docked_args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Docked");
-                
-                bool docked;
-                r = get_property(&docked_args, "b", &docked, sizeof(docked));
-                if (!r) {
-                    state.lid_state += docked;
-                }
-            }
+            on_upower_change(NULL, NULL, NULL);
         } else {
             INFO("Not a laptop device. Killing UPower module.\n");
             r = -1;

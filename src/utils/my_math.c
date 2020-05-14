@@ -5,7 +5,7 @@
 #define ZENITH -0.83
 
 static float to_hours(const float rad);
-static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, int tomorrow);
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, bool tomorrow);
 
 /*
  * Convert degrees to radians
@@ -86,7 +86,7 @@ static float to_hours(const float rad) {
  * If conf.events[event] is set, it means "event" time is user-set.
  * So, only store in *tt its corresponding time_t values.
  */
-static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, int tomorrow) {
+static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, bool tomorrow) {
     // 1. compute the day of the year (timeinfo->tm_yday below)
     time(tt);
     struct tm *timeinfo = localtime(tt);
@@ -99,8 +99,8 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     timeinfo->tm_sec = 0;
 
     /* If user provided a sunrise/sunset time, use them */
-    if (strlen(conf.gamma_conf.day_events[event]) > 0) {
-        strptime(conf.gamma_conf.day_events[event], "%R", timeinfo);
+    if (strlen(conf.day_conf.day_events[event]) > 0) {
+        strptime(conf.day_conf.day_events[event], "%R", timeinfo);
         *tt = mktime(timeinfo);
         return 0;
     }
@@ -171,11 +171,11 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     return 0;
 }
 
-int calculate_sunrise(const float lat, const float lng, time_t *tt, int tomorrow) {
+int calculate_sunrise(const float lat, const float lng, time_t *tt, bool tomorrow) {
     return calculate_sunrise_sunset(lat, lng, tt, SUNRISE, tomorrow);
 }
 
-int calculate_sunset(const float lat, const float lng, time_t *tt, int tomorrow) {
+int calculate_sunset(const float lat, const float lng, time_t *tt, bool tomorrow) {
     return calculate_sunrise_sunset(lat, lng, tt, SUNSET, tomorrow);
 }
 

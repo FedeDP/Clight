@@ -7,6 +7,7 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf);
 static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf);
 static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
+static void load_day_settings(config_t *cfg, daytime_conf_t *day_conf);
 static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf);
 static void load_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf);
 static void load_screen_settings(config_t *cfg, screen_conf_t *screen_conf);
@@ -16,6 +17,7 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf);
 static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf);
 static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
+static void store_daytime_settings(config_t *cfg, daytime_conf_t *day_conf);
 static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf);
 static void store_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf);
 static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf);
@@ -145,25 +147,13 @@ static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
 
 static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     config_setting_t *gamma = config_lookup(cfg, "gamma");
-    if (gamma) {
-        const char *sunrise, *sunset;
-        
+    if (gamma) {        
         config_setting_lookup_bool(gamma, "disabled", &gamma_conf->disabled);
         config_setting_lookup_bool(gamma, "no_smooth_transition", &gamma_conf->no_smooth);
         config_setting_lookup_int(gamma, "trans_step", &gamma_conf->trans_step);
         config_setting_lookup_int(gamma, "trans_timeout", &gamma_conf->trans_timeout);
-        config_setting_lookup_float(gamma, "latitude", &gamma_conf->loc.lat);
-        config_setting_lookup_float(gamma, "longitude", &gamma_conf->loc.lon);
-        config_setting_lookup_int(gamma, "event_duration", &gamma_conf->event_duration);
         config_setting_lookup_bool(gamma, "long_transition", &gamma_conf->long_transition);
         config_setting_lookup_bool(gamma, "ambient_gamma", &gamma_conf->ambient_gamma);
-        
-        if (config_setting_lookup_string(gamma, "sunrise", &sunrise) == CONFIG_TRUE) {
-            strncpy(gamma_conf->day_events[SUNRISE], sunrise, sizeof(gamma_conf->day_events[SUNRISE]) - 1);
-        }
-        if (config_setting_lookup_string(gamma, "sunset", &sunset) == CONFIG_TRUE) {
-            strncpy(gamma_conf->day_events[SUNSET], sunset, sizeof(gamma_conf->day_events[SUNSET]) - 1);
-        }
         
         if ((gamma = config_setting_get_member(gamma, "temp"))) {
             if (config_setting_length(gamma) == SIZE_STATES) {
@@ -173,6 +163,24 @@ static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
             } else {
                 WARN("Wrong number of gamma 'temp' array elements.\n");
             }
+        }
+    }
+}
+
+static void load_day_settings(config_t *cfg, daytime_conf_t *day_conf) {
+    config_setting_t *daytime = config_lookup(cfg, "daytime");
+    if (daytime) {
+        const char *sunrise, *sunset;
+        
+        config_setting_lookup_float(daytime, "latitude", &day_conf->loc.lat);
+        config_setting_lookup_float(daytime, "longitude", &day_conf->loc.lon);
+        config_setting_lookup_int(daytime, "event_duration", &day_conf->event_duration);
+        
+        if (config_setting_lookup_string(daytime, "sunrise", &sunrise) == CONFIG_TRUE) {
+            strncpy(day_conf->day_events[SUNRISE], sunrise, sizeof(day_conf->day_events[SUNRISE]) - 1);
+        }
+        if (config_setting_lookup_string(daytime, "sunset", &sunset) == CONFIG_TRUE) {
+            strncpy(day_conf->day_events[SUNSET], sunset, sizeof(day_conf->day_events[SUNSET]) - 1);
         }
     }
 }
@@ -298,6 +306,7 @@ int read_config(enum CONFIG file, char *config_file) {
         load_sensor_settings(&cfg, &conf.sens_conf);
         load_kbd_settings(&cfg, &conf.kbd_conf);
         load_gamma_settings(&cfg, &conf.gamma_conf);
+        load_day_settings(&cfg, &conf.day_conf);
         load_dimmer_settings(&cfg, &conf.dim_conf);
         load_dpms_settings(&cfg, &conf.dpms_conf);
         load_screen_settings(&cfg, &conf.screen_conf);
@@ -404,26 +413,31 @@ static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     setting = config_setting_add(gamma, "ambient_gamma", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, gamma_conf->ambient_gamma);
     
-    if (gamma_conf->loc.lat != LAT_UNDEFINED && gamma_conf->loc.lon != LON_UNDEFINED) {
-        setting = config_setting_add(gamma, "latitude", CONFIG_TYPE_FLOAT);
-        config_setting_set_float(setting, gamma_conf->loc.lat);
-        setting = config_setting_add(gamma, "longitude", CONFIG_TYPE_FLOAT);
-        config_setting_set_float(setting, gamma_conf->loc.lon);
-    }
-    
-    setting = config_setting_add(gamma, "event_duration", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, gamma_conf->event_duration);
-    
-    setting = config_setting_add(gamma, "sunrise", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, gamma_conf->day_events[SUNRISE]);
-    
-    setting = config_setting_add(gamma, "sunset", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, gamma_conf->day_events[SUNSET]);
-    
     setting = config_setting_add(gamma, "temp", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_STATES; i++) {
         config_setting_set_int_elem(setting, -1, gamma_conf->temp[i]);
     }
+}
+
+static void store_daytime_settings(config_t *cfg, daytime_conf_t *day_conf) {
+    config_setting_t *daytime = config_setting_add(cfg->root, "daytime", CONFIG_TYPE_GROUP);
+    config_setting_t *setting;
+    
+    if (day_conf->loc.lat != LAT_UNDEFINED && day_conf->loc.lon != LON_UNDEFINED) {
+        setting = config_setting_add(daytime, "latitude", CONFIG_TYPE_FLOAT);
+        config_setting_set_float(setting, day_conf->loc.lat);
+        setting = config_setting_add(daytime, "longitude", CONFIG_TYPE_FLOAT);
+        config_setting_set_float(setting, day_conf->loc.lon);
+    }
+    
+    setting = config_setting_add(daytime, "event_duration", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, day_conf->event_duration);
+    
+    setting = config_setting_add(daytime, "sunrise", CONFIG_TYPE_STRING);
+    config_setting_set_string(setting, day_conf->day_events[SUNRISE]);
+    
+    setting = config_setting_add(daytime, "sunset", CONFIG_TYPE_STRING);
+    config_setting_set_string(setting, day_conf->day_events[SUNSET]);
 }
 
 static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
@@ -505,6 +519,7 @@ int store_config(enum CONFIG file) {
     store_sensors_settings(&cfg, &conf.sens_conf);
     store_kbd_settings(&cfg, &conf.kbd_conf);
     store_gamma_settings(&cfg, &conf.gamma_conf);
+    store_daytime_settings(&cfg, &conf.day_conf);
     store_dimmer_settings(&cfg, &conf.dim_conf);
     store_dpms_settings(&cfg, &conf.dpms_conf);
     store_screen_settings(&cfg, &conf.screen_conf);
