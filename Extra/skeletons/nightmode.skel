@@ -3,19 +3,19 @@
 /**
  * Small example custom module for Clight.
  * 
- * It just hooks on TIME updates and it can set different themes based on daytime,
+ * It just hooks on DAYTIME_UPD updates and it can set different themes based on daytime,
  * just replace commented system() lines.
  **/
 
 /*
- * Rename to: daytime.c
+ * Rename to: nightmode.c
  * 
- * Build with: gcc -shared -fPIC daytime.c -o daytime -Wno-unused
+ * Build with: gcc -shared -fPIC nightmode.c -o nightmode -Wno-unused
  * 
- * Place daytime in: $HOME/.local/share/clight/modules.d/ OR, globally, in /usr/share/clight/modules.d/
+ * Place nightmode in: $HOME/.local/share/clight/modules.d/ OR, globally, in /usr/share/clight/modules.d/
  */
 
-CLIGHT_MODULE("NIGHTTHEME");
+CLIGHT_MODULE("NIGHTMODE");
 
 static void init(void) {
     /* Suscribe to daytime updates */
