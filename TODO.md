@@ -80,9 +80,14 @@
 ### Modules architecture
 - [x] Start all modules together; then let modules wait on proper condition before actually start doing things
 - - This way published messages are received by everyone!
+- [x] Fix: daytime should not wait LOCATION_UPD if LOCATION module is not started (ie: fixed sunrise/sunset times or fixed location)
 
 ### Screen
 - [x] Pause SCREEN on lid closed and SENSOR not available too
+
+### Bus
+- [ ] Expose BUS_REQ to make dbus call from custom modules
+- [x] Drop LIBSYSTEMD < 237 version (and bump CMakeLists required version)
 
 ### Generic
 - [x] Improvement: rework log_conf() function to print configs MODULE based, just like conf file
@@ -105,9 +110,6 @@
 - [x] Fix: public DEBUG macro uses internal conf
 
 ## 4.2
-
-### Bus
-- [ ] Expose BUS_REQ to make dbus call from custom modules
 
 ### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)

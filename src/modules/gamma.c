@@ -116,8 +116,8 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
     } else {
         long_transitioning = false;
     }
-    
-    int r = call(&args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);
+        
+    int r = call(&args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);    
     if (!r && ok) {
         temp_msg.temp.old = state.current_temp;
         state.current_temp = temp;
@@ -179,8 +179,8 @@ static void on_next_dayevt(evt_upd *up) {
 }
 
 static void on_daytime_req(temp_upd *up) {
-    const time_t t = time(NULL);
     if (!long_transitioning && !conf.gamma_conf.ambient_gamma) {
+        const time_t t = time(NULL);        
         set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth, 
                  conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
     }

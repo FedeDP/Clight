@@ -39,6 +39,6 @@ typedef struct {
 
 int call(const bus_args *a, const char *signature, ...);
 int add_match(const bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb);
-int set_property(const bus_args *a, const char type, const void *value);
-int get_property(const bus_args *a, const char *type, void *userptr, int size);
+int set_property(const bus_args *a, const char *type, const uintptr_t value);
+int get_property(const bus_args *a, const char *type, void *userptr);
 sd_bus *get_user_bus(void);

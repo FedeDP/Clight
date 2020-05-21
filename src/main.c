@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
         }
     }
     close_log();
+    free((void *)state.clightd_version);
     return ret;
 }
 
@@ -96,7 +97,7 @@ static int init(int argc, char *argv[]) {
 }
 
 static void init_state(void) {
-    strncpy(state.version, VERSION, sizeof(state.version));
+    state.version = VERSION;
     memcpy(&state.current_loc, &conf.day_conf.loc, sizeof(loc_t));
     
     /* 
@@ -124,7 +125,7 @@ static void sigsegv_handler(int signum) {
 static int check_clightd_version(void) {
     SYSBUS_ARG(vers_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
     
-    int r = get_property(&vers_args, "s", state.clightd_version, sizeof(state.clightd_version));
+    int r = get_property(&vers_args, "s", &state.clightd_version);
     if (r < 0 || !strlen(state.clightd_version)) {
         ERROR("No clightd found. Clightd is a mandatory dep.\n");
         r = -1;

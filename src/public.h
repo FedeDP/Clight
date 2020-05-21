@@ -96,7 +96,7 @@ enum mod_msg_types {
     LID_UPD,            // Subscribe to receive new lid states
     LID_REQ,            // Publish to set a new lid state
     PM_UPD,             // Subscribe to receive new PowerManagement inhibition states
-    PM_REQ,             // Publish to set a new PowerManagement inhibition state,
+    PM_REQ,             // Publish to set a new PowerManagement inhibition state
     SENS_UPD,           // Subscribe to receive "SensorAvail" states
     NEXT_DAYEVT_UPD,    // Subscribe to receive notifications about next day event (ie: sunrise or sunset)
     MSGS_SIZE

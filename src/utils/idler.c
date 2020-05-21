@@ -53,7 +53,7 @@ int idle_set_timeout(char *client, int timeout) {
     int r = 0;
     if (timeout > 0) {
         SYSBUS_ARG(to_args, CLIGHTD_SERVICE, client, "org.clightd.clightd.Idle.Client", "Timeout");
-        r = set_property(&to_args, 'u', &timeout);
+        r = set_property(&to_args, "u", timeout);
         if (!state.inhibited) {
             /* Only start client if we are not inhibited */
             r += idle_client_start(client, timeout);

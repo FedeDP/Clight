@@ -166,8 +166,8 @@ static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNU
     
     SYSBUS_ARG(lat_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Latitude");
     SYSBUS_ARG(lon_args, "org.freedesktop.GeoClue2", new_location, "org.freedesktop.GeoClue2.Location", "Longitude");
-    int r = get_property(&lat_args, "d", &new_lat, sizeof(new_lat)) + 
-            get_property(&lon_args, "d", &new_lon, sizeof(new_lon));
+    int r = get_property(&lat_args, "d", &new_lat) + 
+            get_property(&lon_args, "d", &new_lon);
     if (!r) {
         DEBUG("%.2lf %.2lf received from Geoclue2.\n", new_lat, new_lon);
         publish_location(new_lat, new_lon, &loc_req);
@@ -184,9 +184,9 @@ static int geoclue_client_start(void) {
     SYSBUS_ARG(accuracy_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "RequestedAccuracyLevel");
 
     /* It now needs proper /usr/share/applications/clightc.desktop name */
-    set_property(&id_args, 's', "clightc");
-    set_property(&accuracy_args, 'u', &(unsigned int) { 2 }); // https://www.freedesktop.org/software/geoclue/docs/geoclue-gclue-enums.html#GClueAccuracyLevel -> GCLUE_ACCURACY_LEVEL_CITY
-    return call(&call_args, NULL);
+    int r = set_property(&id_args, "s", (uintptr_t)"clightc");
+    r += set_property(&accuracy_args, "u",  2); // https://www.freedesktop.org/software/geoclue/docs/geoclue-gclue-enums.html#GClueAccuracyLevel -> GCLUE_ACCURACY_LEVEL_CITY
+    return r + call(&call_args, NULL);
 }
 
 /*

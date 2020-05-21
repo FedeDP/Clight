@@ -19,9 +19,7 @@
 #define LAT_UNDEFINED 91.0                  // Undefined (ie: unset) value for latitude
 #define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
 #define MINIMUM_CLIGHTD_VERSION_MAJ 4       // Clightd minimum required maj version
-#define MINIMUM_CLIGHTD_VERSION_MIN 1       // Clightd minimum required min version
-
-#define ON_LOOP_STARTED(fn)                 case SYSTEM_UPD: { if (msg->ps_msg->type == LOOP_STARTED) fn; break; }
+#define MINIMUM_CLIGHTD_VERSION_MIN 1       // Clightd minimum required min version -> new wizard: Backlight.{Get,Set} with empty "serial" param support
 
 /** Generic structs **/
 
@@ -139,8 +137,8 @@ typedef struct {
     double current_kbd_pct;                 // current keyboard backlight pct
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
     double screen_comp;                     // current screen-emitted brightness compensation
-    char clightd_version[32];               // Clightd found version
-    char version[32];                       // Clight version
+    const char *clightd_version;            // Clightd found version
+    const char *version;                    // Clight version
 } state_t;
 
 /** Global state and config data **/

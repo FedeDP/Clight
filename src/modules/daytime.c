@@ -2,6 +2,7 @@
 #include "timer.h"
 
 static void receive_waiting_loc(const msg_t *const msg, UNUSED const void* userdata);
+static void start_daytime(void);
 static void check_daytime(void);
 static void get_next_events(const time_t *now, const float lat, const float lon, bool tomorrow);
 static void check_next_event(const time_t *now);
@@ -54,9 +55,22 @@ static void receive_waiting_loc(const msg_t *const msg, UNUSED const void* userd
             M_PUB(&time_msg);
             state.day_time = DAY;
         } else {
-            gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-            m_register_fd(gamma_fd, true, NULL);
-            m_unbecome();
+            start_daytime();
+        }
+        break;
+    }
+    case SYSTEM_UPD: {
+        /* 
+         * If, when loop starts, LOCATION is not running, it means 
+         * we need to startup immediately as we either have a fixed location
+         * or fixed sunrise/sunset times.
+         */
+        if (msg->ps_msg->type == LOOP_STARTED) {
+            const self_t *loc_ref = NULL;
+            m_ref("LOCATION", &loc_ref);
+            if (!module_is(loc_ref, RUNNING)) {
+                start_daytime();
+            }
         }
         break;
     }
@@ -91,6 +105,12 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         default:
             break;
     }
+}
+
+static void start_daytime(void) {
+    gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    m_register_fd(gamma_fd, true, NULL);
+    m_unbecome();
 }
 
 static void check_daytime(void) {    

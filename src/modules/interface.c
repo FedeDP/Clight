@@ -34,8 +34,6 @@ static int method_simulate_activity(sd_bus_message *m, void *userdata, sd_bus_er
 static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 /** Clight bus api **/
-static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
-                       sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_load(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -66,8 +64,8 @@ static const char sc_interface[] = "org.freedesktop.ScreenSaver";
 /* Names should match _UPD topic names here as a signal is emitted on each topic */
 static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("Version", "s", get_version, offsetof(state_t, version), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("ClightdVersion", "s", get_version, offsetof(state_t, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("Version", "s", NULL, offsetof(state_t, version), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("ClightdVersion", "s", NULL, offsetof(state_t, clightd_version), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_PROPERTY("Sunrise", "t", NULL, offsetof(state_t, day_events[SUNRISE]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Sunset", "t", NULL, offsetof(state_t, day_events[SUNSET]), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("NextEvent", "i", NULL, offsetof(state_t, next_event), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
@@ -736,11 +734,6 @@ static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *r
 }
 
 /** Clight bus api **/
-
-static int get_version(sd_bus *b, const char *path, const char *interface, const char *property,
-                       sd_bus_message *reply, void *userdata, sd_bus_error *error) {
-    return sd_bus_message_append(reply, "s", userdata);
-}
                        
 static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     VALIDATE_PARAMS(m, "bb", &capture_req.capture.reset_timer, &capture_req.capture.capture_only);

@@ -32,17 +32,20 @@ static bool evaluate(void) {
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    ON_LOOP_STARTED({
-        if (upower_check() != 0 || upower_init() != 0) {
-            /* Upower not available. Let's assume ON_AC and LID OPEN! */
-            publish_upower(ON_AC, &upower_msg);
-            state.ac_state = ON_AC;
-            publish_lid(OPEN, &lid_msg);
-            state.lid_state = OPEN;
-            WARN("Failed to retrieve AC state; fallback to ON_AC and OPEN lid.\n");
-            m_poisonpill(self());
+    case SYSTEM_UPD: {
+        if (msg->ps_msg->type == LOOP_STARTED) {
+            if (upower_check() != 0 || upower_init() != 0) {
+                /* Upower not available. Let's assume ON_AC and LID OPEN! */
+                publish_upower(ON_AC, &upower_msg);
+                state.ac_state = ON_AC;
+                publish_lid(OPEN, &lid_msg);
+                state.lid_state = OPEN;
+                WARN("Failed to retrieve AC state; fallback to ON_AC and OPEN lid.\n");
+                m_poisonpill(self());
+            }
         }
-    });
+        break;
+    }
     case UPOWER_REQ: {
         upower_upd *up = (upower_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -82,7 +85,7 @@ static void destroy(void) {
 static int upower_check(void) {
     bool is_laptop = false;
     SYSBUS_ARG(lid_pres_args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "LidIsPresent");
-    int r = get_property(&lid_pres_args, "b", &is_laptop, sizeof(is_laptop));
+    int r = get_property(&lid_pres_args, "b", &is_laptop);
     if (!r) {
         if (is_laptop) {
             on_upower_change(NULL, NULL, NULL);
@@ -117,13 +120,13 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
      * .OnBattery                          property  b         false        emits-change
      */
     int ac_state;
-    int r = get_property(&batt_args, "b", &ac_state, sizeof(ac_state));
+    int r = get_property(&batt_args, "b", &ac_state);
     if (!r && state.ac_state != ac_state) {
         publish_upower(ac_state, &upower_req);
     }
 
     enum lid_states lid_state;
-    r = get_property(&lid_close_args, "b", &lid_state, sizeof(lid_state));
+    r = get_property(&lid_close_args, "b", &lid_state);
     if (!r && !!state.lid_state != lid_state) {
         if (conf.inh_conf.inhibit_docked) {
             
@@ -134,7 +137,7 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
             if (lid_state) {
                 SYSBUS_ARG(docked_args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Docked");
                 
-                r = get_property(&docked_args, "b", &docked, sizeof(docked));
+                r = get_property(&docked_args, "b", &docked);
                 if (!r) {
                     lid_state += docked;
                 }

@@ -2,6 +2,7 @@
 
 #define GET_BUS(a)  sd_bus *tmp = a->bus; if (!tmp) { tmp = a->type == USER_BUS ? userbus : sysbus; } if (!tmp) { return -1; }
 
+static int _call(const bus_args *a, const char *signature, va_list args_va, const void **args_ptr, bool expect_reply);
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int *r, sd_bus_error *err, const char *caller);
 
@@ -65,99 +66,36 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     }
 }
 
-/*
- * Call a method on bus and store its result of type userptr_type in userptr.
- */
-int call(const bus_args *a, const char *signature, ...) {
+static int _call(const bus_args *a, const char *signature, va_list args_va, const void **args_ptr, bool expect_reply) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL, *reply = NULL;
     GET_BUS(a);
-
+    
     int r = sd_bus_message_new_method_call(tmp, &m, a->service, a->path, a->interface, a->member);
     if (check_err(&r, &error, a->caller)) {
         goto finish;
     }
-
-    r = sd_bus_message_set_expect_reply(m, a->reply_cb != NULL);
+    
+    r = sd_bus_message_set_expect_reply(m, expect_reply);
     if (check_err(&r, &error, a->caller)) {
         goto finish;
     }
-
-    if (signature) {
-        va_list args;
-        va_start(args, signature);
-
-#if LIBSYSTEMD_VERSION >= 234
-        sd_bus_message_appendv(m, signature, args);
-#else
-        int i = 0;
-        int size_array = 0;
-        while (signature[i] != '\0') {
-            switch (signature[i]) {
-                case SD_BUS_TYPE_STRING:
-                case SD_BUS_TYPE_OBJECT_PATH:{
-                    char *val = va_arg(args, char *);
-                    r = sd_bus_message_append_basic(m, signature[i], val);
-                    break;
-                }
-                case SD_BUS_TYPE_INT32:
-                case SD_BUS_TYPE_UINT32:
-                case SD_BUS_TYPE_BOOLEAN: {
-                    int val = va_arg(args, int);
-                    r = sd_bus_message_append_basic(m, signature[i], &val);
-                    break;
-                }
-                case SD_BUS_TYPE_DOUBLE: {
-                    double val = va_arg(args, double);
-                    r = sd_bus_message_append_basic(m, signature[i], &val);
-                    break;
-                }
-                case SD_BUS_TYPE_STRUCT_BEGIN: {
-                    char *ptr = strchr(signature + i, SD_BUS_TYPE_STRUCT_END);
-                    if (ptr) {
-                        char str[30] = {0};
-                        strncpy(str, signature + i + 1, strlen(signature + i + 1) - strlen(ptr));
-                        r = sd_bus_message_open_container(m, SD_BUS_TYPE_STRUCT, str);
-                    }
-                    break;
-                }
-                case SD_BUS_TYPE_STRUCT_END:
-                    r = sd_bus_message_close_container(m);
-                    break;
-                case SD_BUS_TYPE_ARRAY: {
-                    char type[5] = {0};
-                    i++;
-                    strncpy(type, &signature[i], 1);
-                    r = sd_bus_message_open_container(m, SD_BUS_TYPE_ARRAY, type);
-                    size_array = va_arg(args, int) + 1; // + 1 because size_array-- below
-                    break;
-                }
-                default:
-                    WARN("Wrong signature in bus call: %c.\n", signature[i]);
-                    break;
-            }
-
-            if (check_err(&r, &error, a->caller)) {
-                goto finish;
-            }
-            
-            /* If inside an array, decrement array counter */
-            if (size_array) {
-                if (--size_array == 0) {
-                    r = sd_bus_message_close_container(m);
-                }
-            }
-            
-            /* Only change signature if we are not in an array */
-            if (!size_array) {
-                i++;
+    
+    if (args_va) {
+        sd_bus_message_appendv(m, signature, args_va);
+    } else if (args_ptr) {
+        int len = strlen(signature);
+        if (len == 1) {
+            sd_bus_message_append_basic(m, signature[0], args_ptr);
+        } else {
+            for (int i = 0; i < len; i++) {
+                sd_bus_message_append_basic(m, signature[i], args_ptr[i]);
             }
         }
-#endif
-        va_end(args);
     }
+    
     /* Check if we need to wait for a response message */
-    if (a->reply_cb != NULL) {
+    if (expect_reply) {
         r = sd_bus_call(tmp, m, 0, &error, &reply);
         if (check_err(&r, &error, a->caller)) {
             goto finish;
@@ -167,9 +105,25 @@ int call(const bus_args *a, const char *signature, ...) {
         r = sd_bus_send(tmp, m, NULL);
     }
     check_err(&r, &error, a->caller);
-
+    
 finish:
     free_bus_structs(&error, m, reply);
+    return r;
+}
+
+/*
+ * Call a method on bus and store its result of type userptr_type in userptr.
+ */
+int call(const bus_args *a, const char *signature, ...) {
+    int r = 0;
+    if (signature) {
+        va_list args;
+        va_start(args, signature);
+        r = _call(a, signature, args, NULL, a->reply_cb != NULL);
+        va_end(args);
+    } else {
+        r = _call(a, signature, NULL, NULL, a->reply_cb != NULL); 
+    }
     return r;
 }
 
@@ -179,65 +133,48 @@ finish:
 int add_match(const bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     GET_BUS(a);
 
-#if LIBSYSTEMD_VERSION >= 237
     int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, NULL);
-#else
-    char match[500] = {0};
-    snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
-    int r = sd_bus_add_match(tmp, slot, match, cb, NULL);
-#endif
     return check_err(&r, NULL, a->caller);
 }
 
-/*
- * Set property of type "type" value to "value". It correctly handles 'u' and 's' types.
- */
-int set_property(const bus_args *a, const char type, const void *value) {
+int set_property(const bus_args *a, const char *type, const uintptr_t value) {
     GET_BUS(a);
     sd_bus_error error = SD_BUS_ERROR_NULL;
-    int r = 0;
-
-    switch (type) {
-        case SD_BUS_TYPE_UINT32:
-            r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "u", *(unsigned int *)value);
-            break;
-        case SD_BUS_TYPE_STRING:
-            r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, "s", value);
-            break;
-        default:
-            WARN("Wrong signature in bus call: %c.\n", type);
-            break;
+   
+    int r = -EINVAL;
+    if (type) {
+        r = sd_bus_set_property(tmp, a->service, a->path, a->interface, a->member, &error, type, value);
     }
     check_err(&r, &error, a->caller);
     free_bus_structs(&error, NULL, NULL);
     return r;
 }
 
-/*
- * Get a property of type "type" with size "size" into userptr.
- */
-int get_property(const bus_args *a, const char *type, void *userptr, int size) {
+int get_property(const bus_args *a, const char *type, void *userptr) {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *m = NULL;
     GET_BUS(a);
-
-    int r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
-    if (check_err(&r, &error, a->caller)) {
-        goto finish;
-    }
-    if (!strcmp(type, "o") || !strcmp(type, "s")) {
-        const char *obj = NULL;
-        r = sd_bus_message_read(m, type, &obj);
-        if (r >= 0) {
-            strncpy(userptr, obj, size);
+    
+    int r = -EINVAL;
+    if (type) {
+        switch (*type) {
+        case SD_BUS_TYPE_STRING:
+        case SD_BUS_TYPE_OBJECT_PATH: {
+            r = sd_bus_get_property(tmp, a->service, a->path, a->interface, a->member, &error, &m, type);
+            const char *obj = NULL;
+            r = sd_bus_message_read(m, type, &obj);
+            if (r >= 0) {
+                *((char **)userptr) = strdup(obj); // must be freed by caller
+            }
+            break;
         }
-    } else {
-        r = sd_bus_message_read(m, type, userptr);
-    }
-    check_err(&r, NULL, a->caller);
-
-finish:
-    free_bus_structs(&error, m, NULL);
+        default:
+            r = sd_bus_get_property_trivial(tmp, a->service, a->path, a->interface, a->member, &error, *type, userptr);
+            break;
+        }
+    }    
+    check_err(&r, NULL, a->caller);    
+    free_bus_structs(&error, m, NULL);    
     return r;
 }
 
