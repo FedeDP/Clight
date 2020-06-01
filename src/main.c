@@ -67,10 +67,9 @@ static int init(int argc, char *argv[]) {
      * a debug message before dying
      */
     signal(SIGSEGV, sigsegv_handler);
-        
-    open_log();
+    
     /* We want any issue while parsing config to be logged */
-    if (init_opts(argc, argv) != 0) {
+    if (open_log() != 0 || init_opts(argc, argv) != 0) {
         return -1;
     }
     log_conf();

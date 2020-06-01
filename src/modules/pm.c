@@ -66,9 +66,9 @@ static void on_pm_req(pm_upd *up) {
     if (VALIDATE_REQ(up)) {
         if (up->new && pm_inh_token == -1) {
             USERBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
-                              "org.freedesktop.PowerManagement.Inhibit",  
-                              "/org/freedesktop/PowerManagement/Inhibit", 
-                              "org.freedesktop.PowerManagement.Inhibit", 
+                              "org.freedesktop.PowerManagement.Inhibit",
+                              "/org/freedesktop/PowerManagement/Inhibit",
+                              "org.freedesktop.PowerManagement.Inhibit",
                               "Inhibit");
             if (call(&pm_args, "ss", "Clight", "PM inhibition.") == 0) {
                 DEBUG("Holding PowerManagement inhibition.\n");

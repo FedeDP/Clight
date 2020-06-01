@@ -7,6 +7,6 @@ do { \
     modules_quit(EXIT_FAILURE); \
 } while (0)
 
-void open_log(void);
+int open_log(void);
 void log_conf(void);
 void close_log(void);

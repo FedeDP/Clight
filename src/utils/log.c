@@ -14,7 +14,7 @@ static void log_inh_conf(inh_conf_t *inh_conf);
 
 static FILE *log_file;
 
-void open_log(void) {
+int open_log(void) {
     char log_path[PATH_MAX + 1] = {0};
 
     if (getenv("XDG_DATA_HOME")) {
@@ -31,14 +31,17 @@ void open_log(void) {
     if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
         WARN("%s\n", strerror(errno));
         ERROR("A lock is present on %s. Another clight instance running?\n", log_path);
-    } else {
-        log_file = fdopen(fd, "w");
-        if (!log_file) {
-            WARN("%s\n", strerror(errno));
-        } else {
-            ftruncate(fd, 0);
-        }
+        return -1;
     }
+    
+    log_file = fdopen(fd, "w");
+    if (!log_file) {
+        WARN("%s\n", strerror(errno));
+        return -2;
+    } 
+    
+    ftruncate(fd, 0);
+    return 0;
 }
 
 static void log_bl_conf(bl_conf_t *bl_conf) {
