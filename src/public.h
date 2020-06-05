@@ -128,8 +128,6 @@ typedef struct {
     bool old;                   // Valued in updates. Useless for requests 
     bool new;                   // Mandatory for requests. Valued in updates
     bool force;                 // True to force UnInhibit (ie: set current inhibition counter to 0 and immediately drop inhibit)
-    const char *app_name;       // Optional for requests. NULL in updates. Must be heap-allocated. Freed by INHIBIT.
-    const char *reason;         // Optional for requests. NULL in updates. Must be heap-allocated. Freed by INHIBIT.
 } inhibit_upd;
 
 typedef struct {

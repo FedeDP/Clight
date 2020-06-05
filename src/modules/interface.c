@@ -592,13 +592,11 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
             l->reason = strdup(reason);
             map_put(lock_map, key, l);
             
-            DEBUG("New ScreenSaver inhibition held by cookie: %d.\n", l->cookie);
+            DEBUG("New ScreenSaver inhibition held by '%s': '%s'. Cookie: %d.\n", l->app, l->reason, l->cookie);
 
             inhibit_req.inhibit.old = state.inhibited;
             inhibit_req.inhibit.new = true;
             inhibit_req.inhibit.force = false;
-            inhibit_req.inhibit.app_name = strdup(app_name);
-            inhibit_req.inhibit.reason = strdup(reason);
             M_PUB(&inhibit_req);
 
             if (map_length(lock_map) == 1) {
@@ -634,12 +632,10 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
             l->refs = 0;
         }
         if (l->refs == 0) {
-            DEBUG("Dropped ScreenSaver inhibition held by cookie: %d.\n", l->cookie);
+            DEBUG("Dropped ScreenSaver inhibition held by '%s': '%s'. Cookie: %d.\n", l->app, l->reason, l->cookie);
             inhibit_req.inhibit.old = state.inhibited;
             inhibit_req.inhibit.new = false;
             inhibit_req.inhibit.force = !strcmp(key, CLIGHT_INH_KEY); // forcefully disable inhibition for Clight INTERFACE Inhibit "false"
-            inhibit_req.inhibit.app_name = strdup(l->app);
-            inhibit_req.inhibit.reason = strdup(l->reason);
             M_PUB(&inhibit_req);
 
             map_remove(lock_map, key);

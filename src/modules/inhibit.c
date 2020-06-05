@@ -42,10 +42,10 @@ static void on_inhibit_req(inhibit_upd *up) {
         if (!up->new) {
             if (!up->force) {
                 inhibition_ctr--;
-                DEBUG("ScreenSaver inhibition released by '%s'.\n", up->app_name ? up->app_name : "Clight");
+                DEBUG("ScreenSaver inhibition released.\n");
             } else {
                 inhibition_ctr = 0;
-                DEBUG("ScreenSaver inhibition forcefully cleared by '%s'.\n", up->app_name ? up->app_name : "Clight");
+                DEBUG("ScreenSaver inhibition forcefully cleared.\n");
             }
         }
         
@@ -59,10 +59,6 @@ static void on_inhibit_req(inhibit_upd *up) {
     /* Count currently held inhibitions */
     if (up->new) {
         inhibition_ctr++;
-        DEBUG("New ScreenSaver inhibition held by '%s': '%s'\n", 
-             up->app_name ? up->app_name : "Clight",
-             up->reason ? up->reason : "no reason specified.");
+        DEBUG("ScreenSaver inhibition grabbed.\n");
     }
-    free((void *)up->app_name);
-    free((void *)up->reason);
 }

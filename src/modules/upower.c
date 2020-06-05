@@ -140,6 +140,9 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
                 r = get_property(&docked_args, "b", &docked);
                 if (!r) {
                     lid_state += docked;
+                    if (docked) {
+                        DEBUG("Docked laptop.");
+                    }
                 }
             }
             publish_inh(docked, &inh_req);
@@ -164,6 +167,5 @@ static void publish_lid(bool new, message_t *up) {
 static void publish_inh(bool new, message_t *up) {
     up->inhibit.old = state.inhibited;
     up->inhibit.new = new;
-    up->inhibit.reason = strdup("Docked laptop.");
     M_PUB(up);
 }
