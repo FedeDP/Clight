@@ -25,6 +25,7 @@ static void resume_mod(enum backlight_pause type);
 
 static int bl_fd = -1;
 static int paused_state;
+static bool paused_fd_recv;
 static sd_bus_slot *slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
@@ -90,6 +91,8 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
     
     /* Wait on each of these 3 messages before actually starting up */
     if (ok == ALL_STARTED) {
+        m_unbecome();
+        
         /* We do not fail if this fails */
         SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
         add_match(&args, &slot, on_sensor_change);
@@ -118,7 +121,6 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
              */
             on_lid_update();
         }
-        m_unbecome();
     }
 }
 
@@ -184,8 +186,15 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 }
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
-    /* In paused state we have deregistered our fd, thus we can only receive PubSub messages */
     switch (MSG_TYPE()) {
+    case FD_UPD:
+        /* Will this fix #106 ? */
+        if (!paused_fd_recv) {
+            read_timer(msg->fd_msg->fd);
+            set_timeout(0, 1, bl_fd, 0);
+            paused_fd_recv = true;
+        }
+        break;
     case UPOWER_UPD:
         upower_callback();
         break;    
@@ -451,6 +460,7 @@ static void pause_mod(enum backlight_pause type) {
         m_become(paused);
         /* Properly deregister our fd while paused */
         m_deregister_fd(bl_fd);
+        paused_fd_recv = false;
     }
 }
 

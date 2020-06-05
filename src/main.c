@@ -24,10 +24,10 @@
 #include <glob.h>
 #include "opts.h"
 
-static int init(int argc, char *argv[]);
+static void init(int argc, char *argv[]);
 static void init_state(void);
 static void sigsegv_handler(int signum);
-static int check_clightd_version(void);
+static void check_clightd_version(void);
 static void init_user_mod_path(enum CONFIG file, char *filename);
 static void load_user_modules(enum CONFIG file);
 
@@ -42,12 +42,15 @@ void modules_pre_start(void) {
 } 
 
 int main(int argc, char *argv[]) {
-    int ret = EXIT_FAILURE;
-    if (init(argc, argv) == 0) {
+    int ret = setjmp(state.quit_buf);
+    if (ret == 0) {
+        init(argc, argv);
         if (conf.bl_conf.disabled && conf.dim_conf.disabled && conf.dpms_conf.disabled && conf.gamma_conf.disabled) {
             WARN("No functional module running. Leaving...\n");
         } else {
+            state.looping = true;
             ret = modules_loop();
+            state.looping = false;
         }
     }
     close_log();
@@ -60,7 +63,7 @@ int main(int argc, char *argv[]) {
  * local config file, and from cmdline options.
  * Then init needed modules.
  */
-static int init(int argc, char *argv[]) {
+static void init(int argc, char *argv[]) {
     /* 
      * When receiving segfault signal,
      * call our sigsegv handler that just logs
@@ -69,17 +72,13 @@ static int init(int argc, char *argv[]) {
     signal(SIGSEGV, sigsegv_handler);
     
     /* We want any issue while parsing config to be logged */
-    if (open_log() != 0 || init_opts(argc, argv) != 0) {
-        return -1;
-    }
+    open_log();
+    init_opts(argc, argv);
     log_conf();
     
     if (!conf.wizard) {
         /* We want any error while checking Clightd required version to be logged AFTER conf logging */
-        if (check_clightd_version() != 0) {
-            return -1;
-        }
-        
+        check_clightd_version();        
         init_state();
         /* 
         * Load user custom modules after opening log (thus this information is logged).
@@ -92,7 +91,6 @@ static int init(int argc, char *argv[]) {
         load_user_modules(LOCAL);
         load_user_modules(GLOBAL);
     }
-    return 0;
 }
 
 static void init_state(void) {
@@ -121,24 +119,21 @@ static void sigsegv_handler(int signum) {
     raise(signum);
 }
 
-static int check_clightd_version(void) {
+static void check_clightd_version(void) {
     SYSBUS_ARG(vers_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
     
     int r = get_property(&vers_args, "s", &state.clightd_version);
     if (r < 0 || !strlen(state.clightd_version)) {
         ERROR("No clightd found. Clightd is a mandatory dep.\n");
-        r = -1;
     } else {
         int maj_val = atoi(state.clightd_version);
         int min_val = atoi(strchr(state.clightd_version, '.') + 1);
         if (maj_val < MINIMUM_CLIGHTD_VERSION_MAJ || (maj_val == MINIMUM_CLIGHTD_VERSION_MAJ && min_val < MINIMUM_CLIGHTD_VERSION_MIN)) {
             ERROR("Clightd must be updated. Required version: %d.%d.\n", MINIMUM_CLIGHTD_VERSION_MAJ, MINIMUM_CLIGHTD_VERSION_MIN);
-            r = -1;
         } else {
             INFO("Clightd found, version: %s.\n", state.clightd_version);
         }
     }
-    return r;
 }
 
 static void init_user_mod_path(enum CONFIG file, char *filename) {

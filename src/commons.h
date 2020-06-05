@@ -116,6 +116,7 @@ typedef struct {
  * Where bool type is 1B large, using bool would break this convention.
  */
 typedef struct {
+    bool looping;
     int in_event;                           // Whether we are in a TIME event +- conf.event_duration
     int inhibited;                          // whether screensaver inhibition is enabled
     int pm_inhibited;                       // whether pm_inhibition is enabled
@@ -139,6 +140,7 @@ typedef struct {
     double screen_comp;                     // current screen-emitted brightness compensation
     const char *clightd_version;            // Clightd found version
     const char *version;                    // Clight version
+    jmp_buf quit_buf;                       // quit jump called by longjmp
 } state_t;
 
 /** Global state and config data **/

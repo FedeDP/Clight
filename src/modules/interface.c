@@ -591,6 +591,8 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
             l->app = strdup(app_name);
             l->reason = strdup(reason);
             map_put(lock_map, key, l);
+            
+            DEBUG("New ScreenSaver inhibition held by cookie: %d.\n", l->cookie);
 
             inhibit_req.inhibit.old = state.inhibited;
             inhibit_req.inhibit.new = true;
@@ -639,7 +641,7 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
             inhibit_req.inhibit.app_name = strdup(l->app);
             inhibit_req.inhibit.reason = strdup(l->reason);
             M_PUB(&inhibit_req);
-            
+
             map_remove(lock_map, key);
             if (map_length(lock_map) == 0) {
                 /* Stop listening on NameOwnerChanged signals */

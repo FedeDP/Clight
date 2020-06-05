@@ -9,7 +9,7 @@ static void init_daytime_opts(daytime_conf_t *day_conf);
 static void init_dimmer_opts(dimmer_conf_t *dim_conf);
 static void init_dpms_opts(dpms_conf_t *dpms_conf);
 static void init_screen_opts(screen_conf_t *screen_conf);
-static int parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
+static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void check_clightd_features(void);
 static void check_bl_conf(bl_conf_t *bl_conf);
@@ -109,7 +109,7 @@ static void init_screen_opts(screen_conf_t *screen_conf) {
  * and parse cmdline args through popt lib.
  * Finally, check configuration values and log it.
  */
-int init_opts(int argc, char *argv[]) {
+void init_opts(int argc, char *argv[]) {
     init_backlight_opts(&conf.bl_conf);
     init_sens_opts(&conf.sens_conf);
     init_kbd_opts(&conf.kbd_conf);
@@ -125,7 +125,7 @@ int init_opts(int argc, char *argv[]) {
     conf_file[0] = 0;
     read_config(LOCAL, conf_file);
     conf_file[0] = 0;
-    int ret = parse_cmd(argc, argv, conf_file, PATH_MAX);
+    parse_cmd(argc, argv, conf_file, PATH_MAX);
     
     /* --conf-file option was passed! */
     if (strlen(conf_file)) {
@@ -133,13 +133,12 @@ int init_opts(int argc, char *argv[]) {
     }
     
     check_conf();
-    return ret;
 }
 
 /*
  * Parse cmdline to get cmd line options
  */
-static int parse_cmd(int argc, char *const argv[], char *conf_file, size_t size) {
+static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size) {
     poptContext pc;
     const struct poptOption po[] = {
         {"frames", 'f', POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, NULL, 7, "Frames taken for each capture, Between 1 and 20", NULL},
@@ -215,13 +214,10 @@ static int parse_cmd(int argc, char *const argv[], char *conf_file, size_t size)
      * poptGetNextOpt returns -1 when the final argument has been parsed
      * otherwise an error occured
      */
-    int ret = 0;
+    poptFreeContext(pc);
     if (rc != -1) {
         ERROR("%s\n", poptStrerror(rc));
-        ret = -1;
     }
-    poptFreeContext(pc);
-    return ret;
 }
 
 static int parse_bus_reply(sd_bus_message *reply, UNUSED const char *member,  UNUSED void *userdata) {

@@ -86,7 +86,6 @@
 - [x] Pause SCREEN on lid closed and SENSOR not available too
 
 ### Bus
-- [ ] Expose BUS_REQ to make dbus call from custom modules
 - [x] Drop LIBSYSTEMD < 237 version (and bump CMakeLists required version)
 
 ### Generic
@@ -103,14 +102,18 @@
 - [x] Avoid creating disabled modules conf interafce
 - [x] Kill clight on bus disconnection (ENOTCONN/ECONNRESET errnos)
 - [x] Drop "Disabled" from dbus INTERFACE as now disabled modules are not exposed
-- [ ] Explicit in custom modules DOC which modules are always available and which not
+- [x] Explicit in custom modules DOC which modules are always available and which not
 - [x] Less verbose log (inhibit and pm modules DEBUG)
 - [x] Fix: Properly leave Clight again if no clightd is found (or clightd minimum version is not satisfied)
 - [x] Fix: do not log anything in modules dtor as log has already been closed
 - [x] Fix: public DEBUG macro uses internal conf
 - [x] Fix: properly leave Clight if another instance is running
+- [x] Restore setjmp jmp buffer
 
 ## 4.2
+
+### Bus
+- [ ] Expose BUS_REQ to make dbus call from custom modules
 
 ### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
