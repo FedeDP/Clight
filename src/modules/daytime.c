@@ -4,7 +4,7 @@
 static void receive_waiting_loc(const msg_t *const msg, UNUSED const void* userdata);
 static void start_daytime(void);
 static void check_daytime(void);
-static void get_next_events(const time_t *now, const float lat, const float lon, bool tomorrow);
+static void get_next_events(const time_t *now, const float lat, const float lon, int dayshift);
 static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void reset_daytime(void);
@@ -113,7 +113,7 @@ static void start_daytime(void) {
     m_unbecome();
 }
 
-static void check_daytime(void) {    
+static void check_daytime(void) {
     const time_t t = time(NULL);
     const enum day_states old_state = state.day_time;
     const int old_in_event = state.in_event;
@@ -126,7 +126,7 @@ static void check_daytime(void) {
      * and it is waken next morning, it will proceed to compute "tomorrow" events, where tomorrow is
      * the wrong day (it should compute "today" events). Thus, avoid this kind of issues.
      */
-    get_next_events(&t, state.current_loc.lat, state.current_loc.lon, false);
+    get_next_events(&t, state.current_loc.lat, state.current_loc.lon, 0);
         
     /** Check which messages should be published **/
     
@@ -184,34 +184,34 @@ static void check_daytime(void) {
  * Note that "+1" is because it seems timerfd receives timer end circa 1s in advance.
  * Probably it is just some ms in advance, but rounding it to seconds returns 1s in advance.
  */
-static void get_next_events(const time_t *now, const float lat, const float lon, bool tomorrow) {
+static void get_next_events(const time_t *now, const float lat, const float lon, int dayshift) {
     time_t t;
     const time_t old_events[SIZE_EVENTS] = { state.day_events[SUNRISE], state.day_events[SUNSET] };
     
     /* only every new day, after today's last event (ie: sunset + event_duration) */
     if (*now + 1 >= state.day_events[SUNSET] + conf.day_conf.event_duration) {
-        if (calculate_sunset(lat, lon, &t, tomorrow) == 0) {
+        if (calculate_sunset(lat, lon, &t, dayshift) == 0) {
             /* If today's sunset was before now, compute tomorrow */
             if (*now + 1 >= t + conf.day_conf.event_duration) {
                 /*
                  * we're between today's sunset and tomorrow sunrise.
                  * rerun function with tomorrow.
                  */
-                return get_next_events(now, lat, lon, true);
+                return get_next_events(now, lat, lon, ++dayshift);
             }
             state.day_events[SUNSET] = t;
         } else {
             state.day_events[SUNSET] = -1;
         }
         
-        if (calculate_sunrise(lat, lon, &t, tomorrow) == 0) {
+        if (calculate_sunrise(lat, lon, &t, dayshift) == 0) {
             /*
              * Force computation of today event if SUNRISE is
              * not today; eg: in local time it is at 6am, but utc time is 22,
              * so it counts as today while it is indeed tomorrow...
              */
             if (t > state.day_events[SUNSET]) {
-                calculate_sunrise(lat, lon, &t, false);
+                calculate_sunrise(lat, lon, &t, dayshift - 1);
             }
             
             state.day_events[SUNRISE] = t;
