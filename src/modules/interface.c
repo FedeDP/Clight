@@ -676,7 +676,7 @@ static int method_clight_changebl(sd_bus_message *m, void *userdata, sd_bus_erro
     double change_pct;
     VALIDATE_PARAMS(m, "d", &change_pct);
     
-    if (change_pct > 0.0 && change_pct < 1.0) {
+    if (change_pct > 0.0 && change_pct <= 1.0) {
         bl_req.bl.smooth = -1;
         
         if (!strcmp(sd_bus_message_get_member(m), "IncBl")) {
