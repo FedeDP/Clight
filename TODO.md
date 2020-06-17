@@ -15,6 +15,7 @@
 - [x] Expose SensAvailable state property
 - [x] Rename "Calibrate" method to "Capture"
 - [x] Capture method to take 2 booleans, exposing capture_upd fields
+- [x] Hook Backlight.Changed Clightd signal to update state.current_bl. Easy for laptop's internal monitor; impossibile with ddcutil, but possible through ddcci-kernel-driver only for software changes, not hardware ones (ie: through monitor buttons)
 
 ### Keyboard
 - [x] Split keyboard settings from backlight
@@ -118,6 +119,3 @@
 ### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
 - [ ] If any conf file is found in /etc/clight/mon.d/, avoid calling SetAll, and just call Set on each serial.
-
-### Backlight
-- [ ] Add a backlight Changed signal in Clightd? Then hook the signal to update state.current_bl. Easy for laptop's internal monitor; impossibile with ddcutil, but possible through ddcci-kernel-driver only for software changes, not hardware ones (ie: through monitor buttons)

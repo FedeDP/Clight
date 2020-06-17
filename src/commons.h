@@ -19,7 +19,7 @@
 #define LAT_UNDEFINED 91.0                  // Undefined (ie: unset) value for latitude
 #define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
 #define MINIMUM_CLIGHTD_VERSION_MAJ 4       // Clightd minimum required maj version
-#define MINIMUM_CLIGHTD_VERSION_MIN 1       // Clightd minimum required min version -> new wizard: Backlight.{Get,Set} with empty "serial" param support
+#define MINIMUM_CLIGHTD_VERSION_MIN 2       // Clightd minimum required min version -> Backlight.Changed signal
 
 /** Generic structs **/
 

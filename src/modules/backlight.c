@@ -18,6 +18,7 @@ static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
 static void time_callback(int old_val, int is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int get_current_timeout(void);
 static void on_lid_update(void);
 static void pause_mod(enum backlight_pause type);
@@ -26,7 +27,7 @@ static void resume_mod(enum backlight_pause type);
 static int bl_fd = -1;
 static int paused_state;
 static bool paused_fd_recv;
-static sd_bus_slot *slot;
+static sd_bus_slot *sens_slot, *bl_slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
 DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
@@ -65,8 +66,11 @@ static bool evaluate(void) {
 }
 
 static void destroy(void) {
-    if (slot) {
-        slot = sd_bus_slot_unref(slot);
+    if (sens_slot) {
+        sens_slot = sd_bus_slot_unref(sens_slot);
+    }
+    if (bl_slot) {
+        bl_slot = sd_bus_slot_unref(bl_slot);
     }
     if (bl_fd >= 0) {
         close(bl_fd);
@@ -94,8 +98,11 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         m_unbecome();
         
         /* We do not fail if this fails */
-        SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
-        add_match(&args, &slot, on_sensor_change);
+        SYSBUS_ARG(sens_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
+        add_match(&sens_args, &sens_slot, on_sensor_change);
+        
+        SYSBUS_ARG(bl_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Changed");
+        add_match(&bl_args, &bl_slot, on_bl_changed);
                 
         bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
         m_register_fd(bl_fd, false, NULL);
@@ -437,6 +444,14 @@ static int on_sensor_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
     }
     return 0;
 }
+
+static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    const char *syspath = NULL;
+    sd_bus_message_read(m, "sd", &syspath, &state.current_bl_pct);
+    DEBUG("Backlight level updated: %.2lf.\n", state.current_bl_pct);
+    return 0;
+}
+
 
 static inline int get_current_timeout(void) {
     if (state.in_event) {
