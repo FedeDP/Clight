@@ -1,8 +1,15 @@
 ## 4.2
 
 ### Generic
+- [x] Require clightd 4.3
 - [ ] Bugfix: fix #106 (?)
 - [ ] Port to libmodule 6.0.0 (?)
+
+### Dpms
+- [x] Hook to new Clightd 4.3 Dpms.Changed signal to react to external (through clightd) dpms state changes
+
+### Gamma
+- [x] Hook to new Clightd 4.3 Gamma.Changed signal to react to external (through clightd) gamma state changes
 
 ### Bus
 - [ ] Expose BUS_REQ to make dbus call from custom modules

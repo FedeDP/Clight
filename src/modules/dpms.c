@@ -6,7 +6,7 @@ static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_erro
 static void upower_timeout_callback(void);
 static void inhibit_callback(void);
 
-static sd_bus_slot *slot;
+static sd_bus_slot *slot, *dpms_slot;
 static char client[PATH_MAX + 1];
 
 DECLARE_MSG(display_req, DISPLAY_REQ);
@@ -38,6 +38,9 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
             m_poisonpill(self());
         } else {
             m_unbecome();
+            
+            SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Changed");
+            add_match(&args, &dpms_slot, on_new_idle);
         }
         break;
     }
@@ -105,10 +108,27 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
+    
+    if (dpms_slot) {
+        dpms_slot = sd_bus_slot_unref(dpms_slot);
+    }
 }
 
 static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     int idle;
+    
+    /* Only account for our display for Dpms.Changed signals */
+    if (!strcmp(sd_bus_message_get_member(m), "Changed")) {
+        const char *display = NULL;
+        sd_bus_message_read(m, "s", &display);
+        if (display && state.display && strcmp(display, state.display)) {
+            return 0;
+        }
+        
+        if ((display == NULL) != (state.display == NULL)) {
+            return 0;
+        }
+    }
     
     /* Unused in requests! */
     display_req.display.old = state.display_state;

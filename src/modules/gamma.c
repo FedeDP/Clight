@@ -9,7 +9,9 @@ static void ambient_callback(void);
 static void on_next_dayevt(evt_upd *up);
 static void on_daytime_req(temp_upd *up);
 static void interface_callback(temp_upd *req);
+static int on_temp_changed(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
+static sd_bus_slot *slot;
 static bool long_transitioning;
 static const self_t *daytime_ref;
 
@@ -36,7 +38,9 @@ static bool evaluate(void) {
 }
 
 static void destroy(void) {
-
+    if (slot) {
+        slot = sd_bus_slot_unref(slot);
+    }
 }
 
 static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* userdata) {
@@ -52,6 +56,9 @@ static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* u
             m_poisonpill(self());
         } else {
             m_unbecome();
+            
+            SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Changed");
+            add_match(&args, &slot, on_temp_changed);
         }
         break;
     }
@@ -120,8 +127,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
     int r = call(&args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);    
     if (!r && ok) {
         temp_msg.temp.old = state.current_temp;
-        state.current_temp = temp;
-        temp_msg.temp.new = state.current_temp;
+        temp_msg.temp.new = temp;
         temp_msg.temp.smooth = smooth;
         temp_msg.temp.step = step;
         temp_msg.temp.timeout = timeout;
@@ -193,4 +199,14 @@ static void interface_callback(temp_upd *req) {
             set_temp(req->new, NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
         }
     }
+}
+
+static int on_temp_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    /* Only account for our display */
+    const char *display = NULL;
+    sd_bus_message_read(m, "s", &display);
+    if (!strcmp(display, state.display)) {
+        sd_bus_message_read(m, "i", &state.current_temp);
+    }
+    return 0;
 }
