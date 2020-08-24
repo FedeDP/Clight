@@ -11,6 +11,9 @@
 ### Gamma
 - [x] Hook to new Clightd 4.3 Gamma.Changed signal to react to external (through clightd) gamma state changes
 
+### Keyboard
+- [x] Fixed bug in set_keyboard_level()
+
 ### Bus
 - [ ] Expose BUS_REQ to make dbus call from custom modules
 
