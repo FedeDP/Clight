@@ -1,7 +1,7 @@
 #include "bus.h"
 
 static int init_kbd_backlight(void);
-static void set_keyboard_level(const double amb_br);
+static void set_keyboard_level(double level);
 static void dimmed_callback(void);
 
 DECLARE_MSG(kbd_msg, KBD_BL_UPD);
@@ -39,7 +39,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         dimmed_callback();
         break;
     case AMBIENT_BR_UPD:
-        set_keyboard_level(state.ambient_br);
+        set_keyboard_level((conf.kbd_conf.amb_br_thres - state.ambient_br) / conf.kbd_conf.amb_br_thres);
         break;
     case KBD_BL_REQ: {
         bl_upd *up = (bl_upd *)MSG_DATA();
@@ -72,14 +72,12 @@ static int init_kbd_backlight(void) {
     return r;
 }
 
-static void set_keyboard_level(const double amb_br) {
-    double level = (conf.kbd_conf.amb_br_thres - amb_br) / conf.kbd_conf.amb_br_thres;
+static void set_keyboard_level(double level) {
     if (level < 0) {
         level = 0;
     }
-    
+
     SYSBUS_ARG(kbd_args, "org.freedesktop.UPower", "/org/freedesktop/UPower/KbdBacklight", "org.freedesktop.UPower.KbdBacklight", "SetBrightness");
-        
     kbd_msg.bl.old = state.current_kbd_pct;
     /* We actually need to pass an int to variadic bus() call */
     const int new_kbd_br = round(level * max_kbd_backlight);
@@ -92,7 +90,7 @@ static void set_keyboard_level(const double amb_br) {
 
 /* Callback on state.display_state changes */
 static void dimmed_callback(void) {
-    static double old_kbd_level = 0.0;
+    static double old_kbd_level = -1.0;
     
     if (state.display_state) {
         /* Switch off keyboard if requested */
@@ -102,9 +100,9 @@ static void dimmed_callback(void) {
         }
     } else {
         /* Reset keyboard backlight level if needed */
-        if (old_kbd_level != 0.0) {
+        if (old_kbd_level != -1.0) {
             set_keyboard_level(old_kbd_level);
-            old_kbd_level = 0.0;
+            old_kbd_level = -1.0;
         }
     }
 }
