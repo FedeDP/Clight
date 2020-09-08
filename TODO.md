@@ -2,6 +2,7 @@
 
 ### Generic
 - [x] Require clightd 4.3
+- [x] Fix keyboard backlight calibration
 - [ ] Bugfix: fix #106 (?)
 - [ ] Port to libmodule 6.0.0 (?)
 
