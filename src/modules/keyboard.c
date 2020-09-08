@@ -81,7 +81,7 @@ static void set_keyboard_level(double level) {
     kbd_msg.bl.old = state.current_kbd_pct;
     /* We actually need to pass an int to variadic bus() call */
     const int new_kbd_br = round(level * max_kbd_backlight);
-    if (call(&kbd_args, NULL, "i", new_kbd_br) == 0) {
+    if (call(&kbd_args, "i", new_kbd_br) == 0) {
         state.current_kbd_pct = level;
         kbd_msg.bl.new = state.current_kbd_pct;
         M_PUB(&kbd_msg);
