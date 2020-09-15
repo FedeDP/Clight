@@ -3,7 +3,7 @@
 ### Generic
 - [x] Require clightd 4.3
 - [x] Fix keyboard backlight calibration
-- [ ] Fix wizard mode
+- [x] Fix wizard mode
 
 ### Dpms
 - [x] Hook to new Clightd 4.3 Dpms.Changed signal to react to external (through clightd) dpms state changes
@@ -16,7 +16,6 @@
 
 ### Bus
 - [ ] Expose BUS_REQ to make dbus call from custom modules
-
 
 ## 4.3
 

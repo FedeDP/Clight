@@ -1,6 +1,7 @@
 #include "bus.h"
 #include "my_math.h"
 
+static void receive_waiting_sens(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_capturing(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_calibrating(const msg_t *const msg, UNUSED const void* userdata);
 static char read_char(int fd);
@@ -42,17 +43,12 @@ static void init(void) {
     setbuf(stdout, NULL); // disable line buffer
     capture_req.capture.reset_timer = false;
     capture_req.capture.capture_only = true;
+    
+    M_SUB(SENS_UPD);
 
-    M_SUB(AMBIENT_BR_UPD);
-    m_register_fd(STDIN_FILENO, false, NULL);
-    INFO("Welcome to Clight wizard.\n");
-    if (!state.sens_avail) {
-        INFO("No sensors available. Plug it in and restart wizard.\n");
-        modules_quit(EXIT_FAILURE);
-    } else {
-        INFO("Press ctrl-c to quit at any moment, discarding changes.\n");
-        INFO("\nStart? [Y/n]: > ");
-    }
+    INFO("Welcome to Clight wizard. Press ctrl-c to quit at any moment.\n");
+    INFO("Waiting for sensor...\n");
+    m_become(waiting_sens);
 }
 
 static bool check(void) {
@@ -82,6 +78,25 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     }
     default:
         break;
+    }
+}
+
+static void receive_waiting_sens(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+        case SENS_UPD: {
+            if (state.sens_avail) {
+                M_SUB(AMBIENT_BR_UPD);
+                m_register_fd(STDIN_FILENO, false, NULL);
+                INFO("Sensor available. Start? [Y/n]: > ");
+                m_unbecome();
+            } else {
+                INFO("No sensors available. Plug it in and restart wizard.\n");
+                modules_quit(EXIT_FAILURE);
+            }
+            break;
+        }
+        default:
+            break;
     }
 }
 

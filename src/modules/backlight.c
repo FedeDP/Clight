@@ -79,6 +79,10 @@ static void destroy(void) {
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata) {
     static enum { UPOWER_STARTED = 1, LID_STARTED = 2, DAYTIME_STARTED = 4, ALL_STARTED = 7} ok = 0;
+    static const self_t *wizSelf = NULL;
+    if (!wizSelf) {
+        m_ref("WIZARD", &wizSelf);
+    }
     switch (MSG_TYPE()) {
     case UPOWER_UPD:
         ok |= UPOWER_STARTED;
@@ -88,6 +92,18 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         break;
     case DAYTIME_UPD:
         ok |= DAYTIME_STARTED;
+        break;
+    case SYSTEM_UPD:
+        /* 
+         * When wizard gets started, it means we are in wizard mode.
+         * In wizard mode, we won't receive UPOWER_UPD, LID_UPD or DAYTIME_UPD
+         * messages. Go on anyway.
+         */
+        if (msg->ps_msg->type == MODULE_STARTED &&
+            msg->ps_msg->sender == wizSelf) {
+            
+            ok = ALL_STARTED;
+        }
         break;
     default:
         break;
