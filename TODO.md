@@ -4,6 +4,7 @@
 - [x] Require clightd 4.3
 - [x] Fix keyboard backlight calibration
 - [x] Fix wizard mode
+- [x] Fix clight desktop file
 
 ### Dpms
 - [x] Hook to new Clightd 4.3 Dpms.Changed signal to react to external (through clightd) dpms state changes
