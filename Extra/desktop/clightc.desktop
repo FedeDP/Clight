@@ -17,9 +17,9 @@ Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/cligh
 Name=Resume screen dimmer
 
 [Desktop Action PauseCalib]
-Exec=busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf org.clight.clight.Conf NoAutoCalib "b" true
+Exec=busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Backlight org.clight.clight.Conf.Backlight NoAutoCalib "b" true
 Name=Pause backlight calibration
 
 [Desktop Action ResumeCalib]
-Exec=busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf org.clight.clight.Conf NoAutoCalib "b" false
+Exec=busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Backlight org.clight.clight.Conf.Backlight NoAutoCalib "b" false
 Name=Resume backlight calibration
