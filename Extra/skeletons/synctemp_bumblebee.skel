@@ -1,0 +1,49 @@
+#include <clight/public.h>
+#include <stdlib.h>
+
+/*
+ * Bumblebee creates a separate X display (":8" by default) where the nvidia gpu does the rendering when using intel-virtual-output 
+ * to create a virtual display in order to be able to use the hdmi port with an external monitor
+ * (when the hdmi port is hardwired to the nvidia card, thus when using the hdmi port, the nvidia card starts on display :8).
+ * 
+ * This custom module will keep second X display temperature in sync with primary one calling directly clightd.
+ * Rename to: synctemp_bumblebee.c
+ * 
+ * Build with: gcc -shared -fPIC synctemp_bumblebee.c -o synctemp_bumblebee -Wno-unused
+ * 
+ * Place synctemp_bumblebee in: $HOME/.local/share/clight/modules.d/ OR, globally, in /usr/share/clight/modules.d/
+ */
+
+CLIGHT_MODULE("SYNCTEMP");
+
+#define BUMBLEBEE_X_DISPLAY ":8"
+
+static const char *xauth;
+
+static void init(void) {
+    xauth = getenv("XAUTHORITY");
+    if (!xauth) {
+        WARN("No XAUTHORITY env variable. Destroying useless custom module.\n");
+        m_poisonpill(self());
+    } else {
+        DEBUG("Using xauth: %s\n", xauth);
+        /* Suscribe to temp updates */
+        M_SUB(TEMP_UPD);
+    }
+}
+
+static void receive(const msg_t *msg, const void *userdata) {
+    switch (MSG_TYPE()) {
+    case TEMP_UPD: {
+        temp_upd *up = (temp_upd *)MSG_DATA();
+        DEBUG("Syncing temp on %s: %d\n", BUMBLEBEE_X_DISPLAY, up->new);
+        char cmd[1024];
+        snprintf(cmd, sizeof(cmd), "busctl call org.clightd.clightd /org/clightd/clightd/Gamma org.clightd.clightd.Gamma Set \"ssi(buu)\" \"%s\" \"%s\" %d %d %d %d", 
+                BUMBLEBEE_X_DISPLAY, xauth, up->new, up->smooth, up->step, up->timeout);
+        system(cmd);
+        break;
+    }
+    default:
+        break;
+    }
+}
