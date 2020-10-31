@@ -129,7 +129,7 @@ set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc/xdg" "/etc/xdg/autostart" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_BINDIR}" "/usr/share/applications" "${SESSION_BUS_DIR}" "/usr/share/icons" "/usr/share/icons/hicolor" "/usr/share/icons/hicolor/scalable" "/usr/share/icons/hicolor/scalable/apps")
-set(CPACK_RPM_PACKAGE_REQUIRES "systemd-libs popt libconfig gsl clightd >= 4.0 libmodule >= 5.0.0")
+set(CPACK_RPM_PACKAGE_REQUIRES "systemd-libs popt libconfig gsl clightd >= 5.0 libmodule >= 5.0.0")
 set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 
@@ -138,7 +138,7 @@ set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 #
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/FedeDP/Clight")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd-dev, libpopt-dev, libconfig-dev, libgsl-dev, clightd (>= 4.0), libmodule (>= 5.0.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsystemd-dev, libpopt-dev, libconfig-dev, libgsl-dev, clightd (>= 5.0), libmodule (>= 5.0.0)")
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS "geoclue-2.0, upower, bash-completion")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 

@@ -1,4 +1,5 @@
 #include "idler.h"
+#include "utils.h"
 
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata);
 static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdata);
@@ -119,20 +120,24 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
     
     /* Only account for our display for Dpms.Changed signals */
     if (!strcmp(sd_bus_message_get_member(m), "Changed")) {
+        const char *state_dpy = fetch_display();
         const char *display = NULL;
-        sd_bus_message_read(m, "s", &display);
-        if (display && state.display && strcmp(display, state.display)) {
+        int level;
+        sd_bus_message_read(m, "si", &display, &level);
+        if (display && state_dpy && strcmp(display, state_dpy)) {
             return 0;
         }
         
-        if ((display == NULL) != (state.display == NULL)) {
+        if ((display == NULL) != (state_dpy == NULL)) {
             return 0;
         }
+        idle = level > 0;
+    } else {
+        sd_bus_message_read(m, "b", &idle);
     }
     
     /* Unused in requests! */
     display_req.display.old = state.display_state;
-    sd_bus_message_read(m, "b", &idle);
 
     if (idle) {
         display_req.display.new = DISPLAY_OFF;

@@ -1,4 +1,5 @@
 #include "bus.h"
+#include "utils.h"
 
 static void publish_bl_req(const double pct, const bool smooth, const double step, const int to);
 static void set_dpms(bool enable);
@@ -82,5 +83,5 @@ static void publish_bl_req(const double pct, const bool smooth, const double ste
 
 static void set_dpms(bool enable) {
     SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Set");
-    call(&args, "ssi", state.display, state.xauthority, enable);
+    call(&args, "ssi", fetch_display(), fetch_env(), enable);
 }
