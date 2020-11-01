@@ -18,8 +18,8 @@
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
 #define LAT_UNDEFINED 91.0                  // Undefined (ie: unset) value for latitude
 #define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
-#define MINIMUM_CLIGHTD_VERSION_MAJ 4       // Clightd minimum required maj version
-#define MINIMUM_CLIGHTD_VERSION_MIN 3       // Clightd minimum required min version -> Dpms/Gamma.Changed signals
+#define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version
+#define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version -> Dpms/Gamma.Changed signals + Dpms/Gamma on wayland
 
 /** Generic structs **/
 
