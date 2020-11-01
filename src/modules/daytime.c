@@ -182,8 +182,7 @@ static void check_daytime(void) {
         if (conf.gamma_conf.delay > 0) {
             set_timeout(conf.gamma_conf.delay, 0, temp_fd, 0);
         } else {
-            temp_req.temp.new = conf.gamma_conf.temp[state.day_time];
-            M_PUB(&temp_req);
+            set_timeout(0, 1, temp_fd, 0);
         }
     }
 
