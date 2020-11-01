@@ -4,7 +4,7 @@
 - [x] Fix keyboard backlight calibration
 - [x] Fix wizard mode
 - [x] Fix clight desktop file
-- [ ] Update wiki pages
+- [x] Update wiki pages
 
 ### Dpms
 - [x] Hook to new Clightd 4.3 Dpms.Changed signal to react to external (through clightd) dpms state changes
@@ -13,6 +13,7 @@
 - [x] Hook to new Clightd 4.3 Gamma.Changed signal to react to external (through clightd) gamma state changes
 - [x] Fix gamma not setting correct temp on resume -> clight is too quick on resume, and X is not yet loaded when it tries to set new screen temperature...
 introduce a small timeout of 5s for gamma corrections
+- [x] Allow users to customize the delay
 
 ### Keyboard
 - [x] Fixed bug in set_keyboard_level()

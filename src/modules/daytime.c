@@ -174,14 +174,19 @@ static void check_daytime(void) {
      * to avoid any possible sync issue
      * between time of day and gamma (eg after long suspend).
      * 
-     * NOTE: this is shifted by 5s because sometimes,
-     * on resume from suspend, clight was too fast to
-     * sync screen temperature, failing because Xorg was still not up.
+     * NOTE: this can shifted by up to 30s delay because sometimes,
+     * on resume from suspend, clight is too fast to
+     * sync screen temperature, failing because Xorg is still not up.
      */
     if (!conf.gamma_conf.disabled) {
-         set_timeout(5, 0, temp_fd, 0);
+        if (conf.gamma_conf.delay > 0) {
+            set_timeout(conf.gamma_conf.delay, 0, temp_fd, 0);
+        } else {
+            temp_req.temp.new = conf.gamma_conf.temp[state.day_time];
+            M_PUB(&temp_req);
+        }
     }
-        
+
     const time_t next = state.day_events[state.next_event] + state.event_time_range;
     INFO("Next alarm due to: %s", ctime(&next));
     set_timeout(next - t, 0, gamma_fd, 0);

@@ -57,6 +57,7 @@ typedef struct {
     int trans_timeout;                      // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
     int long_transition;                    // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
+    int delay;                              // delay before screen temp appliance
 } gamma_conf_t;
 
 typedef struct {

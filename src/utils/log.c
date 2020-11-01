@@ -77,6 +77,7 @@ static void log_gamma_conf(gamma_conf_t *gamma_conf) {
     fprintf(log_file, "* Nightly screen temp:\t\t%d\n", gamma_conf->temp[NIGHT]);
     fprintf(log_file, "* Long transition:\t\t%s\n", gamma_conf->long_transition ? "Enabled" : "Disabled");
     fprintf(log_file, "* Ambient gamma:\t\t%s\n", gamma_conf->ambient_gamma ? "Enabled" : "Disabled");
+    fprintf(log_file, "* Delay:\t\t%d\n", gamma_conf->delay);
 }
 
 static void log_daytime_conf(daytime_conf_t *day_conf) {
