@@ -9,7 +9,7 @@ static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void reset_daytime(void);
 
-static int gamma_fd;
+static int gamma_fd, temp_fd;
 
 DECLARE_MSG(time_msg, DAYTIME_UPD);
 DECLARE_MSG(in_ev_msg, IN_EVENT_UPD);
@@ -21,6 +21,9 @@ DECLARE_MSG(temp_req, TEMP_REQ);
 MODULE("DAYTIME");
 
 static void init(void) {
+    temp_req.temp.daytime = -1;
+    temp_req.temp.smooth = -1;
+    
     M_SUB(LOC_UPD);
     M_SUB(SUNRISE_REQ);
     M_SUB(SUNSET_REQ);
@@ -83,7 +86,12 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
         case FD_UPD:
             read_timer(msg->fd_msg->fd);
-            check_daytime();
+            if (msg->fd_msg->fd == gamma_fd) {
+                check_daytime();
+            } else {
+                temp_req.temp.new = conf.gamma_conf.temp[state.day_time];
+                M_PUB(&temp_req);
+            }
             break;
         case LOC_UPD:
             reset_daytime();
@@ -110,12 +118,15 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 static void start_daytime(void) {
     gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     m_register_fd(gamma_fd, true, NULL);
+    
+    temp_fd = start_timer(CLOCK_BOOTTIME, 0, 0);
+    m_register_fd(temp_fd, true, NULL);
     m_unbecome();
 }
 
 static void check_daytime(void) {
     const time_t t = time(NULL);
-    const enum day_states old_state = state.day_time;
+    const enum day_states old_daytime = state.day_time;
     const int old_in_event = state.in_event;
     const enum day_events old_next_event = state.next_event; 
     
@@ -131,18 +142,18 @@ static void check_daytime(void) {
     /** Check which messages should be published **/
     
     /* 
-     * If we switched time, emit signal.
+     * If we changed old_daytime, emit signal.
      * 
      * THIS MUST BE SENT AS FIRST as gamma waits this message
      * to actually start and become running.
      */
-    if (old_state != state.day_time) {
-        time_msg.day_time.old = old_state;
+    if (old_daytime != state.day_time) {
+        time_msg.day_time.old = old_daytime;
         time_msg.day_time.new = state.day_time;
         M_PUB(&time_msg);
     }
     
-    /* If we switched next event, emit signal */
+    /* If we changed next event, emit signal */
     if (old_next_event != state.next_event) {
         next_ev_msg.event.old = old_next_event;
         next_ev_msg.event.new = state.next_event;
@@ -162,12 +173,13 @@ static void check_daytime(void) {
      * Forcefully set correct gamma every time
      * to avoid any possible sync issue
      * between time of day and gamma (eg after long suspend).
+     * 
+     * NOTE: this is shifted by 5s because sometimes,
+     * on resume from suspend, clight was too fast to
+     * sync screen temperature, failing because Xorg was still not up.
      */
     if (!conf.gamma_conf.disabled) {
-        temp_req.temp.daytime = -1;
-        temp_req.temp.smooth = -1;
-        temp_req.temp.new = conf.gamma_conf.temp[state.day_time];
-        M_PUB(&temp_req);
+         set_timeout(5, 0, temp_fd, 0);
     }
         
     const time_t next = state.day_events[state.next_event] + state.event_time_range;

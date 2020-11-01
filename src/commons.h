@@ -129,6 +129,7 @@ typedef struct {
     int event_time_range;
     int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
     const char *xauthority;                 // xauthority env variable
+    const char *xdg_runtime_dir;            // xdg_runtime_dir env variable
     const char *display;                    // DISPLAY env variable
     const char *wl_display;                 // WAYLAND_DISPLAY env variable
     time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)

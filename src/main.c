@@ -34,11 +34,14 @@ static void load_user_modules(enum CONFIG file);
 state_t state = {0};
 conf_t conf = {0};
 
-/* Every module needs these; let's init them before any module */
 void modules_pre_start(void) {
+    /* Xorg related */
     state.display = getenv("DISPLAY");
-    state.wl_display = getenv("WAYLAND_DISPLAY");
     state.xauthority = getenv("XAUTHORITY");
+    
+    /* Wayland related */
+    state.wl_display = getenv("WAYLAND_DISPLAY");
+    state.xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
 } 
 
 int main(int argc, char *argv[]) {

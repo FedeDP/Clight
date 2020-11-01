@@ -1,4 +1,5 @@
 #include "bus.h"
+#include "utils.h"
 
 #define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 
@@ -6,7 +7,7 @@ static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* u
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
-static void on_next_dayevt(evt_upd *up);
+static void on_new_next_dayevt(void);
 static void on_daytime_req(temp_upd *up);
 static void interface_callback(temp_upd *req);
 static int on_temp_changed(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -84,8 +85,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
     case NEXT_DAYEVT_UPD: {
-        evt_upd *up = (evt_upd *)MSG_DATA();
-        on_next_dayevt(up);
+        on_new_next_dayevt();
         break;
     }
     default:
@@ -124,7 +124,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         long_transitioning = false;
     }
         
-    int r = call(&args, "ssi(buu)", state.display, state.xauthority, temp, smooth, step, timeout);    
+    int r = call(&args, "ssi(buu)", fetch_display(), fetch_env(), temp, smooth, step, timeout);    
     if (!r && ok) {
         temp_msg.temp.old = state.current_temp;
         temp_msg.temp.new = temp;
@@ -136,8 +136,10 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         if (!long_transitioning && conf.gamma_conf.no_smooth) {
             INFO("%d gamma temp set.\n", temp);
         } else {
-            INFO("%s transition to %d gamma temp started.\n", long_transitioning ? "Long" : "Normal", temp);
+            INFO("%s transition to %d gamma temp.\n", long_transitioning ? "Long" : "Normal", temp);
         }
+    } else {
+        WARN("Failed to set gamma temperature.\n");
     }
 }
 
@@ -157,36 +159,37 @@ static void ambient_callback(void) {
     }
 }
 
-static void on_next_dayevt(evt_upd *up) {
-    static time_t last_t;                          // last time_t check_gamma() was called
+static void on_new_next_dayevt(void) {    
+    /* Properly reset long_transitioning when we change target event */
+    if (long_transitioning) {
+        INFO("Long transition ended.\n");
+        long_transitioning = false;
+    }
+}
+
+static void on_daytime_req(temp_upd *up) {
+    /* 
+     * Properly reset long_transitioning when we changed current day.
+     * This is needed when we are suspended and then resumed with 
+     * same next_event but in a different day/year (well this is kinda overkill)
+     */
+    static time_t last_t;
     
     const time_t t = time(NULL);
     struct tm tm_now, tm_old;
     localtime_r(&t, &tm_now);
     localtime_r(&last_t, &tm_old);
     
-    /* 
-     * Properly reset long_transitioning when we change target event or we change current day.
-     * This is needed when:
-     * 1) we change target event (ie: when event_time_range == -conf.event_duration)
-     * 2) we are suspended and:
-     *      A) resumed with a different next_event
-     *      B) resumed with same next_event but in a different day/year (well this is kinda overkill)
-     */
     if (long_transitioning &&
         (tm_now.tm_yday != tm_old.tm_yday || 
         tm_now.tm_year != tm_old.tm_year)) {
         
-        INFO("Long transition ended.\n");
-        long_transitioning = false;
+        on_new_next_dayevt();
     }
         
     last_t = t;
-}
-
-static void on_daytime_req(temp_upd *up) {
+        
     if (!long_transitioning && !conf.gamma_conf.ambient_gamma) {
-        const time_t t = time(NULL);        
         set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth, 
                  conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
     }

@@ -319,12 +319,6 @@ static void check_kbd_conf(kbd_conf_t *kbd_conf) {
 }
 
 static void check_gamma_conf(gamma_conf_t *gamma_conf) {
-    /* GAMMA requires X */
-    if (!state.display || !state.xauthority) {
-        INFO("Disabling GAMMA on non-X environment.\n");
-        gamma_conf->disabled = true;
-    }
-    
     if (conf.bl_conf.disabled && gamma_conf->ambient_gamma) {
         INFO("Disabling ambient gamma as BACKLIGHT is disabled.\n");
         gamma_conf->ambient_gamma = false;
@@ -338,11 +332,11 @@ static void check_gamma_conf(gamma_conf_t *gamma_conf) {
         WARN("Wrong nightly temp value. Resetting default value.\n");
         gamma_conf->temp[NIGHT] = 4000;
     }
+    
     if (gamma_conf->trans_step <= 0) {
         WARN("Wrong gamma_trans_step value. Resetting default value.\n");
         gamma_conf->trans_step = 50;
     }
-    
     if (gamma_conf->trans_timeout <= 0) {
         WARN("Wrong gamma_trans_timeout value. Resetting default value.\n");
         gamma_conf->trans_timeout = 300;
@@ -404,13 +398,7 @@ static void check_dim_conf(dimmer_conf_t *dim_conf) {
     }
 }
 
-static void check_dpms_conf(dpms_conf_t *dpms_conf) {
-    /* DPMS does not work in wayland */
-    if (state.wl_display) {
-        INFO("Disabling DPMS in wayland environment.\n");
-        dpms_conf->disabled = true;
-    }
-    
+static void check_dpms_conf(dpms_conf_t *dpms_conf) {    
     if (!conf.dim_conf.disabled) {
         if (dpms_conf->timeout[ON_AC] <= conf.dim_conf.timeout[ON_AC]) {
             WARN("DPMS AC timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
