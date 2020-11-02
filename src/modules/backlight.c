@@ -26,7 +26,6 @@ static void resume_mod(enum backlight_pause type);
 
 static int bl_fd = -1;
 static int paused_state;
-static bool paused_fd_recv;
 static sd_bus_slot *sens_slot, *bl_slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
@@ -210,14 +209,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case FD_UPD:
-        /* Will this fix #106 ? */
-        if (!paused_fd_recv) {
-            read_timer(msg->fd_msg->fd);
-            set_timeout(0, 1, bl_fd, 0);
-            paused_fd_recv = true;
-        }
-        break;
     case UPOWER_UPD:
         upower_callback();
         break;    
@@ -477,9 +468,15 @@ static inline int get_current_timeout(void) {
 }
 
 static void on_lid_update(void) {
-    if (conf.bl_conf.pause_on_lid_closed && state.lid_state) {
-        pause_mod(LID);
+    if (state.lid_state) {
+        if (conf.bl_conf.pause_on_lid_closed) {
+            pause_mod(LID);
+        }
     } else {
+        if (conf.bl_conf.capture_on_lid_opened) {
+            /* Fire immediately */
+            set_timeout(0, 1, bl_fd, 0);
+        }
         resume_mod(LID);
     }
 }
@@ -491,7 +488,6 @@ static void pause_mod(enum backlight_pause type) {
         m_become(paused);
         /* Properly deregister our fd while paused */
         m_deregister_fd(bl_fd);
-        paused_fd_recv = false;
     }
 }
 

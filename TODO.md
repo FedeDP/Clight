@@ -6,6 +6,9 @@
 - [x] Fix clight desktop file
 - [x] Update wiki pages
 
+### Backlight
+- [x] Add an option to fire a calibration whenever lid gets opened
+
 ### Dpms
 - [x] Hook to new Clightd 4.3 Dpms.Changed signal to react to external (through clightd) dpms state changes
 

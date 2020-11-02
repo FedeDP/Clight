@@ -103,6 +103,7 @@ static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
+    SD_BUS_WRITABLE_PROPERTY("CaptureOnLidOpened", "b", NULL, NULL, offsetof(bl_conf_t, capture_on_lid_opened), 0),
     SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(bl_conf_t, screen_path), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth), 0),
     SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),

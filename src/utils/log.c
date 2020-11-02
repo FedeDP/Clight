@@ -53,6 +53,7 @@ static void log_bl_conf(bl_conf_t *bl_conf) {
     fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", bl_conf->shutter_threshold);
     fprintf(log_file, "* Autocalibration:\t\t%s\n", bl_conf->no_auto_calib ? "Disabled" : "Enabled");
     fprintf(log_file, "* Pause on lid closed:\t\t%s\n", bl_conf->pause_on_lid_closed ? "Enabled" : "Disabled");
+    fprintf(log_file, "* Capture on lid opened:\t\t%s\n", bl_conf->capture_on_lid_opened ? "Enabled" : "Disabled");
 }
 
 static void log_sens_conf(sensor_conf_t *sens_conf) {

@@ -55,6 +55,7 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
             strncpy(bl_conf->screen_path, screendev, sizeof(bl_conf->screen_path) - 1);
         }
         config_setting_lookup_bool(bl, "pause_on_lid_closed", &bl_conf->pause_on_lid_closed);
+        config_setting_lookup_bool(bl, "capture_on_lid_opened", &bl_conf->capture_on_lid_opened);
         
         config_setting_t *timeouts;
         
@@ -340,6 +341,9 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     
     setting = config_setting_add(bl, "pause_on_lid_closed", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->pause_on_lid_closed);
+    
+    setting = config_setting_add(bl, "capture_on_lid_opened", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, bl_conf->capture_on_lid_opened);
     
     setting = config_setting_add(bl, "screen_sysname", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, bl_conf->screen_path);

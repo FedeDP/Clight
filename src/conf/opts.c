@@ -342,7 +342,7 @@ static void check_gamma_conf(gamma_conf_t *gamma_conf) {
         gamma_conf->trans_timeout = 300;
     }
     
-    if (gamma_conf->delay > 30) {
+    if (gamma_conf->delay < 0 || gamma_conf->delay > 30) {
         WARN("Wrong gamma delay value. Resetting default value.\n");
         gamma_conf->trans_timeout = 0;
     }

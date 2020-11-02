@@ -40,7 +40,8 @@ typedef struct {
     int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
     int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
-    int pause_on_lid_closed;              // whether clight should inhibit autocalibration on lid closed
+    int pause_on_lid_closed;                // whether clight should inhibit autocalibration on lid closed
+    int capture_on_lid_opened;              // whether to trigger a new capture whenever lid gets opened
 } bl_conf_t;
 
 typedef struct {
