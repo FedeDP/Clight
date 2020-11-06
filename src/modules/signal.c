@@ -5,7 +5,9 @@
 MODULE("SIGNAL");
 
 /*
- * Set signals handler for SIGINT and SIGTERM (using a signalfd)
+ * Set signals handler for SIGINT, SIGTERM and SIGHUP (using a signalfd)
+ * SIGHUP is sent by systemd upon leaving user session! 
+ * See: https://fedoraproject.org/wiki/Changes/KillUserProcesses_by_default
  */
 static void init(void) {
     sigset_t mask;
@@ -13,6 +15,7 @@ static void init(void) {
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
     sigaddset(&mask, SIGTERM);
+    sigaddset(&mask, SIGHUP);
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
@@ -32,10 +35,6 @@ static void destroy(void) {
     /* Skeleton function needed for modules interface */
 }
 
-/*
- * if received an external SIGINT or SIGTERM,
- * just switch the quit flag to 1 and print to stdout.
- */
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case FD_UPD: {
@@ -54,4 +53,3 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
 }
-
