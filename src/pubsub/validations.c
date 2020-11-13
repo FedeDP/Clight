@@ -2,7 +2,6 @@
 #include "my_math.h"
 
 bool validate_loc(loc_upd *up) {
-    const int LOC_DISTANCE_THRS = 50;
     if (fabs(up->new.lat) <  90.0f && fabs(up->new.lon) < 180.0f && 
         get_distance(&up->new, &state.current_loc) >= LOC_DISTANCE_THRS) {
 

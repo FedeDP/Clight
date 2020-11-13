@@ -12,12 +12,17 @@
 #include <module/modules_easy.h>
 
 #define UNUSED __attribute__((unused))
+
 #define MAX_SIZE_POINTS 50                  // max number of points used for polynomial regression
 #define DEF_SIZE_POINTS 11                  // default number of points used for polynomial regression
 #define DEGREE 3                            // number of parameters for polynomial regression
+
 #define IN_EVENT SIZE_STATES                // Backlight module has 1 more state: IN_EVENT
+
 #define LAT_UNDEFINED 91.0                  // Undefined (ie: unset) value for latitude
 #define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
+#define LOC_DISTANCE_THRS 50                // threshold for location distances before triggering location changed events (km)
+
 #define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version
 #define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version -> Dpms/Gamma.Changed signals + Dpms/Gamma on wayland
 

@@ -1,5 +1,7 @@
 #include "bus.h"
 
+#define LOC_TIME_THRS 600                   // time threshold (seconds) before triggering location changed events (10mins)
+
 static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
@@ -181,10 +183,14 @@ static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNU
 static int geoclue_client_start(void) {
     SYSBUS_ARG(call_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "Start");
     SYSBUS_ARG(id_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DesktopId");
+    SYSBUS_ARG(thres_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "DistanceThreshold");
+    SYSBUS_ARG(time_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "TimeThreshold");
     SYSBUS_ARG(accuracy_args, "org.freedesktop.GeoClue2", client, "org.freedesktop.GeoClue2.Client", "RequestedAccuracyLevel");
 
     /* It now needs proper /usr/share/applications/clightc.desktop name */
     int r = set_property(&id_args, "s", (uintptr_t)"clightc");
+    set_property(&time_args, "u",  LOC_TIME_THRS);
+    set_property(&thres_args, "u", LOC_DISTANCE_THRS * 1000);
     r += set_property(&accuracy_args, "u",  2); // https://www.freedesktop.org/software/geoclue/docs/geoclue-gclue-enums.html#GClueAccuracyLevel -> GCLUE_ACCURACY_LEVEL_CITY
     return r + call(&call_args, NULL);
 }
