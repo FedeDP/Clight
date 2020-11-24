@@ -1,25 +1,19 @@
 #include <sys/timerfd.h>
 #include "timer.h"
 
-static long get_timeout_sec(int fd);
-static long get_timeout(int fd, size_t member);
+static time_t get_timeout_sec(int fd);
 
-/*
- * Create timer and returns its fd to
- * the main struct pollfd
- */
 int start_timer(int clockid, int initial_s, int initial_ns) {
     int timerfd = timerfd_create(clockid, TFD_NONBLOCK);
     if (timerfd == -1) {
-        ERROR("could not start timer: %s\n", strerror(errno));
-    } else {
-        set_timeout(initial_s, initial_ns, timerfd, 0);
-    }
+        ERROR("timerfd_create() failed: %s\n", strerror(errno));
+    } 
+    set_timeout(initial_s, initial_ns, timerfd, 0);
     return timerfd;
 }
 
 /*
- * Helper to set a new trigger on timerfd in sec seconds and n nsec
+ * Helper to set a new trigger on timerfd in sec seconds and nsec nanoseconds
  */
 void set_timeout(int sec, int nsec, int fd, int flag) {
     struct itimerspec timerValue = {{0}};
@@ -31,7 +25,7 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     timerValue.it_value.tv_nsec = nsec;
     int r = timerfd_settime(fd, flag, &timerValue, NULL);
     if (r == -1) {
-        ERROR("%s\n", strerror(errno));
+        ERROR("timerfd_settime(%d) failed: %s\n", fd, strerror(errno));
     }
     if (flag == 0) {
         if (sec != 0 || nsec != 0) {
@@ -42,32 +36,35 @@ void set_timeout(int sec, int nsec, int fd, int flag) {
     }
 }
 
-static long get_timeout_sec(int fd) {
-    return get_timeout(fd, offsetof(struct timespec, tv_sec));
-}
-
-static long get_timeout(int fd, size_t member) {
+static time_t get_timeout_sec(int fd) {
     struct itimerspec curr_value;
-    timerfd_gettime(fd, &curr_value);
-
-    char *s = (char *) &(curr_value.it_value);
-    return *(long *)(s + member);
+    if (timerfd_gettime(fd, &curr_value) == 0) {
+        return curr_value.it_value.tv_sec;
+    }
+    WARN("timerfd_gettime(%d) failed: %s\n", fd, strerror(errno));
+    return 0;
 }
 
+// FIXME: if get_timeout_sec() returns 0 -> fd is ready to fire; avoid changing its timer! ok for BACKLIGHT... but for SCREEN?... pause_screen(true, TIMEOUT) to deregister its fd
+// for SCREEN: may be avoid unbecoming and just deregister fd, Way simpler; moreover it already gets paused for other reasons and it never unbecomes.
+// Same for BACKLIGHT?
+// grep set_timeout 
 void reset_timer(int fd, int old_timer, int new_timer) {
     if (old_timer < 0) {
-        old_timer = 0;
-    }
-    unsigned int elapsed_time = old_timer - get_timeout_sec(fd);
-    /* if we still need to wait some seconds */
-    if (new_timer > elapsed_time) {
-        set_timeout(new_timer - elapsed_time, 0, fd, 0);
-    } else if (new_timer > 0) {
-        /* with new timeout, old_timeout would already been elapsed */
-        set_timeout(0, 1, fd, 0);
+        /* We had a paused fd */
+        set_timeout(new_timer, 0, fd, 0);
     } else {
-        /* pause fd as a timeout <= 0 has been set */
-        set_timeout(0, 0, fd, 0);
+        unsigned int elapsed_time = old_timer - get_timeout_sec(fd);
+        /* if we still need to wait some seconds */
+        if (new_timer > elapsed_time) {
+            set_timeout(new_timer - elapsed_time, 0, fd, 0);
+        } else if (new_timer > 0) {
+            /* with new timeout, old_timeout would already have elapsed */
+            set_timeout(0, 1, fd, 0);
+        } else {
+            /* pause fd as a timeout <= 0 has been set */
+            set_timeout(0, 0, fd, 0);
+        }
     }
 }
 

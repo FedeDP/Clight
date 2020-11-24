@@ -4,6 +4,9 @@
 
 #define ZENITH -0.83
 
+static char **init_grid(int num_points);
+static void show_grid(char **grid, int num_points);
+static void free_grid(char **grid, int num_points);
 static float to_hours(const float rad);
 static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt, enum day_events event, int dayshift);
 
@@ -74,6 +77,60 @@ double clamp(double value, double max, double min) {
         return min;
     }
     return value;
+}
+
+void plot_poly_curve(int num_points, double values[]) {
+    const int maxY = num_points - 1;
+    char **grid = init_grid(num_points);
+    for (int i = 0; i < num_points; i++) {
+        const int y = round(maxY * values[i]);
+        grid[maxY - y][i] = '*';
+    }
+    show_grid(grid, num_points);
+    free_grid(grid, num_points);
+}
+
+static char **init_grid(int num_points) {
+    char **grid = calloc(num_points, sizeof(char *));
+    for (int i = 0; i < num_points; i++) {
+        grid[i] = calloc(num_points, sizeof(char));
+    }
+    
+    for (int y = 0; y < num_points; y++) {
+        for (int x = 0; x < num_points; x++) {
+            grid[y][x] = ' ';
+        }
+    }
+    /* draw the axis */
+    for(int y = 0; y < num_points; y++) {
+        grid[y][0] = '|';
+    }
+    for(int x = 0; x < num_points; x++) {
+        grid[num_points - 1][x] = '-';
+    }
+    grid[num_points - 1][0] = '+';
+    return grid;
+}
+
+static void show_grid(char **grid, int num_points) {
+    PLOT("BL\n^\n");
+    for(int y = 0; y < num_points; y++) {
+        for(int x = 0; x < num_points; x++) {
+            PLOT("%c", grid[y][x]);
+        }
+        
+        if (y != num_points - 1) {
+            PLOT("\n");
+        }
+    }
+    PLOT(">BR\n");
+}
+
+static void free_grid(char **grid, int num_points) {
+     for (int i = 0; i < num_points; i++) {
+        free(grid[i]);
+    }
+    free(grid);
 }
 
 static float to_hours(const float rad) {

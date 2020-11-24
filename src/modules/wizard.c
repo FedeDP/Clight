@@ -1,6 +1,9 @@
 #include "bus.h"
 #include "my_math.h"
 
+#define WIZ_IN_POINTS 5
+#define WIZ_OUT_POINTS 11
+
 static void receive_waiting_sens(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_capturing(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_calibrating(const msg_t *const msg, UNUSED const void* userdata);
@@ -10,9 +13,6 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 static int get_backlight(void);
 static void compute(void);
 static void expand_regr_points(void);
-
-#define WIZ_IN_POINTS 5
-#define WIZ_OUT_POINTS 11
 
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 
@@ -43,7 +43,7 @@ static void init(void) {
     setbuf(stdout, NULL); // disable line buffer
     capture_req.capture.reset_timer = false;
     capture_req.capture.capture_only = true;
-    
+
     M_SUB(SENS_UPD);
 
     INFO("Welcome to Clight wizard. Press ctrl-c to quit at any moment.\n");
@@ -218,12 +218,16 @@ static void compute(void) {
 }
 
 static void expand_regr_points(void) {
+    double out_values[WIZ_OUT_POINTS];
     INFO("[ ");
     for (int i = 0; i < WIZ_OUT_POINTS; i++) {
         const double perc = i * (WIZ_IN_POINTS - 1);
         const double b = output[0] + output[1] * perc + output[2] * pow(perc, 2);
         const double new_br_pct =  clamp(b, 1, 0);
+        out_values[i] = new_br_pct;
         INFO("%.3lf%s ", new_br_pct, i < WIZ_OUT_POINTS - 1 ? ", " : " ");
     }
     INFO("]\n");
+    
+    plot_poly_curve(WIZ_OUT_POINTS, out_values);
 }

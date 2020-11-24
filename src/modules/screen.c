@@ -1,22 +1,24 @@
 #include "bus.h"
 #include "my_math.h"
+#include "utils.h"
 
-enum screen_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, LID = 0x04, CONTRIB = 0x08 };
+enum screen_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, LID = 0x04, CONTRIB = 0x08, SUSPEND = 0x10 };
 
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
+static void compute_screen_brightness(void);
 static void get_screen_brightness(bool compute);
 static void receive_computing(const msg_t *msg, const void *userdata);
 static void timeout_callback(int old_val, bool is_computing);
 static void pause_screen(bool pause, enum screen_pause type);
+
+DECLARE_MSG(screen_msg, SCR_BL_UPD);
 
 MODULE("SCREEN");
 
 static double *screen_br;
 static int screen_ctr, screen_fd = -1;
 static int paused_state;
-
-DECLARE_MSG(screen_msg, SCR_BL_UPD);
 
 static void init(void) {
     screen_br = calloc(conf.screen_conf.samples, sizeof(double));
@@ -27,7 +29,8 @@ static void init(void) {
         M_SUB(DISPLAY_UPD);
         M_SUB(SENS_UPD);
         M_SUB(LID_UPD);
-    
+        M_SUB(SUSPEND_UPD);
+        
         m_become(waiting_acstate);
     } else {
         WARN("Failed to init.\n");
@@ -36,8 +39,7 @@ static void init(void) {
 }
 
 static bool check(void) {
-    /* Only on X */
-    return state.display && state.xauthority;
+    return true;
 }
 
 static bool evaluate(void) {
@@ -89,6 +91,9 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
             pause_screen(state.lid_state, LID);
         }
         break;
+    case SUSPEND_UPD:
+         pause_screen(state.suspended, SUSPEND);
+         break;
     case SCR_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -134,6 +139,9 @@ static void receive_computing(const msg_t *msg, UNUSED const void *userdata) {
             pause_screen(state.lid_state, LID);
         }
         break;
+    case SUSPEND_UPD:
+         pause_screen(state.suspended, SUSPEND);
+         break;
     case SCR_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -151,12 +159,7 @@ static void receive_computing(const msg_t *msg, UNUSED const void *userdata) {
             const double old = conf.screen_conf.contrib;
             conf.screen_conf.contrib = up->new;
             /* Recompute current screen compensation */
-            screen_msg.bl.old = state.screen_comp;
-            state.screen_comp = compute_average(screen_br, conf.screen_conf.samples) * conf.screen_conf.contrib;
-            if (screen_msg.bl.old != state.screen_comp) {
-                screen_msg.bl.new = state.screen_comp;
-                M_PUB(&screen_msg);
-            }
+            compute_screen_brightness();
             /* If screen_comp is now 0, or old screen_comp was 0, check if we need to pause */
             if (up->new == 0 || old == 0) {
                 pause_screen(up->new == 0, CONTRIB);
@@ -177,20 +180,25 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
     return r;
 }
 
+static void compute_screen_brightness(void) {
+    const double old_comp = state.screen_comp;
+    state.screen_comp = compute_average(screen_br, conf.screen_conf.samples) * conf.screen_conf.contrib;
+    if (old_comp != state.screen_comp) {
+        screen_msg.bl.old = old_comp;
+        screen_msg.bl.new = state.screen_comp;
+        M_PUB(&screen_msg);
+    }
+    DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
+}
+
 static void get_screen_brightness(bool compute) {
     SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
     
-    if (call(&args, "ss", state.display, state.xauthority) == 0) {
+    if (call(&args, "ss", fetch_display(), fetch_env()) == 0) {
         screen_ctr = (screen_ctr + 1) % conf.screen_conf.samples;
         
         if (compute) {
-            screen_msg.bl.old = state.screen_comp;
-            state.screen_comp = compute_average(screen_br, conf.screen_conf.samples) * conf.screen_conf.contrib;
-            if (screen_msg.bl.old != state.screen_comp) {
-                screen_msg.bl.new = state.screen_comp;
-                M_PUB(&screen_msg);
-            }
-            DEBUG("Average screen-emitted brightness: %lf.\n", state.screen_comp);
+            compute_screen_brightness();
         } else if (screen_ctr + 1 == conf.screen_conf.samples) {
             /* Bucket filled! Start computing! */
             DEBUG("Start compensating for screen-emitted brightness.\n");

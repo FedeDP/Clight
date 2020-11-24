@@ -4,7 +4,7 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
 static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdata);
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void upower_timeout_callback(void);
-static void inhibit_callback(void);
+static void inhibit_callback(const bool pause);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
@@ -16,6 +16,7 @@ MODULE("DIMMER");
 static void init(void) {
     M_SUB(UPOWER_UPD);
     M_SUB(INHIBIT_UPD);
+    M_SUB(SUSPEND_UPD);
     M_SUB(DIMMER_TO_REQ);
     M_SUB(SIMULATE_REQ);
     m_become(waiting_acstate);
@@ -52,7 +53,10 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         upower_timeout_callback();
         break;
     case INHIBIT_UPD:
-        inhibit_callback();
+        inhibit_callback(state.inhibited);
+        break;
+    case SUSPEND_UPD:
+        inhibit_callback(state.suspended);
         break;
     case DIMMER_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
@@ -82,7 +86,10 @@ static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdat
         upower_timeout_callback();
         break;
     case INHIBIT_UPD:
-        inhibit_callback();
+        inhibit_callback(state.inhibited);
+        break;
+    case SUSPEND_UPD:
+        inhibit_callback(state.suspended);
         break;
     case DIMMER_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
@@ -131,8 +138,8 @@ static void upower_timeout_callback(void) {
  * If we're getting inhibited, stop idle client.
  * Else, restart it.
  */
-static void inhibit_callback(void) {
-    if (!state.inhibited) {
+static void inhibit_callback(const bool pause) {
+    if (!pause) {
         DEBUG("Being resumed.\n");
         idle_client_start(client, conf.dim_conf.timeout[state.ac_state]);
         m_unbecome();

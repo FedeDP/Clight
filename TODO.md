@@ -5,55 +5,43 @@
 - [x] Fix wizard mode
 - [x] Fix clight desktop file
 - [x] Update wiki pages
-- [x] Avoid geoclue continuosly spamming positions to clight
-- [ ] On slow resume from suspend, weird things happen:
-(D)[08:31:20]{timer.c:38}       Set timeout of 5s 0ns on fd 47.
-(I)[08:31:20]{daytime.c:190}    Next alarm due to: Thu Nov 12 16:25:00 2020
-(D)[08:31:20]{timer.c:38}       Set timeout of 28420s 0ns on fd 46.
-(D)[08:31:20]{bus.c:175}        get_screen_brightness(): Input/output error
-(D)[08:31:20]{timer.c:38}       Set timeout of 30s 0ns on fd 45.
-(D)[08:31:20]{bus.c:175}        capture_frames_brightness(): Operation not permitted
-(D)[08:31:20]{timer.c:38}       Set timeout of 600s 0ns on fd 48.
-(I)[08:31:20]{test.c:17}        We're now during the day!
-(D)[08:31:20]{interface.c:436}  Emitting DayTime property
-(D)[08:31:20]{timer.c:38}       Set timeout of 0s 1ns on fd 48.
-(D)[08:31:20]{interface.c:436}  Emitting NextEvent property
-(D)[08:31:20]{bus.c:175}        capture_frames_brightness(): Operation not permitted
-(D)[08:31:20]{timer.c:38}       Set timeout of 600s 0ns on fd 48.
-(I)[08:31:20]{upower.c:52}      AC cable disconnected.
-(I)[08:31:20]{upower.c:63}      Laptop lid opened.
-(D)[08:31:20]{interface.c:436}  Emitting AcState property
-(D)[08:31:20]{timer.c:38}       Set timeout of 0s 1ns on fd 48.
-(D)[08:31:20]{timer.c:40}       Disarmed timerfd on fd 45.
-(D)[08:31:20]{validations.c:18} Failed to validate upower request.
-(D)[08:31:20]{interface.c:436}  Emitting LidState property
-(D)[08:31:20]{validations.c:143}        Failed to validate lid request.
-(D)[08:31:20]{bus.c:175}        capture_frames_brightness(): Operation not permitted
-(D)[08:31:20]{timer.c:38}       Set timeout of 1200s 0ns on fd 48.
-(I)[08:31:25]{gamma.c:139}      Normal transition to 6500 gamma temp.
-
-* Easy solution: add a global delay_on_lid_opened option that just sleeps N seconds on lid opened; check
+- [x] Fix clightd autostart when called by clight (cannot find gamma)
+- [x] Add a sd-bus hook on systemd-logind PrepareForSleep signal that will pause any feature module
+- [x] On resume, honor conf.wakedelay before resuming modules
+- [x] Rename wakedelay to resumedelay, and honor it even on interface/custom modules SUSPEND_REQ; this allows to properly suppor suspend/resume cycles on non-systemd systems: just add a script to invoke "Pause true" upon suspend, and "Pause false" upon resume
+- [x] Expose a "Pause" dbus API to pause clight
+- [x] Fixed longstanding bug with negative timeouts in reset_timer()
+- [x] Actually check that timerfd_gettime() succeed before using its value
+- [ ] Fix wrong timeout set on resume after a long night?
+- [ ] Update api doc
+- [x] Require clightd 5.0
 
 ### Backlight
 - [x] Add an option to fire a calibration whenever lid gets opened
+- [x] Actually plot AC/BATT curves for backlight, in wizard mode too.
+- [x] Fix timeout on daytime_upd: MSG_TYPE() macro needs parenthesis
+
+### Screen 
+- [x] Does now work on wl and tty too
 
 ### Dpms
-- [x] Hook to new Clightd 4.3 Dpms.Changed signal to react to external (through clightd) dpms state changes
+- [x] Hook to new Clightd 5.0 Dpms.Changed signal to react to external (through clightd) dpms state changes
+- [x] oes now work on wayland too
+- [x] Port to clightd new API for dpms Changed signal
 
 ### Gamma
-- [x] Hook to new Clightd 4.3 Gamma.Changed signal to react to external (through clightd) gamma state changes
-- [x] Fix gamma not setting correct temp on resume -> clight is too quick on resume, and X is not yet loaded when it tries to set new screen temperature...
-introduce a small timeout of 5s for gamma corrections
-- [x] Allow users to customize the delay
+- [x] Hook to new Clightd 5.0 Gamma.Changed signal to react to external (through clightd) gamma state changes
+- [x] Does now work on tty and wayland too
 
 ### Keyboard
 - [x] Fixed bug in set_keyboard_level()
 
-### Clightd 5.0
-- [x] Require clightd 5.0
-- [x] Port to clightd new API for dpms signal
-- [x] Clightd does now support gamma and dpms on wayland too (where corrispective protocols are supported)
-- [x] Clightd does now support gamma on tty too!
+### Inhibition
+- [x] Fix inhibiton counter going crazy if lots of inhibit requests are quicly sent to clight
+- [x] Switch to DECLARE_HEAP_MSG where needed: most notably: we may receive looots of spam from ScreenSaver dbus monitor/api
+
+### Location
+- [x] Avoid geoclue continuosly spamming positions to clight
 
 ## 4.3
 
@@ -66,4 +54,13 @@ introduce a small timeout of 5s for gamma corrections
 - [ ] If any conf file is found in /etc/clight/mon.d/, avoid calling SetAll, and just call Set on each serial.
 
 ### Bus
-- [ ] Expose BUS_REQ to make dbus call from custom modules
+- [ ] Expose BUS_REQ to make dbus call from custom modules -> 
+CALL: sd_bus_message_appendv(m, signature, args) + sd_bus_message_readv(m, signature, args);
+SET_PROP: sd_bus_set_propertyv
+GET_PROP; sd_bus_get_property() + sd_bus_message_readv()
+typedef struct {
+    enum bus_call_type type;
+    va_list write_args;
+    va_list read_args;
+} bus_req;
+

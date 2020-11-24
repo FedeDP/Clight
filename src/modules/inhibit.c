@@ -2,8 +2,6 @@
 
 static void on_inhibit_req(inhibit_upd *up);
 
-DECLARE_MSG(inh_msg, INHIBIT_UPD);
-
 MODULE("INHIBIT");
 
 static int inhibition_ctr;
@@ -50,10 +48,11 @@ static void on_inhibit_req(inhibit_upd *up) {
         }
         
         if (up->new || inhibition_ctr == 0) {
-            inh_msg.inhibit.old = state.inhibited;
+            DECLARE_HEAP_MSG(inh_msg, INHIBIT_UPD);
+            inh_msg->inhibit.old = state.inhibited;
             state.inhibited = up->new;
-            inh_msg.inhibit.new = state.inhibited;
-            M_PUB(&inh_msg);
+            inh_msg->inhibit.new = state.inhibited;
+            M_PUB(inh_msg);
         }
     }
     /* Count currently held inhibitions */
@@ -61,4 +60,5 @@ static void on_inhibit_req(inhibit_upd *up) {
         inhibition_ctr++;
         DEBUG("ScreenSaver inhibition grabbed.\n");
     }
+    DEBUG("Inhibitions ctr: %d\n", inhibition_ctr);
 }

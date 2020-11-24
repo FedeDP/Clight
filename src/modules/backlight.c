@@ -1,7 +1,7 @@
 #include "bus.h"
 #include "my_math.h"
 
-enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, LID = 0x08 };
+enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, LID = 0x08, SUSPEND = 0x10 };
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, const void* userdata);
@@ -16,7 +16,8 @@ static void interface_autocalib_callback(bool new_val);
 static void interface_curve_callback(double *regr_points, int num_points, enum ac_states s);
 static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
-static void time_callback(int old_val, int is_event);
+static void suspended_callback(void);
+static void time_callback(int old_val, const bool is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int get_current_timeout(void);
@@ -46,6 +47,7 @@ static void init(void) {
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);
     M_SUB(LID_UPD);
+    M_SUB(SUSPEND_UPD);
     M_SUB(DAYTIME_UPD);
     M_SUB(IN_EVENT_UPD);
     M_SUB(BL_TO_REQ);
@@ -167,6 +169,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case LID_UPD:
         on_lid_update();
         break;
+    case SUSPEND_UPD:
+        suspended_callback();
+        break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -223,6 +228,9 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     }
     case LID_UPD:
         on_lid_update();
+        break;
+    case SUSPEND_UPD:
+        suspended_callback();
         break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
@@ -388,13 +396,14 @@ static void interface_curve_callback(double *regr_points, int num_points, enum a
     polynomialfit(NULL, conf.sens_conf.regression_points[s], 
                   state.fit_parameters[s], conf.sens_conf.num_points[s]);
     
-    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", state.fit_parameters[s][0],
+    INFO("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", state.fit_parameters[s][0],
           state.fit_parameters[s][1], state.fit_parameters[s][2]);
+    plot_poly_curve(conf.sens_conf.num_points[s], conf.sens_conf.regression_points[s]);
 }
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(timeout_upd *up) {
-    /* Validate request: BACKLIGHT is the only module that require valued daytime */
+    /* Validate request: BACKLIGHT is the only module that requires valued daytime */
     if (up->daytime >= DAY && up->daytime <= SIZE_STATES) {
         const int old = get_current_timeout();
         conf.bl_conf.timeout[up->state][up->daytime] = up->new;
@@ -417,8 +426,16 @@ static void dimmed_callback(void) {
     }
 }
 
+static void suspended_callback(void) {
+    if (state.suspended) {
+        pause_mod(SUSPEND);
+    } else {
+        resume_mod(SUSPEND);
+    }
+}
+
 /* Callback on state.time/state.in_event changes */
-static void time_callback(int old_val, int is_event) {
+static void time_callback(int old_val, const bool is_event) {
     int old_timeout;
     if (!is_event) {
         /* A state.time change happened, react! */

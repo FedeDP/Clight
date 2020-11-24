@@ -155,7 +155,6 @@ static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
         config_setting_lookup_int(gamma, "trans_timeout", &gamma_conf->trans_timeout);
         config_setting_lookup_bool(gamma, "long_transition", &gamma_conf->long_transition);
         config_setting_lookup_bool(gamma, "ambient_gamma", &gamma_conf->ambient_gamma);
-        config_setting_lookup_int(gamma, "delay", &gamma_conf->delay);
         
         if ((gamma = config_setting_get_member(gamma, "temp"))) {
             if (config_setting_length(gamma) == SIZE_STATES) {
@@ -303,6 +302,7 @@ int read_config(enum CONFIG file, char *config_file) {
     config_init(&cfg);
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
+        config_lookup_int(&cfg, "resumedelay", &conf.resumedelay);
         
         load_backlight_settings(&cfg, &conf.bl_conf);
         load_sensor_settings(&cfg, &conf.sens_conf);
@@ -418,9 +418,6 @@ static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     setting = config_setting_add(gamma, "ambient_gamma", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, gamma_conf->ambient_gamma);
     
-    setting = config_setting_add(gamma, "delay", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, gamma_conf->delay);
-    
     setting = config_setting_add(gamma, "temp", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_STATES; i++) {
         config_setting_set_int_elem(setting, -1, gamma_conf->temp[i]);
@@ -522,6 +519,8 @@ int store_config(enum CONFIG file) {
     
     config_setting_t *setting = config_setting_add(cfg.root, "verbose", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, conf.verbose);
+    setting = config_setting_add(cfg.root, "resumedelay", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, conf.resumedelay);
     
     store_backlight_settings(&cfg, &conf.bl_conf);
     store_sensors_settings(&cfg, &conf.sens_conf);
