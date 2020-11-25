@@ -12,8 +12,8 @@
 - [x] Expose a "Pause" dbus API to pause clight
 - [x] Fixed longstanding bug with negative timeouts in reset_timer()
 - [x] Actually check that timerfd_gettime() succeed before using its value
-- [ ] Fix wrong timeout set on resume after a long night?
-- [ ] Update api doc
+- [x] Fix wrong timeout set on resume after a long night?
+- [ ] Update api doc (ResumeDelay, Suspended, Pause)
 - [x] Require clightd 5.0
 
 ### Backlight

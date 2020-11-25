@@ -166,11 +166,11 @@ static void upower_timeout_callback(void) {
  */
 static void inhibit_callback(const bool pause) {
     if (!pause) {
-        DEBUG("Being resumed.\n");
+        DEBUG("Resuming DPMS.\n");
         idle_client_start(client, conf.dpms_conf.timeout[state.ac_state]);
         m_unbecome();
     } else {
-        DEBUG("Being paused.\n");
+        DEBUG("Pausing DPMS.\n");
         idle_client_stop(client);
         m_become(inhibited);
     }

@@ -45,16 +45,22 @@ static time_t get_timeout_sec(int fd) {
     return 0;
 }
 
-// FIXME: if get_timeout_sec() returns 0 -> fd is ready to fire; avoid changing its timer! ok for BACKLIGHT... but for SCREEN?... pause_screen(true, TIMEOUT) to deregister its fd
-// for SCREEN: may be avoid unbecoming and just deregister fd, Way simpler; moreover it already gets paused for other reasons and it never unbecomes.
-// Same for BACKLIGHT?
-// grep set_timeout 
 void reset_timer(int fd, int old_timer, int new_timer) {
-    if (old_timer < 0) {
-        /* We had a paused fd */
+    if (old_timer <= 0) {
+        /* We had a paused fd; resume it */
         set_timeout(new_timer, 0, fd, 0);
     } else {
-        unsigned int elapsed_time = old_timer - get_timeout_sec(fd);
+        time_t fd_timeout = get_timeout_sec(fd);
+        if (fd_timeout == 0 && new_timer > 0) {
+            /* 
+             * fd was ready to fire; we are not pausing it 
+             * thus we can safely let it fire.
+             * Note: this happens after eg: a long night suspend
+             */
+            return; 
+        }
+    
+        unsigned int elapsed_time = old_timer - fd_timeout;
         /* if we still need to wait some seconds */
         if (new_timer > elapsed_time) {
             set_timeout(new_timer - elapsed_time, 0, fd, 0);
