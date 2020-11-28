@@ -2,10 +2,14 @@
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/clight.svg)](https://repology.org/project/clight/versions)
 
-Clight is a C user daemon utility that aims to fully manage your display.  
-It will automagically change screen backlight level to match ambient brightness, as computed by capturing frames from webcam.  
-Moreover, it can manage your screen temperature, just like redshift does.  
-Finally, it can dim your screen after a timeout.  
+Clight is a C user daemon utility that aims to fully manage your display.
+It will automagically change screen backlight level to match ambient
+brightness, as computed by capturing frames from webcam.
+Moreover, it can manage your screen temperature, just like redshift does.
+Finally, it can dim your screen after a timeout.
+
+Clight is actually a control daemon which makes use of another daemon talking to the sensor inputs and hardware actuators, [Clightd](https://github.com/FedeDP/Clightd).
+*Check the instructions there and [Clightd wiki](https://github.com/FedeDP/Clightd/wiki) for details regarding hardware configuration.*
 
 It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in its initial intents.  
 
