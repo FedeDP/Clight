@@ -4,7 +4,7 @@
 #define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 
 static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* userdata);
-static void receive_suspended(const msg_t *const msg, UNUSED const void* userdata);
+static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
@@ -12,7 +12,7 @@ static void on_new_next_dayevt(void);
 static void on_daytime_req(void);
 static void interface_callback(temp_upd *req);
 static int on_temp_changed(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void on_new_suspend(void);
+static void pause_mod(bool pause, enum mod_pause reason);
 
 static sd_bus_slot *slot;
 static bool long_transitioning, should_sync_temp;
@@ -20,7 +20,7 @@ static const self_t *daytime_ref;
 
 DECLARE_MSG(temp_msg, TEMP_UPD);
 
-MODULE("GAMMA");
+MODULE_WITH_PAUSE("GAMMA");
 
 static void init(void) {
     m_ref("DAYTIME", &daytime_ref);
@@ -91,14 +91,14 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
     case SUSPEND_UPD:
-        on_new_suspend();
+        pause_mod(state.suspended, SUSPEND);
         break;
     default:
         break;
     }
 }
 
-static void receive_suspended(const msg_t *const msg, UNUSED const void* userdata) {
+static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case BL_UPD:
         // there won't be bl_upd messages while clight is suspended!
@@ -121,7 +121,7 @@ static void receive_suspended(const msg_t *const msg, UNUSED const void* userdat
         break;
     }
     case SUSPEND_UPD:
-        on_new_suspend();
+        pause_mod(state.suspended, SUSPEND);
         break;
     default:
         break;
@@ -250,14 +250,16 @@ static int on_temp_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_b
     return 0;
 }
 
-static void on_new_suspend(void) {
-    if (state.suspended) {
-        m_become(suspended);
-    } else {
-        m_unbecome();
-        if (should_sync_temp) {
-            should_sync_temp = false;
-            on_daytime_req();
+static void pause_mod(bool pause, enum mod_pause reason) {
+    if (CHECK_PAUSE(pause, reason, "GAMMA")) {
+        if (pause) {
+            m_become(paused);
+        } else {
+            m_unbecome();
+            if (should_sync_temp) {
+                should_sync_temp = false;
+                on_daytime_req();
+            }
         }
     }
 }

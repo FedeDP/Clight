@@ -1,7 +1,6 @@
 #include "bus.h"
 #include "my_math.h"
-
-enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, LID = 0x08, SUSPEND = 0x10, TIMEOUT = 0x20 };
+#include "utils.h"
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, const void* userdata);
@@ -23,11 +22,10 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int get_current_timeout(void);
 static void on_lid_update(void);
-static void pause_mod(enum backlight_pause type);
-static void resume_mod(enum backlight_pause type);
+static void pause_mod(enum mod_pause type);
+static void resume_mod(enum mod_pause type);
 
 static int bl_fd = -1;
-static int paused_state;
 static sd_bus_slot *sens_slot, *bl_slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
@@ -35,7 +33,7 @@ DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(sens_msg, SENS_UPD);
 
-MODULE("BACKLIGHT");
+MODULE_WITH_PAUSE("BACKLIGHT");
 
 static void init(void) {
     capture_req.capture.reset_timer = true;
@@ -515,23 +513,18 @@ static void on_lid_update(void) {
     }
 }
 
-static void pause_mod(enum backlight_pause type) {
-    if (paused_state == UNPAUSED) {
+static void pause_mod(enum mod_pause type) {
+    if (CHECK_PAUSE(true, type, "BACKLIGHT")) {
         m_become(paused);
         /* Properly deregister our fd while paused */
         m_deregister_fd(bl_fd);
-        DEBUG("Pausing BACKLIGHT.\n");
     }
-    paused_state |= type;
 }
 
-static void resume_mod(enum backlight_pause type) {
-    int old_paused = paused_state;
-    paused_state &= ~type;
-    if (old_paused != UNPAUSED && paused_state == UNPAUSED) {
+static void resume_mod(enum mod_pause type) {
+    if (CHECK_PAUSE(false, type, "BACKLIGHT")) {
         m_unbecome();
         /* Register back our fd on resume */
         m_register_fd(bl_fd, false, NULL);
-        DEBUG("Resuming BACKLIGHT.\n");
     }
 }

@@ -2,17 +2,17 @@
 #include "utils.h"
 
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata);
-static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdata);
+static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static void upower_timeout_callback(void);
-static void inhibit_callback(const bool pause);
+static void timeout_callback(void);
+static void pause_dpms(const bool pause, enum mod_pause reason);
 
 static sd_bus_slot *slot, *dpms_slot;
 static char client[PATH_MAX + 1];
 
 DECLARE_MSG(display_req, DISPLAY_REQ);
 
-MODULE("DPMS");
+MODULE_WITH_PAUSE("DPMS");
 
 static void init(void) {
     M_SUB(UPOWER_UPD);
@@ -54,20 +54,20 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case UPOWER_UPD:
-        upower_timeout_callback();
+        timeout_callback();
         break;
     case INHIBIT_UPD:
-        inhibit_callback(state.inhibited);
+        pause_dpms(state.inhibited, INHIBIT);
         break;
     case SUSPEND_UPD:
-        inhibit_callback(state.suspended);
+        pause_dpms(state.suspended, SUSPEND);
         break;
     case DPMS_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             conf.dpms_conf.timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
-                upower_timeout_callback();
+                timeout_callback();
             }
         }
         break;
@@ -84,23 +84,23 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     }
 }
 
-static void receive_inhibited(const msg_t *const msg, UNUSED const void* userdata) {
+static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case UPOWER_UPD:
-        upower_timeout_callback();
+        timeout_callback();
         break;
     case INHIBIT_UPD:
-        inhibit_callback(state.inhibited);
+        pause_dpms(state.inhibited, INHIBIT);
         break;
     case SUSPEND_UPD:
-        inhibit_callback(state.suspended);
+        pause_dpms(state.suspended, SUSPEND);
         break;
     case DPMS_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             conf.dpms_conf.timeout[up->state] = up->new;
             if (up->state == state.ac_state) {
-                upower_timeout_callback();
+                timeout_callback();
             }
         }
         break;
@@ -155,23 +155,23 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
     return 0;
 }
 
-/* Reset dimmer timeout */
-static void upower_timeout_callback(void) {
-    idle_set_timeout(client, conf.dpms_conf.timeout[state.ac_state]);
+static void timeout_callback(void) {
+    if (conf.dpms_conf.timeout[state.ac_state] <= 0) {
+        pause_dpms(true, TIMEOUT);
+    } else {
+        pause_dpms(false, TIMEOUT);
+        idle_set_timeout(client, conf.dpms_conf.timeout[state.ac_state]);
+    }
 }
 
-/*
- * If we're getting inhibited, stop idle client.
- * Else, restart it.
- */
-static void inhibit_callback(const bool pause) {
-    if (!pause) {
-        DEBUG("Resuming DPMS.\n");
-        idle_client_start(client, conf.dpms_conf.timeout[state.ac_state]);
-        m_unbecome();
-    } else {
-        DEBUG("Pausing DPMS.\n");
-        idle_client_stop(client);
-        m_become(inhibited);
+static void pause_dpms(const bool pause, enum mod_pause reason) {
+    if (CHECK_PAUSE(pause, reason, "DPMS")) {
+        if (!pause) {
+            idle_client_start(client, conf.dpms_conf.timeout[state.ac_state]);
+            m_unbecome();
+        } else {
+            idle_client_stop(client);
+            m_become(paused);
+        }
     }
 }

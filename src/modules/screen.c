@@ -2,24 +2,21 @@
 #include "my_math.h"
 #include "utils.h"
 
-enum screen_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, LID = 0x04, CONTRIB = 0x08, SUSPEND = 0x10, TIMEOUT = 0x20 };
-
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void compute_screen_brightness(void);
 static void get_screen_brightness(bool compute);
 static void on_contrib_req(bool compute, int new);
 static void timeout_callback(int old_val);
-static void pause_screen(bool pause, enum screen_pause type);
-
-DECLARE_MSG(screen_msg, SCR_BL_UPD);
-
-MODULE("SCREEN");
+static void pause_screen(bool pause, enum mod_pause type);
 
 static bool computing;
 static double *screen_br;
 static int screen_ctr, screen_fd = -1;
-static int paused_state;
+
+DECLARE_MSG(screen_msg, SCR_BL_UPD);
+
+MODULE_WITH_PAUSE("SCREEN");
 
 static void init(void) {
     screen_br = calloc(conf.screen_conf.samples, sizeof(double));
@@ -176,21 +173,14 @@ static void timeout_callback(int old_val) {
     }
 }
 
-static void pause_screen(bool pause, enum screen_pause type) {
-    if (pause) {
-        if (paused_state == UNPAUSED) {
+static void pause_screen(bool pause, enum mod_pause type) {
+    if (CHECK_PAUSE(pause, type, "SCREEN")) {
+        if (pause) {
             /* Stop capturing snapshots */
             m_deregister_fd(screen_fd);
-            DEBUG("Pausing SCREEN.\n");
-        }
-        paused_state |= type;
-    } else {
-         int old_paused = paused_state;
-        paused_state &= ~type;
-        if (old_paused != UNPAUSED && paused_state == UNPAUSED) {
+        } else {
             /* Resume capturing */
             m_register_fd(screen_fd, false, NULL);
-            DEBUG("Resuming SCREEN.\n");
         }
     }
 }
