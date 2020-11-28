@@ -78,7 +78,6 @@ static void log_gamma_conf(gamma_conf_t *gamma_conf) {
     fprintf(log_file, "* Nightly screen temp:\t\t%d\n", gamma_conf->temp[NIGHT]);
     fprintf(log_file, "* Long transition:\t\t%s\n", gamma_conf->long_transition ? "Enabled" : "Disabled");
     fprintf(log_file, "* Ambient gamma:\t\t%s\n", gamma_conf->ambient_gamma ? "Enabled" : "Disabled");
-    fprintf(log_file, "* Delay:\t\t%d\n", gamma_conf->delay);
 }
 
 static void log_daytime_conf(daytime_conf_t *day_conf) {
@@ -137,6 +136,7 @@ void log_conf(void) {
         
         fprintf(log_file, "\n### GENERIC ###\n");
         fprintf(log_file, "* Verbose (debug):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
+        fprintf(log_file, "* ResumeDelay:\t\t%d\n", conf.resumedelay);
         
         if (!conf.bl_conf.disabled) {
             log_bl_conf(&conf.bl_conf);
@@ -181,9 +181,11 @@ void log_message(const char *filename, int lineno, const char type, const char *
         va_start(file_args, log_msg);
         va_copy(args, file_args);
         if (log_file) {
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
-            fprintf(log_file, "(%c)[%02d:%02d:%02d]{%s:%d}\t", type, tm->tm_hour, tm->tm_min, tm->tm_sec, filename, lineno);
+            if (type != 'P') {
+                time_t t = time(NULL);
+                struct tm *tm = localtime(&t);
+                fprintf(log_file, "(%c)[%02d:%02d:%02d]{%s:%d}\t", type, tm->tm_hour, tm->tm_min, tm->tm_sec, filename, lineno);
+            }
             vfprintf(log_file, log_msg, file_args);
             fflush(log_file);
         }

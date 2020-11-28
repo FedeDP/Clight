@@ -1,7 +1,6 @@
 #include "bus.h"
 #include "my_math.h"
-
-enum backlight_pause { UNPAUSED = 0, DISPLAY = 0x01, SENSOR = 0x02, AUTOCALIB = 0x04, LID = 0x08 };
+#include "utils.h"
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, const void* userdata);
@@ -13,19 +12,20 @@ static void set_backlight_level(const double pct, const int is_smooth, const dou
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_autocalib_callback(bool new_val);
+static void reset_or_pause(int old_timeout);
 static void interface_curve_callback(double *regr_points, int num_points, enum ac_states s);
 static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
-static void time_callback(int old_val, int is_event);
+static void suspended_callback(void);
+static void time_callback(int old_val, const bool is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int get_current_timeout(void);
 static void on_lid_update(void);
-static void pause_mod(enum backlight_pause type);
-static void resume_mod(enum backlight_pause type);
+static void pause_mod(enum mod_pause type);
+static void resume_mod(enum mod_pause type);
 
 static int bl_fd = -1;
-static int paused_state;
 static sd_bus_slot *sens_slot, *bl_slot;
 
 DECLARE_MSG(bl_msg, BL_UPD);
@@ -33,7 +33,7 @@ DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(sens_msg, SENS_UPD);
 
-MODULE("BACKLIGHT");
+MODULE_WITH_PAUSE("BACKLIGHT");
 
 static void init(void) {
     capture_req.capture.reset_timer = true;
@@ -46,6 +46,7 @@ static void init(void) {
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);
     M_SUB(LID_UPD);
+    M_SUB(SUSPEND_UPD);
     M_SUB(DAYTIME_UPD);
     M_SUB(IN_EVENT_UPD);
     M_SUB(BL_TO_REQ);
@@ -167,6 +168,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case LID_UPD:
         on_lid_update();
         break;
+    case SUSPEND_UPD:
+        suspended_callback();
+        break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -223,6 +227,9 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     }
     case LID_UPD:
         on_lid_update();
+        break;
+    case SUSPEND_UPD:
+        suspended_callback();
         break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
@@ -388,20 +395,37 @@ static void interface_curve_callback(double *regr_points, int num_points, enum a
     polynomialfit(NULL, conf.sens_conf.regression_points[s], 
                   state.fit_parameters[s], conf.sens_conf.num_points[s]);
     
-    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", state.fit_parameters[s][0],
+    INFO("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", state.fit_parameters[s][0],
           state.fit_parameters[s][1], state.fit_parameters[s][2]);
+    plot_poly_curve(conf.sens_conf.num_points[s], conf.sens_conf.regression_points[s]);
+}
+
+/* 
+ * This internal API allows
+ * to pause BACKLIGHT if <= 0 timeout should be set,
+ * else resuming it and setting correct timeout.
+ */
+static void reset_or_pause(int old_timeout) {
+    const int new_timeout = get_current_timeout();
+    if (new_timeout <= 0) {
+        pause_mod(TIMEOUT);
+    } else {
+        resume_mod(TIMEOUT);
+        reset_timer(bl_fd, old_timeout, new_timeout);
+    }
 }
 
 /* Callback on "backlight_timeout" bus exposed writable properties */
 static void interface_timeout_callback(timeout_upd *up) {
-    /* Validate request: BACKLIGHT is the only module that require valued daytime */
+    /* Validate request: BACKLIGHT is the only module that requires valued daytime */
     if (up->daytime >= DAY && up->daytime <= SIZE_STATES) {
         const int old = get_current_timeout();
         conf.bl_conf.timeout[up->state][up->daytime] = up->new;
+        // Check if current timeout was updated
         if (up->state == state.ac_state && 
             (up->daytime == state.day_time || (state.in_event && up->daytime == IN_EVENT))) {
             
-            reset_timer(bl_fd, old, get_current_timeout());
+            reset_or_pause(old);
         }
     } else {
         WARN("Failed to validate timeout request.\n");
@@ -417,8 +441,16 @@ static void dimmed_callback(void) {
     }
 }
 
+static void suspended_callback(void) {
+    if (state.suspended) {
+        pause_mod(SUSPEND);
+    } else {
+        resume_mod(SUSPEND);
+    }
+}
+
 /* Callback on state.time/state.in_event changes */
-static void time_callback(int old_val, int is_event) {
+static void time_callback(int old_val, const bool is_event) {
     int old_timeout;
     if (!is_event) {
         /* A state.time change happened, react! */
@@ -430,7 +462,7 @@ static void time_callback(int old_val, int is_event) {
          */
         old_timeout = conf.bl_conf.timeout[state.ac_state][state.in_event ? state.day_time : IN_EVENT];
     }
-    reset_timer(bl_fd, old_timeout, get_current_timeout());
+     reset_or_pause(old_timeout);
 }
 
 /* Callback on SensorChanged clightd signal */
@@ -481,20 +513,16 @@ static void on_lid_update(void) {
     }
 }
 
-static void pause_mod(enum backlight_pause type) {
-    int old_paused = paused_state;
-    paused_state |= type;
-    if (old_paused == UNPAUSED && paused_state != UNPAUSED) {
+static void pause_mod(enum mod_pause type) {
+    if (CHECK_PAUSE(true, type, "BACKLIGHT")) {
         m_become(paused);
         /* Properly deregister our fd while paused */
         m_deregister_fd(bl_fd);
     }
 }
 
-static void resume_mod(enum backlight_pause type) {
-    int old_paused = paused_state;
-    paused_state &= ~type;
-    if (old_paused != UNPAUSED && paused_state == UNPAUSED) {
+static void resume_mod(enum mod_pause type) {
+    if (CHECK_PAUSE(false, type, "BACKLIGHT")) {
         m_unbecome();
         /* Register back our fd on resume */
         m_register_fd(bl_fd, false, NULL);

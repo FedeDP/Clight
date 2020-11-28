@@ -221,6 +221,9 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
 }
 
 static int parse_bus_reply(sd_bus_message *reply, UNUSED const char *member,  UNUSED void *userdata) {
+    if (!strcmp(member, "Ping")) {
+        return 0;
+    }
     const char *service_list;
     int r = sd_bus_message_read(reply, "s", &service_list);
     if (r < 0) {
@@ -246,6 +249,13 @@ static int parse_bus_reply(sd_bus_message *reply, UNUSED const char *member,  UN
 }
 
 static void check_clightd_features(void) {
+    /* 
+     * Pass a non-null callback here, even if Ping method has no answer,
+     * because we need to wait for clightd to get started, if it is not yet.
+     */
+    SYSBUS_ARG_REPLY(ping_args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.freedesktop.DBus.Peer", "Ping");
+    call(&ping_args, NULL);
+    
     SYSBUS_ARG_REPLY(introspect_args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.freedesktop.DBus.Introspectable", "Introspect");
     call(&introspect_args, NULL);
 }
@@ -341,11 +351,6 @@ static void check_gamma_conf(gamma_conf_t *gamma_conf) {
         WARN("Wrong gamma_trans_timeout value. Resetting default value.\n");
         gamma_conf->trans_timeout = 300;
     }
-    
-    if (gamma_conf->delay < 0 || gamma_conf->delay > 30) {
-        WARN("Wrong gamma delay value. Resetting default value.\n");
-        gamma_conf->trans_timeout = 0;
-    }
 }
 
 static void check_daytime_conf(daytime_conf_t *day_conf) {
@@ -418,12 +423,6 @@ static void check_dpms_conf(dpms_conf_t *dpms_conf) {
 }
 
 static void check_screen_conf(screen_conf_t *screen_conf) {
-    /* SCREEN requires X */
-    if (!state.display || !state.xauthority) {
-        INFO("Disabling SCREEN on non-X environment.\n");
-        screen_conf->disabled = true;
-    }
-    
     if (conf.bl_conf.disabled) {
         INFO("Disabling SCREEN as BACKLIGHT is disabled.\n");
         screen_conf->disabled = true;
@@ -466,6 +465,12 @@ static void check_conf(void) {
         /* Disable any not built-in feature in Clightd */
         check_clightd_features();
     }
+    
+    if (conf.resumedelay < 0 || conf.resumedelay > 30) {
+        WARN("Wrong resumedelay value. Resetting default value.\n");
+        conf.resumedelay = 0;
+    }
+    
     if (!conf.bl_conf.disabled) {
         check_bl_conf(&conf.bl_conf);
         check_sens_conf(&conf.sens_conf);

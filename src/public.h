@@ -16,12 +16,13 @@
 
 #define ASSERT_MSG(type);           _Static_assert(type >= LOC_UPD && type < MSGS_SIZE, "Wrong MSG type.");
 
-#define MSG_TYPE()                  msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type : SYSTEM_UPD) : FD_UPD
+#define MSG_TYPE()                  (msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type : SYSTEM_UPD) : FD_UPD)
 #define MSG_DATA()                  ((uint8_t *)msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding
 
 #define DECLARE_MSG(name, type)     ASSERT_MSG(type); static message_t name = { type }
+#define DECLARE_HEAP_MSG(name, t)   ASSERT_MSG(t); message_t *name = calloc(1, sizeof(message_t)); *((int *)&name->type) = t; *((bool *)&name->on_heap) = true;
 
-#define M_PUB(ptr)                  m_publish(topics[(ptr)->type], ptr, sizeof(message_t), false);
+#define M_PUB(ptr)                  m_publish(topics[(ptr)->type], ptr, sizeof(message_t), (ptr)->on_heap);
 #define M_SUB(type)                 ASSERT_MSG(type); m_subscribe(topics[type]);
 
 /** Log Macros **/
@@ -99,6 +100,8 @@ enum mod_msg_types {
     PM_REQ,             // Publish to set a new PowerManagement inhibition state
     SENS_UPD,           // Subscribe to receive "SensorAvail" states
     NEXT_DAYEVT_UPD,    // Subscribe to receive notifications about next day event (ie: sunrise or sunset)
+    SUSPEND_UPD,        // Subscribe to receive new system suspended states
+    SUSPEND_REQ,        // Publish to set a new system suspend state (this won't suspend your system! It jsut 'fakes' a suspended state)
     MSGS_SIZE
 };
 
@@ -134,6 +137,11 @@ typedef struct {
     bool old;                   // Valued in updates. Useless for requests
     bool new;                   // Mandatory for requests. Valued in updates
 } pm_upd;
+
+typedef struct {
+    bool old;                   // Valued in updates. Useless for requests
+    bool new;                   // Mandatory for requests. Valued in updates. True when entering suspend mode. False when resuming.
+} suspend_upd;
 
 typedef struct {
     enum display_states old;    // Valued in updates
@@ -205,12 +213,14 @@ typedef struct {
 
 typedef struct {
     const enum mod_msg_types type;
+    const bool on_heap;
     union {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
         lid_upd lid;            /* LID_UPD/LID_REQ */
         inhibit_upd inhibit;    /* INHIBIT_UPD/INHIBIT_REQ */
         pm_upd pm;              /* PM_UPD/PM_REQ */
+        suspend_upd suspend;    /* SUSPEND_UPD/SUSPEND_REQ */
         display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
         daytime_upd day_time;   /* TIME_UPD/IN_EVENT_UPD */
         evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ/NEXT_DAYEVT_UPD */

@@ -23,8 +23,8 @@
 #define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
 #define LOC_DISTANCE_THRS 50                // threshold for location distances before triggering location changed events (km)
 
-#define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version
-#define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version -> Dpms/Gamma.Changed signals + Dpms/Gamma on wayland
+#define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version -> Dpms/Gamma.Changed signals + Dpms/Gamma on wayland
+#define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version
 
 /** Generic structs **/
 
@@ -63,7 +63,6 @@ typedef struct {
     int trans_timeout;                      // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
     int long_transition;                    // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
-    int delay;                              // delay before screen temp appliance
 } gamma_conf_t;
 
 typedef struct {
@@ -112,6 +111,7 @@ typedef struct {
     inh_conf_t inh_conf;
     int verbose;                            // whether verbose mode is enabled
     int wizard;                             // whether wizard mode is enabled
+    int resumedelay;                        // delay on resume from suspend
 } conf_t;
 
 /* Global state of program */
@@ -128,6 +128,7 @@ typedef struct {
     int inhibited;                          // whether screensaver inhibition is enabled
     int pm_inhibited;                       // whether pm_inhibition is enabled
     int sens_avail;                         // whether a sensor is currently available
+    int suspended;                          // whether system is suspended
     enum day_states day_time;               // whether it is day or night time
     enum ac_states ac_state;                // is laptop on battery?
     enum lid_states lid_state;              // current lid state

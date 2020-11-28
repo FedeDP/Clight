@@ -5,7 +5,7 @@ static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void publish_upower(int new, message_t *up);
 static void publish_lid(bool new, message_t *up);
-static void publish_inh(bool new, message_t *up);
+static void publish_inh(bool new);
 
 static sd_bus_slot *slot;
 
@@ -38,8 +38,10 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 /* Upower not available. Let's assume ON_AC and LID OPEN! */
                 publish_upower(ON_AC, &upower_msg);
                 state.ac_state = ON_AC;
+                
                 publish_lid(OPEN, &lid_msg);
                 state.lid_state = OPEN;
+                
                 WARN("Failed to retrieve AC state; fallback to ON_AC and OPEN lid.\n");
                 m_poisonpill(self());
             }
@@ -145,7 +147,7 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
                     }
                 }
             }
-            publish_inh(docked, &inh_req);
+            publish_inh(docked);
         }
         publish_lid(lid_state, &lid_req);
     }
@@ -164,8 +166,8 @@ static void publish_lid(bool new, message_t *up) {
     M_PUB(up);
 }
 
-static void publish_inh(bool new, message_t *up) {
-    up->inhibit.old = state.inhibited;
-    up->inhibit.new = new;
-    M_PUB(up);
+static void publish_inh(bool new) {
+    inh_req.inhibit.old = state.inhibited;
+    inh_req.inhibit.new = new;
+    M_PUB(&inh_req);
 }

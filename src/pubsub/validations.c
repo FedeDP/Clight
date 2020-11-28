@@ -144,6 +144,22 @@ bool validate_lid(lid_upd *up) {
     return false;
 }
 
+bool validate_pm(pm_upd *up) {
+    if (up->new != state.pm_inhibited) {
+        return true;
+    }
+    DEBUG("Failed to validate pm request.\n");
+    return false;
+}
+
+bool validate_suspend(suspend_upd *up) {
+    if (up->new != state.suspended) {
+        return true;
+    }
+    DEBUG("Failed to validate suspend request.\n");
+    return false;
+}
+
 bool validate_nothing(void *up) {
     return true;
 }

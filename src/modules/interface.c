@@ -37,6 +37,7 @@ static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *r
 static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_load(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_pause(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -83,18 +84,21 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("Temp", "i", NULL, offsetof(state_t, current_temp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(state_t, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("ScreenComp", "d", NULL, offsetof(state_t, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("Suspended", "b", NULL, offsetof(state_t, suspended), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Capture", "bb", NULL, method_capture, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_clight_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("IncBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("DecBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Load", "s", NULL, method_load, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Unload", "s", NULL, method_unload, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Pause", "b", NULL, method_pause, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
 static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("Verbose", "b", NULL, NULL, offsetof(conf_t, verbose), 0),
+    SD_BUS_WRITABLE_PROPERTY("ResumeDelay", "i", NULL, NULL, offsetof(conf_t, resumedelay), 0),
     SD_BUS_METHOD("Store", NULL, NULL, method_store_conf, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
@@ -145,7 +149,6 @@ static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("LongTransition", "b", NULL, NULL, offsetof(gamma_conf_t, long_transition), 0),
-    SD_BUS_WRITABLE_PROPERTY("Delay", "i", NULL, NULL, offsetof(gamma_conf_t, delay), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -209,7 +212,6 @@ DECLARE_MSG(bl_req, BL_REQ);
 DECLARE_MSG(dimmer_to_req, DIMMER_TO_REQ);
 DECLARE_MSG(dpms_to_req, DPMS_TO_REQ);
 DECLARE_MSG(scr_to_req, SCR_TO_REQ);
-DECLARE_MSG(inhibit_req, INHIBIT_REQ);
 DECLARE_MSG(temp_req, TEMP_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(curve_req, CURVE_REQ);
@@ -219,6 +221,7 @@ DECLARE_MSG(contrib_req, CONTRIB_REQ);
 DECLARE_MSG(sunrise_req, SUNRISE_REQ);
 DECLARE_MSG(sunset_req, SUNSET_REQ);
 DECLARE_MSG(simulate_req, SIMULATE_REQ);
+DECLARE_MSG(suspend_req, SUSPEND_REQ);
 
 static map_t *lock_map;
 static sd_bus *userbus, *monbus;
@@ -430,10 +433,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
     case SYSTEM_UPD:
+        // We just do not want to process it in default case
         break;
     default:
         if (userbus) {
-            DEBUG("Emitting %s property\n", msg->ps_msg->topic);
+            DEBUG("Emitting '%s' property\n", msg->ps_msg->topic);
             sd_bus_emit_properties_changed(userbus, object_path, bus_interface, msg->ps_msg->topic, NULL);
         }
         break;
@@ -577,6 +581,20 @@ static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED 
     return 0;
 }
 
+static void publish_inhibition(const bool new, const bool force) {
+    /* 
+     * Declare msg on heap as sometimes (STEAM i am looking at you!)
+     * we receive inhibition req too fast,
+     * overriding values from currently sent inhibition 
+     * before it gets received by INHIBIT module
+     */
+    DECLARE_HEAP_MSG(inhibit_req, INHIBIT_REQ);
+    inhibit_req->inhibit.old = state.inhibited;
+    inhibit_req->inhibit.new = new;
+    inhibit_req->inhibit.force = force;
+    M_PUB(inhibit_req);
+}
+
 static int create_inhibit(int *cookie, const char *key, const char *app_name, const char *reason) {
     lock_t *l = map_get(lock_map, key);
     if (l) {
@@ -592,15 +610,11 @@ static int create_inhibit(int *cookie, const char *key, const char *app_name, co
             l->refs = 1;
             l->app = strdup(app_name);
             l->reason = strdup(reason);
-            map_put(lock_map, key, l);
             
             DEBUG("New ScreenSaver inhibition held by '%s': '%s'. Cookie: %d.\n", l->app, l->reason, l->cookie);
-
-            inhibit_req.inhibit.old = state.inhibited;
-            inhibit_req.inhibit.new = true;
-            inhibit_req.inhibit.force = false;
-            M_PUB(&inhibit_req);
-
+            publish_inhibition(true, false);
+            map_put(lock_map, key, l);
+            
             if (map_length(lock_map) == 1) {
                 /* Start listening on NameOwnerChanged signals */
                 USERBUS_ARG(args, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameOwnerChanged");
@@ -635,12 +649,9 @@ static int drop_inhibit(int *cookie, const char *key, bool force) {
         }
         if (l->refs == 0) {
             DEBUG("Dropped ScreenSaver inhibition held by '%s': '%s'. Cookie: %d.\n", l->app, l->reason, l->cookie);
-            inhibit_req.inhibit.old = state.inhibited;
-            inhibit_req.inhibit.new = false;
-            inhibit_req.inhibit.force = !strcmp(key, CLIGHT_INH_KEY); // forcefully disable inhibition for Clight INTERFACE Inhibit "false"
-            M_PUB(&inhibit_req);
-
+            publish_inhibition(false, !strcmp(key, CLIGHT_INH_KEY)); // forcefully disable inhibition for Clight INTERFACE Inhibit "false"
             map_remove(lock_map, key);
+            
             if (map_length(lock_map) == 0) {
                 /* Stop listening on NameOwnerChanged signals */
                 lock_slot = sd_bus_slot_unref(lock_slot);
@@ -767,6 +778,15 @@ static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_er
     WARN("'%s' failed to unload.\n", module_path);
     sd_bus_error_set_errno(ret_error, EINVAL);
     return -EINVAL;
+}
+
+static int method_pause(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    const bool paused;
+
+    VALIDATE_PARAMS(m, "b", &paused);
+    suspend_req.suspend.new = paused;
+    M_PUB(&suspend_req);
+    return sd_bus_reply_method_return(m, NULL);
 }
 
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,

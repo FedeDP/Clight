@@ -4,21 +4,23 @@
 #define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
 
 static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* userdata);
+static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
 static void on_new_next_dayevt(void);
-static void on_daytime_req(temp_upd *up);
+static void on_daytime_req(void);
 static void interface_callback(temp_upd *req);
 static int on_temp_changed(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static void pause_mod(bool pause, enum mod_pause reason);
 
 static sd_bus_slot *slot;
-static bool long_transitioning;
+static bool long_transitioning, should_sync_temp;
 static const self_t *daytime_ref;
 
 DECLARE_MSG(temp_msg, TEMP_UPD);
 
-MODULE("GAMMA");
+MODULE_WITH_PAUSE("GAMMA");
 
 static void init(void) {
     m_ref("DAYTIME", &daytime_ref);
@@ -26,12 +28,12 @@ static void init(void) {
     M_SUB(TEMP_REQ);
     M_SUB(DAYTIME_UPD);
     M_SUB(NEXT_DAYEVT_UPD);
+    M_SUB(SUSPEND_UPD);
     m_become(waiting_daytime);
 }
 
 static bool check(void) {
-    /* Only on X */
-    return state.display && state.xauthority;
+    return true;
 }
 
 static bool evaluate(void) {
@@ -77,7 +79,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         temp_upd *up = (temp_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             if (msg->ps_msg->sender == daytime_ref) {
-                on_daytime_req(up);
+                on_daytime_req();
             } else {
                 interface_callback(up);
             }
@@ -88,10 +90,44 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         on_new_next_dayevt();
         break;
     }
+    case SUSPEND_UPD:
+        pause_mod(state.suspended, SUSPEND);
+        break;
     default:
         break;
     }
 }
+
+static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case BL_UPD:
+        // there won't be bl_upd messages while clight is suspended!
+        break;
+    case TEMP_REQ: {
+        /* 
+         * We do not manage external temp_req; 
+         * we just store that we should sync temp for clight internal temp requests.
+         */
+        temp_upd *up = (temp_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            if (msg->ps_msg->sender == daytime_ref) {
+                should_sync_temp = true;
+            }
+        }
+        break;
+    }
+    case NEXT_DAYEVT_UPD: {
+        on_new_next_dayevt();
+        break;
+    }
+    case SUSPEND_UPD:
+        pause_mod(state.suspended, SUSPEND);
+        break;
+    default:
+        break;
+    }
+}
+
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     return sd_bus_message_read(reply, "b", userdata);
@@ -167,7 +203,7 @@ static void on_new_next_dayevt(void) {
     }
 }
 
-static void on_daytime_req(temp_upd *up) {
+static void on_daytime_req(void) {
     /* 
      * Properly reset long_transitioning when we changed current day.
      * This is needed when we are suspended and then resumed with 
@@ -212,4 +248,18 @@ static int on_temp_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_b
         sd_bus_message_read(m, "i", &state.current_temp);
     }
     return 0;
+}
+
+static void pause_mod(bool pause, enum mod_pause reason) {
+    if (CHECK_PAUSE(pause, reason, "GAMMA")) {
+        if (pause) {
+            m_become(paused);
+        } else {
+            m_unbecome();
+            if (should_sync_temp) {
+                should_sync_temp = false;
+                on_daytime_req();
+            }
+        }
+    }
 }

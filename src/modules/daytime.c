@@ -9,7 +9,7 @@ static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void reset_daytime(void);
 
-static int gamma_fd, temp_fd;
+static int gamma_fd;
 
 DECLARE_MSG(time_msg, DAYTIME_UPD);
 DECLARE_MSG(in_ev_msg, IN_EVENT_UPD);
@@ -86,12 +86,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
         case FD_UPD:
             read_timer(msg->fd_msg->fd);
-            if (msg->fd_msg->fd == gamma_fd) {
-                check_daytime();
-            } else {
-                temp_req.temp.new = conf.gamma_conf.temp[state.day_time];
-                M_PUB(&temp_req);
-            }
+            check_daytime();
             break;
         case LOC_UPD:
             reset_daytime();
@@ -118,9 +113,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 static void start_daytime(void) {
     gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
     m_register_fd(gamma_fd, true, NULL);
-    
-    temp_fd = start_timer(CLOCK_BOOTTIME, 0, 0);
-    m_register_fd(temp_fd, true, NULL);
     m_unbecome();
 }
 
@@ -173,17 +165,10 @@ static void check_daytime(void) {
      * Forcefully set correct gamma every time
      * to avoid any possible sync issue
      * between time of day and gamma (eg after long suspend).
-     * 
-     * NOTE: this can shifted by up to 30s delay because sometimes,
-     * on resume from suspend, clight is too fast to
-     * sync screen temperature, failing because Xorg is still not up.
      */
     if (!conf.gamma_conf.disabled) {
-        if (conf.gamma_conf.delay > 0) {
-            set_timeout(conf.gamma_conf.delay, 0, temp_fd, 0);
-        } else {
-            set_timeout(0, 1, temp_fd, 0);
-        }
+        temp_req.temp.new = conf.gamma_conf.temp[state.day_time];
+        M_PUB(&temp_req);
     }
 
     const time_t next = state.day_events[state.next_event] + state.event_time_range;
