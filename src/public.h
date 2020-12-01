@@ -16,13 +16,16 @@
 
 #define ASSERT_MSG(type);           _Static_assert(type >= LOC_UPD && type < MSGS_SIZE, "Wrong MSG type.");
 
-#define MSG_TYPE()                  (msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type : SYSTEM_UPD) : FD_UPD)
+#define MSG_FLAGS_MASK              ((1 << 16) - 1)
+#define MSG_FLAG_HEAP               (1 << 16)
+
+#define MSG_TYPE()                  (msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type & MSG_FLAGS_MASK : SYSTEM_UPD) : FD_UPD)
 #define MSG_DATA()                  ((uint8_t *)msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding
 
 #define DECLARE_MSG(name, type)     ASSERT_MSG(type); static message_t name = { type }
-#define DECLARE_HEAP_MSG(name, t)   ASSERT_MSG(t); message_t *name = calloc(1, sizeof(message_t)); *((int *)&name->type) = t; *((bool *)&name->on_heap) = true;
+#define DECLARE_HEAP_MSG(name, t)   ASSERT_MSG(t); message_t *name = calloc(1, sizeof(message_t)); *((int *)&name->type) = t | MSG_FLAG_HEAP;
 
-#define M_PUB(ptr)                  m_publish(topics[(ptr)->type], ptr, sizeof(message_t), (ptr)->on_heap);
+#define M_PUB(ptr)                  m_publish(topics[(ptr)->type & MSG_FLAGS_MASK], ptr, sizeof(message_t), (ptr)->type & MSG_FLAG_HEAP);
 #define M_SUB(type)                 ASSERT_MSG(type); m_subscribe(topics[type]);
 
 /** Log Macros **/
@@ -213,7 +216,6 @@ typedef struct {
 
 typedef struct {
     const enum mod_msg_types type;
-    const bool on_heap;
     union {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
         upower_upd upower;      /* UPOWER_UPD/UPOWER_REQ */
