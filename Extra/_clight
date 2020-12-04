@@ -1,0 +1,40 @@
+#compdef clight
+# zsh completion for clight
+
+local arguments
+
+arguments=(
+  {-f,--frames=}'[Frames taken for each capture, Between 1 and 20]'
+  {-d,--device=}'[Path to webcam device. If empty, first matching device is used]:device:_files -W /dev/'
+  {-b,--backlight=}'[Path to backlight syspath. If empty, first matching device is used]:filename:_files -W /sys/class/backlight/'
+  '--no-backlight-smooth[Disable smooth backlight transitions]'
+  '--no-gamma-smooth[Disable smooth gamma transitions]'
+  '--no-dimmer-smooth-enter[Disable smooth dimmer transitions while entering dimmed state]'
+  '--no-dimmer-smooth-enter[Disable smooth dimmer transitions while leaving dimmed state]'
+  '--day-temp=[Daily gamma temperature, between 1000 and 10000]'
+  '--night-temp=[Nightly gamma temperature, between 1000 and 10000]'
+  '--lat=[Your desired latitude]'
+  '--lon=[Your desired longitude]'
+  '--sunrise=[Force sunrise time for gamma correction]'
+  '--sunset=[Force sunset time for gamma correction]'
+  '--no-gamma[Disable gamma correction tool]'
+  '--no-dimmer[Disable dimmer tool]'
+  '--no-dpms[Disable dpms tool]'
+  '--no-backlight[Disable backlight module]'
+  '--no-screen[Disable screen module]'
+  '--no-kbd[Disable keyboard backlight calibration]'
+  '--dimmer-pct=[Backlight level used while screen is dimmed, in percentage]'
+  '--verbose[Enable verbose mode]'
+  '--no-auto-calib[Disable screen backlight automatic calibration]'
+  '--shutter-thres=[Threshold to consider a capture as clogged]'
+  {-v,--version}'[Show version info]'
+  {-c,--conf-file=}'[Specify a conf file to be parsed]:filename:_files'
+  '--gamma-long-transition[Enable a very long smooth transition for gamma]'
+  '--ambient-gamma[Enable screen temperature matching ambient brightness instead of time]'
+  {-w,--wizard}'[Enable wizard mode]'
+  {-?,--help}'[Show help message]'
+  '--usage[Display brief usage message]'
+)
+
+_arguments $arguments
+
