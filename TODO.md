@@ -16,6 +16,7 @@
 - [x] Update api doc (ResumeDelay, Suspended, Pause)
 - [x] Require clightd 5.0
 - [x] Better management of modules "paused" state (unified); see SCREEN, BACKLIGHT, DIMMER, DPMS paused_state
+- [x] Added a zsh completion script (#169)
 
 ### Backlight
 - [x] Add an option to fire a calibration whenever lid gets opened
