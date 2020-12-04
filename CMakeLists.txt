@@ -9,7 +9,7 @@ find_package(PkgConfig)
 
 # Needed folders
 set(CLIGHT_CONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
-    CACHE PATH "Path for config file")    
+    CACHE PATH "Path for config file")
 set(CLIGHT_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/clight"
     CACHE PATH "Path for data dir folder")
 
@@ -82,6 +82,8 @@ configure_file(${EXTRA_DIR}/org.clight.clight.service
                @ONLY)
 
 # Installation of files
+set(ZSH_COMPLETIONS_DIR "${CMAKE_INSTALL_FULL_DATADIR}/zsh/site-functions"
+    CACHE STRING "Installation directory for Zsh completions.")
 pkg_get_variable(COMPLETIONS_DIR bash-completion completionsdir)
 pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
 
@@ -102,6 +104,10 @@ install(DIRECTORY DESTINATION ${CLIGHT_DATADIR}/modules.d/)
 if (COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/clight
             DESTINATION ${COMPLETIONS_DIR})
+endif()
+if (ZSH_COMPLETIONS_DIR)
+    install(FILES ${EXTRA_DIR}/_clight
+            DESTINATION ${ZSH_COMPLETIONS_DIR})
 endif()
 
 #
