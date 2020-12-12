@@ -11,8 +11,8 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 ## Features
 
-Clight allows to match your backlight level to ambient brightness, as computed by capturing frames from webcam or from Ambient Light Sensors (ALS devices).  
-It does even support adjusting external monitors and keyboard backlight too.  
+Clight allows to match your backlight level to ambient brightness, computed by capturing frames from webcam or Ambient Light Sensors.  
+It does also support adjusting external monitors and keyboard backlight.  
 Moreover, it can manage your screen temperature, just like redshift does.  
 Finally, it can dim your screen after a timeout and manage screen DPMS.  
 
@@ -22,18 +22,19 @@ On wayland Clight requires specific protocols to be implemented by your composit
 ## Developers Corner
 
 Clight makes use of [Clightd](https://github.com/FedeDP/Clightd), a system DBus service that exposes an [API](https://github.com/FedeDP/Clightd/wiki/Api) to manage various aspects of your screen and allows Webcam/ALS devices captures.  
-Its API is as generic as possible and it has nothing specifically for Clight; this means anyone can use it;  
+Its API is as generic as possible and it has nothing specifically for Clight; this means anyone can make use of it.  
 If you are interested, please have a look at its wiki pages too!  
-I even developed a super simple Clight clone as an hello world application in Go: https://github.com/FedeDP/GoLight.  
-It is much simpler than Clight for obvious reasons and i do not expect to ever develop it further.  
+Indeed i even developed a super simple Clight clone as an hello world application in Go: https://github.com/FedeDP/GoLight.  
+It is much simpler than Clight for obvious reasons and i do not expect to develop it further.  
 
-Morever, note that Clight exposes a DBus API itself too; it allows to quickly test config values or build scripts around Clight, eg: https://github.com/FedeDP/Clight/wiki/DE-Automation.  
-Finally, it can be expanded through [Custom modules](https://github.com/FedeDP/Clight/wiki/Custom-Modules) that enable users to build their own plugins to further customize Clight behaviour.  
+Morever, note that Clight exposes a DBus [API](https://github.com/FedeDP/Clightd/wiki/Api) itself too; it allows quickly testing config values or building scripts around it, eg: https://github.com/FedeDP/Clight/wiki/DE-Automation.  
+Finally, it can also be expanded through [Custom modules](https://github.com/FedeDP/Clight/wiki/Custom-Modules) that enable users to build their own plugins to further customize Clight behaviour.  
 
 ## Packages
-Clight is available on AUR as both stable or devel package: https://aur.archlinux.org/packages/?K=clight .  
+Clight is available on Archlinux AUR as both stable or devel package: https://aur.archlinux.org/packages/?K=clight .  
 Note that devel package may break in some weird ways during development. Use it at your own risk.  
-Moreover, some brave distros are already shipping Clight as you can see from above packaging badge. Special thanks to all mantainers!
+
+Moreover, some brave distros are already shipping Clight as you can see from above packaging badge. Special thanks to all maintainers!
 
 ## License
 This software is distributed with GPL license, see [COPYING](https://github.com/FedeDP/Clight/blob/master/COPYING) file for more informations.
