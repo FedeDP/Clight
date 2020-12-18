@@ -82,9 +82,13 @@ configure_file(${EXTRA_DIR}/org.clight.clight.service
                @ONLY)
 
 # Installation of files
-set(ZSH_COMPLETIONS_DIR "${CMAKE_INSTALL_FULL_DATADIR}/zsh/site-functions"
-    CACHE STRING "Installation directory for Zsh completions.")
-pkg_get_variable(COMPLETIONS_DIR bash-completion completionsdir)
+if (NOT DEFINED BASH_COMPLETIONS_DIR)
+    pkg_get_variable(BASH_COMPLETIONS_DIR bash-completion completionsdir)
+endif()
+if (NOT DEFINED ZSH_COMPLETIONS_DIR)
+    set(ZSH_COMPLETIONS_DIR "${CMAKE_INSTALL_FULL_DATADIR}/zsh/site-functions"
+        CACHE STRING "Installation directory for Zsh completions.")
+endif()
 pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
 
 file(GLOB_RECURSE SKELETONS Extra/skeletons/*.skel)
@@ -101,9 +105,9 @@ install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
 install(FILES ${SKELETONS} DESTINATION ${CLIGHT_DATADIR})
 install(DIRECTORY DESTINATION ${CLIGHT_DATADIR}/modules.d/)
-if (COMPLETIONS_DIR)
+if (BASH_COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/clight
-            DESTINATION ${COMPLETIONS_DIR})
+            DESTINATION ${BASH_COMPLETIONS_DIR})
 endif()
 if (ZSH_COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/_clight
