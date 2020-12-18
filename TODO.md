@@ -17,6 +17,7 @@
 - [x] Require clightd 5.0
 - [x] Better management of modules "paused" state (unified); see SCREEN, BACKLIGHT, DIMMER, DPMS paused_state
 - [x] Added a zsh completion script (#169)
+- [x] Add support for tty in utils.c
 
 ### Backlight
 - [x] Add an option to fire a calibration whenever lid gets opened
@@ -34,6 +35,7 @@
 ### Gamma
 - [x] Hook to new Clightd 5.0 Gamma.Changed signal to react to external (through clightd) gamma state changes
 - [x] Does now work on tty and wayland too
+- [x] Actually emit gamma steps 
 
 ### Keyboard
 - [x] Fixed bug in set_keyboard_level()

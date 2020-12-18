@@ -74,7 +74,7 @@ enum mod_msg_types {
     IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times
-    TEMP_UPD,           // Subscribe to receive new gamma temperatures
+    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth gamma changes, a first TEMP_UPD will be emitteed with target temp and smooth options, then for each individual step TEMP_UPD will be emitted too
     AMBIENT_BR_UPD,     // Subscribe to receive new ambient brightness values
     BL_UPD,             // Subscribe to receive new backlight level values
     KBD_BL_UPD,         // Subscribe to receive new keyboard backlight values

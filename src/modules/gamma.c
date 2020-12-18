@@ -5,6 +5,7 @@
 
 static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
+static void publish_temp_upd(int temp, int smooth, int step, int timeout);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
 static void ambient_callback(void);
@@ -128,6 +129,15 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     }
 }
 
+static void publish_temp_upd(int temp, int smooth, int step, int timeout) {
+    temp_msg.temp.old = state.current_temp;
+    temp_msg.temp.new = temp;
+    temp_msg.temp.smooth = smooth;
+    temp_msg.temp.step = step;
+    temp_msg.temp.timeout = timeout;
+    temp_msg.temp.daytime = state.day_time;
+    M_PUB(&temp_msg);
+}
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     return sd_bus_message_read(reply, "b", userdata);
@@ -162,16 +172,12 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         
     int r = call(&args, "ssi(buu)", fetch_display(), fetch_env(), temp, smooth, step, timeout);    
     if (!r && ok) {
-        temp_msg.temp.old = state.current_temp;
-        temp_msg.temp.new = temp;
-        temp_msg.temp.smooth = smooth;
-        temp_msg.temp.step = step;
-        temp_msg.temp.timeout = timeout;
-        temp_msg.temp.daytime = state.day_time;
-        M_PUB(&temp_msg);
         if (!long_transitioning && conf.gamma_conf.no_smooth) {
             INFO("%d gamma temp set.\n", temp);
+            // we do not publish TEMP_UPD here as it will be published by on_temp_changed()
         } else {
+            // publish target value and params for smooth temp change
+            publish_temp_upd(temp, smooth, step, timeout);
             INFO("%s transition to %d gamma temp.\n", long_transitioning ? "Long" : "Normal", temp);
         }
     } else {
@@ -241,11 +247,15 @@ static void interface_callback(temp_upd *req) {
 }
 
 static int on_temp_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
-    /* Only account for our display */
+   /* Only account for our display for Gamma.Changed signals */
     const char *display = NULL;
     sd_bus_message_read(m, "s", &display);
-    if (!strcmp(display, state.display)) {
-        sd_bus_message_read(m, "i", &state.current_temp);
+    if (own_display(display)) {
+        // Publish each step for smooth changes
+        int new_temp;
+        sd_bus_message_read(m, "i", &new_temp);
+        publish_temp_upd(new_temp, 0, abs(state.current_temp - new_temp), 0);
+        state.current_temp = new_temp;
     }
     return 0;
 }

@@ -127,18 +127,12 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
     
     /* Only account for our display for Dpms.Changed signals */
     if (!strcmp(sd_bus_message_get_member(m), "Changed")) {
-        const char *state_dpy = fetch_display();
         const char *display = NULL;
         int level;
         sd_bus_message_read(m, "si", &display, &level);
-        if (display && state_dpy && strcmp(display, state_dpy)) {
-            return 0;
+        if (own_display(display)) {
+            idle = level > 0;
         }
-        
-        if ((display == NULL) != (state_dpy == NULL)) {
-            return 0;
-        }
-        idle = level > 0;
     } else {
         sd_bus_message_read(m, "b", &idle);
     }
