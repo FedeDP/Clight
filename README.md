@@ -27,6 +27,8 @@ If you are interested, please have a look at its wiki pages too!
 Indeed i even developed a super simple Clight clone as an hello world application in Go: https://github.com/FedeDP/GoLight.  
 It is much simpler than Clight for obvious reasons and i do not expect to develop it further.  
 
+Both Clight and Clightd make use of [libmodule](https://github.com/FedeDP/libmodule), a C library developed with modularity in mind that offers a simple actor framework for C, with an integrated event loop.
+
 Morever, note that Clight exposes a DBus [API](https://github.com/FedeDP/Clightd/wiki/Api) itself too; it allows quickly testing config values or building scripts around it, eg: https://github.com/FedeDP/Clight/wiki/DE-Automation.  
 Finally, it can also be expanded through [Custom modules](https://github.com/FedeDP/Clight/wiki/Custom-Modules) that enable users to build their own plugins to further customize Clight behaviour.  
 
