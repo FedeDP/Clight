@@ -22,7 +22,10 @@
 #define MSG_TYPE()                  (msg->is_pubsub ? (msg->ps_msg->type == USER ? ((message_t *)msg->ps_msg->message)->type & MSG_FLAGS_MASK : SYSTEM_UPD) : FD_UPD)
 #define MSG_DATA()                  ((uint8_t *)msg->ps_msg->message + offsetof(message_t, loc)) // offsetof any of the internal data structure to actually account for padding
 
+// Declare a single, file private, stack allocated msg with name "name" and type "type"
 #define DECLARE_MSG(name, type)     ASSERT_MSG(type); static message_t name = { type }
+
+// Declare a unique, AUTOFREED, heap allocated msg with name "name" and type "t".
 #define DECLARE_HEAP_MSG(name, t)   ASSERT_MSG(t); message_t *name = calloc(1, sizeof(message_t)); *((int *)&name->type) = t | MSG_FLAG_HEAP;
 
 #define M_PUB(ptr)                  m_publish(topics[(ptr)->type & MSG_FLAGS_MASK], ptr, sizeof(message_t), (ptr)->type & MSG_FLAG_HEAP);
@@ -74,9 +77,9 @@ enum mod_msg_types {
     IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times
-    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth gamma changes, a first TEMP_UPD will be emitteed with target temp and smooth options, then for each individual step TEMP_UPD will be emitted too
+    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth changes, a first TEMP_UPD will be emitteed with target temp and smooth params, then for each individual step TEMP_UPD will be emitted too
     AMBIENT_BR_UPD,     // Subscribe to receive new ambient brightness values
-    BL_UPD,             // Subscribe to receive new backlight level values
+    BL_UPD,             // Subscribe to receive new backlight level values. NOTE: for smooth changes, a first BL_UPD will be emitteed with target temp and smooth params, then for each individual step BL_UPD will be emitted too
     KBD_BL_UPD,         // Subscribe to receive new keyboard backlight values
     SCR_BL_UPD,         // Subscribe to receive new screen-emitted brightness values
     LOCATION_REQ,       // Publish to set a new location

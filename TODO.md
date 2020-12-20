@@ -23,6 +23,7 @@
 - [x] Add an option to fire a calibration whenever lid gets opened
 - [x] Actually plot AC/BATT curves for backlight, in wizard mode too.
 - [x] Fix timeout on daytime_upd: MSG_TYPE() macro needs parenthesis
+- [x] Actually emit bl steps
 
 ### Screen 
 - [x] Does now work on wl and tty too
@@ -52,6 +53,7 @@
 ### Generic
 - [ ] Port to libmodule 6.0.0 (?)
 - [ ] Bugfix: fix #106 (?)
+- [ ] Add a Dump dbus method (and a DUMP_REQ request) to allow any module to dump their state (module_dump()) to a txt file
 
 ### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)

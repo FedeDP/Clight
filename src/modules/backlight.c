@@ -8,7 +8,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer, bool capture_only);
 static void set_new_backlight(const double perc);
-static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout);
+static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_autocalib_callback(bool new_val);
@@ -28,7 +28,6 @@ static void resume_mod(enum mod_pause type);
 static int bl_fd = -1;
 static sd_bus_slot *sens_slot, *bl_slot;
 
-DECLARE_MSG(bl_msg, BL_UPD);
 DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(sens_msg, SENS_UPD);
@@ -345,20 +344,25 @@ static void set_new_backlight(const double perc) {
                         conf.bl_conf.trans_step, conf.bl_conf.trans_timeout);
 }
 
-static void set_backlight_level(const double pct, const int is_smooth, const double step, const int timeout) {
+static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout) {
+    DECLARE_HEAP_MSG(bl_msg, BL_UPD);
+    bl_msg->bl.old = state.current_bl_pct;
+    bl_msg->bl.new = pct;
+    bl_msg->bl.smooth = is_smooth;
+    bl_msg->bl.step = step;
+    bl_msg->bl.timeout = timeout;
+    M_PUB(bl_msg);
+}
+
+static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout) {
     int ok = 0;
     SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
     
     /* Set backlight on both internal monitor (in case of laptop) and external ones */
     int r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, conf.bl_conf.screen_path);
-    if (!r && ok) {
-        bl_msg.bl.old = state.current_bl_pct;
-        state.current_bl_pct = pct;
-        bl_msg.bl.new = pct;
-        bl_msg.bl.smooth = is_smooth;
-        bl_msg.bl.step = step;
-        bl_msg.bl.timeout = timeout;
-        M_PUB(&bl_msg);
+    if (!r && ok && is_smooth) {
+        // Publish smooth target and params
+        publish_bl_upd(pct, true, step, timeout);
     }
 }
 
@@ -486,8 +490,12 @@ static int on_sensor_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
 
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     const char *syspath = NULL;
-    sd_bus_message_read(m, "sd", &syspath, &state.current_bl_pct);
-    DEBUG("Backlight level updated: %.2lf.\n", state.current_bl_pct);
+    double pct;
+    sd_bus_message_read(m, "sd", &syspath, &pct);
+    DEBUG("Backlight level updated: %.2lf.\n", pct);
+    // publish step update
+    publish_bl_upd(pct, false, 0, 0);
+    state.current_bl_pct = pct;
     return 0;
 }
 

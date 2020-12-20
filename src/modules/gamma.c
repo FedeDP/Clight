@@ -19,8 +19,6 @@ static sd_bus_slot *slot;
 static bool long_transitioning, should_sync_temp;
 static const self_t *daytime_ref;
 
-DECLARE_MSG(temp_msg, TEMP_UPD);
-
 MODULE_WITH_PAUSE("GAMMA");
 
 static void init(void) {
@@ -130,13 +128,14 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
 }
 
 static void publish_temp_upd(int temp, int smooth, int step, int timeout) {
-    temp_msg.temp.old = state.current_temp;
-    temp_msg.temp.new = temp;
-    temp_msg.temp.smooth = smooth;
-    temp_msg.temp.step = step;
-    temp_msg.temp.timeout = timeout;
-    temp_msg.temp.daytime = state.day_time;
-    M_PUB(&temp_msg);
+    DECLARE_HEAP_MSG(temp_msg, TEMP_UPD);
+    temp_msg->temp.old = state.current_temp;
+    temp_msg->temp.new = temp;
+    temp_msg->temp.smooth = smooth;
+    temp_msg->temp.step = step;
+    temp_msg->temp.timeout = timeout;
+    temp_msg->temp.daytime = state.day_time;
+    M_PUB(temp_msg);
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
