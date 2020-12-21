@@ -7,11 +7,15 @@
  * (ie: we are neither on x or wayland; try drm plugin)
  */
 const char *fetch_display() {
-    const char *x_display = getenv("DISPLAY");
-    if (x_display && strlen(x_display)) {
-        return x_display;
+    /*
+     * Use wayland as first case, 
+     * as sometimes on wayland you have $DISPLAY env var too!
+     */
+    const char *wl_display = getenv("WAYLAND_DISPLAY");
+    if (wl_display && strlen(wl_display)) {
+        return wl_display;
     }
-    return getenv("WAYLAND_DISPLAY");
+    return getenv("DISPLAY");
 }
 
 /*

@@ -7,7 +7,7 @@ static void receive_paused(const msg_t *const msg, const void* userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer, bool capture_only);
-static void set_new_backlight(const double perc);
+static double set_new_backlight(const double perc);
 static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
@@ -315,11 +315,11 @@ static void do_capture(bool reset_timer, bool capture_only) {
         /* Account for screen-emitted brightness */
         const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
         if (compensated_br >= conf.bl_conf.shutter_threshold) {
-            set_new_backlight(compensated_br * (conf.sens_conf.num_points[state.ac_state] - 1));
+            const double new_bl = set_new_backlight(compensated_br * (conf.sens_conf.num_points[state.ac_state] - 1));
             if (state.screen_comp > 0.0) {
-                INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, state.current_bl_pct);
+                INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, new_bl);
             } else {
-                INFO("Ambient brightness: %.3lf -> Backlight pct: %.3lf.\n", state.ambient_br, state.current_bl_pct);
+                INFO("Ambient brightness: %.3lf -> Backlight pct: %.3lf.\n", state.ambient_br, new_bl);
             }
         } else if (state.screen_comp > 0.0) {
             INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Clogged capture detected.\n", state.ambient_br, state.screen_comp);
@@ -333,7 +333,7 @@ static void do_capture(bool reset_timer, bool capture_only) {
     }
 }
 
-static void set_new_backlight(const double perc) {
+static double set_new_backlight(const double perc) {
     /* y = a0 + a1x + a2x^2 */
     const double b = state.fit_parameters[state.ac_state][0] 
                     + state.fit_parameters[state.ac_state][1] * perc 
@@ -342,6 +342,7 @@ static void set_new_backlight(const double perc) {
 
     set_backlight_level(new_br_pct, !conf.bl_conf.no_smooth, 
                         conf.bl_conf.trans_step, conf.bl_conf.trans_timeout);
+    return new_br_pct;
 }
 
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout) {
