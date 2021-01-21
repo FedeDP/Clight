@@ -1,5 +1,8 @@
 ## 4.3
 
+### Backlight
+- [x] Clamp backlight values between first backlight curve[ac state] value and last one, ie: never get out of backlight curve's points
+
 ### Generic
 - [ ] Port to libmodule 6.0.0 (?)
 - [ ] Bugfix: fix #106 (?)

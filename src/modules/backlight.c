@@ -334,11 +334,17 @@ static void do_capture(bool reset_timer, bool capture_only) {
 }
 
 static double set_new_backlight(const double perc) {
+    sensor_conf_t *sens_conf = &conf.sens_conf;
+    enum ac_states st = state.ac_state;
+    const double max = sens_conf->regression_points[st][sens_conf->num_points[st] - 1];
+    const double min = sens_conf->regression_points[st][0];
+    
+    
     /* y = a0 + a1x + a2x^2 */
     const double b = state.fit_parameters[state.ac_state][0] 
                     + state.fit_parameters[state.ac_state][1] * perc 
                     + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
-    const double new_br_pct =  clamp(b, 1, 0);
+    const double new_br_pct = clamp(b, max, min);
 
     set_backlight_level(new_br_pct, !conf.bl_conf.no_smooth, 
                         conf.bl_conf.trans_step, conf.bl_conf.trans_timeout);
