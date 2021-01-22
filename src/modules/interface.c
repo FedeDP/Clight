@@ -749,7 +749,11 @@ static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *r
 /** Clight bus api **/
                        
 static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    VALIDATE_PARAMS(m, "bb", &capture_req.capture.reset_timer, &capture_req.capture.capture_only);
+    int reset_timer, capture_only;
+    VALIDATE_PARAMS(m, "bb", &reset_timer, &capture_only);
+    
+    capture_req.capture.reset_timer = reset_timer;
+    capture_req.capture.capture_only = capture_only;
     M_PUB(&capture_req);
     return sd_bus_reply_method_return(m, NULL);
 }
@@ -783,8 +787,7 @@ static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_er
 }
 
 static int method_pause(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    const bool paused;
-
+    int paused;
     VALIDATE_PARAMS(m, "b", &paused);
     suspend_req.suspend.new = paused;
     M_PUB(&suspend_req);
