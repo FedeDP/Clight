@@ -9,7 +9,7 @@ static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void reset_daytime(void);
 
-static int gamma_fd;
+static int day_fd;
 
 DECLARE_MSG(time_msg, DAYTIME_UPD);
 DECLARE_MSG(in_ev_msg, IN_EVENT_UPD);
@@ -111,8 +111,8 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 }
 
 static void start_daytime(void) {
-    gamma_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
-    m_register_fd(gamma_fd, true, NULL);
+    day_fd = start_timer(CLOCK_BOOTTIME, 0, 1);
+    m_register_fd(day_fd, true, NULL);
     m_unbecome();
 }
 
@@ -173,7 +173,7 @@ static void check_daytime(void) {
 
     const time_t next = state.day_events[state.next_event] + state.event_time_range;
     INFO("Next alarm due to: %s", ctime(&next));
-    set_timeout(next - t, 0, gamma_fd, 0);
+    set_timeout(next - t, 0, day_fd, 0);
 }
 
 /*
@@ -286,5 +286,5 @@ static void check_state(const time_t *now) {
 static void reset_daytime(void) {
     /* Updated sunrise/sunset times for new location */
     state.day_events[SUNSET] = 0; // to force get_next_events to recheck sunrise and sunset for today
-    set_timeout(0, 1, gamma_fd, 0);
+    set_timeout(0, 1, day_fd, 0);
 }

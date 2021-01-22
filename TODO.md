@@ -3,6 +3,9 @@
 ### Backlight
 - [x] Clamp backlight values between first backlight curve[ac state] value and last one, ie: never get out of backlight curve's points
 
+### Interface
+- [x] Fix crash when writing Sunrise/Sunset dayconf properties from dbus
+
 ### Generic
 - [ ] Port to libmodule 6.0.0 (?)
 - [ ] Bugfix: fix #106 (?)

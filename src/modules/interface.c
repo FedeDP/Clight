@@ -52,6 +52,8 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int get_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -154,8 +156,8 @@ static const sd_bus_vtable conf_gamma_vtable[] = {
 
 static const sd_bus_vtable conf_daytime_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", NULL, set_event, offsetof(daytime_conf_t, day_events[SUNRISE]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", NULL, set_event, offsetof(daytime_conf_t, day_events[SUNSET]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", get_event, set_event, offsetof(daytime_conf_t, day_events[SUNRISE]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", get_event, set_event, offsetof(daytime_conf_t, day_events[SUNSET]), 0),
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(daytime_conf_t, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(daytime_conf_t, event_duration), 0),
     SD_BUS_VTABLE_END
@@ -917,6 +919,11 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
     
     M_PUB(&calib_req);
     return r;
+}
+
+static int get_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    return sd_bus_message_append(value, "s", userdata);
 }
 
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,

@@ -123,7 +123,7 @@ static void destroy(void) {
 }
 
 static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
-    int idle;
+    int idle = -1;
     
     /* Only account for our display for Dpms.Changed signals */
     if (!strcmp(sd_bus_message_get_member(m), "Changed")) {
@@ -137,14 +137,16 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
         sd_bus_message_read(m, "b", &idle);
     }
     
-    /* Unused in requests! */
-    display_req.display.old = state.display_state;
-    if (idle) {
-        display_req.display.new = DISPLAY_OFF;
-    } else {
-        display_req.display.new = DISPLAY_ON;
+    if (idle != -1) {
+        /* Unused in requests! */
+        display_req.display.old = state.display_state;
+        if (idle) {
+            display_req.display.new = DISPLAY_OFF;
+        } else {
+            display_req.display.new = DISPLAY_ON;
+        }
+        M_PUB(&display_req);
     }
-    M_PUB(&display_req);
     
     return 0;
 }
