@@ -19,6 +19,11 @@ Finally, it can dim your screen after a timeout and manage screen DPMS.
 Note that all its features are available on both **X, Wayland and tty** and can be turned off from its config file.  
 On wayland Clight requires specific protocols to be implemented by your compositor; have a look at https://github.com/FedeDP/Clight/wiki/Modules#wayland-support.  
 
+## GUI
+
+Github user [nullobsi](https://github.com/nullobsi) created a qt gui for clight, with a nice tray applet too.  
+Remember to check it out: https://github.com/nullobsi/clight-gui!
+
 ## Developers Corner
 
 Clight makes use of [Clightd](https://github.com/FedeDP/Clightd), a system DBus service that exposes an [API](https://github.com/FedeDP/Clightd/wiki/Api) to manage various aspects of your screen and allows Webcam/ALS devices captures.  
