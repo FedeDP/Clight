@@ -6,6 +6,7 @@
 ### Interface
 - [x] Fix crash when writing Sunrise/Sunset dayconf properties from dbus
 - [x] Remember that 'b' dbus type maps to int when reading from sd_bus_message. This fixes a weird stack-smashing crash.
+- [x] Allow to reset Sunrise/Sunset conf evts from dbus api
 
 ### Generic
 - [ ] Add a small man page? https://roperzh.github.io/grapse/ (#174)
