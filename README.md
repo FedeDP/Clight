@@ -21,7 +21,7 @@ On wayland Clight requires specific protocols to be implemented by your composit
 
 ## GUI
 
-Github user [nullobsi](https://github.com/nullobsi) created a qt gui for clight, with a nice tray applet too.  
+Github user [nullobsi](https://github.com/nullobsi) created a (super nice!) qt gui for clight, with a useful tray applet too.  
 Remember to check it out: https://github.com/nullobsi/clight-gui!
 
 ## Developers Corner
