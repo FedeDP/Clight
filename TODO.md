@@ -11,6 +11,11 @@
 ### Generic
 - [ ] Add a small man page? https://roperzh.github.io/grapse/ (#174)
 - [ ] Parse "-h" flag before everything else? (#174)
+
+
+## 4.4
+
+### Generic
 - [ ] Port to libmodule 6.0.0 (?)
 - [ ] Bugfix: fix #106 (?)
 - [ ] Add a Dump dbus method (and a DUMP_REQ request) to allow any module to dump their state (module_dump()) to a txt file
