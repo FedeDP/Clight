@@ -89,6 +89,9 @@ if (NOT DEFINED ZSH_COMPLETIONS_DIR)
     set(ZSH_COMPLETIONS_DIR "${CMAKE_INSTALL_FULL_DATADIR}/zsh/site-functions"
         CACHE STRING "Installation directory for Zsh completions.")
 endif()
+if (NOT DEFINED FISH_COMPLETIONS_DIR)
+    pkg_get_variable(FISH_COMPLETIONS_DIR fish completionsdir)
+endif()
 pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
 
 file(GLOB_RECURSE SKELETONS Extra/skeletons/*.skel)
@@ -112,6 +115,10 @@ endif()
 if (ZSH_COMPLETIONS_DIR)
     install(FILES ${EXTRA_DIR}/_clight
             DESTINATION ${ZSH_COMPLETIONS_DIR})
+endif()
+if (FISH_COMPLETIONS_DIR)
+    install(FILES ${EXTRA_DIR}/clight.fish
+            DESTINATION ${FISH_COMPLETIONS_DIR})
 endif()
 
 #
