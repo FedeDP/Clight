@@ -9,9 +9,7 @@
 - [x] Allow to reset Sunrise/Sunset conf evts from dbus api
 
 ### Generic
-- [ ] Add a small man page? https://roperzh.github.io/grapse/ (#174)
-- [ ] Parse "-h" flag before everything else? (#174)
-
+- [ ] Parse cmdline flags before everything else? (#174)
 
 ## 4.4
 

@@ -35,7 +35,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)
 
 # Required dependencies
 pkg_check_modules(REQ_LIBS REQUIRED popt gsl libconfig libmodule>=5.0.0)
-pkg_search_module(LOGIN_LIBS REQUIRED libelogind libsystemd>=237)
+pkg_search_module(LOGIN_LIBS REQUIRED libelogind libsystemd>=234)
 
 # Avoid float versioning for libsystemd/libelogind
 string(REPLACE "." ";" LOGIN_LIBS_VERSION_LIST ${LOGIN_LIBS_VERSION})

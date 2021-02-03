@@ -113,7 +113,13 @@ finish:
 int add_match(const bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb) {
     GET_BUS(a);
 
+#if LIBSYSTEMD_VERSION >= 237
     int r = sd_bus_match_signal(tmp, slot, a->service, a->path, a->interface, a->member, cb, NULL);
+#else
+    char match[500] = {0};
+    snprintf(match, sizeof(match), "type='signal', sender='%s', interface='%s', member='%s', path='%s'", a->service, a->interface, a->member, a->path);
+    int r = sd_bus_add_match(tmp, slot, match, cb, NULL);
+#endif
     return check_err(&r, NULL, a->caller);
 }
 
