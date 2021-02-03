@@ -10,7 +10,7 @@ arguments=(
   '--no-backlight-smooth[Disable smooth backlight transitions]'
   '--no-gamma-smooth[Disable smooth gamma transitions]'
   '--no-dimmer-smooth-enter[Disable smooth dimmer transitions while entering dimmed state]'
-  '--no-dimmer-smooth-enter[Disable smooth dimmer transitions while leaving dimmed state]'
+  '--no-dimmer-smooth-exit[Disable smooth dimmer transitions while leaving dimmed state]'
   '--day-temp=[Daily gamma temperature, between 1000 and 10000]'
   '--night-temp=[Nightly gamma temperature, between 1000 and 10000]'
   '--lat=[Your desired latitude]'
