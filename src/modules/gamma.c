@@ -8,7 +8,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static void publish_temp_upd(int temp, int smooth, int step, int timeout);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
-static void ambient_callback(void);
+static void ambient_callback(bl_upd *up);
 static void on_new_next_dayevt(void);
 static void on_daytime_req(void);
 static void interface_callback(temp_upd *req);
@@ -71,9 +71,11 @@ static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* u
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case BL_UPD:
-        ambient_callback();
+    case BL_UPD: {
+        bl_upd *up = (bl_upd *)MSG_DATA();
+        ambient_callback(up);
         break;
+    }
     case TEMP_REQ: {
         temp_upd *up = (temp_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -85,10 +87,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         }
         break;
     }
-    case NEXT_DAYEVT_UPD: {
+    case NEXT_DAYEVT_UPD:
         on_new_next_dayevt();
         break;
-    }
     case SUSPEND_UPD:
         pause_mod(state.suspended, SUSPEND);
         break;
@@ -99,9 +100,6 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case BL_UPD:
-        // there won't be bl_upd messages while clight is suspended!
-        break;
     case TEMP_REQ: {
         /* 
          * We do not manage external temp_req; 
@@ -115,10 +113,9 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         }
         break;
     }
-    case NEXT_DAYEVT_UPD: {
+    case NEXT_DAYEVT_UPD:
         on_new_next_dayevt();
         break;
-    }
     case SUSPEND_UPD:
         pause_mod(state.suspended, SUSPEND);
         break;
@@ -184,19 +181,22 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
     }
 }
 
-static void ambient_callback(void) {
+static void ambient_callback(bl_upd *up) {
     if (conf.gamma_conf.ambient_gamma) {
-        /* 
-         * Note that conf.temp is not constant (it can be changed through bus api),
-         * thus we have to always compute these ones.
-         */
-        const int diff = abs(conf.gamma_conf.temp[DAY] - conf.gamma_conf.temp[NIGHT]);
-        const int min_temp = conf.gamma_conf.temp[NIGHT] < conf.gamma_conf.temp[DAY] ? 
-                            conf.gamma_conf.temp[NIGHT] : conf.gamma_conf.temp[DAY]; 
-        
-        const int ambient_temp = (diff * state.current_bl_pct) + min_temp;
-        set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth, 
-                 conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout); // force refresh (passing NULL time_t*)
+        /* Only account for target backlight changes, ie: not step ones */
+        if (up->smooth || conf.bl_conf.no_smooth) {
+            /* 
+            * Note that conf.temp is not constant (it can be changed through bus api),
+            * thus we have to always compute these ones.
+            */
+            const int diff = abs(conf.gamma_conf.temp[DAY] - conf.gamma_conf.temp[NIGHT]);
+            const int min_temp = conf.gamma_conf.temp[NIGHT] < conf.gamma_conf.temp[DAY] ? 
+                                conf.gamma_conf.temp[NIGHT] : conf.gamma_conf.temp[DAY]; 
+            
+            const int ambient_temp = (diff * up->new) + min_temp;
+            set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth, 
+                    conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout); // force refresh (passing NULL time_t*)
+        }
     }
 }
 

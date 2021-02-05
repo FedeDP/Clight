@@ -11,6 +11,12 @@
 ### Keyboard
 - [x] Switch to use new KEYBOARD api offered by Clightd
 - [x] Add support for StopTimeout (keyboard dimming)
+- [x] Use backlight instead of ambient brightness? Thus following backlight curve
+- [x] Start keyboard waiting on UPOWER
+
+### Gamma
+- [x] Do not use state.current_bl_pct in ambient_callback() as it may still have old value (it is now updated in dbus match on_bl_changed, async)
+- [x] Only call ambient_callback() on target bl changes, not step ones
 
 ### Generic
 - [ ] Parse cmdline flags before everything else? (#174)

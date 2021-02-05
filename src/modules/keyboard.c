@@ -1,11 +1,11 @@
 #include "bus.h"
 #include "utils.h"
 
+static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static int init_kbd_backlight(void);
 static void set_keyboard_level(double level);
 static void set_keyboard_timeout(void);
-static void dimmed_callback(void);
 static void pause_kbd(const bool pause, enum mod_pause reason);
 
 DECLARE_MSG(kbd_msg, KBD_BL_UPD);
@@ -15,15 +15,12 @@ MODULE_WITH_PAUSE("KEYBOARD");
 static void init(void) {
     if (init_kbd_backlight() == 0) {
         M_SUB(DISPLAY_UPD);
-        M_SUB(AMBIENT_BR_UPD);
+        M_SUB(BL_UPD);
         M_SUB(KBD_BL_REQ);
         M_SUB(UPOWER_UPD);
         M_SUB(KBD_TO_REQ);
-        
-        /* Switch off keyboard from start as BACKLIGHT sets 100% backlight */
-        if (!conf.bl_conf.disabled && conf.bl_conf.no_auto_calib) {
-            set_keyboard_level(1.0);
-        }
+        M_SUB(SUSPEND_UPD);
+        m_become(waiting_init);
     } else {
         m_poisonpill(self());
     }
@@ -37,17 +34,31 @@ static bool evaluate() {
     return !conf.kbd_conf.disabled;
 }
 
+
+static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata) {
+    switch (MSG_TYPE()) {
+    case UPOWER_UPD:
+        m_unbecome();
+        set_keyboard_timeout();
+        break;
+    default:
+        break;
+    }
+}
+
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case DISPLAY_UPD:
-        dimmed_callback();
+    case BL_UPD: {
+        bl_upd *up = (bl_upd *)MSG_DATA();
+        /* Only account for target backlight changes, ie: not step ones */
+        if (up->smooth || conf.bl_conf.no_smooth) {
+            set_keyboard_level(1.0 - up->new);
+        }
         break;
-    case AMBIENT_BR_UPD:
-        set_keyboard_level((conf.kbd_conf.amb_br_thres - state.ambient_br) / conf.kbd_conf.amb_br_thres);
-        break;
+    }
     case KBD_BL_REQ: {
         bl_upd *up = (bl_upd *)MSG_DATA();
-        if (VALIDATE_REQ(up) && !state.display_state) {
+        if (VALIDATE_REQ(up)) {
             set_keyboard_level(up->new);
         }
         break;
@@ -62,8 +73,14 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         }
         break;
     }
+     case DISPLAY_UPD:
+        pause_kbd(state.display_state && conf.kbd_conf.dim, DISPLAY);
+        break;
     case UPOWER_UPD:
         set_keyboard_timeout();
+        break;
+    case SUSPEND_UPD:
+        pause_kbd(state.suspended, SUSPEND);
         break;
     default:
         break;
@@ -72,8 +89,14 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
+    case DISPLAY_UPD:
+        pause_kbd(state.display_state && conf.kbd_conf.dim, DISPLAY);
+        break;
     case UPOWER_UPD:
         set_keyboard_timeout();
+        break;
+    case SUSPEND_UPD:
+        pause_kbd(state.suspended, SUSPEND);
         break;
     default:
         break;
@@ -105,10 +128,10 @@ static int init_kbd_backlight(void) {
 }
 
 static void set_keyboard_level(double level) {
-    if (level < 0) {
+    if (level < 1 - conf.kbd_conf.amb_br_thres) {
         level = 0;
     }
-
+    
     SYSBUS_ARG(kbd_args, CLIGHTD_SERVICE, "/org/clightd/clightd/KbdBacklight", "org.clightd.clightd.KbdBacklight", "Set");
     kbd_msg.bl.old = state.current_kbd_pct;
     if (call(&kbd_args, "d", level) == 0) {
@@ -126,31 +149,12 @@ static void set_keyboard_timeout(void) {
     }
 }
 
-/* Callback on state.display_state changes */
-static void dimmed_callback(void) {
-    static double old_kbd_level = -1.0;
-    
-    if (state.display_state) {
-        /* Switch off keyboard if requested */
-        if (conf.kbd_conf.dim) {
-            old_kbd_level = state.current_kbd_pct;
-            set_keyboard_level(0.0);
-        }
-    } else {
-        /* Reset keyboard backlight level if needed */
-        if (old_kbd_level != -1.0) {
-            set_keyboard_level(old_kbd_level);
-            old_kbd_level = -1.0;
-        }
-    }
-}
-
 static void pause_kbd(const bool pause, enum mod_pause reason) {
     if (CHECK_PAUSE(pause, reason, "KEYBOARD")) {
         if (!pause) {
             m_unbecome();
-            // Set a correct level for current ambient brightness
-            set_keyboard_level((conf.kbd_conf.amb_br_thres - state.ambient_br) / conf.kbd_conf.amb_br_thres);
+            // Set correct level for current backlight
+            set_keyboard_level(1.0 - state.current_bl_pct);
         } else {
             // Switch off keyboard backlight
             set_keyboard_level(0.0);

@@ -131,9 +131,10 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
              * from a well known backlight level for DIMMER to correctly work.
              * Force 100% backlight level.
              *
-             * Cannot publish a BL_REQ as BACKLIGHT get paused.
+             * Note: set smooth field from conf to allow keyboard and gamma to react;
+             * > if (up->smooth || conf.bl_conf.no_smooth) { ... }
              */
-            set_backlight_level(1.0, false, 0, 0);
+            set_backlight_level(1.0, !conf.bl_conf.no_smooth, 0, 0);
             pause_mod(AUTOCALIB);
         }
         if (state.lid_state) {
