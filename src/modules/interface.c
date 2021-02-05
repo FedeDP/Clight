@@ -139,6 +139,8 @@ static const sd_bus_vtable conf_kbd_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
     SD_BUS_WRITABLE_PROPERTY("AmbBrThresh", "d", NULL, NULL, offsetof(kbd_conf_t, amb_br_thres), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -211,6 +213,7 @@ static const sd_bus_vtable sc_vtable[] = {
 
 DECLARE_MSG(bl_to_req, BL_TO_REQ);
 DECLARE_MSG(bl_req, BL_REQ);
+DECLARE_MSG(kbd_to_req, KBD_TO_REQ);
 DECLARE_MSG(dimmer_to_req, DIMMER_TO_REQ);
 DECLARE_MSG(dpms_to_req, DPMS_TO_REQ);
 DECLARE_MSG(scr_to_req, SCR_TO_REQ);
@@ -878,6 +881,12 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
         msg = &bl_to_req;
         bl_to_req.to.daytime = IN_EVENT;
         bl_to_req.to.state = ON_BATTERY;
+    }  else if (userdata == &conf.kbd_conf.timeout[ON_AC]) {
+        msg = &kbd_to_req;
+        kbd_to_req.to.state = ON_AC;
+    } else if (userdata == &conf.kbd_conf.timeout[ON_BATTERY]) {
+        msg = &kbd_to_req;
+        kbd_to_req.to.state = ON_BATTERY;
     } else if (userdata == &conf.dim_conf.timeout[ON_AC]) {
         msg = &dimmer_to_req;
         dimmer_to_req.to.state = ON_AC;

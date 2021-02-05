@@ -143,6 +143,18 @@ static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
         config_setting_lookup_bool(kbd, "disabled", &kbd_conf->disabled);
         config_setting_lookup_bool(kbd, "dim", &kbd_conf->dim);
         config_setting_lookup_float(kbd, "ambient_br_thresh", &kbd_conf->amb_br_thres);
+        
+        /* Load timeouts */
+        config_setting_t *timeouts;
+        if ((timeouts = config_setting_get_member(kbd, "timeouts"))) {
+            if (config_setting_length(timeouts) == SIZE_AC) {
+                for (int i = 0; i < SIZE_AC; i++) {
+                    kbd_conf->timeout[i] = config_setting_get_int_elem(timeouts, i);
+                }
+            } else {
+                WARN("Wrong number of kbd 'timeouts' array elements.\n");
+            }
+        }
     }
 }
 
@@ -398,6 +410,11 @@ static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
     
     setting = config_setting_add(kbd, "ambient_br_thresh", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, kbd_conf->amb_br_thres);
+    
+    setting = config_setting_add(kbd, "timeouts", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_AC; i++) {
+        config_setting_set_int_elem(setting, -1, kbd_conf->timeout[i]);
+    }
 }
 
 static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {

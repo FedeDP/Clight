@@ -67,6 +67,7 @@ static void log_kbd_conf(kbd_conf_t *kbd_conf) {
     fprintf(log_file, "\n### KEYBOARD ###\n");
     fprintf(log_file, "* Dim:\t\t%s\n", kbd_conf->dim ? "Enabled" : "Disabled");
     fprintf(log_file, "* Threshold:\t\t%.2lf\n", kbd_conf->amb_br_thres);
+    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", kbd_conf->timeout[ON_AC], kbd_conf->timeout[ON_BATTERY]);
 }
 
 static void log_gamma_conf(gamma_conf_t *gamma_conf) {

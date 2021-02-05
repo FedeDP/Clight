@@ -23,8 +23,8 @@
 #define LON_UNDEFINED 181.0                 // Undefined (ie: unset) value for longitude
 #define LOC_DISTANCE_THRS 50                // threshold for location distances before triggering location changed events (km)
 
-#define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version -> Dpms/Gamma.Changed signals + Dpms/Gamma on wayland
-#define MINIMUM_CLIGHTD_VERSION_MIN 0       // Clightd minimum required min version
+#define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version
+#define MINIMUM_CLIGHTD_VERSION_MIN 2       // Clightd minimum required min version -> org.clightd.clightd.KbdBacklight
 
 /** Generic structs **/
 
@@ -52,7 +52,8 @@ typedef struct {
 typedef struct {
     int disabled;                           // disable keyboard backlight automatic calibration (where supported)
     int dim;                                // whether DPMS/Dimmer should switch keyboard off
-    double amb_br_thres;                    // Ambient brightness high threshold 
+    double amb_br_thres;                    // Ambient brightness high threshold
+    int timeout[SIZE_AC];                   // kbd dimming timeout
 } kbd_conf_t;
 
 typedef struct {

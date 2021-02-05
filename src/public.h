@@ -108,6 +108,7 @@ enum mod_msg_types {
     NEXT_DAYEVT_UPD,    // Subscribe to receive notifications about next day event (ie: sunrise or sunset)
     SUSPEND_UPD,        // Subscribe to receive new system suspended states
     SUSPEND_REQ,        // Publish to set a new system suspend state (this won't suspend your system! It jsut 'fakes' a suspended state)
+    KBD_TO_REQ,         // Publish to require a new keyboard timeout
     MSGS_SIZE
 };
 

@@ -66,6 +66,8 @@ static void init_sens_opts(sensor_conf_t *sens_conf) {
 
 static void init_kbd_opts(kbd_conf_t *kbd_conf) {
     kbd_conf->amb_br_thres = 1.0;
+    kbd_conf->timeout[ON_AC] = 15;
+    kbd_conf->timeout[ON_BATTERY] = 5;
 }
 
 static void init_gamma_opts(gamma_conf_t *gamma_conf) {
