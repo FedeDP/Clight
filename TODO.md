@@ -19,7 +19,8 @@
 - [x] Only call ambient_callback() on target bl changes, not step ones
 
 ### Generic
-- [ ] Parse cmdline flags before everything else? (#174)
+- [ ] Add a man page (#174)
+- [x] Fix sensor captures config parsing
 
 ## 4.4
 
