@@ -101,7 +101,7 @@ static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf) {
         if ((captures = config_setting_get_member(sens_group, "captures"))) {
             if (config_setting_length(captures) == SIZE_AC) {
                 for (int i = 0; i < SIZE_AC; i++) {
-                    sens_conf->num_captures[i] = config_setting_get_float_elem(captures, i);
+                    sens_conf->num_captures[i] = config_setting_get_int_elem(captures, i);
                 }
             } else {
                 WARN("Wrong number of sensor 'captures' array elements.\n");

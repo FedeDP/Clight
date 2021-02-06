@@ -281,11 +281,11 @@ static void check_bl_conf(bl_conf_t *bl_conf) {
 
 static void check_sens_conf(sensor_conf_t *sens_conf) {
     if (sens_conf->num_captures[ON_AC] < 1 || sens_conf->num_captures[ON_AC] > 20) {
-        WARN("Wrong AC frames value. Resetting default value.\n");
+        WARN("Wrong AC captures value. Resetting default value.\n");
         sens_conf->num_captures[ON_AC] = 5;
     }
     if (sens_conf->num_captures[ON_BATTERY] < 1 || sens_conf->num_captures[ON_BATTERY] > 20) {
-        WARN("Wrong BATT frames value. Resetting default value.\n");
+        WARN("Wrong BATT captures value. Resetting default value.\n");
         sens_conf->num_captures[ON_BATTERY] = 5;
     }
     
