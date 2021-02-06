@@ -108,18 +108,25 @@ install(FILES ${EXTRA_DIR}/icons/clight.svg
         DESTINATION /usr/share/icons/hicolor/scalable/apps)
 install(FILES ${SKELETONS} DESTINATION ${CLIGHT_DATADIR})
 install(DIRECTORY DESTINATION ${CLIGHT_DATADIR}/modules.d/)
+
+# Install completion files
 if (BASH_COMPLETIONS_DIR)
-    install(FILES ${EXTRA_DIR}/clight
+    install(FILES ${EXTRA_DIR}/completions/clight
             DESTINATION ${BASH_COMPLETIONS_DIR})
 endif()
 if (ZSH_COMPLETIONS_DIR)
-    install(FILES ${EXTRA_DIR}/_clight
+    install(FILES ${EXTRA_DIR}/completions/_clight
             DESTINATION ${ZSH_COMPLETIONS_DIR})
 endif()
 if (FISH_COMPLETIONS_DIR)
-    install(FILES ${EXTRA_DIR}/clight.fish
+    install(FILES ${EXTRA_DIR}/completions/clight.fish
             DESTINATION ${FISH_COMPLETIONS_DIR})
 endif()
+
+# Configure, gzip and install man pages
+configure_file(${EXTRA_DIR}/man/clight.1 clight.1 @ONLY)
+execute_process(COMMAND gzip clight.1 WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/clight.gz DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/man/man1)
 
 #
 # Packaging support

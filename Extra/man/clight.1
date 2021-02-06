@@ -1,0 +1,160 @@
+.nh
+.TH Clight 1 Linux "User Manuals"
+.SH NAME
+.PP
+Clight \- a user daemon utility that aims to fully manage your display.
+
+.SH SYNOPSIS
+.PP
+\fB\fCclight\fR [\fB\fC\-vw?\fR] [\fB\fC\-f, \-\-frames\fR INT] [\fB\fC\-d, \-\-device\fR video0] [\fB\fC\-b, \-\-backlight\fR intel\_backlight]
+.br
+[\fB\fC\-\-no\-backlight\-smooth\fR] [\fB\fC\-\-no\-gamma\-smooth\fR] [\fB\fC\-\-no\-dimmer\-smooth\-enter\fR] [\fB\fC\-\-no\-dimmer\-smooth\-exit\fR]
+.br
+[\fB\fC\-\-day\-temp\fR INT] [\fB\fC\-\-night\-temp\fR INT] [\fB\fC\-\-lat\fR DOUBLE] [\fB\fC\-\-lon\fR DOUBLE] [\fB\fC\-\-sunrise\fR 07:00] [\fB\fC\-\-sunset\fR 19:00]
+.br
+[\fB\fC\-\-no\-gamma\fR] [\fB\fC\-\-no\-dimmer\fR] [\fB\fC\-\-no\-dpms\fR] [\fB\fC\-\-no\-backlight\fR] [\fB\fC\-\-no\-screen\fR] [\fB\fC\-\-no\-kbd\fR]
+.br
+[\fB\fC\-\-dimmer\-pct\fR DOUBLE] [\fB\fC\-\-no\-auto\-calib\fR] [\fB\fC\-\-shutter\-thres\fR DOUBLE] [\fB\fC\-\-gamma\-long\-transition\fR] [\fB\fC\-\-ambient\-gamma\fR]
+.br
+[\fB\fC\-c, \-\-conf\-file\fR STRING] [\fB\fC\-w, \-\-wizard\fR] [\fB\fC\-\-verbose\fR] [\fB\fC\-v, \-\-version\fR] [\fB\fC\-?, \-\-help\fR] [\fB\fC\-\-usage\fR]
+
+.SH DESCRIPTION
+.PP
+\fB\fCclight\fR allows to match your backlight level to ambient brightness,
+computed by capturing frames from webcam or Ambient Light Sensors.
+.br
+It does also support adjusting external monitors and keyboards backlight.
+.br
+Moreover, it can manage your screen temperature,
+dim your screen after a timeout and manage screen DPMS.
+
+.SH OPTIONS
+.PP
+\fB\fC\-c, \-\-conf\-file\fR \fIconfig\-file\fP
+  Parse an additonal \fIconfig\-file\fP to override other configs.
+
+.PP
+\fB\fC\-v, \-\-version\fR
+  Print program version.
+
+.PP
+\fB\fC\-w, \-\-wizard\fR
+  Run a small wizard to calibrate sensor curve.
+
+.PP
+\fB\fC\-f, \-\-frames\fR \fInumber\fP
+  Customize frames taken for each capture, between 1 and 20.
+
+.PP
+\fB\fC\-d, \-\-device\fR \fIdevice\fP
+  Specify sensor device. If empty, first matching device is used.
+
+.PP
+\fB\fC\-b, \-\-backlight\fR \fIsyspath\fP
+  Specify internal backlight syspath. If empty, first matching device is used.
+
+.PP
+\fB\fC\-\-no\-backlight\-smooth\fR
+  Disable backlight smooth transitions.
+
+.PP
+\fB\fC\-\-no\-gamma\-smooth\fR
+  Disable gamma smooth transitions.
+
+.PP
+\fB\fC\-\-no\-dimmer\-smooth\-enter\fR
+  Disable smooth transitions while entering dimmed state.
+
+.PP
+\fB\fC\-\-no\-dimmer\-smooth\-exit\fR
+  Disable smooth transitions while leaving dimmed state.
+
+.PP
+\fB\fC\-\-day\-temp\fR \fInumber\fP
+  Customize daily screen temperature.
+
+.PP
+\fB\fC\-\-night\-temp\fR \fInumber\fP
+  Customize nightly screen temperature.
+
+.PP
+\fB\fC\-\-gamma\-long\-transition\fR
+  Enable a very long smooth transition for gamma (redshift\-like).
+
+.PP
+\fB\fC\-\-ambient\-gamma\fR
+  Enable screen temperature matching ambient brightness instead of being time based.
+
+.PP
+\fB\fC\-\-lat\fR \fIdouble\fP
+  Desired latitude.
+
+.PP
+\fB\fC\-\-lon\fR \fIdouble\fP
+.br
+  Desired longitude.
+
+.PP
+\fB\fC\-\-sunrise\fR \fItime\fP
+  Specify sunrise time for gamma correction.
+
+.PP
+\fB\fC\-\-sunset\fR \fItime\fP
+  Specify sunset time for gamma correction.
+
+.PP
+\fB\fC\-\-no\-gamma\fR
+  Disable gamma correction tool.
+
+.PP
+\fB\fC\-\-no\-dimmer\fR
+  Disable dimmer tool.
+
+.PP
+\fB\fC\-\-no\-dpms\fR
+  Disable dpms tool.
+
+.PP
+\fB\fC\-\-no\-backlight\fR
+  Disable backlight calibration tool.
+
+.PP
+\fB\fC\-\-no\-screen\fR
+  Disable screen emitted brightness correction tool.
+
+.PP
+\fB\fC\-\-no\-kbd\fR
+.br
+  Disable keyboard backlight calibration tool.
+
+.PP
+\fB\fC\-\-dimmer\-pct\fR \fIdouble\fP
+  Backlight level used while screen is dimmed, in pergentage.
+
+.PP
+\fB\fC\-\-verbose\fR
+.br
+  Enable verbose mode.
+
+.PP
+\fB\fC\-\-no\-auto\-calib\fR
+.br
+  Disable screen backlight automatic calibration.
+
+.PP
+\fB\fC\-\-shutter\-thres\fR \fIdouble\fP
+  Threshold to consider a capture as clogged.
+
+.SH FILES
+.PP
+\fI@CLIGHT_CONFDIR@/clight.conf\fP
+  The system wide configuration file.
+
+.PP
+\fI$HOME/.config/clight.conf\fP
+  Per user configuration file.
+
+.SH AUTHOR
+.PP
+Federico Di Pierro nierro92@gmail.com
+\[la]mailto:nierro92@gmail.com\[ra]
