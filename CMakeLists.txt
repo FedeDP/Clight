@@ -126,7 +126,7 @@ endif()
 # Configure, gzip and install man pages
 configure_file(${EXTRA_DIR}/man/clight.1 clight.1 @ONLY)
 execute_process(COMMAND gzip clight.1 WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/clight.gz DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/man/man1)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/clight.1.gz DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/man/man1)
 
 #
 # Packaging support
