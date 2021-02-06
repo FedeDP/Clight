@@ -68,11 +68,12 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     }
     case SYSTEM_UPD:
         if (msg->ps_msg->type == LOOP_STARTED) {
-            if (geoclue_init() == 0) {
-                load_cache_location();
-            } else {
+            int ret = load_cache_location();
+            if (geoclue_init() != 0) {
                 WARN("Failed to init.\n");
-                publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
+                if (ret != 0) {
+                    publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
+                }
                 m_poisonpill(self());
             }
         } else if (msg->ps_msg->type == LOOP_STOPPED) {
@@ -120,7 +121,6 @@ static int geoclue_init(void) {
         goto end;
     }
     r = geoclue_client_start();
-
 end:
     if (r < 0) {
         WARN("Geoclue2 appears to be unsupported.\n");
