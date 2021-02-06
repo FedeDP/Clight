@@ -1,0 +1,58 @@
+# bash completion for clight                                  -*- shell-script -*-
+
+_clight()
+{
+    local cur prev words cword
+    _init_completion || return
+
+    case $prev in
+        "--device"|"-d"|"-b"|"--backlight"|"--conf-file"|"-c")
+            _filedir
+            return 0
+            ;;
+        "--frames")
+            COMPREPLY=( $( compgen -W "5" -- ${cur}) )
+            return 0
+            ;;
+        "--day-temp")
+            COMPREPLY=( $( compgen -W "6500" -- ${cur}) )
+            return 0
+            ;;
+        "--night-temp")
+            COMPREPLY=( $( compgen -W "4000" -- ${cur}) )
+            return 0
+            ;;
+        "--sunrise")
+            COMPREPLY=( $( compgen -W "07:00" -- ${cur}) )
+            return 0
+            ;;
+        "--sunset")
+            COMPREPLY=( $( compgen -W "19:00" -- ${cur}) )
+            return 0
+            ;;
+        "--dimmer-pct")
+            COMPREPLY=( $( compgen -W "0.2" -- ${cur}) )
+            return 0
+            ;;
+        "--shutter-thres")
+            COMPREPLY=( $( compgen -W "0.1" -- ${cur}) )
+            return 0
+            ;;
+        "--lat")
+            COMPREPLY=( $( compgen -W "49.2" -- ${cur}) )
+            return 0
+            ;;
+        "--lon")
+            COMPREPLY=( $( compgen -W "9.22" -- ${cur}) )
+            return 0
+            ;;
+    esac
+    opts="--device --backlight --frames --no-backlight-smooth --no-gamma-smooth --no-dimmer-smooth-enter --no-dimmer-smooth-exit --day-temp --night-temp --lat --lon --sunrise --sunset --no-gamma --dimmer-pct --no-dimmer --no-dpms --no-backlight --verbose --no-auto-calib --version --no-kbd-backlight --shutter-thres --conf-file --gamma-long-transition --ambient-gamma --no-screen --wizard"
+    if [[ "$cur" == -* ]] || [[ -z "$cur" ]]; then
+        COMPREPLY=( $( compgen -W "${opts}" -- ${cur}) )
+    fi
+
+} &&
+complete -F _clight clight
+
+# ex: ts=4 sw=4 et filetype=sh
