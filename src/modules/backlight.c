@@ -27,6 +27,7 @@ static void resume_mod(enum mod_pause type);
 
 static int bl_fd = -1;
 static sd_bus_slot *sens_slot, *bl_slot;
+static char *backlight_interface;
 
 DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
@@ -74,6 +75,7 @@ static void destroy(void) {
     if (bl_fd >= 0) {
         close(bl_fd);
     }
+    free(backlight_interface);
 }
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata) {
@@ -497,13 +499,18 @@ static int on_sensor_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
 }
 
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
-    const char *syspath = NULL;
     double pct;
+    const char *syspath = NULL;
     sd_bus_message_read(m, "sd", &syspath, &pct);
-    DEBUG("Backlight level updated: %.2lf.\n", pct);
-    // publish step update
-    publish_bl_upd(pct, false, 0, 0);
-    state.current_bl_pct = pct;
+    if (!backlight_interface) {
+        backlight_interface = strdup(syspath);
+    }
+    DEBUG("Backlight '%s' level updated: %.2lf.\n", syspath, pct);
+    
+    if (!strcmp(backlight_interface, syspath)) {
+        publish_bl_upd(pct, false, 0, 0);
+        state.current_bl_pct = pct;
+    }
     return 0;
 }
 
