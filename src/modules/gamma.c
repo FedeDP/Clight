@@ -8,9 +8,10 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static void publish_temp_upd(int temp, int smooth, int step, int timeout);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout);
-static void ambient_callback(bl_upd *up);
+static void ambient_callback(bool smooth, double new);
 static void on_new_next_dayevt(void);
 static void on_daytime_req(void);
+static void on_ambgamma_req(ambgamma_upd *up);
 static void interface_callback(temp_upd *req);
 static int on_temp_changed(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void pause_mod(bool pause, enum mod_pause reason);
@@ -25,6 +26,7 @@ static void init(void) {
     m_ref("DAYTIME", &daytime_ref);
     M_SUB(BL_UPD);
     M_SUB(TEMP_REQ);
+    M_SUB(AMB_GAMMA_REQ);
     M_SUB(DAYTIME_UPD);
     M_SUB(NEXT_DAYEVT_UPD);
     M_SUB(SUSPEND_UPD);
@@ -73,7 +75,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case BL_UPD: {
         bl_upd *up = (bl_upd *)MSG_DATA();
-        ambient_callback(up);
+        ambient_callback(up->smooth, up->new);
         break;
     }
     case TEMP_REQ: {
@@ -84,6 +86,13 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             } else {
                 interface_callback(up);
             }
+        }
+        break;
+    }
+    case AMB_GAMMA_REQ: {
+        ambgamma_upd *up = (ambgamma_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            on_ambgamma_req(up);
         }
         break;
     }
@@ -181,10 +190,10 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
     }
 }
 
-static void ambient_callback(bl_upd *up) {
+static void ambient_callback(bool smooth, double new) {
     if (conf.gamma_conf.ambient_gamma) {
         /* Only account for target backlight changes, ie: not step ones */
-        if (up->smooth || conf.bl_conf.no_smooth) {
+        if (smooth || conf.bl_conf.no_smooth) {
             /* 
             * Note that conf.temp is not constant (it can be changed through bus api),
             * thus we have to always compute these ones.
@@ -193,7 +202,7 @@ static void ambient_callback(bl_upd *up) {
             const int min_temp = conf.gamma_conf.temp[NIGHT] < conf.gamma_conf.temp[DAY] ? 
                                 conf.gamma_conf.temp[NIGHT] : conf.gamma_conf.temp[DAY]; 
             
-            const int ambient_temp = (diff * up->new) + min_temp;
+            const int ambient_temp = (diff * new) + min_temp;
             set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth, 
                     conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout); // force refresh (passing NULL time_t*)
         }
@@ -233,6 +242,19 @@ static void on_daytime_req(void) {
     if (!long_transitioning && !conf.gamma_conf.ambient_gamma) {
         set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth, 
                  conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
+    }
+}
+
+static void on_ambgamma_req(ambgamma_upd *up) {
+    conf.gamma_conf.ambient_gamma = up->new;
+    if (!up->new) {
+        // restore correct screen temp -> force refresh (passing NULL time_t*)
+        // Note that long_transitioning cannot be true because we were in ambient gamma mode
+        set_temp(conf.gamma_conf.temp[state.day_time], NULL, !conf.gamma_conf.no_smooth, 
+                 conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
+    } else {
+        // Immediately set correct temp for current bl pct
+        ambient_callback(true, state.current_bl_pct);
     }
 }
 

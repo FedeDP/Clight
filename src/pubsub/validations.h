@@ -17,6 +17,7 @@
     lid_upd *: validate_lid, \
     pm_upd *: validate_pm, \
     suspend_upd *: validate_suspend, \
+    ambgamma_upd *: validate_ambgamma, \
     default: validate_nothing)(X)
 
 bool validate_loc(loc_upd *up);
@@ -33,4 +34,5 @@ bool validate_display(display_upd *up);
 bool validate_lid(lid_upd *up);
 bool validate_pm(pm_upd *up);
 bool validate_suspend(suspend_upd *up);
+bool validate_ambgamma(ambgamma_upd *up);
 bool validate_nothing(void *up);

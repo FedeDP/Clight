@@ -46,6 +46,8 @@ static int get_location(sd_bus *bus, const char *path, const char *interface, co
                      sd_bus_message *reply, void *userdata, sd_bus_error *error);
 static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
+                        sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -146,7 +148,7 @@ static const sd_bus_vtable conf_kbd_vtable[] = {
 
 static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, NULL, offsetof(gamma_conf_t, ambient_gamma), 0),
+    SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, set_ambgamma, offsetof(gamma_conf_t, ambient_gamma), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(gamma_conf_t, no_smooth), 0),
     SD_BUS_WRITABLE_PROPERTY("TransStep", "i", NULL, NULL, offsetof(gamma_conf_t, trans_step), 0),
     SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(gamma_conf_t, trans_timeout), 0),
@@ -227,6 +229,7 @@ DECLARE_MSG(sunrise_req, SUNRISE_REQ);
 DECLARE_MSG(sunset_req, SUNSET_REQ);
 DECLARE_MSG(simulate_req, SIMULATE_REQ);
 DECLARE_MSG(suspend_req, SUSPEND_REQ);
+DECLARE_MSG(ambgamma_req, AMB_GAMMA_REQ);
 
 static map_t *lock_map;
 static sd_bus *userbus, *monbus;
@@ -850,6 +853,14 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
 
     DEBUG("New location from BUS api: %.2lf %.2lf\n", loc_req.loc.new.lat, loc_req.loc.new.lat);
     M_PUB(&loc_req);
+    return r;
+}
+
+static int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
+                        sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    
+    VALIDATE_PARAMS(value, "b", &ambgamma_req.ambgamma.new);
+    M_PUB(&ambgamma_req);
     return r;
 }
 

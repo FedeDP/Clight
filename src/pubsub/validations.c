@@ -162,6 +162,14 @@ bool validate_suspend(suspend_upd *up) {
     return false;
 }
 
+bool validate_ambgamma(ambgamma_upd *up) {
+    if (up->new != conf.gamma_conf.ambient_gamma) {
+        return true;
+    }
+    DEBUG("Failed to validate ambgamma request.\n");
+    return false;
+}
+
 bool validate_nothing(void *up) {
     return true;
 }

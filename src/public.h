@@ -109,6 +109,7 @@ enum mod_msg_types {
     SUSPEND_UPD,        // Subscribe to receive new system suspended states
     SUSPEND_REQ,        // Publish to set a new system suspend state (this won't suspend your system! It jsut 'fakes' a suspended state)
     KBD_TO_REQ,         // Publish to require a new keyboard timeout
+    AMB_GAMMA_REQ,      // Publish to require a new AmbientGamma state
     MSGS_SIZE
 };
 
@@ -219,6 +220,11 @@ typedef struct {
 } sens_upd;
 
 typedef struct {
+    bool old;                   // Valued in updates. No requests available
+    bool new;                   // Valued in updates. No requests available
+} ambgamma_upd;
+
+typedef struct {
     const enum mod_msg_types type;
     union {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
@@ -231,13 +237,14 @@ typedef struct {
         daytime_upd day_time;   /* TIME_UPD/IN_EVENT_UPD */
         evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ/NEXT_DAYEVT_UPD */
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
-        timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ */
+        timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ/KBD_TO_REQ */
         curve_upd curve;        /* CURVE_REQ */
         calib_upd nocalib;      /* NO_AUTOCALIB_REQ */
         bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
         contrib_upd contrib;    /* CONTRIB_REQ */
         capture_upd capture;    /* CAPTURE_REQ */
         sens_upd sens;          /* SENS_UPD */
+        ambgamma_upd ambgamma;  /* AMB_GAMMA_REQ */
     };
 } message_t;
 

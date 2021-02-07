@@ -505,7 +505,7 @@ static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus
     if (!backlight_interface) {
         backlight_interface = strdup(syspath);
     }
-    DEBUG("Backlight '%s' level updated: %.2lf.\n", syspath, pct);
+    INFO("Backlight '%s' level updated: %.2lf.\n", syspath, pct);
     
     if (!strcmp(backlight_interface, syspath)) {
         publish_bl_upd(pct, false, 0, 0);
