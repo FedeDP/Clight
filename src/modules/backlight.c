@@ -39,9 +39,12 @@ static void init(void) {
     capture_req.capture.reset_timer = true;
     capture_req.capture.capture_only = false;
     
-    /* Compute polynomial best-fit parameters for each loaded sensor config */
-    interface_curve_callback(NULL, 0, ON_AC);
-    interface_curve_callback(NULL, 0, ON_BATTERY);
+    // Disabled while in wizard mode as it is useless and spams to stdout
+    if (!conf.wizard) {
+        /* Compute polynomial best-fit parameters for each loaded sensor config */
+        interface_curve_callback(NULL, 0, ON_AC);
+        interface_curve_callback(NULL, 0, ON_BATTERY);
+    }
 
     M_SUB(UPOWER_UPD);
     M_SUB(DISPLAY_UPD);

@@ -9,6 +9,7 @@ static void set_keyboard_timeout(void);
 static void pause_kbd(const bool pause, enum mod_pause reason);
 
 DECLARE_MSG(kbd_msg, KBD_BL_UPD);
+DECLARE_MSG(kbd_req, KBD_BL_REQ);
 
 MODULE_WITH_PAUSE("KEYBOARD");
 
@@ -52,13 +53,15 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         bl_upd *up = (bl_upd *)MSG_DATA();
         /* Only account for target backlight changes, ie: not step ones */
         if (up->smooth || conf.bl_conf.no_smooth) {
-            set_keyboard_level(1.0 - up->new);
+            kbd_req.bl.new = 1.0 - up->new;
+            M_PUB(&kbd_req);
         }
         break;
     }
     case KBD_BL_REQ: {
         bl_upd *up = (bl_upd *)MSG_DATA();
-        if (VALIDATE_REQ(up)) {
+        /* Do not change kbd backlight for dimmed state (ie: when entering dimmed state)! */
+        if (VALIDATE_REQ(up) && !state.display_state) {
             set_keyboard_level(up->new);
         }
         break;
