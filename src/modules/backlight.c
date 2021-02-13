@@ -153,6 +153,7 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
+    MSG_DEBUG();
     switch (MSG_TYPE()) {
     case FD_UPD:
         read_timer(msg->fd_msg->fd);
@@ -217,6 +218,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 }
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
+    MSG_DEBUG();
     switch (MSG_TYPE()) {
     case UPOWER_UPD:
         upower_callback();

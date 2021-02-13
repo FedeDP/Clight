@@ -26,6 +26,8 @@
 #define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version
 #define MINIMUM_CLIGHTD_VERSION_MIN 2       // Clightd minimum required min version -> org.clightd.clightd.KbdBacklight
 
+#define MSG_DEBUG()                         DEBUG("Received msg: %d\n", msg->is_pubsub);
+
 /** Generic structs **/
 
 typedef struct {
