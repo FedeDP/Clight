@@ -263,6 +263,9 @@ static void interface_callback(temp_upd *req) {
         conf.gamma_conf.temp[req->daytime] = req->new;
         if (!conf.gamma_conf.ambient_gamma && req->daytime == state.day_time) {
             set_temp(req->new, NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
+        } else {
+             // Immediately set correct temp for current bl pct (given new temperature)
+            ambient_callback(true, state.current_bl_pct);
         }
     }
 }
