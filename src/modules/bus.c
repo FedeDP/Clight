@@ -48,7 +48,6 @@ static void destroy(void) {
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
-    MSG_DEBUG();
     switch (MSG_TYPE()) {
     case FD_UPD: {
         sd_bus *b = (sd_bus *)msg->fd_msg->userptr;

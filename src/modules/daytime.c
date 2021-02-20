@@ -83,7 +83,6 @@ static void receive_waiting_loc(const msg_t *const msg, UNUSED const void* userd
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
-    MSG_DEBUG();
     switch (MSG_TYPE()) {
         case FD_UPD:
             read_timer(msg->fd_msg->fd);

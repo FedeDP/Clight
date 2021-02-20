@@ -68,7 +68,6 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
 }
 
 static void receive(const msg_t *msg, UNUSED const void *userdata) {
-    MSG_DEBUG();
     switch (MSG_TYPE()) {
     case FD_UPD:
         read_timer(msg->fd_msg->fd);
