@@ -440,7 +440,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             }
         } while (r > 0);
         if (r < 0) {
-            DEBUG("ERROR %d %s\n", r, strerror(-r));
+            // in case of error, kill the monitor bus and open a new one
+            WARN("%s\n", strerror(-r));
+            m_deregister_fd(msg->fd_msg->fd);
+            monbus = sd_bus_flush_close_unref(monbus);
+            start_inhibit_monitor();
         }
         break;
     }

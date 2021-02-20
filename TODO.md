@@ -23,12 +23,12 @@
 ### Generic
 - [x] Add a man page (#174)
 - [x] Fix sensor captures config parsing
+- [x] Bugfix: fix #106 (needs testing)
 
 ## 4.4
 
 ### Generic
 - [ ] Port to libmodule 6.0.0 (?)
-- [ ] Bugfix: fix #106 (?)
 - [ ] Add a Dump dbus method (and a DUMP_REQ request) to allow any module to dump their state (module_dump()) to a txt file
 
 ### BACKLIGHT multiple-monitors curves
