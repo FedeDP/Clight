@@ -429,13 +429,13 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case FD_UPD: {
         sd_bus *b = (sd_bus *)msg->fd_msg->userptr;
-        sd_bus_message *m = NULL;
         int r;
         do {
+            sd_bus_message *m = NULL;
             r = sd_bus_process(b, &m);
             if (m) {
                 inhibit_parse_msg(m);
-                sd_bus_message_unrefp(&m);
+                sd_bus_message_unref(m);
             }
         } while (r > 0);
         if (r < 0) {
