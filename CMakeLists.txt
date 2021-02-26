@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(clight VERSION 4.3 LANGUAGES C)
+project(clight VERSION 4.4 LANGUAGES C)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 

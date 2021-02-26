@@ -1,30 +1,3 @@
-## 4.3
-
-### Backlight
-- [x] Clamp backlight values between first backlight curve[ac state] value and last one, ie: never get out of backlight curve's points
-
-### Interface
-- [x] Fix crash when writing Sunrise/Sunset dayconf properties from dbus
-- [x] Remember that 'b' dbus type maps to int when reading from sd_bus_message. This fixes a weird stack-smashing crash.
-- [x] Allow to reset Sunrise/Sunset conf evts from dbus api
-
-### Keyboard
-- [x] Switch to use new KEYBOARD api offered by Clightd
-- [x] Add support for StopTimeout (keyboard dimming)
-- [x] Use backlight instead of ambient brightness? Thus following backlight curve
-- [x] Start keyboard waiting on UPOWER
-
-### Gamma
-- [x] Do not use state.current_bl_pct in ambient_callback() as it may still have old value (it is now updated in dbus match on_bl_changed, async)
-- [x] Only call ambient_callback() on target bl changes, not step ones
-- [x] Dynamically react to ambient gamma value updates
-- [x] When ambient gamma is enabled, properly react to interface gamma temp updates
-
-### Generic
-- [x] Add a man page (#174)
-- [x] Fix sensor captures config parsing
-- [x] Bugfix: fix #106 (needs testing)
-
 ## 4.4
 
 ### Generic
