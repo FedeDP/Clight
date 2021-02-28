@@ -30,16 +30,16 @@
 
 typedef struct {
     int num_captures[SIZE_AC];
-    char dev_name[PATH_MAX + 1];
-    char dev_opts[NAME_MAX + 1];
-    double regression_points[SIZE_AC][MAX_SIZE_POINTS];  // points used for regression through libgsl
-    int num_points[SIZE_AC];                // number of points currently used for polynomial regression
+    char *dev_name;
+    char *dev_opts;
+    double regression_points[SIZE_AC][MAX_SIZE_POINTS]; // points used for regression through libgsl
+    int num_points[SIZE_AC];                            // number of points currently used for polynomial regression
 } sensor_conf_t;
 
 typedef struct {
     int disabled;
     int timeout[SIZE_AC][SIZE_STATES + 1];
-    char screen_path[PATH_MAX + 1];         // screen syspath (eg: /sys/class/backlight/intel_backlight)
+    char *screen_path;                      // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int no_smooth;                          // disable smooth backlight changes for BACKLIGHT module
     double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
     int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled

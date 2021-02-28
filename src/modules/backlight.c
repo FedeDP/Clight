@@ -79,6 +79,9 @@ static void destroy(void) {
         close(bl_fd);
     }
     free(backlight_interface);
+    free(conf.bl_conf.screen_path);
+    free(conf.sens_conf.dev_name);
+    free(conf.sens_conf.dev_opts);
 }
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata) {

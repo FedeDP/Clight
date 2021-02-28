@@ -143,9 +143,9 @@ void init_opts(int argc, char *argv[]) {
 static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size) {
     poptContext pc;
     const struct poptOption po[] = {
-        {"frames", 'f', POPT_ARG_INT, NULL, 7, "Frames taken for each capture, Between 1 and 20", NULL},
-        {"device", 'd', POPT_ARG_STRING, NULL, 1, "Path to sensor device. If empty, first matching device is used", "video0"},
-        {"backlight", 'b', POPT_ARG_STRING, NULL, 2, "Path to internal backlight syspath. If empty, first matching device is used", "intel_backlight"},
+        {"frames", 'f', POPT_ARG_INT, NULL, 5, "Frames taken for each capture, Between 1 and 20", NULL},
+        {"device", 'd', POPT_ARG_STRING, &conf.sens_conf.dev_name, 100, "Path to sensor device. If empty, first matching device is used", "video0"},
+        {"backlight", 'b', POPT_ARG_STRING, &conf.bl_conf.screen_path, 100, "Path to internal backlight syspath. If empty, first matching device is used", "intel_backlight"},
         {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.bl_conf.no_smooth, 100, "Disable smooth backlight transitions", NULL},
         {"no-gamma-smooth", 0, POPT_ARG_NONE, &conf.gamma_conf.no_smooth, 100, "Disable smooth gamma transitions", NULL},
         {"no-dimmer-smooth-enter", 0, POPT_ARG_NONE, &conf.dim_conf.no_smooth[ENTER], 100, "Disable smooth dimmer transitions while entering dimmed state", NULL},
@@ -154,8 +154,8 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.gamma_conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
         {"lat", 0, POPT_ARG_DOUBLE, &conf.day_conf.loc.lat, 100, "Your desired latitude", NULL},
         {"lon", 0, POPT_ARG_DOUBLE, &conf.day_conf.loc.lon, 100, "Your desired longitude", NULL},
-        {"sunrise", 0, POPT_ARG_STRING, NULL, 3, "Force sunrise time for gamma correction", "07:00"},
-        {"sunset", 0, POPT_ARG_STRING, NULL, 4, "Force sunset time for gamma correction", "19:00"},
+        {"sunrise", 0, POPT_ARG_STRING, NULL, 1, "Force sunrise time for gamma correction", "07:00"},
+        {"sunset", 0, POPT_ARG_STRING, NULL, 2, "Force sunset time for gamma correction", "19:00"},
         {"no-gamma", 0, POPT_ARG_NONE, &conf.gamma_conf.disabled, 100, "Disable gamma correction tool", NULL},
         {"no-dimmer", 0, POPT_ARG_NONE, &conf.dim_conf.disabled, 100, "Disable dimmer tool", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &conf.dpms_conf.disabled, 100, "Disable dpms tool", NULL},
@@ -166,8 +166,8 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
         {"no-auto-calib", 0, POPT_ARG_NONE, &conf.bl_conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
         {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.bl_conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
-        {"version", 'v', POPT_ARG_NONE, NULL, 5, "Show version info", NULL},
-        {"conf-file", 'c', POPT_ARG_STRING, NULL, 6, "Specify a conf file to be parsed", NULL},
+        {"version", 'v', POPT_ARG_NONE, NULL, 3, "Show version info", NULL},
+        {"conf-file", 'c', POPT_ARG_STRING, NULL, 4, "Specify a conf file to be parsed", NULL},
         {"gamma-long-transition", 0, POPT_ARG_NONE, &conf.gamma_conf.long_transition, 100, "Enable a very long smooth transition for gamma (redshift-like)", NULL },
         {"ambient-gamma", 0, POPT_ARG_NONE, &conf.gamma_conf.ambient_gamma, 100, "Enable screen temperature matching ambient brightness instead of time based.", NULL },
         {"wizard", 'w', POPT_ARG_NONE, &conf.wizard, 100, "Enable wizard mode.", NULL},
@@ -179,36 +179,32 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
     int rc;
     while ((rc = poptGetNextOpt(pc)) > 0) {
         char *str = poptGetOptArg(pc);
+        bool must_free = true;
         switch (rc) {
             case 1:
-                strncpy(conf.sens_conf.dev_name, str, sizeof(conf.sens_conf.dev_name) - 1);
-                break;
-            case 2:
-                strncpy(conf.bl_conf.screen_path, str, sizeof(conf.bl_conf.screen_path) - 1);
-                break;
-            case 3:
                 strncpy(conf.day_conf.day_events[SUNRISE], str, sizeof(conf.day_conf.day_events[SUNRISE]) - 1);
                 break;
-            case 4:
+            case 2:
                 strncpy(conf.day_conf.day_events[SUNSET], str, sizeof(conf.day_conf.day_events[SUNSET]) - 1);
                 break;
-            case 5:
+            case 3:
                 printf("%s: C daemon utility to automagically adjust screen backlight to match ambient brightness.\n"
                         "* Current version: %s\n"
                         "* https://github.com/FedeDP/Clight\n"
-                        "* Copyright (C) 2020  Federico Di Pierro <nierro92@gmail.com>\n", argv[0], VERSION);
+                        "* Copyright (C) 2021  Federico Di Pierro <nierro92@gmail.com>\n"
+                        "* For more info, see man clight.1.\n", argv[0], VERSION);
                 exit(EXIT_SUCCESS);
-            case 6:
+            case 4:
                 strncpy(conf_file, str, size);
                 break;
-            case 7:
+            case 5:
                 conf.sens_conf.num_captures[ON_AC] = atoi(str);
                 conf.sens_conf.num_captures[ON_BATTERY] = atoi(str);
                 break;
             default:
                 break;
         }
-        if (str) {
+        if (str && must_free) {
             free(str);
         }
     }

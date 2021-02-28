@@ -135,7 +135,7 @@ static void receive_calibrating(const msg_t *const msg, UNUSED const void* userd
         switch (c) {
         case 10:
             if (get_backlight() != 0) {
-                WARN("Failed to get '%s' backlight pct.\n", conf.bl_conf.screen_path);
+                WARN("Failed to get '%s' backlight pct.\n", conf.bl_conf.screen_path ? conf.bl_conf.screen_path : "");
                 modules_quit(-1);
             } else {
                 INFO("Backlight level is: %.3lf\n\n", bls[capture_idx - 1]);

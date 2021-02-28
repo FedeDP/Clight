@@ -1,4 +1,4 @@
-## 4.4
+## 4.5
 
 ### Generic
 - [ ] Port to libmodule 6.0.0 (?)

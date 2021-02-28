@@ -51,8 +51,8 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         config_setting_lookup_int(bl, "trans_timeout", &bl_conf->trans_timeout);
         config_setting_lookup_float(bl, "shutter_threshold", &bl_conf->shutter_threshold);
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
-        if (config_setting_lookup_string(bl, "screen_sysname", &screendev) == CONFIG_TRUE) {
-            strncpy(bl_conf->screen_path, screendev, sizeof(bl_conf->screen_path) - 1);
+        if (config_setting_lookup_string(bl, "screen_sysname", &screendev) == CONFIG_TRUE && strlen(screendev)) {
+            bl_conf->screen_path = strdup(screendev);
         }
         config_setting_lookup_bool(bl, "pause_on_lid_closed", &bl_conf->pause_on_lid_closed);
         config_setting_lookup_bool(bl, "capture_on_lid_opened", &bl_conf->capture_on_lid_opened);
@@ -88,12 +88,12 @@ static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf) {
     if (sens_group) {
         const char *sensor_dev, *sensor_settings;
         
-        if (config_setting_lookup_string(sens_group, "devname", &sensor_dev) == CONFIG_TRUE) {
-            strncpy(sens_conf->dev_name, sensor_dev, sizeof(sens_conf->dev_name) - 1);
+        if (config_setting_lookup_string(sens_group, "devname", &sensor_dev) == CONFIG_TRUE && strlen(sensor_dev)) {
+            sens_conf->dev_name = strdup(sensor_dev);
         }
     
-        if (config_setting_lookup_string(sens_group, "settings", &sensor_settings) == CONFIG_TRUE) {
-            strncpy(sens_conf->dev_opts, sensor_settings, sizeof(sens_conf->dev_opts) - 1);
+        if (config_setting_lookup_string(sens_group, "settings", &sensor_settings) == CONFIG_TRUE && strlen(sensor_settings)) {
+            sens_conf->dev_opts = strdup(sensor_settings);
         }
         
         config_setting_t *captures, *points;
@@ -347,7 +347,6 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     setting = config_setting_add(bl, "trans_timeout", CONFIG_TYPE_INT);
     config_setting_set_int(setting, bl_conf->trans_timeout);
     
-    
     setting = config_setting_add(bl, "no_auto_calibration", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_auto_calib);
     
@@ -357,8 +356,10 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     setting = config_setting_add(bl, "capture_on_lid_opened", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->capture_on_lid_opened);
     
-    setting = config_setting_add(bl, "screen_sysname", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, bl_conf->screen_path);
+    if (bl_conf->screen_path) {
+        setting = config_setting_add(bl, "screen_sysname", CONFIG_TYPE_STRING);
+        config_setting_set_string(setting, bl_conf->screen_path);
+    }
     
     setting = config_setting_add(bl, "shutter_threshold", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, bl_conf->shutter_threshold);
@@ -380,12 +381,16 @@ static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf) {
     for (int i = 0; i < SIZE_AC; i++) {
         config_setting_set_int_elem(setting, -1, sens_conf->num_captures[i]);
     }
-            
-    setting = config_setting_add(sensor, "devname", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, sens_conf->dev_name);
-            
-    setting = config_setting_add(sensor, "settings", CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, sens_conf->dev_opts);
+    
+    if (sens_conf->dev_name) {
+        setting = config_setting_add(sensor, "devname", CONFIG_TYPE_STRING);
+        config_setting_set_string(setting, sens_conf->dev_name); 
+    }
+
+    if (sens_conf->dev_opts) {
+        setting = config_setting_add(sensor, "settings", CONFIG_TYPE_STRING);
+        config_setting_set_string(setting, sens_conf->dev_opts);
+    }
         
     /* -1 here below means append to end of array */
     setting = config_setting_add(sensor, "ac_regression_points", CONFIG_TYPE_ARRAY);

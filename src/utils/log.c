@@ -49,7 +49,7 @@ static void log_bl_conf(bl_conf_t *bl_conf) {
     fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][DAY], bl_conf->timeout[ON_BATTERY][DAY]);
     fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][NIGHT], bl_conf->timeout[ON_BATTERY][NIGHT]);
     fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][SIZE_STATES], bl_conf->timeout[ON_BATTERY][SIZE_STATES]);
-    fprintf(log_file, "* Backlight path:\t\t%s\n", strlen(bl_conf->screen_path) ? bl_conf->screen_path : "Unset");
+    fprintf(log_file, "* Backlight path:\t\t%s\n", bl_conf->screen_path ? bl_conf->screen_path : "Unset");
     fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", bl_conf->shutter_threshold);
     fprintf(log_file, "* Autocalibration:\t\t%s\n", bl_conf->no_auto_calib ? "Disabled" : "Enabled");
     fprintf(log_file, "* Pause on lid closed:\t\t%s\n", bl_conf->pause_on_lid_closed ? "Enabled" : "Disabled");
@@ -59,8 +59,8 @@ static void log_bl_conf(bl_conf_t *bl_conf) {
 static void log_sens_conf(sensor_conf_t *sens_conf) {
     fprintf(log_file, "\n### SENSOR ###\n");
     fprintf(log_file, "* Captures:\t\tAC %d\tBATT %d\n", sens_conf->num_captures[ON_AC], sens_conf->num_captures[ON_BATTERY]);
-    fprintf(log_file, "* Device:\t\t%s\n", strlen(sens_conf->dev_name) ? sens_conf->dev_name : "Unset");
-    fprintf(log_file, "* Settings:\t\t%s\n", strlen(sens_conf->dev_opts) ? sens_conf->dev_opts : "Unset");
+    fprintf(log_file, "* Device:\t\t%s\n", sens_conf->dev_name ? sens_conf->dev_name : "Unset");
+    fprintf(log_file, "* Settings:\t\t%s\n", sens_conf->dev_opts ? sens_conf->dev_opts : "Unset");
 }
 
 static void log_kbd_conf(kbd_conf_t *kbd_conf) {
