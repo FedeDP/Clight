@@ -9,7 +9,7 @@ arch=('i686' 'x86_64')
 url="https://github.com/FedeDP/${_gitname}"
 license=('GPL')
 backup=(etc/default/clight.conf)
-depends=('systemd>=234' 'popt' 'libconfig' 'gsl' 'clightd-git' 'libmodule>=5.0.0')
+depends=('systemd-libs' 'popt' 'libconfig' 'gsl' 'clightd-git' 'libmodule>=5.0.0' 'hicolor-icon-theme')
 makedepends=('git' 'cmake' 'bash-completion')
 optdepends=('geoclue2: to retrieve user location through geoclue2.'
             'upower: to save energy by managing ac states increasing timeouts while on battery.'
