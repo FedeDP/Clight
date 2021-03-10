@@ -221,7 +221,7 @@ static void expand_regr_points(void) {
     double out_values[WIZ_OUT_POINTS];
     INFO("[ ");
     for (int i = 0; i < WIZ_OUT_POINTS; i++) {
-        const double perc = i * (WIZ_IN_POINTS - 1);
+        const double perc = (double)i / (WIZ_IN_POINTS - 1);
         const double b = output[0] + output[1] * perc + output[2] * pow(perc, 2);
         const double new_br_pct =  clamp(b, 1, 0);
         out_values[i] = new_br_pct;
