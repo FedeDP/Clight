@@ -191,7 +191,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
 }
 
 static void ambient_callback(bool smooth, double new) {
-    if (conf.gamma_conf.ambient_gamma) {
+    if (conf.gamma_conf.ambient_gamma && !state.display_state) {
         /* Only account for target backlight changes, ie: not step ones */
         if (smooth || conf.bl_conf.no_smooth) {
             /* 
@@ -264,7 +264,7 @@ static void interface_callback(temp_upd *req) {
         if (!conf.gamma_conf.ambient_gamma && req->daytime == state.day_time) {
             set_temp(req->new, NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
         } else {
-             // Immediately set correct temp for current bl pct (given new temperature)
+             // Immediately set correct temp for current bl pct (given new temperature max/min values)
             ambient_callback(true, state.current_bl_pct);
         }
     }
