@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <time.h>
 #include <module/module_easy.h>
 
 /** Libmodule wrapping macros, for convenience **/
@@ -167,10 +168,15 @@ typedef struct {
 } daytime_upd;
 
 typedef struct {
-    enum day_events old;        // Valued in updates. Useless for requests
-    enum day_events new;        // Valued in updates. Useless for requests
+    time_t old;                 // Valued in updates. Useless for requests
+    time_t new;                 // Valued in updates. Useless for requests
     char event[10];             // Mandatory for SUNRISE/SUNSET requests. Empty on updates
 } evt_upd;
+
+typedef struct {
+    enum day_events old;        // Valued in updates
+    enum day_events new;        // Valued in updates
+} nextdayevt_upd;
 
 typedef struct {
     enum day_states daytime;    // Mandatory for requests. Valued in updates. Special value: -1 -> current daytime
@@ -235,7 +241,8 @@ typedef struct {
         suspend_upd suspend;    /* SUSPEND_UPD/SUSPEND_REQ */
         display_upd display;    /* DISPLAY_UPD/DISPLAY_REQ */
         daytime_upd day_time;   /* TIME_UPD/IN_EVENT_UPD */
-        evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ/NEXT_DAYEVT_UPD */
+        evt_upd event;          /* SUNRISE_UPD/SUNSET_UPD/SUNRISE_REQ/SUNSET_REQ */
+        nextdayevt_upd nextevt; /* NEXT_DAYEVT_UPD */
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ/KBD_TO_REQ */
         curve_upd curve;        /* CURVE_REQ */

@@ -147,8 +147,8 @@ static void check_daytime(void) {
     
     /* If we changed next event, emit signal */
     if (old_next_event != state.next_event) {
-        next_ev_msg.event.old = old_next_event;
-        next_ev_msg.event.new = state.next_event;
+        next_ev_msg.nextevt.old = old_next_event;
+        next_ev_msg.nextevt.new = state.next_event;
         M_PUB(&next_ev_msg);
     }
         
