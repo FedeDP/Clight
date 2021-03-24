@@ -1,17 +1,8 @@
-## 4.5
+## 4.6
 
 ### Generic
 - [ ] Port to libmodule 6.0.0 (?)
 - [ ] Add a Dump dbus method (and a DUMP_REQ request) to allow any module to dump their state (module_dump()) to a txt file
-
-### Daytime
-- [x] Sunrise/Sunset should send updates with time_t
-
-### Wizard
-- [x] Fix stupid bug in expand_regr_points
-
-### Gamma
-- [x] Do not touch screen temperature in ambient_gamma mode when entering dimmed state
 
 ### BACKLIGHT multiple-monitors curves
 - [ ] Add support for config files to give each monitor its own backlight curves. Something like /etc/clight/clight.conf + /etc/clight/mon.d/$MONITOR_SERIAL.conf (where MONITOR_SERIAL can be found through org.clightd.clightd.Backlight.GetAll)
