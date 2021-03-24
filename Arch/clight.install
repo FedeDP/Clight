@@ -1,7 +1,0 @@
-post_install() {
-    echo '--> By default, first matching webcam/als device and backlight interface are used.'
-    echo '--> Therefore, it should work out of the box even without any setup in most cases.'
-    echo '--> For any customization, take a look at settings file placed in /etc/default/clight.conf.'
-    echo '--> If you are not in a XDG compliant DE, remember to add clight to your autostart script.'
-}
-
