@@ -35,15 +35,15 @@ double compute_average(const double *intensity, int num) {
 /*
  * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C
  */
-void polynomialfit(double *XPoints, double *YPoints, double *out_params, int num_points) {
+void polynomialfit(double *XPoints, curve_t *curve) {
     double chisq;
     
-    gsl_matrix *X = gsl_matrix_alloc(num_points, DEGREE);
-    gsl_vector *y = gsl_vector_alloc(num_points);
+    gsl_matrix *X = gsl_matrix_alloc(curve->num_points, DEGREE);
+    gsl_vector *y = gsl_vector_alloc(curve->num_points);
     gsl_vector *c = gsl_vector_alloc(DEGREE);
     gsl_matrix *cov = gsl_matrix_alloc(DEGREE, DEGREE);
     
-    for (int i = 0; i < num_points; i++) {
+    for (int i = 0; i < curve->num_points; i++) {
         for (int j = 0; j < DEGREE; j++) {
             if (XPoints) {
                 gsl_matrix_set(X, i, j, pow(XPoints[i], j));
@@ -51,15 +51,15 @@ void polynomialfit(double *XPoints, double *YPoints, double *out_params, int num
                 gsl_matrix_set(X, i, j, pow(i, j));
             }
         }
-        gsl_vector_set(y, i, YPoints[i]);
+        gsl_vector_set(y, i, curve->points[i]);
     }
     
-    gsl_multifit_linear_workspace *ws = gsl_multifit_linear_alloc(num_points, DEGREE);
+    gsl_multifit_linear_workspace *ws = gsl_multifit_linear_alloc(curve->num_points, DEGREE);
     gsl_multifit_linear(X, y, c, cov, &chisq, ws);
     
     /* store results */
     for(int i = 0; i < DEGREE; i++) {
-        out_params[i] = gsl_vector_get(c, i);
+        curve->fit_parameters[i] = gsl_vector_get(c, i);
     }
     
     gsl_multifit_linear_free(ws);
@@ -79,15 +79,15 @@ double clamp(double value, double max, double min) {
     return value;
 }
 
-void plot_poly_curve(int num_points, double values[]) {
-    const int maxY = num_points - 1;
-    char **grid = init_grid(num_points);
-    for (int i = 0; i < num_points; i++) {
-        const int y = round(maxY * values[i]);
+void plot_poly_curve(curve_t *curve) {
+    const int maxY = curve->num_points - 1;
+    char **grid = init_grid(curve->num_points);
+    for (int i = 0; i < curve->num_points; i++) {
+        const int y = round(maxY * curve->points[i]);
         grid[maxY - y][i] = '*';
     }
-    show_grid(grid, num_points);
-    free_grid(grid, num_points);
+    show_grid(grid, curve->num_points);
+    free_grid(grid, curve->num_points);
 }
 
 static char **init_grid(int num_points) {

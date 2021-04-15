@@ -4,10 +4,14 @@
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, const void* userdata);
+static void init_curves(void);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer, bool capture_only);
+static double get_value_from_curve(const double perc, curve_t *curve);
 static double set_new_backlight(const double perc);
+static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout);
+static int get_and_set_each_brightness(const double pct, const bool is_smooth, const double step, const int timeout);
 static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
@@ -41,9 +45,7 @@ static void init(void) {
     
     // Disabled while in wizard mode as it is useless and spams to stdout
     if (!conf.wizard) {
-        /* Compute polynomial best-fit parameters for each loaded sensor config */
-        interface_curve_callback(NULL, 0, ON_AC);
-        interface_curve_callback(NULL, 0, ON_BATTERY);
+        init_curves();
     }
 
     M_SUB(UPOWER_UPD);
@@ -281,6 +283,19 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     }
 }
 
+static void init_curves(void) {
+    /* Compute polynomial best-fit parameters */
+    interface_curve_callback(NULL, 0, ON_AC);
+    interface_curve_callback(NULL, 0, ON_BATTERY);
+        
+    /* Compute polynomial best-fit parameters for specific monitor backlight adjustments */
+    for (map_itr_t *itr = map_itr_new(conf.sens_conf.specific_curves); itr; itr = map_itr_next(itr)) {
+        curve_t *c = map_itr_get_data(itr);
+        polynomialfit(NULL, &c[ON_AC]);
+        polynomialfit(NULL, &c[ON_BATTERY]);
+    } 
+}
+
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     int r = -EINVAL;
     if (!strcmp(member, "IsAvailable")) {
@@ -290,7 +305,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
         if (r >= 0 && is_avail) {
             DEBUG("Sensor '%s' is now available.\n", sensor);
         }
-    } else if (!strcmp(member, "SetAll")) {
+    } else if (!strcmp(member, "SetAll") || !strcmp(member, "Set")) {
         r = sd_bus_message_read(reply, "b", userdata);
     } else if (!strcmp(member, "Capture")) {
         const char *sensor = NULL;
@@ -308,6 +323,15 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
             amb_msg.bl.new = state.ambient_br;
             M_PUB(&amb_msg);
         }
+    } else if (!strcmp(member, "GetAll")) {
+        sd_bus_message **msg = (sd_bus_message **)userdata;
+        /*
+         * Just ref the message to keep it alive 
+         * as we will later cycle on returned array.
+         */
+        sd_bus_message_ref(reply);
+        *msg = reply;
+        r = 0;
     }
     return r;
 }
@@ -324,7 +348,8 @@ static void do_capture(bool reset_timer, bool capture_only) {
         /* Account for screen-emitted brightness */
         const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
         if (compensated_br >= conf.bl_conf.shutter_threshold) {
-            const double new_bl = set_new_backlight(compensated_br * (conf.sens_conf.num_points[state.ac_state] - 1));
+            int num_points = conf.sens_conf.default_curve[state.ac_state].num_points;
+            const double new_bl = set_new_backlight(compensated_br * (num_points - 1));
             if (state.screen_comp > 0.0) {
                 INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, new_bl);
             } else {
@@ -342,22 +367,25 @@ static void do_capture(bool reset_timer, bool capture_only) {
     }
 }
 
+static inline double get_value_from_curve(const double perc, curve_t *curve) {
+    const double max = curve->points[curve->num_points - 1];
+    const double min = curve->points[0];
+    
+    /* y = a0 + a1x + a2x^2 */
+    const double b = curve->fit_parameters[0] 
+                    + curve->fit_parameters[1] * perc 
+                    + curve->fit_parameters[2] * pow(perc, 2);
+    const double value = clamp(b, max, min);
+    return value;
+}
+
 static double set_new_backlight(const double perc) {
     sensor_conf_t *sens_conf = &conf.sens_conf;
     enum ac_states st = state.ac_state;
-    const double max = sens_conf->regression_points[st][sens_conf->num_points[st] - 1];
-    const double min = sens_conf->regression_points[st][0];
-    
-    
-    /* y = a0 + a1x + a2x^2 */
-    const double b = state.fit_parameters[state.ac_state][0] 
-                    + state.fit_parameters[state.ac_state][1] * perc 
-                    + state.fit_parameters[state.ac_state][2] * pow(perc, 2);
-    const double new_br_pct = clamp(b, max, min);
-
-    set_backlight_level(new_br_pct, !conf.bl_conf.no_smooth, 
+    const double new_bl_pct = get_value_from_curve(perc, &sens_conf->default_curve[st]);
+    set_backlight_level(new_bl_pct, !conf.bl_conf.no_smooth, 
                         conf.bl_conf.trans_step, conf.bl_conf.trans_timeout);
-    return new_br_pct;
+    return new_bl_pct;
 }
 
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout) {
@@ -370,13 +398,72 @@ static void publish_bl_upd(const double pct, const bool is_smooth, const double 
     M_PUB(bl_msg);
 }
 
-static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout) {
-    int ok = 0;
-    SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
+/* 
+ * Calls GetAll on clightd.Backlight to retrieve all currently connected monitors,
+ * then for each serial returned tries to find it in specific_curves mapping;
+ * if found, maps requested backlight level to desired one for the specific monitor,
+ * otherwise just sets requested backlight level (just like a SetAll)
+ */
+static int get_and_set_each_brightness(const double pct, const bool is_smooth, const double step, const int timeout) {
+    sensor_conf_t *sens_conf = &conf.sens_conf;
+    enum ac_states st = state.ac_state;
     
-    /* Set backlight on both internal monitor (in case of laptop) and external ones */
-    int r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, conf.bl_conf.screen_path);
-    if (!r && ok && is_smooth) {
+    /* Get all monitors backlight; we just need to map each monitor to its specific curve indeed */
+    // TODO: when clightd will use different object paths for each monitor, just enumerate paths here!
+    sd_bus_message *m = NULL;
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, &m, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "GetAll");
+    int r = call(&args, "s", conf.bl_conf.screen_path);
+    if (r >= 0) {
+        r = sd_bus_message_enter_container(m, SD_BUS_TYPE_ARRAY, "(sd)");
+        while ((r = sd_bus_message_enter_container(m, SD_BUS_TYPE_STRUCT, "sd") >= 0) && r >= 0) {
+            const char *mon_id = NULL;
+            r = sd_bus_message_read(m, "sd", &mon_id, NULL);
+            sd_bus_message_exit_container(m);
+            
+            if (r >= 0 && mon_id) {
+                int ok = true;
+                
+                /* Set backlight on monitor id */
+                SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
+                curve_t *c = map_get(sens_conf->specific_curves, mon_id);
+                if (c) {
+                    DEBUG("Using specific curve for %s\n", mon_id);
+                    /* Use monitor specific adjustment, properly scaling bl pct */
+                    int num_points = c[st].num_points;
+                    const double real_pct = get_value_from_curve(pct * (num_points - 1), &c[st]);
+                    r = call(&args, "d(bdu)s", real_pct, is_smooth, step, timeout, mon_id);
+                } else {
+                    DEBUG("Using default curve for %s\n", mon_id);
+                    /* Use non-adjusted (default) curve value */
+                    r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, mon_id);
+                }
+                if (!ok) {
+                    r = -1;
+                }
+            }
+        }
+        sd_bus_message_exit_container(m);
+        sd_bus_message_unref(m);
+    }
+    return r;
+}
+
+static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout) {
+    int r = -EINVAL;
+    if (map_length(conf.sens_conf.specific_curves) > 0) {
+        r = get_and_set_each_brightness(pct, is_smooth, step, timeout);
+    } else {
+        int ok = 0;
+        SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
+        
+        /* Set backlight on both internal monitor (in case of laptop) and external ones */
+        r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, conf.bl_conf.screen_path);
+        if (!ok) {
+            r = -1;
+        }
+    }
+    
+    if (r >= 0 && is_smooth) {
         // Publish smooth target and params
         publish_bl_upd(pct, true, step, timeout);
     }
@@ -407,17 +494,18 @@ static void interface_autocalib_callback(bool new_val) {
 
 /* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
 static void interface_curve_callback(double *regr_points, int num_points, enum ac_states s) {
+    // Only default curve can be changed through api 
+    curve_t *c = &conf.sens_conf.default_curve[s];
     if (regr_points) {
-        memcpy(conf.sens_conf.regression_points[s], 
+        memcpy(c->points, 
            regr_points, num_points * sizeof(double));
-        conf.sens_conf.num_points[s] = num_points;
+        c->num_points = num_points;
     }
-    polynomialfit(NULL, conf.sens_conf.regression_points[s], 
-                  state.fit_parameters[s], conf.sens_conf.num_points[s]);
+    polynomialfit(NULL, c);
     
-    INFO("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", state.fit_parameters[s][0],
-          state.fit_parameters[s][1], state.fit_parameters[s][2]);
-    plot_poly_curve(conf.sens_conf.num_points[s], conf.sens_conf.regression_points[s]);
+    INFO("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", c->fit_parameters[0],
+          c->fit_parameters[1], c->fit_parameters[2]);
+    plot_poly_curve(&conf.sens_conf.default_curve[s]);
 }
 
 /* 

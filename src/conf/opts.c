@@ -14,6 +14,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 static void check_clightd_features(void);
 static void check_bl_conf(bl_conf_t *bl_conf);
 static void check_sens_conf(sensor_conf_t *sens_conf);
+static void check_override_conf(sensor_conf_t *sens_conf);
 static void check_kbd_conf(kbd_conf_t *kbd_conf);
 static void check_gamma_conf(gamma_conf_t *gamma_conf);
 static void check_daytime_conf(daytime_conf_t *day_conf);
@@ -54,12 +55,12 @@ static void init_sens_opts(sensor_conf_t *sens_conf) {
      * Where X is ambient brightness and Y is backlight level.
      * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
      */
-    sens_conf->num_points[ON_AC] = DEF_SIZE_POINTS;
-    sens_conf->num_points[ON_BATTERY] = DEF_SIZE_POINTS;
-    memcpy(sens_conf->regression_points[ON_AC],
+    sens_conf->default_curve[ON_AC].num_points = DEF_SIZE_POINTS;
+    sens_conf->default_curve[ON_BATTERY].num_points = DEF_SIZE_POINTS;
+    memcpy(sens_conf->default_curve[ON_AC].points,
            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
            DEF_SIZE_POINTS * sizeof(double));
-    memcpy(sens_conf->regression_points[ON_BATTERY],
+    memcpy(sens_conf->default_curve[ON_BATTERY].points,
            (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
            DEF_SIZE_POINTS * sizeof(double));
 }
@@ -114,6 +115,7 @@ static void init_screen_opts(screen_conf_t *screen_conf) {
 void init_opts(int argc, char *argv[]) {
     init_backlight_opts(&conf.bl_conf);
     init_sens_opts(&conf.sens_conf);
+    // init_override_opts NOT NEEDED (is just a NULL map)
     init_kbd_opts(&conf.kbd_conf);
     init_gamma_opts(&conf.gamma_conf);
     init_daytime_opts(&conf.day_conf);
@@ -275,6 +277,36 @@ static void check_bl_conf(bl_conf_t *bl_conf) {
     }
 }
 
+static inline void check_curve_points(curve_t *c, const char *id) {
+    int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
+    /* Check regression points values */
+    for (i = 0; i < c[ON_AC].num_points && !reg_points_ac_needed; i++) {
+        if (c[ON_AC].points[i] < 0.0 || c[ON_AC].points[i] > 1.0) {
+            reg_points_ac_needed = 1;
+        }
+    }
+    for (i = 0; i < c[ON_BATTERY].num_points && !reg_points_batt_needed; i++) {
+        if (c[ON_BATTERY].points[i] < 0.0 || c[ON_BATTERY].points[i] > 1.0) {
+            reg_points_batt_needed = 1;
+        }
+    }
+        
+    if (reg_points_ac_needed) {
+        WARN("Wrong %s ac_regression points. Resetting default values.\n", id);
+        c[ON_AC].num_points = DEF_SIZE_POINTS;
+        memcpy(c[ON_AC].points,
+            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
+            DEF_SIZE_POINTS * sizeof(double));
+    }
+    if (reg_points_batt_needed) {
+        WARN("Wrong %s batt_regression points. Resetting default values.\n", id);
+        c[ON_BATTERY].num_points = DEF_SIZE_POINTS;
+        memcpy(c[ON_BATTERY].points,
+            (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
+            DEF_SIZE_POINTS * sizeof(double));
+    }
+}
+
 static void check_sens_conf(sensor_conf_t *sens_conf) {
     if (sens_conf->num_captures[ON_AC] < 1 || sens_conf->num_captures[ON_AC] > 20) {
         WARN("Wrong AC captures value. Resetting default value.\n");
@@ -284,33 +316,14 @@ static void check_sens_conf(sensor_conf_t *sens_conf) {
         WARN("Wrong BATT captures value. Resetting default value.\n");
         sens_conf->num_captures[ON_BATTERY] = 5;
     }
-    
-    int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
-    /* Check regression points values */
-    for (i = 0; i < sens_conf->num_points[ON_AC] && !reg_points_ac_needed; i++) {
-        if (sens_conf->regression_points[ON_AC][i] < 0.0 || sens_conf->regression_points[ON_AC][i] > 1.0) {
-            reg_points_ac_needed = 1;
-        }
-    }
-    for (i = 0; i < sens_conf->num_points[ON_BATTERY] && !reg_points_batt_needed; i++) {
-        if (sens_conf->regression_points[ON_BATTERY][i] < 0.0 || sens_conf->regression_points[ON_BATTERY][i] > 1.0) {
-            reg_points_batt_needed = 1;
-        }
-    }
-    
-    if (reg_points_ac_needed) {
-        WARN("Wrong ac_regression points. Resetting default values.\n");
-        sens_conf->num_points[ON_AC] = DEF_SIZE_POINTS;
-        memcpy(sens_conf->regression_points[ON_AC],
-               (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
-               DEF_SIZE_POINTS * sizeof(double));
-    }
-    if (reg_points_batt_needed) {
-        WARN("Wrong batt_regression points. Resetting default values.\n");
-        sens_conf->num_points[ON_BATTERY] = DEF_SIZE_POINTS;
-        memcpy(sens_conf->regression_points[ON_BATTERY],
-               (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
-               DEF_SIZE_POINTS * sizeof(double));
+    check_curve_points(sens_conf->default_curve, "sensor");
+}
+
+static void check_override_conf(sensor_conf_t *sens_conf) {
+    for (map_itr_t *itr = map_itr_new(sens_conf->specific_curves); itr; itr = map_itr_next(itr)) {
+        curve_t *c = map_itr_get_data(itr);
+        const char *id = map_itr_get_key(itr);
+        check_curve_points(c, id);
     }
 }
 
@@ -472,6 +485,7 @@ static void check_conf(void) {
     if (!conf.bl_conf.disabled) {
         check_bl_conf(&conf.bl_conf);
         check_sens_conf(&conf.sens_conf);
+        check_override_conf(&conf.sens_conf);
     }
     if (!conf.kbd_conf.disabled) {
         check_kbd_conf(&conf.kbd_conf);

@@ -34,12 +34,13 @@ typedef enum {
 } wiz_states;
 
 static wiz_states wiz_st;
-static double bls[WIZ_IN_POINTS];
 static double amb_brs[WIZ_IN_POINTS];
-static double output[DEGREE];
 static int capture_idx;
+static curve_t curve;
 
 static void init(void) {
+    curve.num_points = WIZ_IN_POINTS;
+    
     setbuf(stdout, NULL); // disable line buffer
     capture_req.capture.reset_timer = false;
     capture_req.capture.capture_only = true;
@@ -138,7 +139,7 @@ static void receive_calibrating(const msg_t *const msg, UNUSED const void* userd
                 WARN("Failed to get '%s' backlight pct.\n", conf.bl_conf.screen_path ? conf.bl_conf.screen_path : "");
                 modules_quit(-1);
             } else {
-                INFO("Backlight level is: %.3lf\n\n", bls[capture_idx - 1]);
+                INFO("Backlight level is: %.3lf\n\n", curve.points[capture_idx - 1]);
                 next_step();
             }
             break;
@@ -201,7 +202,7 @@ static void next_step(void) {
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
-    return sd_bus_message_read(reply, "(sd)", NULL, &bls[capture_idx++]);
+    return sd_bus_message_read(reply, "(sd)", NULL, &curve.points[capture_idx++]);
 }
 
 static int get_backlight() {
@@ -211,23 +212,23 @@ static int get_backlight() {
 
 static void compute(void) {
     for (int i = 0; i < WIZ_IN_POINTS; i++) {
-        DEBUG("%.3lf -> %.3lf\n", amb_brs[i], bls[i]);
+        DEBUG("%.3lf -> %.3lf\n", amb_brs[i], curve.points[i]);
     }
-    polynomialfit(amb_brs, bls, output, WIZ_IN_POINTS);
-    DEBUG("New curve: y = %lf + %lfx + %lfx^2\n", output[0], output[1], output[2]);
+    polynomialfit(amb_brs, &curve);
+    DEBUG("New curve: y = %lf + %lfx + %lfx^2\n", curve.fit_parameters[0], curve.fit_parameters[1], curve.fit_parameters[2]);
 }
 
 static void expand_regr_points(void) {
-    double out_values[WIZ_OUT_POINTS];
+    curve_t expanded = { .num_points = WIZ_OUT_POINTS };
     INFO("[ ");
     for (int i = 0; i < WIZ_OUT_POINTS; i++) {
         const double perc = (double)i / (WIZ_OUT_POINTS - 1);
-        const double b = output[0] + output[1] * perc + output[2] * pow(perc, 2);
+        const double b = curve.fit_parameters[0] + curve.fit_parameters[1] * perc + curve.fit_parameters[2] * pow(perc, 2);
         const double new_br_pct =  clamp(b, 1, 0);
-        out_values[i] = new_br_pct;
+        expanded.points[i] = new_br_pct;
         INFO("%.3lf%s ", new_br_pct, i < WIZ_OUT_POINTS - 1 ? ", " : " ");
     }
     INFO("]\n");
     
-    plot_poly_curve(WIZ_OUT_POINTS, out_values);
+    plot_poly_curve(&expanded);
 }

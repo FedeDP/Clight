@@ -10,6 +10,7 @@
 #include "validations.h"
 #include "log.h"
 #include <module/modules_easy.h>
+#include <module/map.h>
 
 #define UNUSED __attribute__((unused))
 
@@ -29,11 +30,17 @@
 /** Generic structs **/
 
 typedef struct {
+    int num_points;
+    double points[MAX_SIZE_POINTS];
+    double fit_parameters[DEGREE]; // best-fit parameters
+} curve_t;
+
+typedef struct {
     int num_captures[SIZE_AC];
     char *dev_name;
     char *dev_opts;
-    double regression_points[SIZE_AC][MAX_SIZE_POINTS]; // points used for regression through libgsl
-    int num_points[SIZE_AC];                            // number of points currently used for polynomial regression
+    curve_t default_curve[SIZE_AC];                     // points used for regression through libgsl
+    map_t *specific_curves;                             // map of monitor-specific curves
 } sensor_conf_t;
 
 typedef struct {
@@ -139,7 +146,6 @@ typedef struct {
     int current_temp;                       // current GAMMA temp; specially useful when used with conf.ambient_gamma enabled
     time_t day_events[SIZE_EVENTS];         // today events (sunrise/sunset)
     loc_t current_loc;                      // current user location
-    double fit_parameters[SIZE_AC][DEGREE]; // best-fit parameters for each sensor, for each AC state
     double current_bl_pct;                  // current backlight pct
     double current_kbd_pct;                 // current keyboard backlight pct
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor

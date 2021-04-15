@@ -5,6 +5,7 @@ static void init_config_file(enum CONFIG file, char *filename);
 
 static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf);
+static void load_override_settings(config_t *cfg, sensor_conf_t *sens_conf);
 static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf);
 static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
 static void load_day_settings(config_t *cfg, daytime_conf_t *day_conf);
@@ -15,6 +16,7 @@ static void load_inh_settings(config_t *cfg, inh_conf_t *inh_conf);
 
 static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf);
+static void store_override_settings(config_t *cfg, sensor_conf_t *sens_conf);
 static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf);
 static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf);
 static void store_daytime_settings(config_t *cfg, daytime_conf_t *day_conf);
@@ -108,30 +110,86 @@ static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf) {
             }
         }
     
-        /* Load regression points for ac backlight curve. Mandatory for sensor-specific settings (ie: when sens != S_GENERIC) */
+        /* Load regression points for ac backlight curve */
         int len;
         if ((points = config_setting_get_member(sens_group, "ac_regression_points"))) {
             len = config_setting_length(points);
             if (len > 0 && len <= MAX_SIZE_POINTS) {
-                sens_conf->num_points[ON_AC] = len;
+                sens_conf->default_curve[ON_AC].num_points = len;
                 for (int i = 0; i < len; i++) {
-                    sens_conf->regression_points[ON_AC][i] = config_setting_get_float_elem(points, i);
+                   sens_conf->default_curve[ON_AC].points[i] = config_setting_get_float_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of sensor 'ac_regression_points' array elements.\n");
             }
         }
         
-        /* Load regression points for batt backlight curve. Mandatory for sensor-specific settings (ie: when sens != S_GENERIC) */
+        /* Load regression points for batt backlight curve */
         if ((points = config_setting_get_member(sens_group, "batt_regression_points"))) {
             len = config_setting_length(points);
             if (len > 0 && len <= MAX_SIZE_POINTS) {
-                sens_conf->num_points[ON_BATTERY] = len;
+                sens_conf->default_curve[ON_BATTERY].num_points = len;
                 for (int i = 0; i < len; i++) {
-                    sens_conf->regression_points[ON_BATTERY][i] = config_setting_get_float_elem(points, i);
+                    sens_conf->default_curve[ON_BATTERY].points[i] = config_setting_get_float_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of sensor 'batt_regression_points' array elements.\n");
+            }
+        }
+    }
+}
+
+static void load_override_settings(config_t *cfg, sensor_conf_t *sens_conf) {
+    config_setting_t *override_group = config_lookup(cfg, "monitor_override");
+    if (override_group) {
+        int count = config_setting_length(override_group);
+        for (int i = 0; i < count; i++) {
+            config_setting_t *setting = config_setting_get_elem(override_group, i);
+            
+            /* Load regression points for ac backlight curve */
+            config_setting_t *points;
+            int len;
+            curve_t *curve = calloc(SIZE_AC, sizeof(curve_t));
+            bool error = false;
+            
+            if ((points = config_setting_get_member(setting, "ac_regression_points"))) {
+                len = config_setting_length(points);
+                if (len > 0 && len <= MAX_SIZE_POINTS) {
+                    curve[ON_AC].num_points = len;
+                    for (int i = 0; i < len; i++) {
+                        curve[ON_AC].points[i] = config_setting_get_float_elem(points, i);
+                    }
+                } else {
+                    WARN("Wrong number of sensor 'ac_regression_points' array elements.\n");
+                    error = true;
+                }
+            } else {
+                error = true;
+            }
+            
+            /* Load regression points for batt backlight curve */
+            if (!error && (points = config_setting_get_member(setting, "batt_regression_points"))) {
+                len = config_setting_length(points);
+                if (len > 0 && len <= MAX_SIZE_POINTS) {
+                     curve[ON_BATTERY].num_points = len;
+                    for (int i = 0; i < len; i++) {
+                        curve[ON_BATTERY].points[i] = config_setting_get_float_elem(points, i);
+                    }
+                } else {
+                    WARN("Wrong number of sensor 'batt_regression_points' array elements.\n");
+                    error = true;
+                }
+            } else {
+                error = true;
+            }
+            
+            if (!error) {
+                if (!sens_conf->specific_curves) {
+                    sens_conf->specific_curves = map_new(true, free);
+                }
+                map_put(sens_conf->specific_curves, setting->name, curve);
+            } else {
+                free(curve);
             }
         }
     }
@@ -318,6 +376,7 @@ int read_config(enum CONFIG file, char *config_file) {
         
         load_backlight_settings(&cfg, &conf.bl_conf);
         load_sensor_settings(&cfg, &conf.sens_conf);
+        load_override_settings(&cfg, &conf.sens_conf);
         load_kbd_settings(&cfg, &conf.kbd_conf);
         load_gamma_settings(&cfg, &conf.gamma_conf);
         load_day_settings(&cfg, &conf.day_conf);
@@ -394,13 +453,33 @@ static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf) {
         
     /* -1 here below means append to end of array */
     setting = config_setting_add(sensor, "ac_regression_points", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < sens_conf->num_points[ON_AC]; i++) {
-        config_setting_set_float_elem(setting, -1, sens_conf->regression_points[ON_AC][i]);
+    for (int i = 0; i < sens_conf->default_curve[ON_AC].num_points; i++) {
+        config_setting_set_float_elem(setting, -1, sens_conf->default_curve[ON_AC].points[i]);
     }
             
     setting = config_setting_add(sensor, "batt_regression_points", CONFIG_TYPE_ARRAY);
-    for (int i = 0; i < sens_conf->num_points[ON_BATTERY]; i++) {
-        config_setting_set_float_elem(setting, -1, sens_conf->regression_points[ON_BATTERY][i]);
+    for (int i = 0; i < sens_conf->default_curve[ON_BATTERY].num_points; i++) {
+        config_setting_set_float_elem(setting, -1, sens_conf->default_curve[ON_BATTERY].points[i]);
+    }
+}
+
+static void store_override_settings(config_t *cfg, sensor_conf_t *sens_conf) {
+    config_setting_t *override = config_setting_add(cfg->root, "monitor_override", CONFIG_TYPE_GROUP);
+    for (map_itr_t *itr = map_itr_new(conf.sens_conf.specific_curves); itr; itr = map_itr_next(itr)) {
+        curve_t *c = map_itr_get_data(itr);
+        const char *key = map_itr_get_key(itr);
+        config_setting_t *monitor = config_setting_add(override, key, CONFIG_TYPE_GROUP);
+        
+        /* -1 here below means append to end of array */
+        config_setting_t *setting = config_setting_add(monitor, "ac_regression_points", CONFIG_TYPE_ARRAY);
+        for (int i = 0; i < c[ON_AC].num_points; i++) {
+            config_setting_set_float_elem(setting, -1, c[ON_AC].points[i]);
+        }
+                
+        setting = config_setting_add(monitor, "batt_regression_points", CONFIG_TYPE_ARRAY);
+        for (int i = 0; i < c[ON_BATTERY].num_points; i++) {
+            config_setting_set_float_elem(setting, -1, c[ON_BATTERY].points[i]);
+        }
     }
 }
 
@@ -546,6 +625,7 @@ int store_config(enum CONFIG file) {
     
     store_backlight_settings(&cfg, &conf.bl_conf);
     store_sensors_settings(&cfg, &conf.sens_conf);
+    store_override_settings(&cfg, &conf.sens_conf);
     store_kbd_settings(&cfg, &conf.kbd_conf);
     store_gamma_settings(&cfg, &conf.gamma_conf);
     store_daytime_settings(&cfg, &conf.day_conf);
