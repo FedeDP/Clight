@@ -146,37 +146,42 @@ static void load_override_settings(config_t *cfg, sensor_conf_t *sens_conf) {
         for (int i = 0; i < count; i++) {
             config_setting_t *setting = config_setting_get_elem(override_group, i);
             
-            /* Load regression points for ac backlight curve */
-            config_setting_t *points;
-            int len;
             curve_t *curve = calloc(SIZE_AC, sizeof(curve_t));
             bool error = false;
-            
-            if ((points = config_setting_get_member(setting, "ac_regression_points"))) {
-                len = config_setting_length(points);
-                if (len > 0 && len <= MAX_SIZE_POINTS) {
-                    curve[ON_AC].num_points = len;
-                    for (int i = 0; i < len; i++) {
-                        curve[ON_AC].points[i] = config_setting_get_float_elem(points, i);
+            const char *mon_id = NULL;
+            if (config_setting_lookup_string(setting, "monitor_id", &mon_id) == CONFIG_TRUE && strlen(mon_id)) {
+                config_setting_t *points;
+                int len;
+                
+                /* Load regression points for ac backlight curve */
+                if ((points = config_setting_get_member(setting, "ac_regression_points"))) {
+                    len = config_setting_length(points);
+                    if (len > 0 && len <= MAX_SIZE_POINTS) {
+                        curve[ON_AC].num_points = len;
+                        for (int i = 0; i < len; i++) {
+                            curve[ON_AC].points[i] = config_setting_get_float_elem(points, i);
+                        }
+                    } else {
+                        WARN("Wrong number of sensor 'ac_regression_points' array elements.\n");
+                        error = true;
                     }
                 } else {
-                    WARN("Wrong number of sensor 'ac_regression_points' array elements.\n");
                     error = true;
                 }
-            } else {
-                error = true;
-            }
-            
-            /* Load regression points for batt backlight curve */
-            if (!error && (points = config_setting_get_member(setting, "batt_regression_points"))) {
-                len = config_setting_length(points);
-                if (len > 0 && len <= MAX_SIZE_POINTS) {
-                     curve[ON_BATTERY].num_points = len;
-                    for (int i = 0; i < len; i++) {
-                        curve[ON_BATTERY].points[i] = config_setting_get_float_elem(points, i);
+                
+                /* Load regression points for batt backlight curve */
+                if (!error && (points = config_setting_get_member(setting, "batt_regression_points"))) {
+                    len = config_setting_length(points);
+                    if (len > 0 && len <= MAX_SIZE_POINTS) {
+                        curve[ON_BATTERY].num_points = len;
+                        for (int i = 0; i < len; i++) {
+                            curve[ON_BATTERY].points[i] = config_setting_get_float_elem(points, i);
+                        }
+                    } else {
+                        WARN("Wrong number of sensor 'batt_regression_points' array elements.\n");
+                        error = true;
                     }
                 } else {
-                    WARN("Wrong number of sensor 'batt_regression_points' array elements.\n");
                     error = true;
                 }
             } else {
@@ -187,7 +192,7 @@ static void load_override_settings(config_t *cfg, sensor_conf_t *sens_conf) {
                 if (!sens_conf->specific_curves) {
                     sens_conf->specific_curves = map_new(true, free);
                 }
-                map_put(sens_conf->specific_curves, setting->name, curve);
+                map_put(sens_conf->specific_curves, mon_id, curve);
             } else {
                 free(curve);
             }
