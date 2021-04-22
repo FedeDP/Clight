@@ -317,7 +317,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
             const int num_captures = length / sizeof(double);
             amb_msg.bl.old = state.ambient_br;
             state.ambient_br = compute_average(intensity, num_captures);
-            DEBUG("Captured [%d/%d] from '%s'. Ambient brightness: %lf.\n", num_captures, 
+            DEBUG("Captured [%d/%d] from '%s'. Ambient brightness: %.3lf.\n", num_captures, 
                   conf.sens_conf.num_captures[state.ac_state], 
                   sensor, state.ambient_br);
             amb_msg.bl.new = state.ambient_br;
@@ -427,13 +427,13 @@ static int get_and_set_each_brightness(const double pct, const bool is_smooth, c
                 SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
                 curve_t *c = map_get(sens_conf->specific_curves, mon_id);
                 if (c) {
-                    DEBUG("Using specific curve for %s\n", mon_id);
                     /* Use monitor specific adjustment, properly scaling bl pct */
                     int num_points = c[st].num_points;
                     const double real_pct = get_value_from_curve(pct * (num_points - 1), &c[st]);
+                    DEBUG("Using specific curve for '%s': setting %.3lf pct.\n", mon_id, real_pct);
                     r = call(&args, "d(bdu)s", real_pct, is_smooth, step, timeout, mon_id);
                 } else {
-                    DEBUG("Using default curve for %s\n", mon_id);
+                    DEBUG("Using default curve for '%s'\n", mon_id);
                     /* Use non-adjusted (default) curve value */
                     r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, mon_id);
                 }
