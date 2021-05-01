@@ -357,8 +357,10 @@ static void load_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
 static void load_inh_settings(config_t *cfg, inh_conf_t *inh_conf) {
     config_setting_t *kbd = config_lookup(cfg, "inhibit");
     if (kbd) {
+        config_setting_lookup_bool(kbd, "disabled", &inh_conf->disabled);
         config_setting_lookup_bool(kbd, "inhibit_docked", &inh_conf->inhibit_docked);
         config_setting_lookup_bool(kbd, "inhibit_pm", &inh_conf->inhibit_pm);
+        config_setting_lookup_bool(kbd, "inhibit_bl", &inh_conf->inhibit_bl);
     }
 }
 
@@ -402,7 +404,10 @@ int read_config(enum CONFIG file, char *config_file) {
 static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_t *bl = config_setting_add(cfg->root, "backlight", CONFIG_TYPE_GROUP);
     
-    config_setting_t *setting = config_setting_add(bl, "no_smooth_transition", CONFIG_TYPE_BOOL);
+    config_setting_t *setting = config_setting_add(bl, "disabled", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, bl_conf->disabled);
+    
+    setting = config_setting_add(bl, "no_smooth_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_smooth);
     
     setting = config_setting_add(bl, "trans_step", CONFIG_TYPE_FLOAT);
@@ -469,14 +474,18 @@ static void store_sensors_settings(config_t *cfg, sensor_conf_t *sens_conf) {
 }
 
 static void store_override_settings(config_t *cfg, sensor_conf_t *sens_conf) {
-    config_setting_t *override = config_setting_add(cfg->root, "monitor_override", CONFIG_TYPE_GROUP);
+    config_setting_t *override = config_setting_add(cfg->root, "monitor_override", CONFIG_TYPE_LIST);
     for (map_itr_t *itr = map_itr_new(conf.sens_conf.specific_curves); itr; itr = map_itr_next(itr)) {
         curve_t *c = map_itr_get_data(itr);
         const char *key = map_itr_get_key(itr);
-        config_setting_t *monitor = config_setting_add(override, key, CONFIG_TYPE_GROUP);
+        
+        config_setting_t *monitor = config_setting_add(override, NULL, CONFIG_TYPE_GROUP);
+        
+        config_setting_t *setting = config_setting_add(monitor, "monitor_id", CONFIG_TYPE_STRING);
+        config_setting_set_string(setting, key);
         
         /* -1 here below means append to end of array */
-        config_setting_t *setting = config_setting_add(monitor, "ac_regression_points", CONFIG_TYPE_ARRAY);
+        setting = config_setting_add(monitor, "ac_regression_points", CONFIG_TYPE_ARRAY);
         for (int i = 0; i < c[ON_AC].num_points; i++) {
             config_setting_set_float_elem(setting, -1, c[ON_AC].points[i]);
         }
@@ -509,7 +518,10 @@ static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
 static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     config_setting_t *gamma = config_setting_add(cfg->root, "gamma", CONFIG_TYPE_GROUP);
     
-    config_setting_t *setting = config_setting_add(gamma, "no_smooth_transition", CONFIG_TYPE_BOOL);
+    config_setting_t *setting = config_setting_add(gamma, "disabled", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, gamma_conf->disabled);
+    
+    setting = config_setting_add(gamma, "no_smooth_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, gamma_conf->no_smooth);
     
     setting = config_setting_add(gamma, "trans_step", CONFIG_TYPE_INT);
@@ -554,7 +566,10 @@ static void store_daytime_settings(config_t *cfg, daytime_conf_t *day_conf) {
 static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
     config_setting_t *dimmer = config_setting_add(cfg->root, "dimmer", CONFIG_TYPE_GROUP);
     
-    config_setting_t *setting = config_setting_add(dimmer, "no_smooth_transition", CONFIG_TYPE_ARRAY);
+    config_setting_t *setting = config_setting_add(dimmer, "disabled", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, dim_conf->disabled);
+    
+    setting = config_setting_add(dimmer, "no_smooth_transition", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_DIM; i++) {
         config_setting_set_bool_elem(setting, -1, dim_conf->no_smooth[i]);
     }
@@ -581,7 +596,10 @@ static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
 static void store_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf) {
     config_setting_t *dpms = config_setting_add(cfg->root, "dpms", CONFIG_TYPE_GROUP);
     
-    config_setting_t *setting = config_setting_add(dpms, "timeouts", CONFIG_TYPE_ARRAY);
+    config_setting_t *setting = config_setting_add(dpms, "disabled", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, dpms_conf->disabled);
+    
+    setting = config_setting_add(dpms, "timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_AC; i++) {
         config_setting_set_int_elem(setting, -1, dpms_conf->timeout[i]);
     }
@@ -590,7 +608,10 @@ static void store_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf) {
 static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
     config_setting_t *screen = config_setting_add(cfg->root, "screen", CONFIG_TYPE_GROUP);
     
-    config_setting_t *setting = config_setting_add(screen, "num_samples", CONFIG_TYPE_INT);
+    config_setting_t *setting = config_setting_add(screen, "disabled", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, screen_conf->disabled);
+    
+    setting = config_setting_add(screen, "num_samples", CONFIG_TYPE_INT);
     config_setting_set_int(setting, screen_conf->samples);
     
     setting = config_setting_add(screen, "contrib", CONFIG_TYPE_FLOAT);
@@ -603,13 +624,19 @@ static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
 }
 
 static void store_inh_settings(config_t *cfg, inh_conf_t *inh_conf) {
-    config_setting_t *kbd = config_setting_add(cfg->root, "inhibit", CONFIG_TYPE_GROUP);
+    config_setting_t *inh = config_setting_add(cfg->root, "inhibit", CONFIG_TYPE_GROUP);
     
-    config_setting_t *setting = config_setting_add(kbd, "inhibit_docked", CONFIG_TYPE_BOOL);
+    config_setting_t *setting = config_setting_add(inh, "disabled", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, inh_conf->disabled);
+    
+    setting = config_setting_add(inh, "inhibit_docked", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, inh_conf->inhibit_docked);
     
-    setting = config_setting_add(kbd, "inhibit_pm", CONFIG_TYPE_BOOL);
+    setting = config_setting_add(inh, "inhibit_pm", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, inh_conf->inhibit_pm);
+    
+    setting = config_setting_add(inh, "inhibit_bl", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, inh_conf->inhibit_bl);
 }
 
 int store_config(enum CONFIG file) {

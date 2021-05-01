@@ -122,6 +122,7 @@ void init_opts(int argc, char *argv[]) {
     init_dimmer_opts(&conf.dim_conf);
     init_dpms_opts(&conf.dpms_conf);
     init_screen_opts(&conf.screen_conf);
+    // init_inh_opts NOT NEEDED
 
     char conf_file[PATH_MAX + 1] = {0};
     

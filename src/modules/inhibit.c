@@ -4,8 +4,6 @@ static void on_inhibit_req(inhibit_upd *up);
 
 MODULE("INHIBIT");
 
-static int inhibition_ctr;
-
 static void init(void) {
     M_SUB(INHIBIT_REQ);
 }
@@ -35,6 +33,7 @@ static void destroy(void) {
 }
 
 static void on_inhibit_req(inhibit_upd *up) {
+    static int inhibition_ctr;
     if (VALIDATE_REQ(up)) {
         /* Drop an inhibition from our counter */
         if (!up->new) {

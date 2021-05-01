@@ -21,6 +21,7 @@ static void interface_curve_callback(double *regr_points, int num_points, enum a
 static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
 static void suspended_callback(void);
+static void inhibit_callback(void);
 static void time_callback(int old_val, const bool is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
@@ -59,6 +60,7 @@ static void init(void) {
     M_SUB(CURVE_REQ);
     M_SUB(NO_AUTOCALIB_REQ);
     M_SUB(BL_REQ);
+    M_SUB(INHIBIT_UPD);
     m_become(waiting_init);
 }
 
@@ -181,6 +183,9 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case SUSPEND_UPD:
         suspended_callback();
         break;
+    case INHIBIT_UPD:
+        inhibit_callback();
+        break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
@@ -240,6 +245,9 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         break;
     case SUSPEND_UPD:
         suspended_callback();
+        break;
+    case INHIBIT_UPD:
+        inhibit_callback();
         break;
     case BL_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
@@ -554,6 +562,14 @@ static void suspended_callback(void) {
         pause_mod(SUSPEND);
     } else {
         resume_mod(SUSPEND);
+    }
+}
+
+static void inhibit_callback(void) {
+    if (state.inhibited && conf.inh_conf.inhibit_bl) {
+        pause_mod(INHIBIT);
+    } else {
+        resume_mod(INHIBIT);
     }
 }
 

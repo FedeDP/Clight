@@ -150,6 +150,7 @@ typedef struct {
 typedef struct {
     bool old;                   // Valued in updates. Useless for requests
     bool new;                   // Mandatory for requests. Valued in updates. True when entering suspend mode. False when resuming.
+    bool force;                 // True to forcefully resume (ie: set current suspends counter to 0 and immediately resume)
 } suspend_upd;
 
 typedef struct {

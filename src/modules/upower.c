@@ -2,6 +2,7 @@
 
 static int upower_check(void);
 static int upower_init(void);
+static int session_active_listener_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void publish_upower(int new, message_t *up);
 static void publish_lid(bool new, message_t *up);
@@ -135,7 +136,7 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
             /* 
              * Only if lid is closed: check for DOCKED state (if inhibit_docked is enabled)
              */
-            bool docked = false;
+            int docked = false;
             if (lid_state) {
                 SYSBUS_ARG(docked_args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Docked");
                 

@@ -201,6 +201,7 @@ static const sd_bus_vtable conf_inh_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("InhibitDocked", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_docked), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitPM", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_pm), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitBL", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_bl), 0),
     SD_BUS_VTABLE_END
 };
 

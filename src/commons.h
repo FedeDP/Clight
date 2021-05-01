@@ -104,6 +104,7 @@ typedef struct {
     int disabled;
     int inhibit_docked;                     // whether to manage "docked" states as inhibitions. Requires UPower.
     int inhibit_pm;                         // whether handle inhibition suppressing powermanagement too
+    int inhibit_bl;                         // whether to inhibit backlight module too
 } inh_conf_t;
 
 /* Struct that holds global config as passed through cmdline args/config file reading */

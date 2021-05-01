@@ -1,9 +1,12 @@
 #include "bus.h"
 
 static int hook_suspend_signal(void);
+static int session_active_listener_init(void);
 static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
+static int on_session_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void publish_pm_msg(const bool old, const bool new);
+static void publish_susp_req(const bool new);
 static void on_pm_req(const bool new);
 static void on_suspend_req(suspend_upd *up);
 
@@ -21,6 +24,8 @@ static void init(void) {
     M_SUB(SUSPEND_REQ);
     
     hook_suspend_signal();
+    session_active_listener_init();
+    
     delayed_resume_fd = start_timer(CLOCK_BOOTTIME, 0, 0);
 }
 
@@ -66,9 +71,8 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             break;
         case SUSPEND_REQ: {
             suspend_upd *up = (suspend_upd *)MSG_DATA();
-            if (VALIDATE_REQ(up)) {
-                on_suspend_req(up);
-            }
+            // VALIDATE_REQ is called inside
+            on_suspend_req(up);
             break;
         }
         default:
@@ -89,13 +93,30 @@ static int hook_suspend_signal(void) {
     return add_match(&args, &slot, on_new_suspend);
 }
 
+static int session_active_listener_init(void) {
+    SYSBUS_ARG(args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    return add_match(&args, &slot, on_session_change);
+}
+
 static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     int going_suspend;
     sd_bus_message_read(m, "b", &going_suspend);
     
-    DECLARE_HEAP_MSG(suspend_req, SUSPEND_REQ);
-    suspend_req->suspend.new = going_suspend;
-    M_PUB(suspend_req);
+    publish_susp_req(going_suspend);
+    return 0;
+}
+
+/* Listener on logind session.Active for current session */
+static int on_session_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    static int active = 1;
+    SYSBUS_ARG(args, "org.freedesktop.login1",  "/org/freedesktop/login1/session/auto", "org.freedesktop.login1.Session", "Active");
+    int old_active = active;
+    int r = get_property(&args, "b", &active);
+    if (!r) {
+        if (active != old_active) {
+            publish_susp_req(!active);
+        }
+    }
     return 0;
 }
 
@@ -113,6 +134,12 @@ static void publish_pm_msg(const bool old, const bool new) {
     pm_msg->pm.new = new;
     M_PUB(pm_msg);
     state.pm_inhibited = new;
+}
+
+static void publish_susp_req(const bool new) {
+    DECLARE_HEAP_MSG(suspend_req, SUSPEND_REQ);
+    suspend_req->suspend.new = new;
+    M_PUB(suspend_req);
 }
 
 static void on_pm_req(const bool new) {
@@ -141,21 +168,38 @@ static void on_pm_req(const bool new) {
 }
 
 static void on_suspend_req(suspend_upd *up) {
-    state.suspended = up->new;
-
-    DECLARE_HEAP_MSG(suspend_msg, SUSPEND_UPD);
-    suspend_msg->suspend.new = up->new;
-    suspend_msg->suspend.old = !state.suspended;
-    
-    /* 
-     * NOTE: resuming from suspend can be delayed up to 30s 
-     * because in some reported cases, clight is too fast to
-     * sync screen temperature, failing because Xorg is still not fully resumed. 
-     */
-    if (!up->new && conf.resumedelay > 0) {
-        set_timeout(conf.resumedelay, 0, delayed_resume_fd, 0);
-        m_register_fd(delayed_resume_fd, false, suspend_msg);
-    } else {
-        M_PUB(suspend_msg);
+    static int suspend_ctr = 0;
+    if (VALIDATE_REQ(up)) {
+        /* Drop a suspend source from our counter */
+        if (!up->new) {
+            if (!up->force) {
+                suspend_ctr--;
+            } else {
+                suspend_ctr = 0;
+            }
+        }
+        
+        if (up->new || suspend_ctr == 0) {
+            DECLARE_HEAP_MSG(suspend_msg, SUSPEND_UPD);
+            suspend_msg->suspend.old = state.suspended;
+            state.suspended = up->new;
+            suspend_msg->suspend.new = up->new;
+            /* 
+             * NOTE: resuming from suspend can be delayed up to 30s 
+             * because in some reported cases, clight is too fast to
+             * sync screen temperature, failing because Xorg is still not fully resumed. 
+             */
+            if (!up->new && conf.resumedelay > 0) {
+                set_timeout(conf.resumedelay, 0, delayed_resume_fd, 0);
+                m_register_fd(delayed_resume_fd, false, suspend_msg);
+            } else {
+                M_PUB(suspend_msg);
+            }
+        }
     }
+    /* Count currently held suspends */
+    if (up->new) {
+        suspend_ctr++;
+    }
+    DEBUG("Suspend ctr: %d\n", suspend_ctr);
 }

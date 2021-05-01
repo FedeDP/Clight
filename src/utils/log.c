@@ -120,6 +120,7 @@ static void log_inh_conf(inh_conf_t *inh_conf) {
     fprintf(log_file, "\n### INHIBIT ###\n");
     fprintf(log_file, "* Docked:\t\t%s\n", inh_conf->inhibit_docked ? "Enabled" : "Disabled");
     fprintf(log_file, "* PowerManagement:\t\t%s\n", inh_conf->inhibit_pm ? "Enabled" : "Disabled");
+    fprintf(log_file, "* Backlight:\t\t%s\n", inh_conf->inhibit_bl ? "Enabled" : "Disabled");
 }
 
 void log_conf(void) {
