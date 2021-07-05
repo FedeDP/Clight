@@ -129,7 +129,7 @@ static int on_upower_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
 
     enum lid_states lid_state;
     r = get_property(&lid_close_args, "b", &lid_state);
-    if (!r && !!state.lid_state != lid_state) {
+    if (!r && (state.lid_state == -1 || !!state.lid_state != lid_state)) {
         if (conf.inh_conf.inhibit_docked) {
             
             /* 
