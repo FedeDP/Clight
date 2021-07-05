@@ -12,6 +12,8 @@
 - [x] Implement StoreCurveConf
 - [x] Fixed StoreCurveConf
 
+- [x] Fix bug in lid state initialization
+
 ### Inhibit
 - [x] Add back inhibit_bl conf value
 - [x] Add a conf opt to disable inhibit module
