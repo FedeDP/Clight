@@ -12,6 +12,7 @@ static double get_value_from_curve(const double perc, curve_t *curve);
 static double set_new_backlight(const double perc);
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout);
 static int get_and_set_each_brightness(const double pct, const bool is_smooth, const double step, const int timeout);
+static void set_each_brightness(sd_bus_message *m, double pct, const bool is_smooth, const double step, const int timeout);
 static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
@@ -30,6 +31,7 @@ static void on_lid_update(void);
 static void pause_mod(enum mod_pause type);
 static void resume_mod(enum mod_pause type);
 
+static sd_bus_message *restore_m = NULL;
 static int bl_fd = -1;
 static sd_bus_slot *sens_slot, *bl_slot;
 static char *backlight_interface;
@@ -62,6 +64,10 @@ static void init(void) {
     M_SUB(BL_REQ);
     M_SUB(INHIBIT_UPD);
     m_become(waiting_init);
+    
+    // Store current backlight to later restore them if requested
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, &restore_m, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "GetAll");
+    call(&args, "s", conf.bl_conf.screen_path);
 }
 
 static bool check(void) {
@@ -81,6 +87,9 @@ static void destroy(void) {
     }
     if (bl_fd >= 0) {
         close(bl_fd);
+    }
+    if (restore_m) {
+        sd_bus_message_unrefp(&restore_m);
     }
     free(backlight_interface);
     free(conf.bl_conf.screen_path);
@@ -221,6 +230,12 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         }
         break;
     }
+    case SYSTEM_UPD:
+        if (msg->ps_msg->type == LOOP_STOPPED && restore_m && conf.bl_conf.restore) {
+            set_each_brightness(restore_m, 0, false, 0, 0);
+            restore_m = NULL;
+        }
+        break; 
     default:
         break;
     }
@@ -286,6 +301,12 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         }
         break;
     }
+    case SYSTEM_UPD:
+        if (msg->ps_msg->type == LOOP_STOPPED && restore_m && conf.bl_conf.restore) {
+            set_each_brightness(restore_m, 0, false, 0, 0);
+            restore_m = NULL;
+        }
+        break; 
     default:
         break;
     }
@@ -413,47 +434,56 @@ static void publish_bl_upd(const double pct, const bool is_smooth, const double 
  * otherwise just sets requested backlight level (just like a SetAll)
  */
 static int get_and_set_each_brightness(const double pct, const bool is_smooth, const double step, const int timeout) {
-    sensor_conf_t *sens_conf = &conf.sens_conf;
-    enum ac_states st = state.ac_state;
-    
     /* Get all monitors backlight; we just need to map each monitor to its specific curve indeed */
     // TODO: when clightd will use different object paths for each monitor, just enumerate paths here!
     sd_bus_message *m = NULL;
     SYSBUS_ARG_REPLY(args, parse_bus_reply, &m, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "GetAll");
     int r = call(&args, "s", conf.bl_conf.screen_path);
     if (r >= 0) {
-        r = sd_bus_message_enter_container(m, SD_BUS_TYPE_ARRAY, "(sd)");
-        while ((r = sd_bus_message_enter_container(m, SD_BUS_TYPE_STRUCT, "sd") >= 0) && r >= 0) {
-            const char *mon_id = NULL;
-            r = sd_bus_message_read(m, "sd", &mon_id, NULL);
-            sd_bus_message_exit_container(m);
-            
-            if (r >= 0 && mon_id) {
-                int ok = true;
-                
-                /* Set backlight on monitor id */
-                SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
-                curve_t *c = map_get(sens_conf->specific_curves, mon_id);
-                if (c) {
-                    /* Use monitor specific adjustment, properly scaling bl pct */
-                    int num_points = c[st].num_points;
-                    const double real_pct = get_value_from_curve(pct * (num_points - 1), &c[st]);
-                    DEBUG("Using specific curve for '%s': setting %.3lf pct.\n", mon_id, real_pct);
-                    r = call(&args, "d(bdu)s", real_pct, is_smooth, step, timeout, mon_id);
-                } else {
-                    DEBUG("Using default curve for '%s'\n", mon_id);
-                    /* Use non-adjusted (default) curve value */
-                    r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, mon_id);
-                }
-                if (!ok) {
-                    r = -1;
-                }
-            }
-        }
-        sd_bus_message_exit_container(m);
-        sd_bus_message_unref(m);
+        set_each_brightness(m, pct, is_smooth, step, timeout);
     }
     return r;
+}
+
+static void set_each_brightness(sd_bus_message *m, double pct, const bool is_smooth, const double step, const int timeout) {
+    const bool restoring = pct == 0;
+    sensor_conf_t *sens_conf = &conf.sens_conf;
+    enum ac_states st = state.ac_state;
+    
+    int r = sd_bus_message_enter_container(m, SD_BUS_TYPE_ARRAY, "(sd)");
+    while ((r = sd_bus_message_enter_container(m, SD_BUS_TYPE_STRUCT, "sd") >= 0) && r >= 0) {
+        const char *mon_id = NULL;
+        if (!restoring) {
+            r = sd_bus_message_read(m, "sd", &mon_id, NULL);
+        } else {
+            r = sd_bus_message_read(m, "sd", &mon_id, &pct);
+        }
+        sd_bus_message_exit_container(m);
+            
+        if (r >= 0 && mon_id) {
+            int ok = true;
+                
+            /* Set backlight on monitor id */
+            SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
+            curve_t *c = map_get(sens_conf->specific_curves, mon_id);
+            if (c && !restoring) {
+                /* Use monitor specific adjustment, properly scaling bl pct */
+                int num_points = c[st].num_points;
+                const double real_pct = get_value_from_curve(pct * (num_points - 1), &c[st]);
+                DEBUG("Using specific curve for '%s': setting %.3lf pct.\n", mon_id, real_pct);
+                r = call(&args, "d(bdu)s", real_pct, is_smooth, step, timeout, mon_id);
+            } else {
+                DEBUG("Using default curve for '%s'\n", mon_id);
+                /* Use non-adjusted (default) curve value */
+                r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, mon_id);
+            }
+            if (!ok) {
+                r = -1;
+            }
+        }
+    }
+    sd_bus_message_exit_container(m);
+    sd_bus_message_unref(m);
 }
 
 static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout) {

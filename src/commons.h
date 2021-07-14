@@ -54,6 +54,7 @@ typedef struct {
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
     int pause_on_lid_closed;                // whether clight should inhibit autocalibration on lid closed
     int capture_on_lid_opened;              // whether to trigger a new capture whenever lid gets opened
+    int restore;                            // whether backlight should be restored on Clight exit
 } bl_conf_t;
 
 typedef struct {
@@ -71,6 +72,7 @@ typedef struct {
     int trans_timeout;                      // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
     int long_transition;                    // flag to enable a very long smooth transition for gamma (redshift-like)
     int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
+    int restore;                            // whether gamma should be restored on Clight exit
 } gamma_conf_t;
 
 typedef struct {

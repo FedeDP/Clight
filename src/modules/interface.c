@@ -123,6 +123,7 @@ static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("BattDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattEventTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][IN_EVENT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(bl_conf_t, restore), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -155,6 +156,7 @@ static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("LongTransition", "b", NULL, NULL, offsetof(gamma_conf_t, long_transition), 0),
+    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(gamma_conf_t, restore), 0),
     SD_BUS_VTABLE_END
 };
 

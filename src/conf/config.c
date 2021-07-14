@@ -48,6 +48,7 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     if (bl) {
         const char *screendev;
         config_setting_lookup_bool(bl, "disabled", &bl_conf->disabled);
+        config_setting_lookup_bool(bl, "restore_on_exit", &bl_conf->restore);
         config_setting_lookup_bool(bl, "no_smooth_transition", &bl_conf->no_smooth);
         config_setting_lookup_float(bl, "trans_step", &bl_conf->trans_step);
         config_setting_lookup_int(bl, "trans_timeout", &bl_conf->trans_timeout);
@@ -225,6 +226,7 @@ static void load_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     config_setting_t *gamma = config_lookup(cfg, "gamma");
     if (gamma) {        
         config_setting_lookup_bool(gamma, "disabled", &gamma_conf->disabled);
+        config_setting_lookup_bool(gamma, "restore_on_exit", &gamma_conf->restore);
         config_setting_lookup_bool(gamma, "no_smooth_transition", &gamma_conf->no_smooth);
         config_setting_lookup_int(gamma, "trans_step", &gamma_conf->trans_step);
         config_setting_lookup_int(gamma, "trans_timeout", &gamma_conf->trans_timeout);
@@ -407,6 +409,9 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_t *setting = config_setting_add(bl, "disabled", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->disabled);
     
+    setting = config_setting_add(bl, "restore_on_exit", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, bl_conf->restore);
+    
     setting = config_setting_add(bl, "no_smooth_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_smooth);
     
@@ -520,6 +525,9 @@ static void store_gamma_settings(config_t *cfg, gamma_conf_t *gamma_conf) {
     
     config_setting_t *setting = config_setting_add(gamma, "disabled", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, gamma_conf->disabled);
+    
+    setting = config_setting_add(gamma, "restore_on_exit", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, gamma_conf->restore);
     
     setting = config_setting_add(gamma, "no_smooth_transition", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, gamma_conf->no_smooth);

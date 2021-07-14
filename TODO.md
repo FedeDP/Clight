@@ -12,14 +12,20 @@
 - [x] Implement StoreCurveConf
 - [x] Fixed StoreCurveConf
 
-- [x] Fix bug in lid state initialization
+- [x] Allow to automatically restore screen backlight upon clight exit
 
 ### Inhibit
 - [x] Add back inhibit_bl conf value
 - [x] Add a conf opt to disable inhibit module
 
+### Upower
+- [x] Fix bug in lid state initialization
+
 ### Conf
 - [x] Properly dump "disabled" bool in StoreConf for each module
+
+### Gamma
+- [x] Allow to automatically restore screen temperature upon clight exit
 
 ## 5.x
 - [ ] Port to libmodule 6.0.0 (?)

@@ -16,6 +16,7 @@ static void interface_callback(temp_upd *req);
 static int on_temp_changed(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void pause_mod(bool pause, enum mod_pause reason);
 
+static int initial_temp;
 static sd_bus_slot *slot;
 static bool long_transitioning, should_sync_temp;
 static const self_t *daytime_ref;
@@ -31,6 +32,10 @@ static void init(void) {
     M_SUB(NEXT_DAYEVT_UPD);
     M_SUB(SUSPEND_UPD);
     m_become(waiting_daytime);
+    
+    // Store current temperature to later restore it if requested
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, &initial_temp, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Get");
+    call(&args, "ss", fetch_display(), fetch_env());    
 }
 
 static bool check(void) {
@@ -102,6 +107,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case SUSPEND_UPD:
         pause_mod(state.suspended, SUSPEND);
         break;
+    case SYSTEM_UPD:
+        if (msg->ps_msg->type == LOOP_STOPPED && initial_temp && conf.gamma_conf.restore) {
+            set_temp(initial_temp, NULL, false, 0, 0);
+        }
+        break;    
     default:
         break;
     }
@@ -145,7 +155,10 @@ static void publish_temp_upd(int temp, int smooth, int step, int timeout) {
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
-    return sd_bus_message_read(reply, "b", userdata);
+    if (!strcmp(member, "Get")) {
+        return sd_bus_message_read(reply, "i", userdata);
+    }
+    return sd_bus_message_read(reply, "b", userdata); 
 }
 
 static void set_temp(int temp, const time_t *now, int smooth, int step, int timeout) {
