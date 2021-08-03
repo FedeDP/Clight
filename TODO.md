@@ -4,9 +4,13 @@
 - [x] Add curve configuration
 - [x] Use curve config
 - [x] drop ambient_threshold
+- [x] Expose curve points from dbus (read only)
+- [ ] allow to update them from dbus (?)
 
 ### Backlight
 - [ ] Port to clightd.Backlight2 API
+- [ ] Drop screen_path bl conf
+- [ ] Drop is_smooth option (no need, just specify a step/wait > 0)
 
 ## 4.x
 - [ ] Port to libmodule 6.0.0 (?)

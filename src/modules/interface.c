@@ -133,8 +133,8 @@ static const sd_bus_vtable conf_sens_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("Settings", "s", NULL, NULL, offsetof(sensor_conf_t, dev_opts), 0),
     SD_BUS_WRITABLE_PROPERTY("AcCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_AC].points), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_BATTERY].points), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -143,6 +143,8 @@ static const sd_bus_vtable conf_kbd_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
     SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_BATTERY]), 0),
+    SD_BUS_PROPERTY("AcPoints", "ad", get_curve, offsetof(kbd_conf_t, curve[ON_AC]), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("BattPoints", "ad", get_curve, offsetof(kbd_conf_t, curve[ON_BATTERY]), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_VTABLE_END
 };
 
@@ -812,11 +814,8 @@ static int method_pause(sd_bus_message *m, void *userdata, sd_bus_error *ret_err
 static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error) {
     
-    enum ac_states st = ON_AC;
-    if (userdata == conf.sens_conf.default_curve[ON_BATTERY].points) {
-        st = ON_BATTERY;
-    }
-    return sd_bus_message_append_array(reply, 'd', userdata, conf.sens_conf.default_curve[st].num_points * sizeof(double));
+    curve_t *c = (curve_t *)userdata;
+    return sd_bus_message_append_array(reply, 'd', c->points, c->num_points * sizeof(double));
 }
 
 static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -839,7 +838,7 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
         r = -EINVAL;
     } else {
         curve_req.curve.state = ON_AC;
-        if (userdata == conf.sens_conf.default_curve[ON_BATTERY].points) {
+        if (userdata == &conf.sens_conf.default_curve[ON_BATTERY]) {
             curve_req.curve.state = ON_BATTERY;
         }
         curve_req.curve.regression_points = data;
