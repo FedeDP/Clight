@@ -60,8 +60,8 @@ typedef struct {
 typedef struct {
     int disabled;                           // disable keyboard backlight automatic calibration (where supported)
     int dim;                                // whether DPMS/Dimmer should switch keyboard off
-    double amb_br_thres;                    // Ambient brightness high threshold
     int timeout[SIZE_AC];                   // kbd dimming timeout
+    curve_t curve[SIZE_AC];                 // curve used to match ambient brightness to certain keyboard backlight level
 } kbd_conf_t;
 
 typedef struct {

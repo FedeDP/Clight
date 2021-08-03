@@ -24,6 +24,16 @@ static void check_screen_conf(screen_conf_t *screen_conf);
 static void check_inh_conf(inh_conf_t *inh_conf);
 static void check_conf(void);
 
+static double *bl_default_curve[SIZE_AC] = { 
+    (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
+    (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
+};
+
+static double *kbd_default_curve[SIZE_AC] = { 
+    (double[]){ 1.0, 0.97, 0.93, 0.88, 0.81, 0.74, 0.61, 0.45, 0.29, 0.15, 0.0 },
+    (double[]){ 0.80, 0.78, 0.75, 0.71, 0.65, 0.59, 0.52, 0.36, 0.23, 0.15, 0.0 },
+};
+
 static void init_backlight_opts(bl_conf_t *bl_conf) {
     bl_conf->timeout[ON_AC][DAY] = 10 * 60;
     bl_conf->timeout[ON_AC][NIGHT] = 45 * 60;
@@ -58,17 +68,24 @@ static void init_sens_opts(sensor_conf_t *sens_conf) {
     sens_conf->default_curve[ON_AC].num_points = DEF_SIZE_POINTS;
     sens_conf->default_curve[ON_BATTERY].num_points = DEF_SIZE_POINTS;
     memcpy(sens_conf->default_curve[ON_AC].points,
-           (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
+           bl_default_curve[ON_AC],
            DEF_SIZE_POINTS * sizeof(double));
     memcpy(sens_conf->default_curve[ON_BATTERY].points,
-           (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
+           bl_default_curve[ON_BATTERY],
            DEF_SIZE_POINTS * sizeof(double));
 }
 
 static void init_kbd_opts(kbd_conf_t *kbd_conf) {
-    kbd_conf->amb_br_thres = 1.0;
     kbd_conf->timeout[ON_AC] = 15;
     kbd_conf->timeout[ON_BATTERY] = 5;
+    kbd_conf->curve[ON_AC].num_points = DEF_SIZE_POINTS;
+    kbd_conf->curve[ON_BATTERY].num_points = DEF_SIZE_POINTS;
+    memcpy(kbd_conf->curve[ON_AC].points,
+           kbd_default_curve[ON_AC],
+           DEF_SIZE_POINTS * sizeof(double));
+    memcpy(kbd_conf->curve[ON_BATTERY].points,
+           kbd_default_curve[ON_BATTERY],
+           DEF_SIZE_POINTS * sizeof(double));
 }
 
 static void init_gamma_opts(gamma_conf_t *gamma_conf) {
@@ -278,7 +295,7 @@ static void check_bl_conf(bl_conf_t *bl_conf) {
     }
 }
 
-static inline void check_curve_points(curve_t *c, const char *id) {
+static inline void check_curve_points(curve_t *c, const char *id, double *fallback[SIZE_AC]) {
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */
     for (i = 0; i < c[ON_AC].num_points && !reg_points_ac_needed; i++) {
@@ -291,20 +308,15 @@ static inline void check_curve_points(curve_t *c, const char *id) {
             reg_points_batt_needed = 1;
         }
     }
-        
     if (reg_points_ac_needed) {
         WARN("Wrong %s ac_regression points. Resetting default values.\n", id);
         c[ON_AC].num_points = DEF_SIZE_POINTS;
-        memcpy(c[ON_AC].points,
-            (double[]){ 0.0, 0.15, 0.29, 0.45, 0.61, 0.74, 0.81, 0.88, 0.93, 0.97, 1.0 },
-            DEF_SIZE_POINTS * sizeof(double));
+        memcpy(c[ON_AC].points, fallback[ON_AC], DEF_SIZE_POINTS * sizeof(double));
     }
     if (reg_points_batt_needed) {
         WARN("Wrong %s batt_regression points. Resetting default values.\n", id);
         c[ON_BATTERY].num_points = DEF_SIZE_POINTS;
-        memcpy(c[ON_BATTERY].points,
-            (double[]){ 0.0, 0.15, 0.23, 0.36, 0.52, 0.59, 0.65, 0.71, 0.75, 0.78, 0.80 },
-            DEF_SIZE_POINTS * sizeof(double));
+        memcpy(c[ON_BATTERY].points, fallback[ON_BATTERY], DEF_SIZE_POINTS * sizeof(double));
     }
 }
 
@@ -317,27 +329,19 @@ static void check_sens_conf(sensor_conf_t *sens_conf) {
         WARN("Wrong BATT captures value. Resetting default value.\n");
         sens_conf->num_captures[ON_BATTERY] = 5;
     }
-    check_curve_points(sens_conf->default_curve, "sensor");
+    check_curve_points(sens_conf->default_curve, "sensor", bl_default_curve);
 }
 
 static void check_override_conf(sensor_conf_t *sens_conf) {
     for (map_itr_t *itr = map_itr_new(sens_conf->specific_curves); itr; itr = map_itr_next(itr)) {
         curve_t *c = map_itr_get_data(itr);
         const char *id = map_itr_get_key(itr);
-        check_curve_points(c, id);
+        check_curve_points(c, id, bl_default_curve);
     }
 }
 
 static void check_kbd_conf(kbd_conf_t *kbd_conf) {
-    if (kbd_conf->amb_br_thres > 1.0) {
-        WARN("Wrong amb_br_thres value. Resetting default value.\n");
-        kbd_conf->amb_br_thres = 1.0;
-    }
-    
-    if (kbd_conf->amb_br_thres <= 0.0) {
-        INFO("Disabling KEYBOARD as requested amb_br_thres is <= 0.\n");
-        kbd_conf->disabled = true;
-    }
+    check_curve_points(kbd_conf->curve, "keyboard", kbd_default_curve);
 }
 
 static void check_gamma_conf(gamma_conf_t *gamma_conf) {

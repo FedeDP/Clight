@@ -141,7 +141,6 @@ static const sd_bus_vtable conf_sens_vtable[] = {
 static const sd_bus_vtable conf_kbd_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
-    SD_BUS_WRITABLE_PROPERTY("AmbBrThresh", "d", NULL, NULL, offsetof(kbd_conf_t, amb_br_thres), 0),
     SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END

@@ -206,10 +206,9 @@ static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
     if (kbd) {
         config_setting_lookup_bool(kbd, "disabled", &kbd_conf->disabled);
         config_setting_lookup_bool(kbd, "dim", &kbd_conf->dim);
-        config_setting_lookup_float(kbd, "ambient_br_thresh", &kbd_conf->amb_br_thres);
         
         /* Load timeouts */
-        config_setting_t *timeouts;
+        config_setting_t *timeouts, *points;
         if ((timeouts = config_setting_get_member(kbd, "timeouts"))) {
             if (config_setting_length(timeouts) == SIZE_AC) {
                 for (int i = 0; i < SIZE_AC; i++) {
@@ -217,6 +216,33 @@ static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
                 }
             } else {
                 WARN("Wrong number of kbd 'timeouts' array elements.\n");
+            }
+        }
+        
+         /* Load regression points for ac keyboard curve */
+        int len;
+        if ((points = config_setting_get_member(kbd, "ac_regression_points"))) {
+            len = config_setting_length(points);
+            if (len > 0 && len <= MAX_SIZE_POINTS) {
+                kbd_conf->curve[ON_AC].num_points = len;
+                for (int i = 0; i < len; i++) {
+                   kbd_conf->curve[ON_AC].points[i] = config_setting_get_float_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of keyboard 'ac_regression_points' array elements.\n");
+            }
+        }
+        
+        /* Load regression points for batt keyboard curve */
+        if ((points = config_setting_get_member(kbd, "batt_regression_points"))) {
+            len = config_setting_length(points);
+            if (len > 0 && len <= MAX_SIZE_POINTS) {
+                kbd_conf->curve[ON_BATTERY].num_points = len;
+                for (int i = 0; i < len; i++) {
+                    kbd_conf->curve[ON_BATTERY].points[i] = config_setting_get_float_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of keyboard 'batt_regression_points' array elements.\n");
             }
         }
     }
@@ -511,8 +537,16 @@ static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
     setting = config_setting_add(kbd, "dim", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, kbd_conf->dim);
     
-    setting = config_setting_add(kbd, "ambient_br_thresh", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, kbd_conf->amb_br_thres);
+    /* -1 here below means append to end of array */
+    setting = config_setting_add(kbd, "ac_regression_points", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < kbd_conf->curve[ON_AC].num_points; i++) {
+        config_setting_set_float_elem(setting, -1, kbd_conf->curve[ON_AC].points[i]);
+    }
+                
+    setting = config_setting_add(kbd, "batt_regression_points", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < kbd_conf->curve[ON_BATTERY].num_points; i++) {
+        config_setting_set_float_elem(setting, -1, kbd_conf->curve[ON_BATTERY].points[i]);
+    }
     
     setting = config_setting_add(kbd, "timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_AC; i++) {

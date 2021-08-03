@@ -8,7 +8,6 @@ static void init_curves(void);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer, bool capture_only);
-static double get_value_from_curve(const double perc, curve_t *curve);
 static double set_new_backlight(const double perc);
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout);
 static int get_and_set_each_brightness(const double pct, const bool is_smooth, const double step, const int timeout);
@@ -394,18 +393,6 @@ static void do_capture(bool reset_timer, bool capture_only) {
     if (reset_timer) {
         set_timeout(get_current_timeout(), 0, bl_fd, 0);
     }
-}
-
-static inline double get_value_from_curve(const double perc, curve_t *curve) {
-    const double max = curve->points[curve->num_points - 1];
-    const double min = curve->points[0];
-    
-    /* y = a0 + a1x + a2x^2 */
-    const double b = curve->fit_parameters[0] 
-                    + curve->fit_parameters[1] * perc 
-                    + curve->fit_parameters[2] * pow(perc, 2);
-    const double value = clamp(b, max, min);
-    return value;
 }
 
 static double set_new_backlight(const double perc) {

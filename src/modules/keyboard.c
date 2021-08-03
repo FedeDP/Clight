@@ -1,9 +1,11 @@
 #include "bus.h"
 #include "utils.h"
+#include "my_math.h"
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static int init_kbd_backlight(void);
+static void on_ambient_br_update(bl_upd *up);
 static void set_keyboard_level(double level);
 static void set_keyboard_timeout(void);
 static void pause_kbd(const bool pause, enum mod_pause reason);
@@ -16,12 +18,15 @@ MODULE_WITH_PAUSE("KEYBOARD");
 static void init(void) {
     if (init_kbd_backlight() == 0) {
         M_SUB(DISPLAY_UPD);
-        M_SUB(BL_UPD);
+        M_SUB(AMBIENT_BR_UPD);
         M_SUB(KBD_BL_REQ);
         M_SUB(UPOWER_UPD);
         M_SUB(KBD_TO_REQ);
         M_SUB(SUSPEND_UPD);
         m_become(waiting_init);
+        
+        polynomialfit(NULL, &conf.kbd_conf.curve[ON_AC]);
+        polynomialfit(NULL, &conf.kbd_conf.curve[ON_BATTERY]);
     } else {
         m_poisonpill(self());
     }
@@ -49,13 +54,8 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case BL_UPD: {
-        bl_upd *up = (bl_upd *)MSG_DATA();
-        /* Only account for target backlight changes, ie: not step ones */
-        if (up->smooth || conf.bl_conf.no_smooth) {
-            kbd_req.bl.new = 1.0 - up->new;
-            M_PUB(&kbd_req);
-        }
+    case AMBIENT_BR_UPD: {
+        on_ambient_br_update((bl_upd *)MSG_DATA());
         break;
     }
     case KBD_BL_REQ: {
@@ -130,11 +130,15 @@ static int init_kbd_backlight(void) {
     return r;
 }
 
-static void set_keyboard_level(double level) {
-    if (level < 1 - conf.kbd_conf.amb_br_thres) {
-        level = 0;
-    }
-    
+static void on_ambient_br_update(bl_upd *up) {
+    const int num_points = conf.kbd_conf.curve[state.ac_state].num_points;
+    const double new_kbd_pct = get_value_from_curve(up->new * (num_points - 1), &conf.kbd_conf.curve[state.ac_state]);
+    INFO("Ambient brightness: %.3lf -> Keyboard backlight pct: %.3lf.\n", up->new, new_kbd_pct);
+    kbd_req.bl.new = new_kbd_pct;
+    M_PUB(&kbd_req);
+}
+
+static void set_keyboard_level(double level) {   
     SYSBUS_ARG(kbd_args, CLIGHTD_SERVICE, "/org/clightd/clightd/KbdBacklight", "org.clightd.clightd.KbdBacklight", "Set");
     kbd_msg.bl.old = state.current_kbd_pct;
     if (call(&kbd_args, "d", level) == 0) {

@@ -79,6 +79,19 @@ double clamp(double value, double max, double min) {
     return value;
 }
 
+double get_value_from_curve(const double perc, curve_t *curve) {
+    // Keyboard backlight curves are upside down
+    const double max = curve->points[curve->num_points - 1] > curve->points[0] ? curve->points[curve->num_points - 1] : curve->points[0];
+    const double min = curve->points[0] < curve->points[curve->num_points - 1] ? curve->points[0] : curve->points[curve->num_points - 1];
+        
+    /* y = a0 + a1x + a2x^2 */
+    const double b = curve->fit_parameters[0] 
+                    + curve->fit_parameters[1] * perc 
+                    + curve->fit_parameters[2] * pow(perc, 2);
+    const double value = clamp(b, max, min);
+    return value;
+}
+
 void plot_poly_curve(curve_t *curve) {
     const int maxY = curve->num_points - 1;
     char **grid = init_grid(curve->num_points);
