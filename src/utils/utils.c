@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <assert.h>
 
 /*
  * On X, use X display variable;
@@ -48,18 +49,32 @@ bool own_display(const char *display) {
     return strcmp(display, my_display) == 0;
 }
 
+static inline const char *mod_pause_reason_string(enum mod_pause reason) {
+    assert(reason != UNPAUSED);
+    
+    static const char *reasons[] = {
+#define X(name, value) #name,
+        X_FIELDS
+#undef X
+    };
+    // this counts number of trailing 0;
+    // it is undefined for 0
+    const int idx = __builtin_ctz(reason) + 1;
+    return reasons[idx];
+}
+
 bool mod_check_pause(bool pause, int *paused_state, enum mod_pause reason, const char *modname) {
     int old_paused = *paused_state;
     if (pause) {
         *paused_state |= reason;
         if (old_paused == UNPAUSED) {
-            DEBUG("Pausing %s\n", modname);
+            DEBUG("Pausing %s: %s\n", modname, mod_pause_reason_string(reason));
         }
         return old_paused == UNPAUSED;
     }
     *paused_state &= ~reason;
     if (old_paused != UNPAUSED && *paused_state == UNPAUSED) {
-        DEBUG("Resuming %s\n", modname);
+        DEBUG("Resuming %s: %s\n", modname, mod_pause_reason_string(reason));
         return true;
     }
     return false;

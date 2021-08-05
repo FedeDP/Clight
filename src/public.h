@@ -111,6 +111,7 @@ enum mod_msg_types {
     SUSPEND_REQ,        // Publish to set a new system suspend state (this won't suspend your system! It jsut 'fakes' a suspended state)
     KBD_TO_REQ,         // Publish to require a new keyboard timeout
     AMB_GAMMA_REQ,      // Publish to require a new AmbientGamma state
+    KBD_CURVE_REQ,      // Publish to set a new keyboard backlight curve for given ac state
     MSGS_SIZE
 };
 
@@ -246,7 +247,7 @@ typedef struct {
         nextdayevt_upd nextevt; /* NEXT_DAYEVT_UPD */
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ/KBD_TO_REQ */
-        curve_upd curve;        /* CURVE_REQ */
+        curve_upd curve;        /* CURVE_REQ/KBD_CURVE_REQ */
         calib_upd nocalib;      /* NO_AUTOCALIB_REQ */
         bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
         contrib_upd contrib;    /* CONTRIB_REQ */

@@ -42,5 +42,6 @@ const char *topics[] = {
     "ReqSuspend",
     "ReqKbdTo",
     "ReqAmbGamma",
+    "ReqKbdCurve"
 };
 _Static_assert(sizeof(topics) / sizeof(*topics) == MSGS_SIZE, "Undefined topic.");

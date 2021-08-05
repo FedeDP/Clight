@@ -8,6 +8,7 @@ static int init_kbd_backlight(void);
 static void on_ambient_br_update(bl_upd *up);
 static void set_keyboard_level(double level);
 static void set_keyboard_timeout(void);
+static void on_curve_req(double *regr_points, int num_points, enum ac_states s);
 static void pause_kbd(const bool pause, enum mod_pause reason);
 
 DECLARE_MSG(kbd_msg, KBD_BL_UPD);
@@ -23,6 +24,7 @@ static void init(void) {
         M_SUB(UPOWER_UPD);
         M_SUB(KBD_TO_REQ);
         M_SUB(SUSPEND_UPD);
+        M_SUB(KBD_CURVE_REQ);
         m_become(waiting_init);
         
         polynomialfit(NULL, &conf.kbd_conf.curve[ON_AC]);
@@ -85,6 +87,13 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case SUSPEND_UPD:
         pause_kbd(state.suspended, SUSPEND);
         break;
+    case KBD_CURVE_REQ: {
+        curve_upd *up = (curve_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            on_curve_req(up->regression_points, up->num_points, up->state);
+        }
+        break;
+    }
     default:
         break;
     }
@@ -101,6 +110,13 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     case SUSPEND_UPD:
         pause_kbd(state.suspended, SUSPEND);
         break;
+    case KBD_CURVE_REQ: {
+        curve_upd *up = (curve_upd *)MSG_DATA();
+        if (VALIDATE_REQ(up)) {
+            on_curve_req(up->regression_points, up->num_points, up->state);
+        }
+        break;
+    }
     default:
         break;
     }
@@ -138,7 +154,7 @@ static void on_ambient_br_update(bl_upd *up) {
     M_PUB(&kbd_req);
 }
 
-static void set_keyboard_level(double level) {   
+static void set_keyboard_level(double level) {
     SYSBUS_ARG(kbd_args, CLIGHTD_SERVICE, "/org/clightd/clightd/KbdBacklight", "org.clightd.clightd.KbdBacklight", "Set");
     kbd_msg.bl.old = state.current_kbd_pct;
     if (call(&kbd_args, "d", level) == 0) {
@@ -154,6 +170,17 @@ static void set_keyboard_timeout(void) {
         SYSBUS_ARG(kbd_args, CLIGHTD_SERVICE, "/org/clightd/clightd/KbdBacklight", "org.clightd.clightd.KbdBacklight", "SetTimeout");
         call(&kbd_args, "i", conf.kbd_conf.timeout[state.ac_state]);
     }
+}
+
+/* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */
+static void on_curve_req(double *regr_points, int num_points, enum ac_states s) {
+    curve_t *c = &conf.kbd_conf.curve[s];
+    if (regr_points) {
+        memcpy(c->points, 
+               regr_points, num_points * sizeof(double));
+        c->num_points = num_points;
+    }
+    polynomialfit(NULL, c);
 }
 
 static void pause_kbd(const bool pause, enum mod_pause reason) {

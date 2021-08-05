@@ -5,7 +5,7 @@
 - [x] Use curve config
 - [x] drop ambient_threshold
 - [x] Expose curve points from dbus (read only)
-- [ ] allow to update them from dbus (?)
+- [x] allow to update them from dbus
 
 ### Backlight
 - [ ] Port to clightd.Backlight2 API

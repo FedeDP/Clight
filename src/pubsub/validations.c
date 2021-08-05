@@ -100,8 +100,8 @@ bool validate_curve(curve_upd *up) {
     }
     
     if (up->state >= ON_AC && up->state < SIZE_AC &&
-        up->num_points > 0 && up->num_points <= MAX_SIZE_POINTS) {
-     
+        up->num_points > 0 && up->num_points <= MAX_SIZE_POINTS &&
+        up->regression_points != NULL) {
         return true;
     }
     DEBUG("Failed to validate curve request.\n");

@@ -143,8 +143,8 @@ static const sd_bus_vtable conf_kbd_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
     SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_BATTERY]), 0),
-    SD_BUS_PROPERTY("AcPoints", "ad", get_curve, offsetof(kbd_conf_t, curve[ON_AC]), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_PROPERTY("BattPoints", "ad", get_curve, offsetof(kbd_conf_t, curve[ON_BATTERY]), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(kbd_conf_t, curve[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(kbd_conf_t, curve[ON_BATTERY]), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -226,6 +226,7 @@ DECLARE_MSG(scr_to_req, SCR_TO_REQ);
 DECLARE_MSG(temp_req, TEMP_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(curve_req, CURVE_REQ);
+DECLARE_MSG(kbd_curve_req, KBD_CURVE_REQ);
 DECLARE_MSG(calib_req, NO_AUTOCALIB_REQ);
 DECLARE_MSG(loc_req, LOCATION_REQ);
 DECLARE_MSG(contrib_req, CONTRIB_REQ);
@@ -237,7 +238,8 @@ DECLARE_MSG(ambgamma_req, AMB_GAMMA_REQ);
 
 static map_t *lock_map;
 static sd_bus *userbus, *monbus;
-static sd_bus_message *curve_message; // this is used to keep curve points data lingering around in set_curve
+static sd_bus_message *bl_curve_message; // this is used to keep backlight curve points data lingering around in set_curve
+static sd_bus_message *kbd_curve_message; // this is used to keep kbd backlight curve points data lingering around in set_curve
 static sd_bus_slot *lock_slot;
 
 MODULE("INTERFACE");
@@ -475,7 +477,8 @@ static void destroy(void) {
         monbus = sd_bus_flush_close_unref(monbus);
     }
     map_free(lock_map);
-    curve_message = sd_bus_message_unref(curve_message);
+    bl_curve_message = sd_bus_message_unref(bl_curve_message);
+    kbd_curve_message = sd_bus_message_unref(kbd_curve_message);
 }
 
 static void lock_dtor(void *data) {
@@ -821,8 +824,22 @@ static int get_curve(sd_bus *bus, const char *path, const char *interface, const
 static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
 
+    sd_bus_message **curve_msg = NULL;
+    message_t *msg = NULL;
+    curve_t *curve = NULL;
+    
+    if (userdata == &conf.sens_conf.default_curve[ON_AC] || userdata == &conf.sens_conf.default_curve[ON_BATTERY]) {
+        curve_msg = &bl_curve_message;
+        msg = &curve_req;
+        curve = conf.sens_conf.default_curve;
+    } else {
+        curve_msg = &kbd_curve_message;
+        msg = &kbd_curve_req;
+        curve = conf.kbd_conf.curve;
+    }
+    
     /* Unref last curve message, if any */
-    curve_message = sd_bus_message_unref(curve_message);
+    sd_bus_message_unrefp(curve_msg);
 
     double *data = NULL;
     size_t length;
@@ -831,19 +848,19 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
         WARN("Failed to parse parameters: %s\n", strerror(-r));
         return r;
     }
-    curve_req.curve.num_points = length / sizeof(double);
-    if (curve_req.curve.num_points > MAX_SIZE_POINTS) {
+    msg->curve.num_points = length / sizeof(double);
+    if (msg->curve.num_points > MAX_SIZE_POINTS) {
         WARN("Wrong parameters.\n");
         sd_bus_error_set_const(error, SD_BUS_ERROR_FAILED, "Wrong parameters.");
         r = -EINVAL;
     } else {
-        curve_req.curve.state = ON_AC;
-        if (userdata == &conf.sens_conf.default_curve[ON_BATTERY]) {
-            curve_req.curve.state = ON_BATTERY;
+        msg->curve.state = ON_AC;
+        if (userdata == &curve[ON_BATTERY]) {
+            msg->curve.state = ON_BATTERY;
         }
-        curve_req.curve.regression_points = data;
-        curve_message = sd_bus_message_ref(value);
-        M_PUB(&curve_req);
+        msg->curve.regression_points = data;
+        *curve_msg = sd_bus_message_ref(value);
+        M_PUB(msg);
     }
     return r;
 }
