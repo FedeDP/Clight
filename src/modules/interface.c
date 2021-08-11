@@ -405,8 +405,9 @@ static void init(void) {
             /** org.freedesktop.ScreenSaver API **/
             if (!conf.inh_conf.disabled) {
                 if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
-                    WARN("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
-                    INFO("Fallback at monitoring requests to %s name owner.\n", sc_interface);
+                    // Debug as this is not a warning, it happens very often
+                    DEBUG("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
+                    INFO("Monitoring requests to %s name owner.\n", sc_interface);
                     if (start_inhibit_monitor() != 0) {
                         WARN("Failed to register %s inhibition monitor.\n", sc_interface);
                     }

@@ -183,12 +183,16 @@ void log_message(const char *filename, int lineno, const char type, const char *
 
         va_start(file_args, log_msg);
         va_copy(args, file_args);
-        if (log_file) {
-            if (type != 'P') {
+        
+        char header[128] = {0};
+        if (type != 'P') {
                 time_t t = time(NULL);
                 struct tm *tm = localtime(&t);
-                fprintf(log_file, "(%c)[%02d:%02d:%02d]{%s:%d}\t", type, tm->tm_hour, tm->tm_min, tm->tm_sec, filename, lineno);
+                snprintf(header, sizeof(header), "(%c)[%02d:%02d:%02d]{%s:%d}\t", type, tm->tm_hour, tm->tm_min, tm->tm_sec, filename, lineno);
             }
+        
+        if (log_file) {
+            fprintf(log_file, "%s", header);
             vfprintf(log_file, log_msg, file_args);
             fflush(log_file);
         }
@@ -199,6 +203,7 @@ void log_message(const char *filename, int lineno, const char type, const char *
             out = stderr;
         }
 
+        fprintf(out, "%s", header);
         vfprintf(out, log_msg, args);
         va_end(args);
         va_end(file_args);
