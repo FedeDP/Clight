@@ -4,6 +4,7 @@
 
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int *r, sd_bus_error *err, const char *caller);
+static int proxy_async_request(struct sd_bus_message *m, void *userdata, sd_bus_error *err);
 
 static sd_bus *sysbus, *userbus;
 
@@ -92,11 +93,17 @@ int call(const bus_args *a, const char *signature, ...) {
     
     /* Check if we need to wait for a response message */
     if (a->reply_cb != NULL) {
-        r = sd_bus_call(tmp, m, 0, &error, &reply);
+        if (!a->async) {
+            r = sd_bus_call(tmp, m, 0, &error, &reply);
+        } else {
+            r = sd_bus_call_async(tmp, NULL, m, proxy_async_request, (void *)a, 0);
+        }
         if (check_err(&r, &error, a->caller)) {
             goto finish;
         }
-        r = a->reply_cb(reply, a->member, a->reply_userdata);
+        if (!a->async) {
+            r = a->reply_cb(reply, a->member, a->reply_userdata);
+        }
     } else {
         r = sd_bus_send(tmp, m, NULL);
     }
@@ -184,6 +191,15 @@ static int check_err(int *r, sd_bus_error *err, const char *caller) {
     /* -1 on error, 0 ok */
     *r = -(*r < 0);
     return *r;
+}
+
+static int proxy_async_request(struct sd_bus_message *m, void *userdata, sd_bus_error *err) {
+    if (sd_bus_message_is_method_error(m, NULL)) {
+        WARN("Error in async req: %s\n", err->message ? err->message : "unknown");
+        return 0;
+    }
+    bus_args *a = (bus_args *)userdata;
+    return a->reply_cb(m, a->member, a->reply_userdata);
 }
 
 sd_bus *get_user_bus(void) {

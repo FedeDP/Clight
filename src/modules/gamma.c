@@ -35,7 +35,11 @@ static void init(void) {
     
     // Store current temperature to later restore it if requested
     SYSBUS_ARG_REPLY(args, parse_bus_reply, &initial_temp, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Get");
-    call(&args, "ss", fetch_display(), fetch_env());    
+    if (call(&args, "ss", fetch_display(), fetch_env()) < 0) {
+        // We are on an unsupported wayland compositor; kill ourself immediately without further message processing
+        WARN("Failed to init.\n");
+        m_stop();
+    }
 }
 
 static bool check(void) {

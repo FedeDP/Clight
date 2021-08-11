@@ -24,6 +24,7 @@ typedef struct {
     void *reply_userdata;
     const char *caller;
     sd_bus *bus;
+    bool async; // ASYNC requests NEED a static/heap memory bus_args!!
 } bus_args;
 
 #define BUS_ARG(name, ...)      bus_args name = { __VA_ARGS__, __func__ };

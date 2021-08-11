@@ -7,6 +7,18 @@
 - [x] Expose curve points from dbus (read only)
 - [x] allow to update them from dbus
 
+### Gamma
+- [x] Stop gamma where not supported
+
+### Location
+- [x] Location getClient async to avoid waiting 20s on startup
+
+### Generic
+- [ ] evaluate using m_stop instead of m_poisonpill?
+- [x] document in wiki pages DBus api the new Restore option for gamma and backlight
+
+## 4.8
+
 ### Backlight
 - [ ] Port to clightd.Backlight2 API
 - [ ] Drop screen_path bl conf

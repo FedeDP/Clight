@@ -112,16 +112,8 @@ static void init_cache_file(void) {
 }
 
 static int geoclue_init(void) {
+    // GetClient is called async, and will later start the client in its callback, see parse_bus_reply
     int r = geoclue_get_client();
-    if (r < 0) {
-        goto end;
-    }
-    r = geoclue_hook_update();
-    if (r < 0) {
-        goto end;
-    }
-    r = geoclue_client_start();
-end:
     if (r < 0) {
         WARN("Geoclue2 appears to be unsupported.\n");
     }
@@ -135,6 +127,13 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
         r = sd_bus_message_read(reply, "o", &cl);
         if (r >= 0 && cl) {
             strncpy(client, cl, PATH_MAX);
+            r = geoclue_hook_update();
+            if (r >= 0) {
+                r = geoclue_client_start();
+            }
+        }
+        if (r < 0 || !cl) {
+            WARN("Failed to start Geoclue2 client.\n");
         }
     }
     return r;
@@ -144,7 +143,9 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
  * Store Client object path in client (static) global var
  */
 static int geoclue_get_client(void) {
-    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient");
+    // Make it async! We need a static lifetime object!
+    static SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager", "org.freedesktop.GeoClue2.Manager", "GetClient");
+    args.async = true;
     return call(&args, NULL);
 }
 
