@@ -12,6 +12,12 @@
 
 ### Location
 - [x] Location getClient async to avoid waiting 20s on startup
+- [x] Send a ping to check if geoclue exists
+- [ ] add a timeout like 30s of waiting on geoclue; if no location is received, kill it and go on 
+(this avoids weird situations where there is no cached location and clight awaits forever for geoclue to give a location); print a meaningful warning!
+
+### Interface
+- [ ] Expose conf.monitor_override dbus api (List(), Set(), Unset())
 
 ### Generic
 - [ ] evaluate using m_stop instead of m_poisonpill?

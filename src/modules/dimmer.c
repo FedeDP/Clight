@@ -36,7 +36,7 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
         case UPOWER_UPD: {
             int r = idle_init(client, &slot, conf.dim_conf.timeout[state.ac_state], on_new_idle);
             if (r != 0) {
-                WARN("Failed to init.\n");
+                WARN("Failed to init. Killing module.\n");
                 m_poisonpill(self());
             } else {
                 m_unbecome();

@@ -6,6 +6,7 @@ static int load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
+static int geoclue_ping(void);
 static int geoclue_get_client(void);
 static int geoclue_hook_update(void);
 static int on_geoclue_new_location(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -21,6 +22,10 @@ DECLARE_MSG(loc_msg, LOC_UPD);
 DECLARE_MSG(loc_req, LOCATION_REQ);
 
 MODULE("LOCATION");
+
+static void module_pre_start(void) {
+    memcpy(&state.current_loc, &conf.day_conf.loc, sizeof(loc_t));
+}
 
 static void init(void) {
     init_cache_file();
@@ -70,8 +75,12 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         if (msg->ps_msg->type == LOOP_STARTED) {
             int ret = load_cache_location();
             if (geoclue_init() != 0) {
-                WARN("Failed to init.\n");
+                WARN("Failed to init. Killing module.\n");
                 if (ret != 0) {
+                    /*
+                     * no cached location present and no geoclue; 
+                     * send a message to let other modules know that no location is provided
+                     */
                     publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
                 }
                 m_poisonpill(self());
@@ -112,16 +121,25 @@ static void init_cache_file(void) {
 }
 
 static int geoclue_init(void) {
-    // GetClient is called async, and will later start the client in its callback, see parse_bus_reply
-    int r = geoclue_get_client();
-    if (r < 0) {
-        WARN("Geoclue2 appears to be unsupported.\n");
+    // Check if geoclue is available, otherwise die 
+    int r = geoclue_ping();
+    if (r >= 0) {
+        // GetClient is called async, and will later start the client in its callback, see parse_bus_reply
+        r = geoclue_get_client();
+        if (r < 0) {
+            WARN("Geoclue2 is present but failed to give us a client.\n");
+        }
+    } else {
+        INFO("Geoclue2 is not present.\n");
     }
     return -(r < 0);  // - 1 on error
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     int r = -EINVAL;
+    if (!strcmp(member, "Ping")) {
+        return 0;
+    }
     if (!strcmp(member, "GetClient")) {
         const char *cl = NULL;
         r = sd_bus_message_read(reply, "o", &cl);
@@ -134,9 +152,22 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
         }
         if (r < 0 || !cl) {
             WARN("Failed to start Geoclue2 client.\n");
+            /*
+             * We had no cached location and geoclue client failed to start;
+             * advise other modules to go on dropping location
+             */
+            if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
+                publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
+            }
+            m_poisonpill(self());
         }
     }
     return r;
+}
+
+static int geoclue_ping(void) {
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, "org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2", "org.freedesktop.DBus.Peer", "Ping");
+    return call(&args, NULL);
 }
 
 /*

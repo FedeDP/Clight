@@ -37,7 +37,7 @@ static void init(void) {
     SYSBUS_ARG_REPLY(args, parse_bus_reply, &initial_temp, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Get");
     if (call(&args, "ss", fetch_display(), fetch_env()) < 0) {
         // We are on an unsupported wayland compositor; kill ourself immediately without further message processing
-        WARN("Failed to init.\n");
+        WARN("Failed to init. Killing module.\n");
         m_stop();
     }
 }

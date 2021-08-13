@@ -20,6 +20,11 @@ DECLARE_MSG(temp_req, TEMP_REQ);
 
 MODULE("DAYTIME");
 
+static void module_pre_start(void) {
+    state.next_event = -1;
+    state.day_time = -1;
+}
+
 static void init(void) {
     temp_req.temp.daytime = -1;
     temp_req.temp.smooth = -1;

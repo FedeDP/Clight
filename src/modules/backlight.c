@@ -41,6 +41,10 @@ DECLARE_MSG(sens_msg, SENS_UPD);
 
 MODULE_WITH_PAUSE("BACKLIGHT");
 
+static void module_pre_start(void) {
+    state.sens_avail = -1;
+}
+
 static void init(void) {
     capture_req.capture.reset_timer = true;
     capture_req.capture.capture_only = false;

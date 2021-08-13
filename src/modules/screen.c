@@ -31,7 +31,7 @@ static void init(void) {
         
         m_become(waiting_acstate);
     } else {
-        WARN("Failed to init.\n");
+        WARN("Failed to init. Killing module.\n");
         m_poisonpill(self());
     }
 }

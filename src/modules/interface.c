@@ -411,6 +411,8 @@ static void init(void) {
                     if (start_inhibit_monitor() != 0) {
                         WARN("Failed to register %s inhibition monitor.\n", sc_interface);
                     }
+                } else {
+                    INFO("%s dbus interface exposed.\n", sc_interface);
                 }
                 lock_map = map_new(true, lock_dtor);
             }
@@ -419,7 +421,7 @@ static void init(void) {
     }
     
     if (r < 0) {
-        WARN("Failed to init.\n");
+        WARN("Failed to init. Killing module.\n");
         m_poisonpill(self());
     }
 }
