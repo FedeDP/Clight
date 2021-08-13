@@ -3,7 +3,7 @@
 ### Keyboard
 - [x] Add curve configuration
 - [x] Use curve config
-- [x] drop ambient_threshold
+- [x] drop ambient_threshol
 - [x] Expose curve points from dbus (read only)
 - [x] allow to update them from dbus
 
@@ -13,14 +13,14 @@
 ### Location
 - [x] Location getClient async to avoid waiting 20s on startup
 - [x] Send a ping to check if geoclue exists
-- [ ] add a timeout like 30s of waiting on geoclue; if no location is received, kill it and go on 
+- [x] add a timeout like 30s of waiting on geoclue; if no location is received, kill it and go on 
 (this avoids weird situations where there is no cached location and clight awaits forever for geoclue to give a location); print a meaningful warning!
 
 ### Interface
 - [ ] Expose conf.monitor_override dbus api (List(), Set(), Unset())
 
 ### Generic
-- [ ] evaluate using m_stop instead of m_poisonpill?
+- [x] evaluate using module_deregister instead of m_poisonpill?
 - [x] document in wiki pages DBus api the new Restore option for gamma and backlight
 - [x] Uniform stdout and log file logs
 

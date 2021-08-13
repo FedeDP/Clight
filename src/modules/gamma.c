@@ -38,7 +38,7 @@ static void init(void) {
     if (call(&args, "ss", fetch_display(), fetch_env()) < 0) {
         // We are on an unsupported wayland compositor; kill ourself immediately without further message processing
         WARN("Failed to init. Killing module.\n");
-        m_stop();
+        module_deregister((self_t **)&self());
     }
 }
 
@@ -66,7 +66,7 @@ static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* u
              * could give us any location.
              */
             WARN("Killing GAMMA as no location provider is available.\n");
-            m_poisonpill(self());
+            module_deregister((self_t **)&self());
         } else {
             m_unbecome();
             

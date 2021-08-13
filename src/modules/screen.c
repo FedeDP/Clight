@@ -32,7 +32,7 @@ static void init(void) {
         m_become(waiting_acstate);
     } else {
         WARN("Failed to init. Killing module.\n");
-        m_poisonpill(self());
+        module_deregister((self_t **)&self());
     }
 }
 

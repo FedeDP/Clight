@@ -422,7 +422,7 @@ static void init(void) {
     
     if (r < 0) {
         WARN("Failed to init. Killing module.\n");
-        m_poisonpill(self());
+        module_deregister((self_t **)&self());
     }
 }
 

@@ -37,7 +37,7 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
             int r = idle_init(client, &slot, conf.dim_conf.timeout[state.ac_state], on_new_idle);
             if (r != 0) {
                 WARN("Failed to init. Killing module.\n");
-                m_poisonpill(self());
+                module_deregister((self_t **)&self());
             } else {
                 m_unbecome();
             }

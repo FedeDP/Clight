@@ -30,7 +30,7 @@ static void init(void) {
         polynomialfit(NULL, &conf.kbd_conf.curve[ON_AC]);
         polynomialfit(NULL, &conf.kbd_conf.curve[ON_BATTERY]);
     } else {
-        m_poisonpill(self());
+        module_deregister((self_t **)&self());
     }
 }
 

@@ -55,9 +55,7 @@ int main(int argc, char *argv[]) {
  * local config file, and from cmdline options.
  * Then init needed modules.
  */
-static void init(int argc, char *argv[]) {
-    state.version = VERSION;
-    
+static void init(int argc, char *argv[]) {    
     /* 
      * When receiving segfault signal,
      * call our sigsegv handler that just logs
@@ -69,6 +67,9 @@ static void init(int argc, char *argv[]) {
     open_log();
     init_opts(argc, argv);
     log_conf();
+    
+    state.version = VERSION;
+    memcpy(&state.current_loc, &conf.day_conf.loc, sizeof(loc_t));
     
     if (!conf.wizard) {
         /* We want any error while checking Clightd required version to be logged AFTER conf logging */

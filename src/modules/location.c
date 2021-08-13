@@ -1,8 +1,19 @@
 #include "bus.h"
 
-#define LOC_TIME_THRS 600                   // time threshold (seconds) before triggering location changed events (10mins)
+/**
+ * LOCATION module will be deregistered if:
+ *  * geoclue is not present
+ *  * geoclue is present but fail to start correctly
+ *  * geoclue is present and started correctly, but it is not responding (killed after GEOCLUE_TIMEOUT seconds)
+ */
 
-static int load_cache_location(void);
+#define LOC_TIME_THRS   600                   // time threshold (seconds) before triggering location changed events (10mins)
+#define GEOCLUE_TIMEOUT 30                    // timeout for waiting on geoclue to give us a position; otherwise kills module
+
+typedef enum { GEOCLUE_NONE, GEOCLUE_PRESENT, GEOCLUE_STARTED, GEOCLUE_FAILED } geoclue_state;
+
+static void fail_geoclue(geoclue_state st);
+static void load_cache_location(void);
 static void init_cache_file(void);
 static int geoclue_init(void);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
@@ -16,6 +27,8 @@ static void cache_location(void);
 static void publish_location(double new_lat, double new_lon, message_t *l);
 
 static sd_bus_slot *slot;
+static int timeout_fd = -1;
+static geoclue_state geoclue_st;
 static char client[PATH_MAX + 1], cache_file[PATH_MAX + 1];
 
 DECLARE_MSG(loc_msg, LOC_UPD);
@@ -23,13 +36,13 @@ DECLARE_MSG(loc_req, LOCATION_REQ);
 
 MODULE("LOCATION");
 
-static void module_pre_start(void) {
-    memcpy(&state.current_loc, &conf.day_conf.loc, sizeof(loc_t));
-}
-
 static void init(void) {
     init_cache_file();
     M_SUB(LOCATION_REQ);
+    
+    // Give 30s of time to geoclue to give us a position before killing module
+    timeout_fd = start_timer(CLOCK_BOOTTIME, GEOCLUE_TIMEOUT, 0);
+    m_register_fd(timeout_fd, true, NULL);
 }
 
 static bool check(void) {
@@ -61,6 +74,32 @@ static void destroy(void) {
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
+    case FD_UPD:
+        read_timer(msg->fd_msg->fd);
+        /*
+         * We had no cached location and geoclue client timed out;
+         * tell other modules an go on dropping location
+         */
+        switch (geoclue_st) {
+        case GEOCLUE_NONE:
+            WARN("Failed to init (no geoclue2 present?). Killing module.\n");
+            break;
+        case GEOCLUE_PRESENT:
+        case GEOCLUE_STARTED:
+            WARN("Timed out waiting on location provided by Geoclue2. Killing module.\n");
+            break;
+        case GEOCLUE_FAILED:
+            WARN("Failed to start Geoclue2 client. Killing module.\n");
+            break;
+        }
+
+        if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
+            publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
+        }
+        
+        // if we came here, just kill ourself
+        module_deregister((self_t **)&self());
+        break;
     case LOCATION_REQ: {
         loc_upd *l = (loc_upd *)MSG_DATA();
         if (VALIDATE_REQ(l)) {
@@ -73,17 +112,15 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     }
     case SYSTEM_UPD:
         if (msg->ps_msg->type == LOOP_STARTED) {
-            int ret = load_cache_location();
+            load_cache_location();
             if (geoclue_init() != 0) {
-                WARN("Failed to init. Killing module.\n");
-                if (ret != 0) {
-                    /*
-                     * no cached location present and no geoclue; 
-                     * send a message to let other modules know that no location is provided
-                     */
-                    publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
-                }
-                m_poisonpill(self());
+                /*
+                 * no cached location present and no geoclue; 
+                 * fire immediately to take care of module cleanup and deregister
+                 */
+                fail_geoclue(GEOCLUE_NONE);
+            } else {
+                geoclue_st = GEOCLUE_PRESENT;
             }
         } else if (msg->ps_msg->type == LOOP_STOPPED) {
             cache_location();
@@ -94,22 +131,25 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     }
 }
 
-static int load_cache_location(void) {
-    int ret = -1;
+static void fail_geoclue(geoclue_state st) {
+    geoclue_st = st;
+    set_timeout(0, 1, timeout_fd, 0);
+}
+
+static void load_cache_location(void) {
     FILE *f = fopen(cache_file, "r");
     if (f) {
         double new_lat, new_lon;
         if (fscanf(f, "%lf %lf\n", &new_lat, &new_lon) == 2) {
             publish_location(new_lat, new_lon, &loc_req);
             DEBUG("%.2lf %.2lf loaded from cache file.\n", new_lat, new_lon);
-            ret = 0;
+        } else {
+            WARN("Could not load cached location, wrong format.\n");
         }
         fclose(f);
+    } else {
+        DEBUG("Could not find location cache file.\n");
     }
-    if (ret != 0) {
-        WARN("Error loading from cache file.\n");
-    }
-    return ret;
 }
 
 static void init_cache_file(void) {
@@ -130,14 +170,21 @@ static int geoclue_init(void) {
             WARN("Geoclue2 is present but failed to give us a client.\n");
         }
     } else {
-        INFO("Geoclue2 is not present.\n");
+        DEBUG("Geoclue2 is not present.\n");
     }
     return -(r < 0);  // - 1 on error
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     int r = -EINVAL;
-    if (!strcmp(member, "Ping")) {
+    /*
+     * If self is null it means module was already deregistered;
+     * may be geoclue took too long to respond and timeout_fd killed the module.
+     * Note that "GetClient" answer is received async thus can be called even after
+     * module was deregistered.
+     * In this case, ignore the reply.
+     */
+    if (!strcmp(member, "Ping") || self() == NULL) {
         return 0;
     }
     if (!strcmp(member, "GetClient")) {
@@ -151,15 +198,9 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
             }
         }
         if (r < 0 || !cl) {
-            WARN("Failed to start Geoclue2 client.\n");
-            /*
-             * We had no cached location and geoclue client failed to start;
-             * advise other modules to go on dropping location
-             */
-            if (state.current_loc.lat == LAT_UNDEFINED || state.current_loc.lon == LON_UNDEFINED) {
-                publish_location(LAT_UNDEFINED, LON_UNDEFINED, &loc_msg);
-            }
-            m_poisonpill(self());
+            fail_geoclue(GEOCLUE_FAILED);
+        } else {
+            geoclue_st = GEOCLUE_STARTED;
         }
     }
     return r;
@@ -205,6 +246,11 @@ static int on_geoclue_new_location(sd_bus_message *m, UNUSED void *userdata, UNU
     if (!r) {
         DEBUG("%.2lf %.2lf received from Geoclue2.\n", new_lat, new_lon);
         publish_location(new_lat, new_lon, &loc_req);
+        if (timeout_fd != -1) {
+            // disable timeout_fd as geoclue is responding!
+            m_deregister_fd(timeout_fd);
+            timeout_fd = -1;
+        }
     }
     return 0;
 }

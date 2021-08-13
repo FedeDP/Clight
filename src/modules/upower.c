@@ -49,7 +49,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 state.lid_state = OPEN;
                 
                 WARN("Failed to retrieve AC state; fallback to ON_AC and OPEN lid.\n");
-                m_poisonpill(self());
+                module_deregister((self_t **)&self());
             }
         }
         break;
