@@ -1,5 +1,6 @@
 #include <module/map.h>
 #include "bus.h"
+#include "my_math.h"
 #include "config.h"
 
 #define VALIDATE_PARAMS(m, signature, ...) \
@@ -61,6 +62,8 @@ static int set_event(sd_bus *bus, const char *path, const char *interface, const
 static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
                               sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
@@ -135,6 +138,13 @@ static const sd_bus_vtable conf_sens_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("BattCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_BATTERY]), 0),
+    SD_BUS_VTABLE_END
+};
+
+static const sd_bus_vtable conf_mon_override_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("List", NULL, "a(sadad)", method_list_mon_override, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Set", "sadad", NULL, method_set_mon_override, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
@@ -248,6 +258,7 @@ static void init(void) {
     const char conf_path[] = "/org/clight/clight/Conf";
     const char conf_bl_path[] = "/org/clight/clight/Conf/Backlight";
     const char conf_sens_path[] = "/org/clight/clight/Conf/Sensor";
+    const char conf_mon_override_path[] = "/org/clight/clight/Conf/MonitorOverride";
     const char conf_kbd_path[] = "/org/clight/clight/Conf/Kbd";
     const char conf_gamma_path[] = "/org/clight/clight/Conf/Gamma";
     const char conf_daytime_path[] = "/org/clight/clight/Conf/Daytime";
@@ -260,6 +271,7 @@ static void init(void) {
     const char conf_interface[] = "org.clight.clight.Conf";
     const char conf_bl_interface[] = "org.clight.clight.Conf.Backlight";
     const char conf_sens_interface[] = "org.clight.clight.Conf.Sensor";
+    const char conf_mon_override_interface[] = "org.clight.clight.Conf.MonitorOverride";
     const char conf_kbd_interface[] = "org.clight.clight.Conf.Kbd";
     const char conf_gamma_interface[] = "org.clight.clight.Conf.Gamma";
     const char conf_daytime_interface[] = "org.clight.clight.Conf.Daytime";
@@ -302,6 +314,14 @@ static void init(void) {
                                     conf_sens_interface,
                                     conf_sens_vtable,
                                     &conf.sens_conf);
+        
+        /* Conf/MonitorOverride interface */
+        r += sd_bus_add_object_vtable(userbus,
+                                      NULL,
+                                      conf_mon_override_path,
+                                      conf_mon_override_interface,
+                                      conf_mon_override_vtable,
+                                      conf.sens_conf.specific_curves);
     }
     
     /* Conf/Kbd interface */
@@ -1007,4 +1027,98 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Failed to store conf.");
     }
     return r;
+}
+
+static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    map_t *curves = (map_t *)userdata;
+    
+    sd_bus_message *reply = NULL;
+    sd_bus_message_new_method_return(m, &reply);
+    sd_bus_message_open_container(reply, SD_BUS_TYPE_ARRAY, "(sadad)");
+    for (map_itr_t *itr = map_itr_new(curves); itr; itr = map_itr_next(itr)) {
+        sd_bus_message_open_container(reply, SD_BUS_TYPE_STRUCT, "sadad");
+        const char *sn = map_itr_get_key(itr);
+        sd_bus_message_append(reply, "s", sn);
+        for (int st = ON_AC; st < SIZE_AC; st++) {
+            sd_bus_message_open_container(reply, SD_BUS_TYPE_ARRAY, "d");
+            curve_t *c = map_itr_get_data(itr);
+            for (int i = 0; i < c[st].num_points; i++) {
+                sd_bus_message_append(reply, "d", c[st].points[i]);
+            }
+            sd_bus_message_close_container(reply);
+        }
+        sd_bus_message_close_container(reply);
+    }
+    sd_bus_message_close_container(reply);
+    sd_bus_send(NULL, reply, NULL);
+    sd_bus_message_unref(reply);
+    return 0;
+}
+
+static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    map_t *curves = (map_t *)userdata;
+    
+    const char *sn = NULL;
+    VALIDATE_PARAMS(m, "s", &sn);
+    
+    double *data[SIZE_AC] = { NULL, NULL };
+    size_t num_points[SIZE_AC] = {0};
+    for (int st = ON_AC; st < SIZE_AC; st++) {
+        size_t length;
+        r = sd_bus_message_read_array(m, 'd', (const void**) &data[st], &length);
+        if (r < 0) {
+            WARN("Failed to parse parameters: %s\n", strerror(-r));
+            return r;
+        }
+        
+        num_points[st] = length / sizeof(double);
+        
+        if (num_points[st] > MAX_SIZE_POINTS) {
+            sd_bus_error_set_errno(ret_error, EINVAL);
+            return -EINVAL;
+        }
+        
+        // validate curve data
+        for (int i = 0; i < num_points[st]; i++) {
+            if (data[st][i] < 0.0 || data[st][i] > 1.0) {
+                sd_bus_error_set_errno(ret_error, EINVAL);
+                return -EINVAL;
+            }
+        }
+    }
+    
+    // they must be both != 0 or 0
+    if (num_points[ON_AC] ^ num_points[ON_BATTERY]) {
+        sd_bus_error_set_errno(ret_error, EINVAL);
+        return -EINVAL;
+    }
+    
+    // remove curve if existent
+    if (num_points[ON_AC] == 0) {
+        if (!map_has_key(curves, sn)) {
+            sd_bus_error_set_errno(ret_error, ENOENT);
+            return -ENOENT;
+        }
+        map_remove(curves, sn);
+        return sd_bus_reply_method_return(m, NULL);
+    }
+    
+    curve_t *c = map_get(curves, sn);
+    if (!c) {
+        c = calloc(SIZE_AC, sizeof(curve_t));
+        if (!c) {
+            sd_bus_error_set_errno(ret_error, ENOMEM);
+            return -ENOMEM;
+        }
+    }
+    
+    for (int st = ON_AC; st < SIZE_AC; st++) {
+        c[st].num_points = num_points[st];
+        memcpy(c[st].points, data[st], num_points[st] * sizeof(double));
+        polynomialfit(NULL, &c[st]);
+    }
+    
+    map_put(curves, sn, c);
+    
+    return sd_bus_reply_method_return(m, NULL);
 }

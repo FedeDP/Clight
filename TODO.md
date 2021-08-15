@@ -17,7 +17,8 @@
 (this avoids weird situations where there is no cached location and clight awaits forever for geoclue to give a location); print a meaningful warning!
 
 ### Interface
-- [ ] Expose conf.monitor_override dbus api (List(), Set(), Unset())
+- [x] Expose conf.monitor_override dbus api (List()"a(sadad)", Set("sadad"), Set(NULL))
+- [ ] Document new api
 
 ### Generic
 - [x] evaluate using module_deregister instead of m_poisonpill?

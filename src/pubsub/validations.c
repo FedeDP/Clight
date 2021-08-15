@@ -102,6 +102,12 @@ bool validate_curve(curve_upd *up) {
     if (up->state >= ON_AC && up->state < SIZE_AC &&
         up->num_points > 0 && up->num_points <= MAX_SIZE_POINTS &&
         up->regression_points != NULL) {
+        
+        for (int i = 0; i < up->num_points; i++) {
+            if (up->regression_points[i] < 0.0 || up->regression_points[i] > 1.0) {
+                return false;
+            }
+        }
         return true;
     }
     DEBUG("Failed to validate curve request.\n");
