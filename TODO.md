@@ -18,7 +18,7 @@
 
 ### Interface
 - [x] Expose conf.monitor_override dbus api (List()"a(sadad)", Set("sadad"), Set(NULL))
-- [ ] Document new api
+- [x] Document new api (https://github.com/FedeDP/Clight/wiki/Api#orgclightclightconfmonitoroverride)
 
 ### Generic
 - [x] evaluate using module_deregister instead of m_poisonpill?
