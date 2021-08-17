@@ -320,12 +320,17 @@ static void init_curves(void) {
     /* Compute polynomial best-fit parameters */
     interface_curve_callback(NULL, 0, ON_AC);
     interface_curve_callback(NULL, 0, ON_BATTERY);
-        
+    
+    char tag[128] = {0};
     /* Compute polynomial best-fit parameters for specific monitor backlight adjustments */
     for (map_itr_t *itr = map_itr_new(conf.sens_conf.specific_curves); itr; itr = map_itr_next(itr)) {
+        const char *sn = map_itr_get_key(itr);
         curve_t *c = map_itr_get_data(itr);
-        polynomialfit(NULL, &c[ON_AC]);
-        polynomialfit(NULL, &c[ON_BATTERY]);
+        
+        snprintf(tag, sizeof(tag), "AC '%s' backlight", sn);
+        polynomialfit(NULL, &c[ON_AC], tag);
+        snprintf(tag, sizeof(tag), "BATT '%s' backlight", sn);
+        polynomialfit(NULL, &c[ON_BATTERY], tag);
     } 
 }
 
@@ -381,8 +386,7 @@ static void do_capture(bool reset_timer, bool capture_only) {
         /* Account for screen-emitted brightness */
         const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
         if (compensated_br >= conf.bl_conf.shutter_threshold) {
-            int num_points = conf.sens_conf.default_curve[state.ac_state].num_points;
-            const double new_bl = set_new_backlight(compensated_br * (num_points - 1));
+            const double new_bl = set_new_backlight(compensated_br);
             if (state.screen_comp > 0.0) {
                 INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, new_bl);
             } else {
@@ -460,8 +464,7 @@ static void set_each_brightness(sd_bus_message *m, double pct, const bool is_smo
             curve_t *c = map_get(sens_conf->specific_curves, mon_id);
             if (c && !restoring) {
                 /* Use monitor specific adjustment, properly scaling bl pct */
-                int num_points = c[st].num_points;
-                const double real_pct = get_value_from_curve(pct * (num_points - 1), &c[st]);
+                const double real_pct = get_value_from_curve(pct, &c[st]);
                 DEBUG("Using specific curve for '%s': setting %.3lf pct.\n", mon_id, real_pct);
                 r = call(&args, "d(bdu)s", real_pct, is_smooth, step, timeout, mon_id);
             } else {
@@ -531,11 +534,7 @@ static void interface_curve_callback(double *regr_points, int num_points, enum a
            regr_points, num_points * sizeof(double));
         c->num_points = num_points;
     }
-    polynomialfit(NULL, c);
-    
-    INFO("%s curve: y = %lf + %lfx + %lfx^2\n", s == ON_AC ? "AC" : "BATT", c->fit_parameters[0],
-          c->fit_parameters[1], c->fit_parameters[2]);
-    plot_poly_curve(&conf.sens_conf.default_curve[s]);
+    polynomialfit(NULL, c, s == ON_AC ? "AC screen backlight" : "BATT screen backlight");
 }
 
 /* 

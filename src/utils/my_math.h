@@ -5,7 +5,7 @@
 double degToRad(double angleDeg);
 double radToDeg(double angleRad);
 double compute_average(const double *intensity, int num);
-void polynomialfit(double *XPoints, curve_t *curve);
+void polynomialfit(double *XPoints, curve_t *curve, const char *tag);
 double clamp(double value, double max, double min);
 double get_value_from_curve(const double perc, curve_t *curve);
 void plot_poly_curve(curve_t *curve);

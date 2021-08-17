@@ -24,6 +24,8 @@
 - [x] evaluate using module_deregister instead of m_poisonpill?
 - [x] document in wiki pages DBus api the new Restore option for gamma and backlight
 - [x] Uniform stdout and log file logs
+- [x] Plot backlight curves directly using fit parameters (makes much more sense)
+- [x] Plot backlight curve for any curve (backlight, monitor_override and keyboard) only in verbose mode
 
 ## 4.8
 

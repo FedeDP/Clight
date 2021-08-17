@@ -35,7 +35,7 @@ double compute_average(const double *intensity, int num) {
 /*
  * Big thanks to https://rosettacode.org/wiki/Polynomial_regression#C
  */
-void polynomialfit(double *XPoints, curve_t *curve) {
+void polynomialfit(double *XPoints, curve_t *curve, const char *tag) {
     double chisq;
     
     gsl_matrix *X = gsl_matrix_alloc(curve->num_points, DEGREE);
@@ -67,6 +67,9 @@ void polynomialfit(double *XPoints, curve_t *curve) {
     gsl_matrix_free(cov);
     gsl_vector_free(y);
     gsl_vector_free(c);
+    
+    DEBUG("%s curve: y = %lf + %lfx + %lfx^2\n", tag, curve->fit_parameters[0], curve->fit_parameters[1], curve->fit_parameters[2]);
+    plot_poly_curve(curve);
 }
 
 double clamp(double value, double max, double min) {
@@ -83,11 +86,12 @@ double get_value_from_curve(const double perc, curve_t *curve) {
     // Keyboard backlight curves are upside down
     const double max = curve->points[curve->num_points - 1] > curve->points[0] ? curve->points[curve->num_points - 1] : curve->points[0];
     const double min = curve->points[0] < curve->points[curve->num_points - 1] ? curve->points[0] : curve->points[curve->num_points - 1];
-        
+    
     /* y = a0 + a1x + a2x^2 */
+    const double real_perc = perc * (curve->num_points - 1);
     const double b = curve->fit_parameters[0] 
-                    + curve->fit_parameters[1] * perc 
-                    + curve->fit_parameters[2] * pow(perc, 2);
+                    + curve->fit_parameters[1] * real_perc 
+                    + curve->fit_parameters[2] * pow(real_perc, 2);
     const double value = clamp(b, max, min);
     return value;
 }
@@ -96,7 +100,8 @@ void plot_poly_curve(curve_t *curve) {
     const int maxY = curve->num_points - 1;
     char **grid = init_grid(curve->num_points);
     for (int i = 0; i < curve->num_points; i++) {
-        const int y = round(maxY * curve->points[i]);
+        const double val = get_value_from_curve((double)i / (curve->num_points - 1), curve);
+        const int y = round(val * (curve->num_points - 1));
         grid[maxY - y][i] = '*';
     }
     show_grid(grid, curve->num_points);

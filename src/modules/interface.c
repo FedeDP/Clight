@@ -1112,10 +1112,12 @@ static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_err
         }
     }
     
+    char tag[128] = {0};
     for (int st = ON_AC; st < SIZE_AC; st++) {
         c[st].num_points = num_points[st];
         memcpy(c[st].points, data[st], num_points[st] * sizeof(double));
-        polynomialfit(NULL, &c[st]);
+        snprintf(tag, sizeof(tag), "%s '%s' backlight", st == ON_AC ? "AC" : "BATT", sn);
+        polynomialfit(NULL, &c[st], tag);
     }
     
     map_put(curves, sn, c);

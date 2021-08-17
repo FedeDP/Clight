@@ -36,9 +36,9 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
-#define DEBUG(msg, ...) log_message(__FILENAME__, __LINE__, 'D', msg, ##__VA_ARGS__)
-#define INFO(msg, ...)  log_message(__FILENAME__, __LINE__, 'I', msg, ##__VA_ARGS__)
-#define WARN(msg, ...)  log_message(__FILENAME__, __LINE__, 'W', msg, ##__VA_ARGS__)
+#define DEBUG(msg, ...) log_message(__FILENAME__, __LINE__, LOG_DEBUG, msg, ##__VA_ARGS__)
+#define INFO(msg, ...)  log_message(__FILENAME__, __LINE__, LOG_INFO, msg, ##__VA_ARGS__)
+#define WARN(msg, ...)  log_message(__FILENAME__, __LINE__, LOG_WARN, msg, ##__VA_ARGS__)
 
 /** Generic Enums **/
 

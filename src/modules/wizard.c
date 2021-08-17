@@ -214,21 +214,16 @@ static void compute(void) {
     for (int i = 0; i < WIZ_IN_POINTS; i++) {
         DEBUG("%.3lf -> %.3lf\n", amb_brs[i], curve.points[i]);
     }
-    polynomialfit(amb_brs, &curve);
-    DEBUG("New curve: y = %lf + %lfx + %lfx^2\n", curve.fit_parameters[0], curve.fit_parameters[1], curve.fit_parameters[2]);
+    polynomialfit(amb_brs, &curve, "Wizard screen backlight");
 }
 
 static void expand_regr_points(void) {
-    curve_t expanded = { .num_points = WIZ_OUT_POINTS };
     INFO("[ ");
     for (int i = 0; i < WIZ_OUT_POINTS; i++) {
         const double perc = (double)i / (WIZ_OUT_POINTS - 1);
         const double b = curve.fit_parameters[0] + curve.fit_parameters[1] * perc + curve.fit_parameters[2] * pow(perc, 2);
         const double new_br_pct =  clamp(b, 1, 0);
-        expanded.points[i] = new_br_pct;
         INFO("%.3lf%s ", new_br_pct, i < WIZ_OUT_POINTS - 1 ? ", " : " ");
     }
     INFO("]\n");
-    
-    plot_poly_curve(&expanded);
 }

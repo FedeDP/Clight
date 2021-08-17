@@ -27,8 +27,8 @@ static void init(void) {
         M_SUB(KBD_CURVE_REQ);
         m_become(waiting_init);
         
-        polynomialfit(NULL, &conf.kbd_conf.curve[ON_AC]);
-        polynomialfit(NULL, &conf.kbd_conf.curve[ON_BATTERY]);
+        polynomialfit(NULL, &conf.kbd_conf.curve[ON_AC], "AC keyboard backlight");
+        polynomialfit(NULL, &conf.kbd_conf.curve[ON_BATTERY], "BATT keyboard backlight");
     } else {
         module_deregister((self_t **)&self());
     }
@@ -147,8 +147,7 @@ static int init_kbd_backlight(void) {
 }
 
 static void on_ambient_br_update(bl_upd *up) {
-    const int num_points = conf.kbd_conf.curve[state.ac_state].num_points;
-    const double new_kbd_pct = get_value_from_curve(up->new * (num_points - 1), &conf.kbd_conf.curve[state.ac_state]);
+    const double new_kbd_pct = get_value_from_curve(up->new, &conf.kbd_conf.curve[state.ac_state]);
     INFO("Ambient brightness: %.3lf -> Keyboard backlight pct: %.3lf.\n", up->new, new_kbd_pct);
     kbd_req.bl.new = new_kbd_pct;
     M_PUB(&kbd_req);
@@ -180,7 +179,7 @@ static void on_curve_req(double *regr_points, int num_points, enum ac_states s) 
                regr_points, num_points * sizeof(double));
         c->num_points = num_points;
     }
-    polynomialfit(NULL, c);
+    polynomialfit(NULL, c, s == ON_AC ? "AC keyboard backlight" : "BATT keyboard backlight");
 }
 
 static void pause_kbd(const bool pause, enum mod_pause reason) {
