@@ -190,9 +190,6 @@ static void load_override_settings(config_t *cfg, sensor_conf_t *sens_conf) {
             }
             
             if (!error) {
-                if (!sens_conf->specific_curves) {
-                    sens_conf->specific_curves = map_new(true, free);
-                }
                 map_put(sens_conf->specific_curves, mon_id, curve);
             } else {
                 free(curve);

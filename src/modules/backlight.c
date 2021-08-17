@@ -33,7 +33,7 @@ static void resume_mod(enum mod_pause type);
 static sd_bus_message *restore_m = NULL;
 static int bl_fd = -1;
 static sd_bus_slot *sens_slot, *bl_slot;
-static char *backlight_interface;
+static char *backlight_interface; // main backlight interface used to only publish BL_UPD msgs for a single backlight sn
 
 DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
@@ -98,6 +98,7 @@ static void destroy(void) {
     free(conf.bl_conf.screen_path);
     free(conf.sens_conf.dev_name);
     free(conf.sens_conf.dev_opts);
+    map_free(conf.sens_conf.specific_curves);
 }
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata) {

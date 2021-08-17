@@ -3,6 +3,7 @@
 
 static void init_backlight_opts(bl_conf_t *bl_conf);
 static void init_sens_opts(sensor_conf_t *sens_conf);
+static void init_override_opts(sensor_conf_t *sens_conf);
 static void init_kbd_opts(kbd_conf_t *kbd_conf);
 static void init_gamma_opts(gamma_conf_t *gamma_conf);
 static void init_daytime_opts(daytime_conf_t *day_conf);
@@ -75,6 +76,10 @@ static void init_sens_opts(sensor_conf_t *sens_conf) {
            DEF_SIZE_POINTS * sizeof(double));
 }
 
+static void init_override_opts(sensor_conf_t *sens_conf) {
+    sens_conf->specific_curves = map_new(true, free);
+}
+
 static void init_kbd_opts(kbd_conf_t *kbd_conf) {
     kbd_conf->timeout[ON_AC] = 15;
     kbd_conf->timeout[ON_BATTERY] = 5;
@@ -132,7 +137,7 @@ static void init_screen_opts(screen_conf_t *screen_conf) {
 void init_opts(int argc, char *argv[]) {
     init_backlight_opts(&conf.bl_conf);
     init_sens_opts(&conf.sens_conf);
-    // init_override_opts NOT NEEDED (is just a NULL map)
+    init_override_opts(&conf.sens_conf);
     init_kbd_opts(&conf.kbd_conf);
     init_gamma_opts(&conf.gamma_conf);
     init_daytime_opts(&conf.day_conf);
