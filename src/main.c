@@ -25,6 +25,7 @@
 #include "opts.h"
 
 static void init(int argc, char *argv[]);
+static void init_state(void);
 static void sigsegv_handler(int signum);
 static void check_clightd_version(void);
 static void init_user_mod_path(enum CONFIG file, char *filename);
@@ -68,12 +69,10 @@ static void init(int argc, char *argv[]) {
     init_opts(argc, argv);
     log_conf();
     
-    state.version = VERSION;
-    memcpy(&state.current_loc, &conf.day_conf.loc, sizeof(loc_t));
-    
     if (!conf.wizard) {
         /* We want any error while checking Clightd required version to be logged AFTER conf logging */
-        check_clightd_version();        
+        check_clightd_version();
+        init_state();
         /* 
         * Load user custom modules after opening log (thus this information is logged).
         * Note that local (ie: placed in $HOME) modules have higher priority,
@@ -85,6 +84,20 @@ static void init(int argc, char *argv[]) {
         load_user_modules(LOCAL);
         load_user_modules(GLOBAL);
     }
+}
+
+static void init_state(void) {
+    state.version = VERSION;
+    memcpy(&state.current_loc, &conf.day_conf.loc, sizeof(loc_t));
+    
+    /* 
+     * Initial states -> undefined; 
+     */
+    state.sens_avail = -1;
+    state.next_event = -1;
+    state.day_time = -1;
+    state.ac_state = -1;
+    state.lid_state = -1;
 }
 
 /*

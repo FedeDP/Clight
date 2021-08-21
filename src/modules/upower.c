@@ -17,12 +17,6 @@ DECLARE_MSG(inh_req, INHIBIT_REQ);
 
 MODULE("UPOWER");
 
-static void module_pre_start(void) {
-    state.ac_state = -1;
-    state.lid_state = -1;
-}
-
-
 static void init(void) {
     M_SUB(UPOWER_REQ);
     M_SUB(LID_REQ);

@@ -86,10 +86,6 @@ API(Sensor, conf_sens_vtable, conf.sens_conf);
 API(MonitorOverride, conf_mon_override_vtable, conf.sens_conf.specific_curves);
 MODULE_WITH_PAUSE("BACKLIGHT");
 
-static void module_pre_start(void) {
-    state.sens_avail = -1;
-}
-
 static void init(void) {
     capture_req.capture.reset_timer = true;
     capture_req.capture.capture_only = false;
@@ -194,7 +190,7 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         
         SYSBUS_ARG(bl_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Changed");
         add_match(&bl_args, &bl_slot, on_bl_changed);
-                
+        
         bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
         m_register_fd(bl_fd, false, NULL);
         
