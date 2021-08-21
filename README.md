@@ -9,6 +9,8 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 **Note that Wiki pages will always refer to master branch.**  
 *For any other info, please feel free to open an issue.*  
 
+Last, but not least, special thanks to all maintainers, developers or simply people involved in Clight!
+
 ## Features
 
 Clight allows to match your backlight level to ambient brightness, computed by capturing frames from webcam or Ambient Light Sensors.  
@@ -34,14 +36,8 @@ It is much simpler than Clight for obvious reasons and i do not expect to develo
 
 Both Clight and Clightd make use of [libmodule](https://github.com/FedeDP/libmodule), a C library developed with modularity in mind that offers a simple actor framework for C, with an integrated event loop.
 
-Morever, note that Clight exposes a DBus [API](https://github.com/FedeDP/Clightd/wiki/Api) itself too; it allows quickly testing config values or building scripts around it, eg: https://github.com/FedeDP/Clight/wiki/DE-Automation.  
+Morever, note that Clight exposes a DBus [API](https://github.com/FedeDP/Clightd/wiki/Api) itself too; it allows quickly testing config values or building scripts around it, some of which you can find in Clight FAQ: https://github.com/FedeDP/Clight/wiki/FAQ#dbus-tricks.  
 Finally, it can also be expanded through [Custom modules](https://github.com/FedeDP/Clight/wiki/Custom-Modules) that enable users to build their own plugins to further customize Clight behaviour.  
-
-## Packages
-Clight is available on Archlinux AUR as both stable or devel package: https://aur.archlinux.org/packages/?K=clight .  
-Note that devel package may break in some weird ways during development. Use it at your own risk.  
-
-Moreover, some brave distros are already shipping Clight as you can see from above packaging badge. Special thanks to all maintainers!
 
 ## License
 This software is distributed with GPL license, see [COPYING](https://github.com/FedeDP/Clight/blob/master/COPYING) file for more informations.
