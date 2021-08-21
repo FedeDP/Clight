@@ -1,4 +1,4 @@
-#include "bus.h"
+#include "interface.h"
 #include "my_math.h"
 #include "utils.h"
 
@@ -9,13 +9,25 @@ static void get_screen_brightness(bool compute);
 static void on_contrib_req(bool compute, int new);
 static void timeout_callback(int old_val);
 static void pause_screen(bool pause, enum mod_pause type);
+static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                              sd_bus_message *value, void *userdata, sd_bus_error *error);
 
 static bool computing;
 static double *screen_br;
 static int screen_ctr, screen_fd = -1;
+static const sd_bus_vtable conf_screen_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_PROPERTY("NumSamples", "i", NULL, offsetof(screen_conf_t, samples), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_WRITABLE_PROPERTY("Contrib", "d", NULL, set_screen_contrib, offsetof(screen_conf_t, contrib), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(screen_conf_t, timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(screen_conf_t, timeout[ON_BATTERY]), 0),
+    SD_BUS_VTABLE_END
+};
 
 DECLARE_MSG(screen_msg, SCR_BL_UPD);
+DECLARE_MSG(contrib_req, CONTRIB_REQ);
 
+API(Screen, conf_screen_vtable, conf.screen_conf);
 MODULE_WITH_PAUSE("SCREEN");
 
 static void init(void) {
@@ -30,6 +42,8 @@ static void init(void) {
         M_SUB(SUSPEND_UPD);
         
         m_become(waiting_acstate);
+        
+        init_Screen_api();
     } else {
         WARN("Failed to init. Killing module.\n");
         module_deregister((self_t **)&self());
@@ -51,6 +65,7 @@ static void destroy(void) {
     if (screen_fd >= 0) {
         close(screen_fd);
     }
+    deinit_Screen_api();
 }
 
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata) {
@@ -183,4 +198,12 @@ static void pause_screen(bool pause, enum mod_pause type) {
             m_register_fd(screen_fd, false, NULL);
         }
     }
+}
+
+static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                       sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    VALIDATE_PARAMS(value, "d", &contrib_req.contrib.new);
+    
+    M_PUB(&contrib_req);
+    return r;
 }

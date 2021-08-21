@@ -9,9 +9,16 @@ static void pause_dpms(const bool pause, enum mod_pause reason);
 
 static sd_bus_slot *slot, *dpms_slot;
 static char client[PATH_MAX + 1];
+static const sd_bus_vtable conf_dpms_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(dpms_conf_t, timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(dpms_conf_t, timeout[ON_BATTERY]), 0),
+    SD_BUS_VTABLE_END
+};
 
 DECLARE_MSG(display_req, DISPLAY_REQ);
 
+API(Dpms, conf_dpms_vtable, conf.dpms_conf);
 MODULE_WITH_PAUSE("DPMS");
 
 static void init(void) {
@@ -21,6 +28,8 @@ static void init(void) {
     M_SUB(DPMS_TO_REQ);
     M_SUB(SIMULATE_REQ);
     m_become(waiting_acstate);
+    
+    init_Dpms_api();
 }
 
 static bool check(void) {
@@ -40,7 +49,7 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
             module_deregister((self_t **)&self());
         } else {
             m_unbecome();
-            
+
             SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Changed");
             add_match(&args, &dpms_slot, on_new_idle);
         }
@@ -116,10 +125,10 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
-    
     if (dpms_slot) {
         dpms_slot = sd_bus_slot_unref(dpms_slot);
     }
+    deinit_Dpms_api();
 }
 
 static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {

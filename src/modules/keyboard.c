@@ -1,4 +1,4 @@
-#include "bus.h"
+#include "interface.h"
 #include "utils.h"
 #include "my_math.h"
 
@@ -11,9 +11,20 @@ static void set_keyboard_timeout(void);
 static void on_curve_req(double *regr_points, int num_points, enum ac_states s);
 static void pause_kbd(const bool pause, enum mod_pause reason);
 
+static const sd_bus_vtable conf_kbd_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(kbd_conf_t, curve[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(kbd_conf_t, curve[ON_BATTERY]), 0),
+    SD_BUS_VTABLE_END
+};
+
 DECLARE_MSG(kbd_msg, KBD_BL_UPD);
 DECLARE_MSG(kbd_req, KBD_BL_REQ);
 
+API(Kbd, conf_kbd_vtable, conf.kbd_conf);
 MODULE_WITH_PAUSE("KEYBOARD");
 
 static void init(void) {
@@ -29,6 +40,8 @@ static void init(void) {
         
         polynomialfit(NULL, &conf.kbd_conf.curve[ON_AC], "AC keyboard backlight");
         polynomialfit(NULL, &conf.kbd_conf.curve[ON_BATTERY], "BATT keyboard backlight");
+        
+        init_Kbd_api();
     } else {
         module_deregister((self_t **)&self());
     }
@@ -123,7 +136,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
 }
 
 static void destroy(void) {
-    
+    deinit_Kbd_api();
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {

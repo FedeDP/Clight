@@ -1,5 +1,6 @@
 #include "my_math.h"
 #include "timer.h"
+#include "interface.h"
 
 static void receive_waiting_loc(const msg_t *const msg, UNUSED const void* userdata);
 static void start_daytime(void);
@@ -8,16 +9,31 @@ static void get_next_events(const time_t *now, const float lat, const float lon,
 static void check_next_event(const time_t *now);
 static void check_state(const time_t *now);
 static void reset_daytime(void);
+static int get_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+              sd_bus_message *value, void *userdata, sd_bus_error *error);
 
 static int day_fd;
+static const sd_bus_vtable conf_daytime_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", get_event, set_event, offsetof(daytime_conf_t, day_events[SUNRISE]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", get_event, set_event, offsetof(daytime_conf_t, day_events[SUNSET]), 0),
+    SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(daytime_conf_t, loc), 0),
+    SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(daytime_conf_t, event_duration), 0),
+    SD_BUS_VTABLE_END
+};
 
 DECLARE_MSG(time_msg, DAYTIME_UPD);
 DECLARE_MSG(in_ev_msg, IN_EVENT_UPD);
 DECLARE_MSG(sunrise_msg, SUNRISE_UPD);
 DECLARE_MSG(sunset_msg, SUNSET_UPD);
+DECLARE_MSG(sunrise_req, SUNRISE_REQ);
+DECLARE_MSG(sunset_req, SUNSET_REQ);
 DECLARE_MSG(next_ev_msg, NEXT_DAYEVT_UPD);
 DECLARE_MSG(temp_req, TEMP_REQ);
 
+API(Daytime, conf_daytime_vtable, conf.day_conf);
 MODULE("DAYTIME");
 
 static void module_pre_start(void) {
@@ -33,6 +49,8 @@ static void init(void) {
     M_SUB(SUNRISE_REQ);
     M_SUB(SUNSET_REQ);
     m_become(waiting_loc);
+    
+    init_Daytime_api();
 }
 
 static bool check(void) {
@@ -44,7 +62,7 @@ static bool evaluate(void) {
 }
 
 static void destroy(void) {
-    
+    deinit_Daytime_api();
 }
 
 static void receive_waiting_loc(const msg_t *const msg, UNUSED const void* userdata) {
@@ -292,4 +310,23 @@ static void reset_daytime(void) {
     /* Updated sunrise/sunset times for new location */
     state.day_events[SUNSET] = 0; // to force get_next_events to recheck sunrise and sunset for today
     set_timeout(0, 1, day_fd, 0);
+}
+
+static int get_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+              sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    return sd_bus_message_append(value, "s", userdata);
+}
+
+static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
+                            sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    const char *event = NULL;
+    VALIDATE_PARAMS(value, "s", &event);
+    
+    message_t *msg = &sunrise_req;
+    if (userdata == &conf.day_conf.day_events[SUNSET]) {
+        msg = &sunset_req;
+    }
+    strncpy(msg->event.event, event, sizeof(msg->event.event));
+    M_PUB(msg);
+    return r;
 }

@@ -1,4 +1,4 @@
-#include "bus.h"
+#include "interface.h"
 #include "utils.h"
 
 #define GAMMA_LONG_TRANS_TIMEOUT 10         // 10s between each step with slow transitioning
@@ -15,12 +15,32 @@ static void on_ambgamma_req(ambgamma_upd *up);
 static void interface_callback(temp_upd *req);
 static int on_temp_changed(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void pause_mod(bool pause, enum mod_pause reason);
+static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
+                 sd_bus_message *value, void *userdata, sd_bus_error *error);
 
 static int initial_temp;
 static sd_bus_slot *slot;
 static bool long_transitioning, should_sync_temp;
 static const self_t *daytime_ref;
+static const sd_bus_vtable conf_gamma_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, set_ambgamma, offsetof(gamma_conf_t, ambient_gamma), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(gamma_conf_t, no_smooth), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransStep", "i", NULL, NULL, offsetof(gamma_conf_t, trans_step), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(gamma_conf_t, trans_timeout), 0),
+    SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("LongTransition", "b", NULL, NULL, offsetof(gamma_conf_t, long_transition), 0),
+    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(gamma_conf_t, restore), 0),
+    SD_BUS_VTABLE_END
+};
 
+DECLARE_MSG(temp_req, TEMP_REQ);
+DECLARE_MSG(ambgamma_req, AMB_GAMMA_REQ);
+
+API(Gamma, conf_gamma_vtable, conf.gamma_conf);
 MODULE_WITH_PAUSE("GAMMA");
 
 static void init(void) {
@@ -39,6 +59,8 @@ static void init(void) {
         // We are on an unsupported wayland compositor; kill ourself immediately without further message processing
         WARN("Failed to init. Killing module.\n");
         module_deregister((self_t **)&self());
+    } else {
+        init_Gamma_api();
     }
 }
 
@@ -54,6 +76,7 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
+    deinit_Gamma_api();
 }
 
 static void receive_waiting_daytime(const msg_t *const msg, UNUSED const void* userdata) {
@@ -313,4 +336,23 @@ static void pause_mod(bool pause, enum mod_pause reason) {
             }
         }
     }
+}
+
+static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
+                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    VALIDATE_PARAMS(value, "i", &temp_req.temp.new);
+    
+    temp_req.temp.daytime = userdata == &conf.gamma_conf.temp[DAY] ? DAY : NIGHT;
+    temp_req.temp.smooth = -1; // use conf values
+    M_PUB(&temp_req);
+    return r;
+}
+
+
+int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
+                 sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    VALIDATE_PARAMS(value, "b", &ambgamma_req.ambgamma.new);
+    
+    M_PUB(&ambgamma_req);
+    return r;
 }

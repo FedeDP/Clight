@@ -1,14 +1,7 @@
 #include <module/map.h>
-#include "bus.h"
+#include "interface.h"
 #include "my_math.h"
 #include "config.h"
-
-#define VALIDATE_PARAMS(m, signature, ...) \
-    int r = sd_bus_message_read(m, signature, __VA_ARGS__); \
-    if (r < 0) { \
-        WARN("Failed to parse parameters: %s\n", strerror(-r)); \
-        return r; \
-    }
 
 #define CLIGHT_COOKIE -1
 #define CLIGHT_INH_KEY "LockClight"
@@ -39,31 +32,7 @@ static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
 static int method_load(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_unload(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_pause(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *reply, void *userdata, sd_bus_error *error);
-static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
-                    sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int get_location(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *reply, void *userdata, sd_bus_error *error);
-static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
-                        sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
-                        sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int get_event(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
-                        sd_bus_message *value, void *userdata, sd_bus_error *error);
-static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
-                              sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
-static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static const char object_path[] = "/org/clight/clight";
 static const char bus_interface[] = "org.clight.clight";
@@ -110,114 +79,6 @@ static const sd_bus_vtable conf_vtable[] = {
     SD_BUS_VTABLE_END
 };
 
-static const sd_bus_vtable conf_bl_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
-    SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
-    SD_BUS_WRITABLE_PROPERTY("CaptureOnLidOpened", "b", NULL, NULL, offsetof(bl_conf_t, capture_on_lid_opened), 0),
-    SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(bl_conf_t, screen_path), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, trans_timeout), 0),
-    SD_BUS_WRITABLE_PROPERTY("ShutterThreshold", "d", NULL, NULL, offsetof(bl_conf_t, shutter_threshold), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcEventTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][IN_EVENT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattEventTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][IN_EVENT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(bl_conf_t, restore), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_sens_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("Device", "s", NULL, NULL, offsetof(sensor_conf_t, dev_name), 0),
-    SD_BUS_WRITABLE_PROPERTY("Settings", "s", NULL, NULL, offsetof(sensor_conf_t, dev_opts), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_BATTERY]), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_mon_override_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_METHOD("List", NULL, "a(sadad)", method_list_mon_override, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_METHOD("Set", "sadad", NULL, method_set_mon_override, SD_BUS_VTABLE_UNPRIVILEGED),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_kbd_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_BATTERY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(kbd_conf_t, curve[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(kbd_conf_t, curve[ON_BATTERY]), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_gamma_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, set_ambgamma, offsetof(gamma_conf_t, ambient_gamma), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(gamma_conf_t, no_smooth), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransStep", "i", NULL, NULL, offsetof(gamma_conf_t, trans_step), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(gamma_conf_t, trans_timeout), 0),
-    SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[DAY]), 0),
-    SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[NIGHT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("LongTransition", "b", NULL, NULL, offsetof(gamma_conf_t, long_transition), 0),
-    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(gamma_conf_t, restore), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_daytime_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("Sunrise", "s", get_event, set_event, offsetof(daytime_conf_t, day_events[SUNRISE]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Sunset", "s", get_event, set_event, offsetof(daytime_conf_t, day_events[SUNSET]), 0),
-    SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(daytime_conf_t, loc), 0),
-    SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(daytime_conf_t, event_duration), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_dimmer_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmoothEnter", "b", NULL, NULL, offsetof(dimmer_conf_t, no_smooth[ENTER]), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmoothExit", "b", NULL, NULL, offsetof(dimmer_conf_t, no_smooth[EXIT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("DimmedPct", "d", NULL, NULL, offsetof(dimmer_conf_t, dimmed_pct), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransStepEnter", "d", NULL, NULL, offsetof(dimmer_conf_t, trans_step[ENTER]), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransStepExit", "d", NULL, NULL, offsetof(dimmer_conf_t, trans_step[EXIT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransDurationEnter", "i", NULL, NULL, offsetof(dimmer_conf_t, trans_timeout[ENTER]), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransDurationExit", "i", NULL, NULL, offsetof(dimmer_conf_t, trans_timeout[EXIT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(dimmer_conf_t, timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(dimmer_conf_t, timeout[ON_BATTERY]), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_dpms_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(dpms_conf_t, timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(dpms_conf_t, timeout[ON_BATTERY]), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_screen_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("NumSamples", "i", NULL, offsetof(screen_conf_t, samples), SD_BUS_VTABLE_PROPERTY_CONST),
-    SD_BUS_WRITABLE_PROPERTY("Contrib", "d", NULL, set_screen_contrib, offsetof(screen_conf_t, contrib), 0),
-    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(screen_conf_t, timeout[ON_AC]), 0),
-    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(screen_conf_t, timeout[ON_BATTERY]), 0),
-    SD_BUS_VTABLE_END
-};
-
-static const sd_bus_vtable conf_inh_vtable[] = {
-    SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("InhibitDocked", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_docked), 0),
-    SD_BUS_WRITABLE_PROPERTY("InhibitPM", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_pm), 0),
-    SD_BUS_WRITABLE_PROPERTY("InhibitBL", "b", NULL, NULL, offsetof(inh_conf_t, inhibit_bl), 0),
-    SD_BUS_VTABLE_END
-};
-
 static const sd_bus_vtable sc_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_METHOD("Inhibit", "ss", "u", method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -233,18 +94,12 @@ DECLARE_MSG(kbd_to_req, KBD_TO_REQ);
 DECLARE_MSG(dimmer_to_req, DIMMER_TO_REQ);
 DECLARE_MSG(dpms_to_req, DPMS_TO_REQ);
 DECLARE_MSG(scr_to_req, SCR_TO_REQ);
-DECLARE_MSG(temp_req, TEMP_REQ);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(curve_req, CURVE_REQ);
 DECLARE_MSG(kbd_curve_req, KBD_CURVE_REQ);
-DECLARE_MSG(calib_req, NO_AUTOCALIB_REQ);
 DECLARE_MSG(loc_req, LOCATION_REQ);
-DECLARE_MSG(contrib_req, CONTRIB_REQ);
-DECLARE_MSG(sunrise_req, SUNRISE_REQ);
-DECLARE_MSG(sunset_req, SUNSET_REQ);
 DECLARE_MSG(simulate_req, SIMULATE_REQ);
 DECLARE_MSG(suspend_req, SUSPEND_REQ);
-DECLARE_MSG(ambgamma_req, AMB_GAMMA_REQ);
 
 static map_t *lock_map;
 static sd_bus *userbus, *monbus;
@@ -256,30 +111,10 @@ MODULE("INTERFACE");
 
 static void init(void) {
     const char conf_path[] = "/org/clight/clight/Conf";
-    const char conf_bl_path[] = "/org/clight/clight/Conf/Backlight";
-    const char conf_sens_path[] = "/org/clight/clight/Conf/Sensor";
-    const char conf_mon_override_path[] = "/org/clight/clight/Conf/MonitorOverride";
-    const char conf_kbd_path[] = "/org/clight/clight/Conf/Kbd";
-    const char conf_gamma_path[] = "/org/clight/clight/Conf/Gamma";
-    const char conf_daytime_path[] = "/org/clight/clight/Conf/Daytime";
-    const char conf_dim_path[] = "/org/clight/clight/Conf/Dimmer";
-    const char conf_dpms_path[] = "/org/clight/clight/Conf/Dpms";
-    const char conf_screen_path[] = "/org/clight/clight/Conf/Screen";
-    const char conf_inh_path[] = "/org/clight/clight/Conf/Inhibit"; 
     const char sc_path_full[] = "/org/freedesktop/ScreenSaver";
     const char sc_path[] = "/ScreenSaver";
     const char conf_interface[] = "org.clight.clight.Conf";
-    const char conf_bl_interface[] = "org.clight.clight.Conf.Backlight";
-    const char conf_sens_interface[] = "org.clight.clight.Conf.Sensor";
-    const char conf_mon_override_interface[] = "org.clight.clight.Conf.MonitorOverride";
-    const char conf_kbd_interface[] = "org.clight.clight.Conf.Kbd";
-    const char conf_gamma_interface[] = "org.clight.clight.Conf.Gamma";
-    const char conf_daytime_interface[] = "org.clight.clight.Conf.Daytime";
-    const char conf_dim_interface[] = "org.clight.clight.Conf.Dimmer";
-    const char conf_dpms_interface[] = "org.clight.clight.Conf.Dpms";
-    const char conf_screen_interface[] = "org.clight.clight.Conf.Screen";
-    const char conf_inh_interface[] = "org.clight.clight.Conf.Inhibit";
-    
+   
     userbus = get_user_bus();
     
     /* Main State interface */
@@ -297,98 +132,8 @@ static void init(void) {
                                 conf_interface,
                                 conf_vtable,
                                 &conf);
-
-    /* Conf/Backlight interface */
-    if (!conf.bl_conf.disabled) {
-        r += sd_bus_add_object_vtable(userbus,
-                                    NULL,
-                                    conf_bl_path,
-                                    conf_bl_interface,
-                                    conf_bl_vtable,
-                                    &conf.bl_conf);
-
-        /* Conf/Sensor interface */
-        r += sd_bus_add_object_vtable(userbus,
-                                    NULL,
-                                    conf_sens_path,
-                                    conf_sens_interface,
-                                    conf_sens_vtable,
-                                    &conf.sens_conf);
-        
-        /* Conf/MonitorOverride interface */
-        r += sd_bus_add_object_vtable(userbus,
-                                      NULL,
-                                      conf_mon_override_path,
-                                      conf_mon_override_interface,
-                                      conf_mon_override_vtable,
-                                      conf.sens_conf.specific_curves);
-    }
-    
-    /* Conf/Kbd interface */
-    if (!conf.kbd_conf.disabled) {
-        r += sd_bus_add_object_vtable(userbus,
-                                    NULL,
-                                    conf_kbd_path,
-                                    conf_kbd_interface,
-                                    conf_kbd_vtable,
-                                    &conf.kbd_conf);
-    }
-    
-    /* Conf/Gamma interface */
-    if (!conf.gamma_conf.disabled) {
-        r += sd_bus_add_object_vtable(userbus,
-                                    NULL,
-                                    conf_gamma_path,
-                                    conf_gamma_interface,
-                                    conf_gamma_vtable,
-                                    &conf.gamma_conf);
-    }
-    
-    r += sd_bus_add_object_vtable(userbus,
-                                  NULL,
-                                  conf_daytime_path,
-                                  conf_daytime_interface,
-                                  conf_daytime_vtable,
-                                  &conf.day_conf);
-    
-    /* Conf/Dimmer interface */
-    if (!conf.dim_conf.disabled) {
-        r += sd_bus_add_object_vtable(userbus,
-                                    NULL,
-                                    conf_dim_path,
-                                    conf_dim_interface,
-                                    conf_dimmer_vtable,
-                                    &conf.dim_conf);
-    }
-    
-    /* Conf/Dpms interface */
-    if (!conf.dpms_conf.disabled) {
-        r += sd_bus_add_object_vtable(userbus,
-                                    NULL,
-                                    conf_dpms_path,
-                                    conf_dpms_interface,
-                                    conf_dpms_vtable,
-                                    &conf.dpms_conf);
-    }
-    
-    /* Conf/Screen interface */
-    if (!conf.screen_conf.disabled) {
-        r += sd_bus_add_object_vtable(userbus,
-                                    NULL,
-                                    conf_screen_path,
-                                    conf_screen_interface,
-                                    conf_screen_vtable,
-                                    &conf.screen_conf);
-    }
     
     if (!conf.inh_conf.disabled) {
-        r += sd_bus_add_object_vtable(userbus,
-                                      NULL,
-                                      conf_inh_path,
-                                      conf_inh_interface,
-                                      conf_inh_vtable,
-                                      &conf.inh_conf);
-
             /*
             * ScreenSaver implementation:
             * take both /ScreenSaver and /org/freedesktop/ScreenSaver paths
@@ -837,14 +582,14 @@ static int method_pause(sd_bus_message *m, void *userdata, sd_bus_error *ret_err
     return sd_bus_reply_method_return(m, NULL);
 }
 
-static int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
+int get_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *reply, void *userdata, sd_bus_error *error) {
     
     curve_t *c = (curve_t *)userdata;
     return sd_bus_message_append_array(reply, 'd', c->points, c->num_points * sizeof(double));
 }
 
-static int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
+int set_curve(sd_bus *bus, const char *path, const char *interface, const char *property,
                      sd_bus_message *value, void *userdata, sd_bus_error *error) {
 
     sd_bus_message **curve_msg = NULL;
@@ -888,13 +633,13 @@ static int set_curve(sd_bus *bus, const char *path, const char *interface, const
     return r;
 }
 
-static int get_location(sd_bus *bus, const char *path, const char *interface, const char *property,
+int get_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *reply, void *userdata, sd_bus_error *error) {
     loc_t *l = (loc_t *)userdata;
     return sd_bus_message_append(reply, "(dd)", l->lat, l->lon);
 }
 
-static int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
+int set_location(sd_bus *bus, const char *path, const char *interface, const char *property,
                         sd_bus_message *value, void *userdata, sd_bus_error *error) {
 
     VALIDATE_PARAMS(value, "(dd)", &loc_req.loc.new.lat, &loc_req.loc.new.lon);
@@ -904,15 +649,7 @@ static int set_location(sd_bus *bus, const char *path, const char *interface, co
     return r;
 }
 
-static int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
-                        sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    
-    VALIDATE_PARAMS(value, "b", &ambgamma_req.ambgamma.new);
-    M_PUB(&ambgamma_req);
-    return r;
-}
-
-static int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
+int set_timeouts(sd_bus *bus, const char *path, const char *interface, const char *property,
                             sd_bus_message *value, void *userdata, sd_bus_error *error) {    
     /* Check if we modified currently used timeout! */
     message_t *msg = NULL;
@@ -974,51 +711,6 @@ static int set_timeouts(sd_bus *bus, const char *path, const char *interface, co
     return r;
 }
 
-static int set_gamma(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    VALIDATE_PARAMS(value, "i", &temp_req.temp.new);
-    
-    temp_req.temp.daytime = userdata == &conf.gamma_conf.temp[DAY] ? DAY : NIGHT;
-    temp_req.temp.smooth = -1; // use conf values
-    M_PUB(&temp_req);
-    return r;
-}
-
-static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
-                          sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    VALIDATE_PARAMS(value, "b", &calib_req.nocalib.new);
-    
-    M_PUB(&calib_req);
-    return r;
-}
-
-static int get_event(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    return sd_bus_message_append(value, "s", userdata);
-}
-
-static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    const char *event = NULL;
-    VALIDATE_PARAMS(value, "s", &event);
-
-    message_t *msg = &sunrise_req;
-    if (userdata == &conf.day_conf.day_events[SUNSET]) {
-        msg = &sunset_req;
-    }
-    strncpy(msg->event.event, event, sizeof(msg->event.event));
-    M_PUB(msg);
-    return r;
-}
-
-static int set_screen_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
-                     sd_bus_message *value, void *userdata, sd_bus_error *error) {
-    VALIDATE_PARAMS(value, "d", &contrib_req.contrib.new);
-
-    M_PUB(&contrib_req);
-    return r;
-}
-
 static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int r = -1;
     if (store_config(LOCAL) == 0) {
@@ -1027,100 +719,4 @@ static int method_store_conf(sd_bus_message *m, void *userdata, sd_bus_error *re
         sd_bus_error_set_const(ret_error, SD_BUS_ERROR_FAILED, "Failed to store conf.");
     }
     return r;
-}
-
-static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    map_t *curves = (map_t *)userdata;
-    
-    sd_bus_message *reply = NULL;
-    sd_bus_message_new_method_return(m, &reply);
-    sd_bus_message_open_container(reply, SD_BUS_TYPE_ARRAY, "(sadad)");
-    for (map_itr_t *itr = map_itr_new(curves); itr; itr = map_itr_next(itr)) {
-        sd_bus_message_open_container(reply, SD_BUS_TYPE_STRUCT, "sadad");
-        const char *sn = map_itr_get_key(itr);
-        sd_bus_message_append(reply, "s", sn);
-        for (int st = ON_AC; st < SIZE_AC; st++) {
-            sd_bus_message_open_container(reply, SD_BUS_TYPE_ARRAY, "d");
-            curve_t *c = map_itr_get_data(itr);
-            for (int i = 0; i < c[st].num_points; i++) {
-                sd_bus_message_append(reply, "d", c[st].points[i]);
-            }
-            sd_bus_message_close_container(reply);
-        }
-        sd_bus_message_close_container(reply);
-    }
-    sd_bus_message_close_container(reply);
-    sd_bus_send(NULL, reply, NULL);
-    sd_bus_message_unref(reply);
-    return 0;
-}
-
-static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
-    map_t *curves = (map_t *)userdata;
-    
-    const char *sn = NULL;
-    VALIDATE_PARAMS(m, "s", &sn);
-    
-    double *data[SIZE_AC] = { NULL, NULL };
-    size_t num_points[SIZE_AC] = {0};
-    for (int st = ON_AC; st < SIZE_AC; st++) {
-        size_t length;
-        r = sd_bus_message_read_array(m, 'd', (const void**) &data[st], &length);
-        if (r < 0) {
-            WARN("Failed to parse parameters: %s\n", strerror(-r));
-            return r;
-        }
-        
-        num_points[st] = length / sizeof(double);
-        
-        if (num_points[st] > MAX_SIZE_POINTS) {
-            sd_bus_error_set_errno(ret_error, EINVAL);
-            return -EINVAL;
-        }
-        
-        // validate curve data
-        for (int i = 0; i < num_points[st]; i++) {
-            if (data[st][i] < 0.0 || data[st][i] > 1.0) {
-                sd_bus_error_set_errno(ret_error, EINVAL);
-                return -EINVAL;
-            }
-        }
-    }
-    
-    // they must be both != 0 or 0
-    if (num_points[ON_AC] ^ num_points[ON_BATTERY]) {
-        sd_bus_error_set_errno(ret_error, EINVAL);
-        return -EINVAL;
-    }
-    
-    // remove curve if existent
-    if (num_points[ON_AC] == 0) {
-        if (!map_has_key(curves, sn)) {
-            sd_bus_error_set_errno(ret_error, ENOENT);
-            return -ENOENT;
-        }
-        map_remove(curves, sn);
-        return sd_bus_reply_method_return(m, NULL);
-    }
-    
-    curve_t *c = map_get(curves, sn);
-    if (!c) {
-        c = calloc(SIZE_AC, sizeof(curve_t));
-        if (!c) {
-            sd_bus_error_set_errno(ret_error, ENOMEM);
-            return -ENOMEM;
-        }
-    }
-    
-    char tag[128] = {0};
-    for (int st = ON_AC; st < SIZE_AC; st++) {
-        c[st].num_points = num_points[st];
-        memcpy(c[st].points, data[st], num_points[st] * sizeof(double));
-        snprintf(tag, sizeof(tag), "%s '%s' backlight", st == ON_AC ? "AC" : "BATT", sn);
-        polynomialfit(NULL, &c[st], tag);
-    }
-    
-    map_put(curves, sn, c);
-    
-    return sd_bus_reply_method_return(m, NULL);
 }

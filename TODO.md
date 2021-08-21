@@ -19,6 +19,9 @@
 ### Interface
 - [x] Expose conf.monitor_override dbus api (List()"a(sadad)", Set("sadad"), Set(NULL))
 - [x] Document new api (https://github.com/FedeDP/Clight/wiki/Api#orgclightclightconfmonitoroverride)
+- [x] Move various Conf/$Module dbus api inside modules so that if module is deregistered, its bus api is killed too
+- [x] Double check interface.h api
+- [x] add a API() macro to autogenerate dbus api code for modules?
 
 ### Generic
 - [x] evaluate using module_deregister instead of m_poisonpill?

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bus.h"
+#include "interface.h"
 
 int idle_init(char *client, sd_bus_slot **slot, int timeout, sd_bus_message_handler_t handler);
 int idle_set_timeout(char *client, int timeout);

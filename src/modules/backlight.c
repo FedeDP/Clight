@@ -1,4 +1,4 @@
-#include "bus.h"
+#include "interface.h"
 #include "my_math.h"
 #include "utils.h"
 
@@ -29,16 +29,61 @@ static int get_current_timeout(void);
 static void on_lid_update(void);
 static void pause_mod(enum mod_pause type);
 static void resume_mod(enum mod_pause type);
+static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                          sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static sd_bus_message *restore_m = NULL;
 static int bl_fd = -1;
 static sd_bus_slot *sens_slot, *bl_slot;
 static char *backlight_interface; // main backlight interface used to only publish BL_UPD msgs for a single backlight sn
+static const sd_bus_vtable conf_bl_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
+    SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
+    SD_BUS_WRITABLE_PROPERTY("CaptureOnLidOpened", "b", NULL, NULL, offsetof(bl_conf_t, capture_on_lid_opened), 0),
+    SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(bl_conf_t, screen_path), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, trans_timeout), 0),
+    SD_BUS_WRITABLE_PROPERTY("ShutterThreshold", "d", NULL, NULL, offsetof(bl_conf_t, shutter_threshold), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcEventTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][IN_EVENT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][DAY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][NIGHT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattEventTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][IN_EVENT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(bl_conf_t, restore), 0),
+    SD_BUS_VTABLE_END
+};
+
+static const sd_bus_vtable conf_sens_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("Device", "s", NULL, NULL, offsetof(sensor_conf_t, dev_name), 0),
+    SD_BUS_WRITABLE_PROPERTY("Settings", "s", NULL, NULL, offsetof(sensor_conf_t, dev_opts), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_BATTERY]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_BATTERY]), 0),
+    SD_BUS_VTABLE_END
+};
+
+static const sd_bus_vtable conf_mon_override_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("List", NULL, "a(sadad)", method_list_mon_override, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("Set", "sadad", NULL, method_set_mon_override, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_VTABLE_END
+};
 
 DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(sens_msg, SENS_UPD);
+DECLARE_MSG(calib_req, NO_AUTOCALIB_REQ);
 
+API(Backlight, conf_bl_vtable, conf.bl_conf);
+API(Sensor, conf_sens_vtable, conf.sens_conf);
+API(MonitorOverride, conf_mon_override_vtable, conf.sens_conf.specific_curves);
 MODULE_WITH_PAUSE("BACKLIGHT");
 
 static void module_pre_start(void) {
@@ -52,6 +97,9 @@ static void init(void) {
     // Disabled while in wizard mode as it is useless and spams to stdout
     if (!conf.wizard) {
         init_curves();
+        init_Backlight_api();
+        init_Sensor_api();
+        init_MonitorOverride_api();
     }
 
     M_SUB(UPOWER_UPD);
@@ -88,6 +136,9 @@ static void destroy(void) {
     if (bl_slot) {
         bl_slot = sd_bus_slot_unref(bl_slot);
     }
+    deinit_Backlight_api();
+    deinit_Sensor_api();
+    deinit_MonitorOverride_api();
     if (bl_fd >= 0) {
         close(bl_fd);
     }
@@ -681,4 +732,108 @@ static void resume_mod(enum mod_pause type) {
         /* Register back our fd on resume */
         m_register_fd(bl_fd, false, NULL);
     }
+}
+
+static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, const char *property,
+                          sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    VALIDATE_PARAMS(value, "b", &calib_req.nocalib.new);
+    
+    M_PUB(&calib_req);
+    return r;
+}
+
+static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    map_t *curves = (map_t *)userdata;
+    
+    sd_bus_message *reply = NULL;
+    sd_bus_message_new_method_return(m, &reply);
+    sd_bus_message_open_container(reply, SD_BUS_TYPE_ARRAY, "(sadad)");
+    for (map_itr_t *itr = map_itr_new(curves); itr; itr = map_itr_next(itr)) {
+        sd_bus_message_open_container(reply, SD_BUS_TYPE_STRUCT, "sadad");
+        const char *sn = map_itr_get_key(itr);
+        sd_bus_message_append(reply, "s", sn);
+        for (int st = ON_AC; st < SIZE_AC; st++) {
+            sd_bus_message_open_container(reply, SD_BUS_TYPE_ARRAY, "d");
+            curve_t *c = map_itr_get_data(itr);
+            for (int i = 0; i < c[st].num_points; i++) {
+                sd_bus_message_append(reply, "d", c[st].points[i]);
+            }
+            sd_bus_message_close_container(reply);
+        }
+        sd_bus_message_close_container(reply);
+    }
+    sd_bus_message_close_container(reply);
+    sd_bus_send(NULL, reply, NULL);
+    sd_bus_message_unref(reply);
+    return 0;
+}
+
+static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    map_t *curves = (map_t *)userdata;
+    
+    const char *sn = NULL;
+    VALIDATE_PARAMS(m, "s", &sn);
+    
+    double *data[SIZE_AC] = { NULL, NULL };
+    size_t num_points[SIZE_AC] = {0};
+    for (int st = ON_AC; st < SIZE_AC; st++) {
+        size_t length;
+        r = sd_bus_message_read_array(m, 'd', (const void**) &data[st], &length);
+        if (r < 0) {
+            WARN("Failed to parse parameters: %s\n", strerror(-r));
+            return r;
+        }
+        
+        num_points[st] = length / sizeof(double);
+        
+        if (num_points[st] > MAX_SIZE_POINTS) {
+            sd_bus_error_set_errno(ret_error, EINVAL);
+            return -EINVAL;
+        }
+        
+        // validate curve data
+        for (int i = 0; i < num_points[st]; i++) {
+            if (data[st][i] < 0.0 || data[st][i] > 1.0) {
+                sd_bus_error_set_errno(ret_error, EINVAL);
+                return -EINVAL;
+            }
+        }
+    }
+    
+    // they must be both != 0 or 0
+    if (num_points[ON_AC] ^ num_points[ON_BATTERY]) {
+        sd_bus_error_set_errno(ret_error, EINVAL);
+        return -EINVAL;
+    }
+    
+    // remove curve if existent
+    if (num_points[ON_AC] == 0) {
+        if (!map_has_key(curves, sn)) {
+            sd_bus_error_set_errno(ret_error, ENOENT);
+            return -ENOENT;
+        }
+        map_remove(curves, sn);
+        return sd_bus_reply_method_return(m, NULL);
+    }
+    
+    curve_t *c = map_get(curves, sn);
+    if (!c) {
+        c = calloc(SIZE_AC, sizeof(curve_t));
+        if (!c) {
+            sd_bus_error_set_errno(ret_error, ENOMEM);
+            return -ENOMEM;
+        }
+    }
+    
+    char tag[128] = {0};
+    for (int st = ON_AC; st < SIZE_AC; st++) {
+        c[st].num_points = num_points[st];
+        memcpy(c[st].points, data[st], num_points[st] * sizeof(double));
+        snprintf(tag, sizeof(tag), "%s '%s' backlight", st == ON_AC ? "AC" : "BATT", sn);
+        polynomialfit(NULL, &c[st], tag);
+    }
+    
+    map_put(curves, sn, c);
+    
+    return sd_bus_reply_method_return(m, NULL);
 }

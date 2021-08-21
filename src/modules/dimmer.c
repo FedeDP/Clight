@@ -9,9 +9,23 @@ static void pause_dimmer(const bool pause, enum mod_pause reason);
 
 static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
+static const sd_bus_vtable conf_dimmer_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothEnter", "b", NULL, NULL, offsetof(dimmer_conf_t, no_smooth[ENTER]), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmoothExit", "b", NULL, NULL, offsetof(dimmer_conf_t, no_smooth[EXIT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("DimmedPct", "d", NULL, NULL, offsetof(dimmer_conf_t, dimmed_pct), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransStepEnter", "d", NULL, NULL, offsetof(dimmer_conf_t, trans_step[ENTER]), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransStepExit", "d", NULL, NULL, offsetof(dimmer_conf_t, trans_step[EXIT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransDurationEnter", "i", NULL, NULL, offsetof(dimmer_conf_t, trans_timeout[ENTER]), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransDurationExit", "i", NULL, NULL, offsetof(dimmer_conf_t, trans_timeout[EXIT]), 0),
+    SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(dimmer_conf_t, timeout[ON_AC]), 0),
+    SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(dimmer_conf_t, timeout[ON_BATTERY]), 0),
+    SD_BUS_VTABLE_END
+};
 
 DECLARE_MSG(display_req, DISPLAY_REQ);
 
+API(Dimmer, conf_dimmer_vtable, conf.dim_conf);
 MODULE_WITH_PAUSE("DIMMER");
 
 static void init(void) {
@@ -21,6 +35,8 @@ static void init(void) {
     M_SUB(DIMMER_TO_REQ);
     M_SUB(SIMULATE_REQ);
     m_become(waiting_acstate);
+    
+    init_Dimmer_api();
 }
 
 static bool check(void) {
@@ -113,6 +129,7 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
+    deinit_Dimmer_api();
 }
 
 static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {

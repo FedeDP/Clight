@@ -4,6 +4,7 @@
 
 #define ZENITH -0.83
 
+static void plot_poly_curve(curve_t *curve);
 static char **init_grid(int num_points);
 static void show_grid(char **grid, int num_points);
 static void free_grid(char **grid, int num_points);
@@ -96,7 +97,7 @@ double get_value_from_curve(const double perc, curve_t *curve) {
     return value;
 }
 
-void plot_poly_curve(curve_t *curve) {
+static void plot_poly_curve(curve_t *curve) {
     const int maxY = curve->num_points - 1;
     char **grid = init_grid(curve->num_points);
     for (int i = 0; i < curve->num_points; i++) {
