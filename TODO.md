@@ -3,7 +3,7 @@
 ### Keyboard
 - [x] Add curve configuration
 - [x] Use curve config
-- [x] drop ambient_threshol
+- [x] drop ambient_threshold
 - [x] Expose curve points from dbus (read only)
 - [x] allow to update them from dbus
 

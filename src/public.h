@@ -78,9 +78,9 @@ enum mod_msg_types {
     IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times
-    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth changes, a first TEMP_UPD will be emitteed with target temp and smooth params, then for each individual step TEMP_UPD will be emitted too
+    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth changes, a first TEMP_UPD will be emitted with target temp and smooth params, then for each individual step TEMP_UPD will be emitted too
     AMBIENT_BR_UPD,     // Subscribe to receive new ambient brightness values
-    BL_UPD,             // Subscribe to receive new backlight level values. NOTE: for smooth changes, a first BL_UPD will be emitteed with target temp and smooth params, then for each individual step BL_UPD will be emitted too
+    BL_UPD,             // Subscribe to receive new backlight level values. NOTE: for smooth changes, a first BL_UPD will be emitted with target temp and smooth params, then for each individual step BL_UPD will be emitted too
     KBD_BL_UPD,         // Subscribe to receive new keyboard backlight values
     SCR_BL_UPD,         // Subscribe to receive new screen-emitted brightness values
     LOCATION_REQ,       // Publish to set a new location
@@ -108,7 +108,7 @@ enum mod_msg_types {
     SENS_UPD,           // Subscribe to receive "SensorAvail" states
     NEXT_DAYEVT_UPD,    // Subscribe to receive notifications about next day event (ie: sunrise or sunset)
     SUSPEND_UPD,        // Subscribe to receive new system suspended states
-    SUSPEND_REQ,        // Publish to set a new system suspend state (this won't suspend your system! It jsut 'fakes' a suspended state)
+    SUSPEND_REQ,        // Publish to set a new system suspend state (this won't suspend your system! It just 'fakes' a suspended state)
     KBD_TO_REQ,         // Publish to require a new keyboard timeout
     AMB_GAMMA_REQ,      // Publish to require a new AmbientGamma state
     KBD_CURVE_REQ,      // Publish to set a new keyboard backlight curve for given ac state

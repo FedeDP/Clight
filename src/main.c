@@ -79,7 +79,7 @@ static void init(int argc, char *argv[]) {
         * thus one can override a global module (placed in /usr/share/clight/modules.d/)
         * by creating a module with same name in $HOME.
         * 
-        * Clight internal modules cannot be overriden.
+        * Clight internal modules cannot be overridden.
         */
         load_user_modules(LOCAL);
         load_user_modules(GLOBAL);
