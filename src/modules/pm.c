@@ -40,7 +40,7 @@ static bool evaluate() {
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
         case FD_UPD: {
-            /* We are reading a message delyaed of conf.resumedelay */
+            /* We are reading a message delayed of conf.resumedelay */
             message_t *suspend_msg = (message_t *)msg->fd_msg->userptr;
             read_timer(delayed_resume_fd);
             M_PUB(suspend_msg);

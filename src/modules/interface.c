@@ -164,7 +164,7 @@ static void init(void) {
         if (r < 0) {
             WARN("Failed to create %s dbus interface: %s\n", bus_interface, strerror(-r));
         } else {
-            /* Subscribe to any topic expept REQUESTS */
+            /* Subscribe to any topic except REQUESTS */
             m_subscribe("^[^Req].*");
             
             /** org.freedesktop.ScreenSaver API **/

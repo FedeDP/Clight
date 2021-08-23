@@ -235,7 +235,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
     }
     /*
      * poptGetNextOpt returns -1 when the final argument has been parsed
-     * otherwise an error occured
+     * otherwise an error occurred
      */
     poptFreeContext(pc);
     if (rc != -1) {
