@@ -321,10 +321,14 @@ static int start_inhibit_monitor(void) {
 }
 
 static void inhibit_parse_msg(sd_bus_message *m) {
-    if (sd_bus_message_get_member(m)) {
+    if (sd_bus_message_get_member(m) && 
+        sd_bus_message_get_signature(m, false) &&
+        sd_bus_message_get_interface(m)) {
+
         const char *member = sd_bus_message_get_member(m);
         const char *signature = sd_bus_message_get_signature(m, false);
         const char *interface = sd_bus_message_get_interface(m);
+        
         
         for (int i = 1; i <= 2; i++) {
             if (!strcmp(interface, sc_interface)
