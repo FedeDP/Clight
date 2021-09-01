@@ -1,5 +1,8 @@
 ## 4.8
 
+### Interface
+- [x] Fixed null ptr dereference in inhibit_parse_msg()
+
 ### Backlight
 - [ ] Port to clightd.Backlight2 API
 - [ ] Drop screen_path bl conf
