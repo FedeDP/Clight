@@ -321,16 +321,16 @@ static int start_inhibit_monitor(void) {
 }
 
 static void inhibit_parse_msg(sd_bus_message *m) {
-    if (sd_bus_message_get_member(m)) {
-        const char *member = sd_bus_message_get_member(m);
-        const char *signature = sd_bus_message_get_signature(m, false);
-        const char *interface = sd_bus_message_get_interface(m);
-        
+    const char *member = sd_bus_message_get_member(m);
+    const char *signature = sd_bus_message_get_signature(m, false);
+    const char *interface = sd_bus_message_get_interface(m);
+
+    if (member && signature && interface) {
         for (int i = 1; i <= 2; i++) {
             if (!strcmp(interface, sc_interface)
                 && !strcmp(member, sc_vtable[i].x.method.member)
                 && !strcmp(signature, sc_vtable[i].x.method.signature)) {
-                
+
                 switch (i) {
                 case 1: { // Inhibit!!
                     int cookie = 0;

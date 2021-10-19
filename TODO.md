@@ -4,6 +4,9 @@
 
 - [x] Allow upower module even if LidIsPresent is false to properly support pinephone
 
+### Interface
+- [x] Fixed null ptr dereference in inhibit_parse_msg()
+
 ## 4.x
 
 ### Generic
