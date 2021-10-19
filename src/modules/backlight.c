@@ -283,7 +283,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     }
     case SYSTEM_UPD:
         if (msg->ps_msg->type == LOOP_STOPPED && restore_m && conf.bl_conf.restore) {
-            set_each_brightness(restore_m, 0, false, 0, 0);
+            set_each_brightness(restore_m, -1.0f, false, 0, 0);
             restore_m = NULL;
         }
         break; 
@@ -354,7 +354,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
     }
     case SYSTEM_UPD:
         if (msg->ps_msg->type == LOOP_STOPPED && restore_m && conf.bl_conf.restore) {
-            set_each_brightness(restore_m, 0, false, 0, 0);
+            set_each_brightness(restore_m, -1.0f, false, 0, 0);
             restore_m = NULL;
         }
         break; 
@@ -489,7 +489,7 @@ static int get_and_set_each_brightness(const double pct, const bool is_smooth, c
 }
 
 static void set_each_brightness(sd_bus_message *m, double pct, const bool is_smooth, const double step, const int timeout) {
-    const bool restoring = pct == 0;
+    const bool restoring = pct == -1.0f;
     sensor_conf_t *sens_conf = &conf.sens_conf;
     enum ac_states st = state.ac_state;
     
@@ -509,6 +509,10 @@ static void set_each_brightness(sd_bus_message *m, double pct, const bool is_smo
             /* Set backlight on monitor id */
             SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
             curve_t *c = map_get(sens_conf->specific_curves, mon_id);
+            /*
+             * Only if a specific curve has been found and 
+             * we are not restoring a previously saved backlight level 
+             */
             if (c && !restoring) {
                 /* Use monitor specific adjustment, properly scaling bl pct */
                 const double real_pct = get_value_from_curve(pct, &c[st]);

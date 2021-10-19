@@ -1,5 +1,6 @@
     #include "bus.h"
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int upower_check(void);
 static int upower_init(void);
 static int on_upower_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
@@ -84,17 +85,19 @@ static void destroy(void) {
     }
 }
 
+static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
+    int r = -EINVAL;
+    if (!strcmp(member, "Ping")) {
+        r = 0;
+    }
+    return r;
+}
+
 static int upower_check(void) {
-    bool is_laptop = false;
-    SYSBUS_ARG(lid_pres_args, "org.freedesktop.UPower",  "/org/freedesktop/UPower", "org.freedesktop.UPower", "LidIsPresent");
-    int r = get_property(&lid_pres_args, "b", &is_laptop);
-    if (!r) {
-        if (is_laptop) {
-            on_upower_change(NULL, NULL, NULL);
-        } else {
-            INFO("Not a laptop device. Killing UPower module.\n");
-            r = -1;
-        }
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, "org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.DBus.Peer", "Ping");
+    int r = call(&args, NULL);
+    if (r >= 0) {
+        on_upower_change(NULL, NULL, NULL);
     } else {
         INFO("UPower not present. Killing UPower module.\n");
     }
