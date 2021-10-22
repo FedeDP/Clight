@@ -64,8 +64,25 @@ static void init(int argc, char *argv[]) {
      */
     signal(SIGSEGV, sigsegv_handler);
     
-    /* We want any issue while parsing config to be logged */
-    open_log();
+    /* 
+     * We want any issue while parsing config to be logged; 
+     * but not in case we are just printing version or help 
+     */
+    bool no_log = false;
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "-v") == 0 ||
+            strcmp(argv[i], "--version") == 0 ||
+            strcmp(argv[i], "-?") == 0 ||
+            strcmp(argv[i], "--help") == 0 ||
+            strcmp(argv[i], "--usage") == 0) {
+        
+            no_log = true;
+        }
+    }
+    
+    if (!no_log) {
+        open_log();
+    }
     init_opts(argc, argv);
     log_conf();
     

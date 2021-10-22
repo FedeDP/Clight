@@ -1,11 +1,13 @@
 ## 4.8
 
 ### Pinephone
-
 - [x] Allow upower module even if LidIsPresent is false to properly support pinephone
 
 ### Interface
 - [x] Fixed null ptr dereference in inhibit_parse_msg()
+
+### Generic
+- [x] Finally allow to view usage, help and version messages while another instance is running. Fixes #235
 
 ## 4.x
 
