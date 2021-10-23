@@ -7,6 +7,7 @@
 static void receive_waiting_sens(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_capturing(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_calibrating(const msg_t *const msg, UNUSED const void* userdata);
+static int get_first_available_backlight(void);
 static char read_char(int fd);
 static void next_step(void);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
@@ -37,6 +38,7 @@ static wiz_states wiz_st;
 static double amb_brs[WIZ_IN_POINTS];
 static int capture_idx;
 static curve_t curve;
+static const char *bl_obj_path;
 
 static void init(void) {
     curve.num_points = WIZ_IN_POINTS;
@@ -48,6 +50,13 @@ static void init(void) {
     M_SUB(SENS_UPD);
 
     INFO("Welcome to Clight wizard. Press ctrl-c to quit at any moment.\n");
+    
+    if (get_first_available_backlight() == 0) {
+        INFO("Wizard will use '%s' screen.\n", strrchr(bl_obj_path, '/') + 1);
+    } else {
+        ERROR("No screen found. Leaving.\n");
+    }
+    
     INFO("Waiting for sensor...\n");
     m_become(waiting_sens);
 }
@@ -136,7 +145,7 @@ static void receive_calibrating(const msg_t *const msg, UNUSED const void* userd
         switch (c) {
         case 10:
             if (get_backlight() != 0) {
-                WARN("Failed to get '%s' backlight pct.\n", conf.bl_conf.screen_path ? conf.bl_conf.screen_path : "");
+                WARN("Failed to get backlight pct.\n");
                 modules_quit(-1);
             } else {
                 INFO("Backlight level is: %.3lf\n\n", curve.points[capture_idx - 1]);
@@ -154,7 +163,12 @@ static void receive_calibrating(const msg_t *const msg, UNUSED const void* userd
 }
 
 static void destroy(void) {
-    
+    free((void *)bl_obj_path);
+}
+
+static int get_first_available_backlight(void) {
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.clightd.clightd.Backlight2", "Get");
+    return call(&args, NULL);
 }
 
 static char read_char(int fd) {
@@ -202,12 +216,32 @@ static void next_step(void) {
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
-    return sd_bus_message_read(reply, "(sd)", NULL, &curve.points[capture_idx++]);
+    if (userdata) {
+        // called by get_backlight()
+        return sd_bus_message_read(reply, "(sd)", NULL, &curve.points[capture_idx++]);
+    }
+    // called by get_first_available_backlight()
+    int r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(sd)");
+    if (r >= 0) {
+        r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_STRUCT, "sd");
+        if (r >= 0) {
+            const char *sysname = NULL;
+            r = sd_bus_message_read(reply, "sd", &sysname, NULL);
+            if (r >= 0) {
+                char obj_path[PATH_MAX + 1];
+                snprintf(obj_path, sizeof(obj_path), "/org/clightd/clightd/Backlight2/%s", sysname);
+                bl_obj_path = strdup(obj_path);
+            }
+            sd_bus_message_exit_container(reply);
+        }
+        sd_bus_message_exit_container(reply);
+    }
+    return r;
 }
 
-static int get_backlight() {
-    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Get");
-    return call(&args, "s", conf.bl_conf.screen_path);
+static int get_backlight(void) {
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, (void *)bl_obj_path, CLIGHTD_SERVICE, bl_obj_path, "org.clightd.clightd.Backlight2.Server", "Get");
+    return call(&args, NULL);
 }
 
 static void compute(void) {

@@ -10,9 +10,8 @@ static int is_sensor_available(void);
 static void do_capture(bool reset_timer, bool capture_only);
 static double set_new_backlight(const double perc);
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout);
-static int get_and_set_each_brightness(const double pct, const bool is_smooth, const double step, const int timeout);
-static void set_each_brightness(sd_bus_message *m, double pct, const bool is_smooth, const double step, const int timeout);
-static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout);
+static void set_each_brightness(double pct, const double step, const int timeout);
+static void set_backlight_level(const double pct, const bool is_smooth, double step, int timeout);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_autocalib_callback(bool new_val);
@@ -25,6 +24,8 @@ static void inhibit_callback(void);
 static void time_callback(int old_val, const bool is_event);
 static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
+static int on_interface_added(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
+static int on_interface_removed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int get_current_timeout(void);
 static void on_lid_update(void);
 static void pause_mod(enum mod_pause type);
@@ -34,16 +35,15 @@ static int set_auto_calib(sd_bus *bus, const char *path, const char *interface, 
 static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
-static sd_bus_message *restore_m = NULL;
+static map_t *bls;
 static int bl_fd = -1;
-static sd_bus_slot *sens_slot, *bl_slot;
+static sd_bus_slot *sens_slot, *bl_slot, *if_a_slot, *if_r_slot;
 static char *backlight_interface; // main backlight interface used to only publish BL_UPD msgs for a single backlight sn
 static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
     SD_BUS_WRITABLE_PROPERTY("CaptureOnLidOpened", "b", NULL, NULL, offsetof(bl_conf_t, capture_on_lid_opened), 0),
-    SD_BUS_WRITABLE_PROPERTY("BacklightSyspath", "s", NULL, NULL, offsetof(bl_conf_t, screen_path), 0),
     SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth), 0),
     SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),
     SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, trans_timeout), 0),
@@ -87,6 +87,7 @@ API(MonitorOverride, conf_mon_override_vtable, conf.sens_conf.specific_curves);
 MODULE_WITH_PAUSE("BACKLIGHT");
 
 static void init(void) {
+    bls = map_new(true, free);
     capture_req.capture.reset_timer = true;
     capture_req.capture.capture_only = false;
     
@@ -111,10 +112,6 @@ static void init(void) {
     M_SUB(BL_REQ);
     M_SUB(INHIBIT_UPD);
     m_become(waiting_init);
-    
-    // Store current backlight to later restore them if requested
-    SYSBUS_ARG_REPLY(args, parse_bus_reply, &restore_m, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "GetAll");
-    call(&args, "s", conf.bl_conf.screen_path);
 }
 
 static bool check(void) {
@@ -132,17 +129,19 @@ static void destroy(void) {
     if (bl_slot) {
         bl_slot = sd_bus_slot_unref(bl_slot);
     }
+    if (if_a_slot) {
+        if_a_slot = sd_bus_slot_unref(if_a_slot);
+    }
+    if (if_r_slot) {
+        if_r_slot = sd_bus_slot_unref(if_r_slot);
+    }
     deinit_Backlight_api();
     deinit_Sensor_api();
     deinit_MonitorOverride_api();
     if (bl_fd >= 0) {
         close(bl_fd);
     }
-    if (restore_m) {
-        sd_bus_message_unrefp(&restore_m);
-    }
     free(backlight_interface);
-    free(conf.bl_conf.screen_path);
     free(conf.sens_conf.dev_name);
     free(conf.sens_conf.dev_opts);
     map_free(conf.sens_conf.specific_curves);
@@ -188,8 +187,14 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         SYSBUS_ARG(sens_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Changed");
         add_match(&sens_args, &sens_slot, on_sensor_change);
         
-        SYSBUS_ARG(bl_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Changed");
+        SYSBUS_ARG(bl_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.clightd.clightd.Backlight2", "Changed");
         add_match(&bl_args, &bl_slot, on_bl_changed);
+        
+        SYSBUS_ARG(if_added_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.freedesktop.DBus.ObjectManager", "InterfacesAdded");
+        add_match(&if_added_args, &if_a_slot, on_interface_added);
+        
+        SYSBUS_ARG(if_removed_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved");
+        add_match(&if_removed_args, &if_r_slot, on_interface_removed);
         
         bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
         m_register_fd(bl_fd, false, NULL);
@@ -216,6 +221,10 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
              */
             on_lid_update();
         }
+        
+        // Store current backlight to later restore them if requested
+        SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.clightd.clightd.Backlight2", "Get");
+        call(&args, NULL);
     }
 }
 
@@ -282,9 +291,8 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
     case SYSTEM_UPD:
-        if (msg->ps_msg->type == LOOP_STOPPED && restore_m && conf.bl_conf.restore) {
-            set_each_brightness(restore_m, -1.0f, false, 0, 0);
-            restore_m = NULL;
+        if (msg->ps_msg->type == LOOP_STOPPED && conf.bl_conf.restore) {
+            set_each_brightness(-1.0f, 0, 0);
         }
         break; 
     default:
@@ -353,9 +361,8 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         break;
     }
     case SYSTEM_UPD:
-        if (msg->ps_msg->type == LOOP_STOPPED && restore_m && conf.bl_conf.restore) {
-            set_each_brightness(restore_m, -1.0f, false, 0, 0);
-            restore_m = NULL;
+        if (msg->ps_msg->type == LOOP_STOPPED && conf.bl_conf.restore) {
+            set_each_brightness(-1.0f, 0, 0);
         }
         break; 
     default:
@@ -390,8 +397,6 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
         if (r >= 0 && is_avail) {
             DEBUG("Sensor '%s' is now available.\n", sensor);
         }
-    } else if (!strcmp(member, "SetAll") || !strcmp(member, "Set")) {
-        r = sd_bus_message_read(reply, "b", userdata);
     } else if (!strcmp(member, "Capture")) {
         const char *sensor = NULL;
         const double *intensity = NULL;
@@ -408,15 +413,22 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
             amb_msg.bl.new = state.ambient_br;
             M_PUB(&amb_msg);
         }
-    } else if (!strcmp(member, "GetAll")) {
-        sd_bus_message **msg = (sd_bus_message **)userdata;
-        /*
-         * Just ref the message to keep it alive 
-         * as we will later cycle on returned array.
-         */
-        sd_bus_message_ref(reply);
-        *msg = reply;
-        r = 0;
+    } else if (!strcmp(member, "Get")) {
+        r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(sd)");
+        if (r >= 0) {
+            while ((r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_STRUCT, "sd") >= 0) && r >= 0) {
+                const char *mon_id = NULL;
+                double *pct = malloc(sizeof(double)),
+                r = sd_bus_message_read(reply, "sd", &mon_id, pct);
+                if (r >= 0) {
+                    char key[PATH_MAX + 1];
+                    snprintf(key, sizeof(key), "/org/clightd/clightd/Backlight2/%s", mon_id);
+                    map_put(bls, key, pct);
+                }
+                sd_bus_message_exit_container(reply);
+            }
+            sd_bus_message_exit_container(reply);
+        }
     }
     return r;
 }
@@ -470,81 +482,55 @@ static void publish_bl_upd(const double pct, const bool is_smooth, const double 
     M_PUB(bl_msg);
 }
 
-/* 
- * Calls GetAll on clightd.Backlight to retrieve all currently connected monitors,
- * then for each serial returned tries to find it in specific_curves mapping;
- * if found, maps requested backlight level to desired one for the specific monitor,
- * otherwise just sets requested backlight level (just like a SetAll)
- */
-static int get_and_set_each_brightness(const double pct, const bool is_smooth, const double step, const int timeout) {
-    /* Get all monitors backlight; we just need to map each monitor to its specific curve indeed */
-    // TODO: when clightd will use different object paths for each monitor, just enumerate paths here!
-    sd_bus_message *m = NULL;
-    SYSBUS_ARG_REPLY(args, parse_bus_reply, &m, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "GetAll");
-    int r = call(&args, "s", conf.bl_conf.screen_path);
-    if (r >= 0) {
-        set_each_brightness(m, pct, is_smooth, step, timeout);
-    }
-    return r;
-}
-
-static void set_each_brightness(sd_bus_message *m, double pct, const bool is_smooth, const double step, const int timeout) {
+static void set_each_brightness(double pct, const double step, const int timeout) {
     const bool restoring = pct == -1.0f;
     sensor_conf_t *sens_conf = &conf.sens_conf;
     enum ac_states st = state.ac_state;
     
-    int r = sd_bus_message_enter_container(m, SD_BUS_TYPE_ARRAY, "(sd)");
-    while ((r = sd_bus_message_enter_container(m, SD_BUS_TYPE_STRUCT, "sd") >= 0) && r >= 0) {
-        const char *mon_id = NULL;
-        if (!restoring) {
-            r = sd_bus_message_read(m, "sd", &mon_id, NULL);
-        } else {
-            r = sd_bus_message_read(m, "sd", &mon_id, &pct);
-        }
-        sd_bus_message_exit_container(m);
-            
-        if (r >= 0 && mon_id) {
-            int ok = true;
+    for (map_itr_t *itr = map_itr_new(bls); itr; itr = map_itr_next(itr)) {
+        const char *path = map_itr_get_key(itr);
+        double *val = map_itr_get_data(itr);
+        
+        const char *mon_id = strrchr(path, '/') + 1;
                 
-            /* Set backlight on monitor id */
-            SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "Set");
-            curve_t *c = map_get(sens_conf->specific_curves, mon_id);
-            /*
-             * Only if a specific curve has been found and 
-             * we are not restoring a previously saved backlight level 
-             */
-            if (c && !restoring) {
-                /* Use monitor specific adjustment, properly scaling bl pct */
-                const double real_pct = get_value_from_curve(pct, &c[st]);
-                DEBUG("Using specific curve for '%s': setting %.3lf pct.\n", mon_id, real_pct);
-                r = call(&args, "d(bdu)s", real_pct, is_smooth, step, timeout, mon_id);
-            } else {
-                DEBUG("Using default curve for '%s'\n", mon_id);
-                /* Use non-adjusted (default) curve value */
-                r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, mon_id);
-            }
-            if (!ok) {
-                r = -1;
-            }
+        /* Set backlight on monitor id */
+        SYSBUS_ARG(args, CLIGHTD_SERVICE, path, "org.clightd.clightd.Backlight2.Server", "Set");
+        curve_t *c = map_get(sens_conf->specific_curves, mon_id);
+        
+        int r;
+        /*
+         * Only if a specific curve has been found and 
+         * we are not restoring a previously saved backlight level 
+         */
+        if (c && !restoring) {
+            /* Use monitor specific adjustment, properly scaling bl pct */
+            const double real_pct = get_value_from_curve(pct, &c[st]);
+            DEBUG("Using specific curve for '%s': setting %.3lf pct.\n", mon_id, real_pct);
+            r = call(&args, "d(du)", real_pct, step, timeout);
+        } else {
+            DEBUG("Using default curve for '%s'\n", mon_id);
+            /* Use non-adjusted (default) curve value */
+            r = call(&args, "d(du)", restoring ? *val : pct, step, timeout);
+        }
+        if (r < 0) {
+            WARN("Failed to set backlight on %s.\n", mon_id);
         }
     }
-    sd_bus_message_exit_container(m);
-    sd_bus_message_unref(m);
 }
 
-static void set_backlight_level(const double pct, const bool is_smooth, const double step, const int timeout) {
+static void set_backlight_level(const double pct, const bool is_smooth, double step, int timeout) {
     int r = -EINVAL;
+    if (!is_smooth) {
+        step = 0;
+        timeout = 0;
+    }
     if (map_length(conf.sens_conf.specific_curves) > 0) {
-        r = get_and_set_each_brightness(pct, is_smooth, step, timeout);
+        set_each_brightness(pct, step, timeout);
     } else {
-        int ok = 0;
-        SYSBUS_ARG_REPLY(args, parse_bus_reply, &ok, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight", "org.clightd.clightd.Backlight", "SetAll");
+        SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.clightd.clightd.Backlight2", "Set");
         
         /* Set backlight on both internal monitor (in case of laptop) and external ones */
-        r = call(&args, "d(bdu)s", pct, is_smooth, step, timeout, conf.bl_conf.screen_path);
-        if (!ok) {
-            r = -1;
-        }
+        r = call(&args, "d(du)", pct, step, timeout);
     }
     
     if (r >= 0 && is_smooth) {
@@ -684,11 +670,14 @@ static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus
     double pct;
     const char *syspath = NULL;
     sd_bus_message_read(m, "sd", &syspath, &pct);
+
     if (!backlight_interface) {
         backlight_interface = strdup(syspath);
     }
+    
     DEBUG("Backlight '%s' level updated: %.2lf.\n", syspath, pct);
     
+    /* Publish a single bl update event on multimonitor setups */
     if (!strcmp(backlight_interface, syspath)) {
         publish_bl_upd(pct, false, 0, 0);
         state.current_bl_pct = pct;
@@ -696,6 +685,48 @@ static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus
     return 0;
 }
 
+static int on_interface_added(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    const char *obj_path;
+    if (sd_bus_message_read(m, "o", &obj_path) >= 0) {
+        DEBUG("Backlight %s added.\n", obj_path);
+        double *val = malloc(sizeof(double));
+        /* 
+         * Initial default value for newly attached screen is 1.0; 
+         * in case of restore, 100% backlight level will be set.
+         */
+        *val = 1.0;
+        map_put(bls, obj_path, val);
+        
+        /* Force-set gamma temp on new monitor */
+        DECLARE_HEAP_MSG(temp_req, TEMP_REQ);
+        temp_req->temp.new = state.current_temp;
+        temp_req->temp.smooth = -1;
+        temp_req->temp.daytime = -1;
+        M_PUB(temp_req);
+        
+        /* Force-set backlight on new monitor */
+        DECLARE_HEAP_MSG(bl_req, BL_REQ);
+        bl_req->bl.new = state.current_bl_pct;
+        bl_req->bl.smooth = -1;
+        M_PUB(bl_req);
+    }
+    return 0;
+}
+
+static int on_interface_removed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+    const char *obj_path;
+    if (sd_bus_message_read(m, "o", &obj_path) >= 0) {
+        DEBUG("Backlight %s removed.\n", obj_path);
+        
+        // Check if backlight_interface was currently using the removed object; in case, remove it.
+        if (strcmp(strrchr(obj_path, '/') + 1, backlight_interface) == 0) {
+            free(backlight_interface);
+            backlight_interface = NULL;
+        }
+        map_remove(bls, obj_path);
+    }
+    return 0;
+}
 
 static inline int get_current_timeout(void) {
     if (state.in_event) {

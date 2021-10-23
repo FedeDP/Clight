@@ -25,7 +25,7 @@
 #define LOC_DISTANCE_THRS 50                // threshold for location distances before triggering location changed events (km)
 
 #define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version
-#define MINIMUM_CLIGHTD_VERSION_MIN 2       // Clightd minimum required min version -> org.clightd.clightd.KbdBacklight
+#define MINIMUM_CLIGHTD_VERSION_MIN 5       // Clightd minimum required min version -> org.clightd.clightd.Backlight2
 
 /** Generic structs **/
 
@@ -46,7 +46,6 @@ typedef struct {
 typedef struct {
     int disabled;
     int timeout[SIZE_AC][SIZE_STATES + 1];
-    char *screen_path;                      // screen syspath (eg: /sys/class/backlight/intel_backlight)
     int no_smooth;                          // disable smooth backlight changes for BACKLIGHT module
     double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
     int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled

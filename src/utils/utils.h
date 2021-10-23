@@ -9,15 +9,15 @@
 #define CHECK_PAUSE(pause, reason, name) mod_check_pause(pause, &paused_state, reason, name)
 
 #define X_FIELDS \
-    X(UNPAUSED,     0x00) \
-    X(DISPLAY,      0x01) \
-    X(SENSOR,       0x02) \
-    X(AUTOCALIB,    0x04) \
-    X(LID,          0x08) \
-    X(SUSPEND,      0x10) \
-    X(TIMEOUT,      0x20) \
-    X(INHIBIT,      0x40) \
-    X(CONTRIB,      0x80)
+    X(UNPAUSED,     0) \
+    X(DISPLAY,      1 << 0) \
+    X(SENSOR,       1 << 1) \
+    X(AUTOCALIB,    1 << 2) \
+    X(LID,          1 << 3) \
+    X(SUSPEND,      1 << 4) \
+    X(TIMEOUT,      1 << 5) \
+    X(INHIBIT,      1 << 6) \
+    X(CONTRIB,      1 << 7)
 
 enum mod_pause {
 #define X(name, value) name = value,

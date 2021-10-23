@@ -6,7 +6,6 @@ local arguments
 arguments=(
   {-f,--frames=}'[Frames taken for each capture, Between 1 and 20]'
   {-d,--device=}'[Path to webcam device. If empty, first matching device is used]:device:_files -W /dev/'
-  {-b,--backlight=}'[Path to backlight syspath. If empty, first matching device is used]:filename:_files -W /sys/class/backlight/'
   '--no-backlight-smooth[Disable smooth backlight transitions]'
   '--no-gamma-smooth[Disable smooth gamma transitions]'
   '--no-dimmer-smooth-enter[Disable smooth dimmer transitions while entering dimmed state]'

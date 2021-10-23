@@ -46,7 +46,6 @@ static void init_config_file(enum CONFIG file, char *filename) {
 static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_t *bl = config_lookup(cfg, "backlight");
     if (bl) {
-        const char *screendev;
         config_setting_lookup_bool(bl, "disabled", &bl_conf->disabled);
         config_setting_lookup_bool(bl, "restore_on_exit", &bl_conf->restore);
         config_setting_lookup_bool(bl, "no_smooth_transition", &bl_conf->no_smooth);
@@ -54,9 +53,6 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         config_setting_lookup_int(bl, "trans_timeout", &bl_conf->trans_timeout);
         config_setting_lookup_float(bl, "shutter_threshold", &bl_conf->shutter_threshold);
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
-        if (config_setting_lookup_string(bl, "screen_sysname", &screendev) == CONFIG_TRUE && strlen(screendev)) {
-            bl_conf->screen_path = strdup(screendev);
-        }
         config_setting_lookup_bool(bl, "pause_on_lid_closed", &bl_conf->pause_on_lid_closed);
         config_setting_lookup_bool(bl, "capture_on_lid_opened", &bl_conf->capture_on_lid_opened);
         
@@ -452,12 +448,7 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     
     setting = config_setting_add(bl, "capture_on_lid_opened", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->capture_on_lid_opened);
-    
-    if (bl_conf->screen_path) {
-        setting = config_setting_add(bl, "screen_sysname", CONFIG_TYPE_STRING);
-        config_setting_set_string(setting, bl_conf->screen_path);
-    }
-    
+
     setting = config_setting_add(bl, "shutter_threshold", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, bl_conf->shutter_threshold);
     
