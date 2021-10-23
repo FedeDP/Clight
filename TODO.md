@@ -14,10 +14,10 @@
 - [x] on objectadded, properly set current_bl_pct + current_temp on new monitor
 - [x] Keep a map of currently available monitors and use this instead of calling GetAll when setting monitor override curves
 - [x] Drop screen_path bl conf
-- [ ] Drop BacklightSyspath from dbus API wiki
+- [x] Drop BacklightSyspath from dbus API wiki
 - [x] Drop backlight from autocompletions script and man page
 - [x] Port to clightd.Backlight2 API
-- [ ] add faq entry "no external monitor found -> disable clightd unit and let clight start it!"
+- [x] add faq entry "no external monitor found"
 
 ### Wizard
 - [x] Port to backlight2
