@@ -7,9 +7,10 @@ It was heavily inspired by [calise](http://calise.sourceforge.net/wordpress/) in
 
 **For a guide on how to build, features and lots of other infos, head to [Clight Wiki Pages](https://github.com/FedeDP/Clight/wiki).**  
 **Note that Wiki pages will always refer to master branch.**  
-*For any other info, please feel free to open an issue.*  
+*For any other info, please before opening an issue, head to [FAQ](https://github.com/FedeDP/Clight/wiki/FAQ).*  
+If the issue is not listed there, feel free to open a new one!
 
-Last, but not least, special thanks to all maintainers, developers or simply people involved in Clight!
+Last, but not least, special thanks to all people involved in Clight!
 
 ## Features
 
@@ -37,6 +38,7 @@ It is much simpler than Clight for obvious reasons and i do not expect to develo
 Both Clight and Clightd make use of [libmodule](https://github.com/FedeDP/libmodule), a C library developed with modularity in mind that offers a simple actor framework for C, with an integrated event loop.
 
 Morever, note that Clight exposes a DBus [API](https://github.com/FedeDP/Clightd/wiki/Api) itself too; it allows quickly testing config values or building scripts around it, some of which you can find in Clight FAQ: https://github.com/FedeDP/Clight/wiki/FAQ#dbus-tricks.  
+The DBus API first and main user is clight-gui.  
 Finally, it can also be expanded through [Custom modules](https://github.com/FedeDP/Clight/wiki/Custom-Modules) that enable users to build their own plugins to further customize Clight behaviour.  
 
 ## License
