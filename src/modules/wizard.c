@@ -222,9 +222,9 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
     }
     // called by get_first_available_backlight()
     int r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(sd)");
-    if (r >= 0) {
+    if (r == 1) {
         r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_STRUCT, "sd");
-        if (r >= 0) {
+        if (r == 1) {
             const char *sysname = NULL;
             r = sd_bus_message_read(reply, "sd", &sysname, NULL);
             if (r >= 0) {

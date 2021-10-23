@@ -415,8 +415,8 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
         }
     } else if (!strcmp(member, "Get")) {
         r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(sd)");
-        if (r >= 0) {
-            while ((r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_STRUCT, "sd") >= 0) && r >= 0) {
+        if (r == 1) {
+            while ((r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_STRUCT, "sd") == 1)) {
                 const char *mon_id = NULL;
                 double *pct = malloc(sizeof(double)),
                 r = sd_bus_message_read(reply, "sd", &mon_id, pct);
@@ -492,7 +492,7 @@ static void set_each_brightness(double pct, const double step, const int timeout
         double *val = map_itr_get_data(itr);
         
         const char *mon_id = strrchr(path, '/') + 1;
-                
+        
         /* Set backlight on monitor id */
         SYSBUS_ARG(args, CLIGHTD_SERVICE, path, "org.clightd.clightd.Backlight2.Server", "Set");
         curve_t *c = map_get(sens_conf->specific_curves, mon_id);
