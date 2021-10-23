@@ -8,6 +8,7 @@
 
 ### Generic
 - [x] Finally allow to view usage, help and version messages while another instance is running. Fixes #235
+- [x] Show commit hash in clight version
 
 ### Backlight
 - [x] Match new objectadded/removed signal from Backlight2 clightd api
