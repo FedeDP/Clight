@@ -152,7 +152,7 @@ void init_opts(int argc, char *argv[]) {
     conf_file[0] = 0;
     read_config(LOCAL, conf_file);
     conf_file[0] = 0;
-        parse_cmd(argc, argv, conf_file, PATH_MAX);
+    parse_cmd(argc, argv, conf_file, PATH_MAX);
     
     /* --conf-file option was passed! */
     if (strlen(conf_file)) {
