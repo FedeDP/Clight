@@ -46,6 +46,7 @@ typedef struct {
 typedef struct {
     int disabled;
     int timeout[SIZE_AC][SIZE_STATES + 1];
+    int timeouts_in_ms;                     // Are timeout in milliseconds?
     int no_smooth;                          // disable smooth backlight changes for BACKLIGHT module
     double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
     int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled

@@ -47,8 +47,9 @@ static void log_bl_conf(bl_conf_t *bl_conf) {
     fprintf(log_file, "* Smooth steps:\t\t%.2lf\n", bl_conf->trans_step);
     fprintf(log_file, "* Smooth timeout:\t\t%d\n", bl_conf->trans_timeout);
     fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][DAY], bl_conf->timeout[ON_BATTERY][DAY]);
-    fprintf(log_file, "* Nightly timeout:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][NIGHT], bl_conf->timeout[ON_BATTERY][NIGHT]);
+    fprintf(log_file, "* Nightly timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][NIGHT], bl_conf->timeout[ON_BATTERY][NIGHT]);
     fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][SIZE_STATES], bl_conf->timeout[ON_BATTERY][SIZE_STATES]);
+    fprintf(log_file, "* Timeouts in ms:\t\t%s\n", bl_conf->timeouts_in_ms ? "Enabled" : "Disabled");
     fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", bl_conf->shutter_threshold);
     fprintf(log_file, "* Autocalibration:\t\t%s\n", bl_conf->no_auto_calib ? "Disabled" : "Enabled");
     fprintf(log_file, "* Pause on lid closed:\t\t%s\n", bl_conf->pause_on_lid_closed ? "Enabled" : "Disabled");

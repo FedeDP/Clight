@@ -19,6 +19,7 @@
 - [x] Drop backlight from autocompletions script and man page
 - [x] Port to clightd.Backlight2 API
 - [x] add faq entry "no external monitor found"
+- [x] Add a new conf option to treat specified timeouts in milliseconds, for Pinephone. Refs #233
 
 ### Wizard
 - [x] Port to backlight2

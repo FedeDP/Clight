@@ -55,6 +55,7 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
         config_setting_lookup_bool(bl, "pause_on_lid_closed", &bl_conf->pause_on_lid_closed);
         config_setting_lookup_bool(bl, "capture_on_lid_opened", &bl_conf->capture_on_lid_opened);
+        config_setting_lookup_bool(bl, "timeouts_in_ms", &bl_conf->timeouts_in_ms);
         
         config_setting_t *timeouts;
         
@@ -448,6 +449,9 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     
     setting = config_setting_add(bl, "capture_on_lid_opened", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->capture_on_lid_opened);
+    
+    setting = config_setting_add(bl, "timeouts_in_ms", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, bl_conf->timeouts_in_ms);
 
     setting = config_setting_add(bl, "shutter_threshold", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, bl_conf->shutter_threshold);
