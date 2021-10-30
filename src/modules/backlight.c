@@ -2,6 +2,8 @@
 #include "my_math.h"
 #include "utils.h"
 
+#define BILLION 1000000000
+
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static void init_curves(void);
@@ -461,7 +463,10 @@ static void do_capture(bool reset_timer, bool capture_only) {
 
     if (reset_timer) {
         if (conf.bl_conf.timeouts_in_ms) {
-            set_timeout(0, get_current_timeout() * 1000, bl_fd, 0);
+            int ns = get_current_timeout() * 1000000;
+            int s = ns / BILLION;
+            ns = ns % BILLION;
+            set_timeout(s, ns, bl_fd, 0);
         } else {
             set_timeout(get_current_timeout(), 0, bl_fd, 0);
         }
