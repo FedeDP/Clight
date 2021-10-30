@@ -24,6 +24,10 @@
 ### Wizard
 - [x] Port to backlight2
 
+### Idle
+- [x] Support systemd loging .SetIdleHint
+- [x] SUpport systemd logind.IdleHint
+
 ## 4.x
 
 ### Generic

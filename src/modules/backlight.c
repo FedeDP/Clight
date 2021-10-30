@@ -43,7 +43,7 @@ static sd_bus_slot *sens_slot, *bl_slot, *if_a_slot, *if_r_slot;
 static char *backlight_interface; // main backlight interface used to only publish BL_UPD msgs for a single backlight sn
 static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("TimeoutsInMs", "b", NULL, NULL, offsetof(bl_conf_t, timeouts_in_ms), 0),
+    SD_BUS_PROPERTY("TimeoutsInMs", "b", NULL, offsetof(bl_conf_t, timeouts_in_ms), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
     SD_BUS_WRITABLE_PROPERTY("CaptureOnLidOpened", "b", NULL, NULL, offsetof(bl_conf_t, capture_on_lid_opened), 0),

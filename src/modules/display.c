@@ -61,6 +61,10 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             }
             display_msg.display.new = state.display_state;
             M_PUB(&display_msg);
+            
+            /* Properly set the IdleHint on logind where available */
+            SYSBUS_ARG(args, "org.freedesktop.login1", "/org/freedesktop/login1/session/auto", "org.freedesktop.login1.Session", "SetIdleHint");
+            call(&args, "b", state.display_state);
         }
         break;
     }
