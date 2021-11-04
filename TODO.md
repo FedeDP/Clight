@@ -5,6 +5,7 @@
 
 ### Interface
 - [x] Fixed null ptr dereference in inhibit_parse_msg()
+- [x] Actually set conf location when a new one is set through dbus API 
 
 ### Generic
 - [x] Finally allow to view usage, help and version messages while another instance is running. Fixes #235

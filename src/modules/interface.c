@@ -644,6 +644,8 @@ int set_location(sd_bus *bus, const char *path, const char *interface, const cha
 
     VALIDATE_PARAMS(value, "(dd)", &loc_req.loc.new.lat, &loc_req.loc.new.lon);
 
+    // Keep conf updated
+    memcpy(&conf.day_conf.loc, &loc_req.loc.new, sizeof(loc_t));
     DEBUG("New location from BUS api: %.2lf %.2lf\n", loc_req.loc.new.lat, loc_req.loc.new.lat);
     M_PUB(&loc_req);
     return r;
