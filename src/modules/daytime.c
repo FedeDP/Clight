@@ -13,6 +13,8 @@ static int get_event(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_event(sd_bus *bus, const char *path, const char *interface, const char *property,
               sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int set_os(sd_bus *bus, const char *path, const char *interface, const char *property,
+              sd_bus_message *value, void *userdata, sd_bus_error *error);
 
 static int day_fd;
 static const sd_bus_vtable conf_daytime_vtable[] = {
@@ -21,6 +23,8 @@ static const sd_bus_vtable conf_daytime_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("Sunset", "s", get_event, set_event, offsetof(daytime_conf_t, day_events[SUNSET]), 0),
     SD_BUS_WRITABLE_PROPERTY("Location", "(dd)", get_location, set_location, offsetof(daytime_conf_t, loc), 0),
     SD_BUS_WRITABLE_PROPERTY("EventDuration", "i", NULL, NULL, offsetof(daytime_conf_t, event_duration), 0),
+    SD_BUS_WRITABLE_PROPERTY("SunriseOffset", "i", NULL, set_os, offsetof(daytime_conf_t, events_os[SUNRISE]), 0),
+    SD_BUS_WRITABLE_PROPERTY("SunsetOffset", "i", NULL, set_os, offsetof(daytime_conf_t, events_os[SUNSET]), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -323,5 +327,12 @@ static int set_event(sd_bus *bus, const char *path, const char *interface, const
     }
     strncpy(msg->event.event, event, sizeof(msg->event.event));
     M_PUB(msg);
+    return r;
+}
+
+static int set_os(sd_bus *bus, const char *path, const char *interface, const char *property,
+                  sd_bus_message *value, void *userdata, sd_bus_error *error) {
+    VALIDATE_PARAMS(value, "i", userdata);
+    reset_daytime();
     return r;
 }
