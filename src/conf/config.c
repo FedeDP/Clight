@@ -272,6 +272,8 @@ static void load_day_settings(config_t *cfg, daytime_conf_t *day_conf) {
         config_setting_lookup_float(daytime, "latitude", &day_conf->loc.lat);
         config_setting_lookup_float(daytime, "longitude", &day_conf->loc.lon);
         config_setting_lookup_int(daytime, "event_duration", &day_conf->event_duration);
+        config_setting_lookup_int(daytime, "sunrise_offset", &day_conf->events_os[SUNRISE]);
+        config_setting_lookup_int(daytime, "sunset_offset", &day_conf->events_os[SUNSET]);
         
         if (config_setting_lookup_string(daytime, "sunrise", &sunrise) == CONFIG_TRUE) {
             strncpy(day_conf->day_events[SUNRISE], sunrise, sizeof(day_conf->day_events[SUNRISE]) - 1);
@@ -585,6 +587,12 @@ static void store_daytime_settings(config_t *cfg, daytime_conf_t *day_conf) {
     
     setting = config_setting_add(daytime, "event_duration", CONFIG_TYPE_INT);
     config_setting_set_int(setting, day_conf->event_duration);
+    
+    setting = config_setting_add(daytime, "sunrise_offset", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, day_conf->events_os[SUNRISE]);
+    
+    setting = config_setting_add(daytime, "sunset_offset", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, day_conf->events_os[SUNSET]);
     
     setting = config_setting_add(daytime, "sunrise", CONFIG_TYPE_STRING);
     config_setting_set_string(setting, day_conf->day_events[SUNRISE]);

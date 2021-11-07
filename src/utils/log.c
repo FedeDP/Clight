@@ -91,6 +91,8 @@ static void log_daytime_conf(daytime_conf_t *day_conf) {
     fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(day_conf->day_events[SUNRISE]) ? day_conf->day_events[SUNRISE] : "Unset");
     fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(day_conf->day_events[SUNSET]) ? day_conf->day_events[SUNSET] : "Unset");
     fprintf(log_file, "* Event duration:\t\t%d\n", day_conf->event_duration);
+    fprintf(log_file, "* Sunrise offset:\t\t%d\n", day_conf->events_os[SUNRISE]);
+    fprintf(log_file, "* Sunset offset:\t\t%d\n", day_conf->events_os[SUNSET]);
 }
 
 static void log_dim_conf(dimmer_conf_t *dim_conf) {

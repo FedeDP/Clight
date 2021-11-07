@@ -78,6 +78,7 @@ typedef struct {
     char day_events[SIZE_EVENTS][10];       // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
     int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     loc_t loc;                              // user location as loaded by config
+    int events_os[SIZE_EVENTS];             // offset for each event
 } daytime_conf_t;
 
 typedef struct {

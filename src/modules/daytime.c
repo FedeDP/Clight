@@ -189,7 +189,7 @@ static void check_daytime(void) {
         M_PUB(&temp_req);
     }
 
-    const time_t next = state.day_events[state.next_event] + state.event_time_range;
+    const time_t next = state.day_events[state.next_event] + conf.day_conf.events_os[state.next_event] + state.event_time_range;
     INFO("Next alarm due to: %s", ctime(&next));
     set_timeout(next - t, 0, day_fd, 0);
 }

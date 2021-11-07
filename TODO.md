@@ -28,6 +28,9 @@
 - [x] Support systemd loging .SetIdleHint
 - [x] SUpport systemd logind.IdleHint
 
+### Daytime
+- [x] Add support for sunrise and sunset events offsets, eg: sunrise event should be considered 10m before the real sunrise.
+
 ## 4.x
 
 ### Generic
