@@ -2,6 +2,11 @@
 
 ### Pinephone
 - [x] Allow upower module even if LidIsPresent is false to properly support pinephone
+- [x] Support systemd loging .SetIdleHint
+- [x] Support systemd logind.IdleHint
+- [x] Always start DISPLAY module
+- [x] Only hook logind.IdleHint when DIMMER is disabled (otherwise it is a secondary source for DIMMED state...useless)
+- [x] If DIMMER is disabled but we receive an IdleHint, do not touch backlight; just manage the new DIMMED state eventually pausing backlight and other modules
 
 ### Interface
 - [x] Fixed null ptr dereference in inhibit_parse_msg()
@@ -23,10 +28,6 @@
 
 ### Wizard
 - [x] Port to backlight2
-
-### Idle
-- [x] Support systemd loging .SetIdleHint
-- [x] SUpport systemd logind.IdleHint
 
 ### Daytime
 - [x] Add support for sunrise and sunset events offsets, eg: sunrise event should be considered 10m before the real sunrise.

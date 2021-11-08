@@ -3,12 +3,11 @@
 
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata);
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
-static int hook_logind_idle_signal(void);
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static void timeout_callback(void);
 static void pause_dimmer(const bool pause, enum mod_pause reason);
 
-static sd_bus_slot *slot, *logind_slot;
+static sd_bus_slot *slot;
 static char client[PATH_MAX + 1];
 static const sd_bus_vtable conf_dimmer_vtable[] = {
     SD_BUS_VTABLE_START(0),
@@ -57,8 +56,6 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
                 module_deregister((self_t **)&self());
             } else {
                 m_unbecome();
-                /* Try to hook logind IdleHint property */
-                hook_logind_idle_signal();
             }
             break;
         }
@@ -132,15 +129,7 @@ static void destroy(void) {
     if (slot) {
         slot = sd_bus_slot_unref(slot);
     }
-    if (logind_slot) {
-        logind_slot = sd_bus_slot_unref(logind_slot);
-    }
     deinit_Dimmer_api();
-}
-
-static int hook_logind_idle_signal(void) {
-    SYSBUS_ARG(args, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.DBus.Properties", "PropertiesChanged");
-    return add_match(&args, &logind_slot, on_new_idle);
 }
 
 static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
@@ -148,16 +137,7 @@ static int on_new_idle(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_e
     
     /* Unused in requests! */
     display_req.display.old = state.display_state;
-    int r = sd_bus_message_read(m, "b", &idle);
-    if (r < 0) {
-        // This comes from logind!
-        SYSBUS_ARG(idle_args, "org.freedesktop.login1",  "/org/freedesktop/login1/session/auto", "org.freedesktop.login1.Session", "IdleHint");
-        r = get_property(&idle_args, "b", &idle);
-        if (r < 0) {
-            // Error...leave
-            return 0;
-        }
-    }
+    sd_bus_message_read(m, "b", &idle);
     if (idle) {
         display_req.display.new = DISPLAY_DIMMED;
     } else {
