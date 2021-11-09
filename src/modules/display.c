@@ -78,7 +78,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                 if (state.display_state & DISPLAY_DIMMED) {
                     state.display_state &= ~DISPLAY_DIMMED;
                     DEBUG("Leaving dimmed state...\n");
-                    if (old_pct >= 0.0) {
+                    if (msg->ps_msg->sender != self() && old_pct >= 0.0) {
                         publish_bl_req(old_pct, !conf.dim_conf.no_smooth[EXIT], 
                                        conf.dim_conf.trans_step[EXIT], conf.dim_conf.trans_timeout[EXIT]);
                         old_pct = -1.0;
