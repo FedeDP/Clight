@@ -1,8 +1,6 @@
 #include "idler.h"
 #include "utils.h"
 
-#define DIMMER_FIXED_STEP 0.01 // Dimmer fixed step is 1% backlight level
-
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata);
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static int on_new_idle(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);

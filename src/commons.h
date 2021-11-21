@@ -37,8 +37,8 @@ typedef struct {
 
 typedef struct {
     int no_smooth;                          // disable smooth backlight changes for module
-    double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
-    int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
+    double trans_step;                      // every backlight transition step value (in pct), used when smooth transitions are enabled
+    int trans_timeout;                      // every backlight transition timeout value, used when smooth transitions are enabled
     int trans_fixed;                        // fixed transitions duration
 } bl_smooth_t;
 
