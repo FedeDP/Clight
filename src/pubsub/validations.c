@@ -1,6 +1,8 @@
 #include "validations.h"
 #include "my_math.h"
 
+#define BL_FIXED_STEP 0.01 // Backlight fixed step is 1% backlight level
+
 bool validate_loc(loc_upd *up) {
     if (fabs(up->new.lat) <  90.0f && fabs(up->new.lon) < 180.0f && 
         get_distance(&up->new, &state.current_loc) >= LOC_DISTANCE_THRS) {
@@ -115,10 +117,32 @@ bool validate_curve(curve_upd *up) {
 }
 
 bool validate_backlight(bl_upd *up) {
-    if (up->smooth == -1) {
-        up->smooth = !conf.bl_conf.no_smooth;
-        up->step = conf.bl_conf.trans_step;
-        up->timeout = conf.bl_conf.trans_timeout;
+    bl_smooth_t *smooth = NULL;
+    switch (up->smooth) {
+    case -1:
+        smooth = &conf.bl_conf.smooth;
+        break;
+    case -2:
+        smooth = &conf.dim_conf.smooth[ENTER];
+        break;
+    case -3:
+        smooth = &conf.dim_conf.smooth[EXIT];
+        break; 
+    default:
+        break;
+    }
+
+    if (smooth) {
+        up->smooth = !smooth->no_smooth;
+        if (smooth->trans_fixed <= 0) {
+            up->step = smooth->trans_step;
+            up->timeout = smooth->trans_timeout;
+        } else {
+            up->step = BL_FIXED_STEP;
+            double pct_diff = fabs(state.current_bl_pct - up->new);
+            double n_steps = pct_diff / up->step;
+            up->timeout = smooth->trans_fixed / n_steps;
+        }
     }
     
     if (up->new >= 0.0 && up->new <= 1.0) {

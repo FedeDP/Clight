@@ -48,9 +48,10 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     if (bl) {
         config_setting_lookup_bool(bl, "disabled", &bl_conf->disabled);
         config_setting_lookup_bool(bl, "restore_on_exit", &bl_conf->restore);
-        config_setting_lookup_bool(bl, "no_smooth_transition", &bl_conf->no_smooth);
-        config_setting_lookup_float(bl, "trans_step", &bl_conf->trans_step);
-        config_setting_lookup_int(bl, "trans_timeout", &bl_conf->trans_timeout);
+        config_setting_lookup_bool(bl, "no_smooth_transition", &bl_conf->smooth.no_smooth);
+        config_setting_lookup_float(bl, "trans_step", &bl_conf->smooth.trans_step);
+        config_setting_lookup_int(bl, "trans_timeout", &bl_conf->smooth.trans_timeout);
+        config_setting_lookup_int(bl, "trans_fixed", &bl_conf->smooth.trans_fixed);
         config_setting_lookup_float(bl, "shutter_threshold", &bl_conf->shutter_threshold);
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
         config_setting_lookup_bool(bl, "pause_on_lid_closed", &bl_conf->pause_on_lid_closed);
@@ -289,13 +290,13 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
     if (dim) {
         config_setting_lookup_bool(dim, "disabled", &dim_conf->disabled);
         config_setting_lookup_float(dim, "dimmed_pct", &dim_conf->dimmed_pct);
-        
+         
         config_setting_t *points, *timeouts;
         /* Load no_smooth_dimmer options */
         if ((points = config_setting_get_member(dim, "no_smooth_transition"))) {
             if (config_setting_length(points) == SIZE_DIM) {
                 for (int i = 0; i < SIZE_DIM; i++) {
-                    dim_conf->no_smooth[i] = config_setting_get_float_elem(points, i);
+                    dim_conf->smooth[i].no_smooth = config_setting_get_float_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'no_smooth_transition' array elements.\n");
@@ -306,7 +307,7 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
         if ((points = config_setting_get_member(dim, "trans_steps"))) {
             if (config_setting_length(points) == SIZE_DIM) {
                 for (int i = 0; i < SIZE_DIM; i++) {
-                    dim_conf->trans_step[i] = config_setting_get_float_elem(points, i);
+                    dim_conf->smooth[i].trans_step = config_setting_get_float_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'trans_steps' array elements.\n");
@@ -317,10 +318,21 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
         if ((points = config_setting_get_member(dim, "trans_timeouts"))) {
             if (config_setting_length(points) == SIZE_DIM) {
                 for (int i = 0; i < SIZE_DIM; i++) {
-                    dim_conf->trans_timeout[i] = config_setting_get_int_elem(points, i);
+                    dim_conf->smooth[i].trans_timeout = config_setting_get_int_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'trans_timeouts' array elements.\n");
+            }
+        }
+        
+        /* Load dimmer_trans_timeouts options */
+        if ((points = config_setting_get_member(dim, "trans_fixed"))) {
+            if (config_setting_length(points) == SIZE_DIM) {
+                for (int i = 0; i < SIZE_DIM; i++) {
+                    dim_conf->smooth[i].trans_fixed = config_setting_get_int_elem(points, i);
+                }
+            } else {
+                WARN("Wrong number of dimmer 'trans_fixed' array elements.\n");
             }
         }
         
@@ -434,13 +446,16 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_set_bool(setting, bl_conf->restore);
     
     setting = config_setting_add(bl, "no_smooth_transition", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, bl_conf->no_smooth);
+    config_setting_set_bool(setting, bl_conf->smooth.no_smooth);
     
     setting = config_setting_add(bl, "trans_step", CONFIG_TYPE_FLOAT);
-    config_setting_set_float(setting, bl_conf->trans_step);
+    config_setting_set_float(setting, bl_conf->smooth.trans_step);
     
     setting = config_setting_add(bl, "trans_timeout", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, bl_conf->trans_timeout);
+    config_setting_set_int(setting, bl_conf->smooth.trans_timeout);
+    
+    setting = config_setting_add(bl, "trans_fixed", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, bl_conf->smooth.trans_fixed);
     
     setting = config_setting_add(bl, "no_auto_calibration", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, bl_conf->no_auto_calib);
@@ -609,17 +624,22 @@ static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
     
     setting = config_setting_add(dimmer, "no_smooth_transition", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_DIM; i++) {
-        config_setting_set_bool_elem(setting, -1, dim_conf->no_smooth[i]);
+        config_setting_set_bool_elem(setting, -1, dim_conf->smooth[i].no_smooth);
     }
     
     setting = config_setting_add(dimmer, "trans_steps", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_DIM; i++) {
-        config_setting_set_float_elem(setting, -1, dim_conf->trans_step[i]);
+        config_setting_set_float_elem(setting, -1, dim_conf->smooth[i].trans_step);
     }
     
     setting = config_setting_add(dimmer, "trans_timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_DIM; i++) {
-        config_setting_set_int_elem(setting, -1, dim_conf->trans_timeout[i]);
+        config_setting_set_int_elem(setting, -1, dim_conf->smooth[i].trans_timeout);
+    }
+    
+    setting = config_setting_add(dimmer, "trans_fixed", CONFIG_TYPE_ARRAY);
+    for (int i = 0; i < SIZE_DIM; i++) {
+        config_setting_set_int_elem(setting, -1, dim_conf->smooth[i].trans_fixed);
     }
     
     setting = config_setting_add(dimmer, "dimmed_pct", CONFIG_TYPE_FLOAT);

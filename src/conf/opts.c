@@ -42,8 +42,8 @@ static void init_backlight_opts(bl_conf_t *bl_conf) {
     bl_conf->timeout[ON_BATTERY][DAY] = 2 * conf.bl_conf.timeout[ON_AC][DAY];
     bl_conf->timeout[ON_BATTERY][NIGHT] = 2 * conf.bl_conf.timeout[ON_AC][NIGHT];
     bl_conf->timeout[ON_BATTERY][IN_EVENT] = 2 * conf.bl_conf.timeout[ON_AC][IN_EVENT];
-    bl_conf->trans_step = 0.05;
-    bl_conf->trans_timeout = 30;
+    bl_conf->smooth.trans_step = 0.05;
+    bl_conf->smooth.trans_timeout = 30;
 }
 
 static void init_sens_opts(sensor_conf_t *sens_conf) {
@@ -110,10 +110,10 @@ static void init_dimmer_opts(dimmer_conf_t *dim_conf) {
     dim_conf->timeout[ON_AC] = 45;
     dim_conf->timeout[ON_BATTERY] = 20;
     dim_conf->dimmed_pct = 0.2;
-    dim_conf->trans_step[ENTER] = 0.05;
-    dim_conf->trans_step[EXIT] = 0.05;
-    dim_conf->trans_timeout[ENTER] = 30;
-    dim_conf->trans_timeout[EXIT] = 30;
+    dim_conf->smooth[ENTER].trans_step = 0.05;
+    dim_conf->smooth[EXIT].trans_step = 0.05;
+    dim_conf->smooth[ENTER].trans_timeout = 30;
+    dim_conf->smooth[EXIT].trans_timeout = 30;
 }
 
 static void init_dpms_opts(dpms_conf_t *dpms_conf) {
@@ -170,10 +170,10 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
     const struct poptOption po[] = {
         {"frames", 'f', POPT_ARG_INT, NULL, 5, "Frames taken for each capture, Between 1 and 20", NULL},
         {"device", 'd', POPT_ARG_STRING, &conf.sens_conf.dev_name, 100, "Path to sensor device. If empty, first matching device is used", "video0"},
-        {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.bl_conf.no_smooth, 100, "Disable smooth backlight transitions", NULL},
+        {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.bl_conf.smooth.no_smooth, 100, "Disable smooth backlight transitions", NULL},
         {"no-gamma-smooth", 0, POPT_ARG_NONE, &conf.gamma_conf.no_smooth, 100, "Disable smooth gamma transitions", NULL},
-        {"no-dimmer-smooth-enter", 0, POPT_ARG_NONE, &conf.dim_conf.no_smooth[ENTER], 100, "Disable smooth dimmer transitions while entering dimmed state", NULL},
-        {"no-dimmer-smooth-exit", 0, POPT_ARG_NONE, &conf.dim_conf.no_smooth[EXIT], 100, "Disable smooth dimmer transitions while leaving dimmed state", NULL},
+        {"no-dimmer-smooth-enter", 0, POPT_ARG_NONE, &conf.dim_conf.smooth[ENTER].no_smooth, 100, "Disable smooth dimmer transitions while entering dimmed state", NULL},
+        {"no-dimmer-smooth-exit", 0, POPT_ARG_NONE, &conf.dim_conf.smooth[EXIT].no_smooth, 100, "Disable smooth dimmer transitions while leaving dimmed state", NULL},
         {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.gamma_conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
         {"night-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.gamma_conf.temp[NIGHT], 100, "Nightly gamma temperature, between 1000 and 10000", NULL},
         {"lat", 0, POPT_ARG_DOUBLE, &conf.day_conf.loc.lat, 100, "Your desired latitude", NULL},
@@ -283,14 +283,14 @@ static void check_clightd_features(void) {
 }
 
 static void check_bl_conf(bl_conf_t *bl_conf) {
-    if (bl_conf->trans_step <= 0.0f || bl_conf->trans_step >= 1.0f) {
+    if (bl_conf->smooth.trans_step <= 0.0f || bl_conf->smooth.trans_step >= 1.0f) {
         WARN("Wrong backlight_trans_step value. Resetting default value.\n");
-        bl_conf->trans_step = 0.05;
+        bl_conf->smooth.trans_step = 0.05;
     }
     
-    if (bl_conf->trans_timeout <= 0) {
+    if (bl_conf->smooth.trans_timeout <= 0) {
         WARN("Wrong backlight_trans_timeout value. Resetting default value.\n");
-        bl_conf->trans_timeout = 30;
+        bl_conf->smooth.trans_timeout = 30;
     }
     
     if (bl_conf->shutter_threshold < 0 || bl_conf->shutter_threshold >= 1) {
@@ -409,22 +409,22 @@ static void check_dim_conf(dimmer_conf_t *dim_conf) {
         dim_conf->dimmed_pct = 0.2;
     }
     
-    if (dim_conf->trans_step[ENTER] <= 0.0f || dim_conf->trans_step[ENTER] >= 1.0f) {
+    if (dim_conf->smooth[ENTER].trans_step <= 0.0f || dim_conf->smooth[ENTER].trans_step >= 1.0f) {
         WARN("Wrong dimmer_trans_step[ENTER] value. Resetting default value.\n");
-        dim_conf->trans_step[ENTER] = 0.05;
+        dim_conf->smooth[ENTER].trans_step = 0.05;
     }
-    if (dim_conf->trans_step[EXIT] <= 0.0f || dim_conf->trans_step[EXIT] >= 1.0f) {
+    if (dim_conf->smooth[EXIT].trans_step <= 0.0f || dim_conf->smooth[EXIT].trans_step >= 1.0f) {
         WARN("Wrong dimmer_trans_step[EXIT] value. Resetting default value.\n");
-        dim_conf->trans_step[EXIT] = 0.05;
+        dim_conf->smooth[EXIT].trans_step = 0.05;
     }
     
-    if (dim_conf->trans_timeout[ENTER] <= 0) {
+    if (dim_conf->smooth[ENTER].trans_timeout <= 0) {
         WARN("Wrong dimmer_trans_timeout[ENTER] value. Resetting default value.\n");
-        dim_conf->trans_timeout[ENTER] = 30;
+        dim_conf->smooth[ENTER].trans_timeout = 30;
     }
-    if (dim_conf->trans_timeout[EXIT] <= 0) {
+    if (dim_conf->smooth[EXIT].trans_timeout <= 0) {
         WARN("Wrong dimmer_trans_timeout[EXIT] value. Resetting default value.\n");
-        dim_conf->trans_timeout[EXIT] = 30;
+        dim_conf->smooth[EXIT].trans_timeout = 30;
     }
 }
 

@@ -3,16 +3,16 @@
 
 static int hook_logind_idle_signal(void);
 static int on_idle_hint_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
-static void publish_bl_req(const double pct, const bool smooth, const double step, const int to);
-static void set_dpms(bool enable);
 
 static sd_bus_slot *slot;
 
 DECLARE_MSG(display_msg, DISPLAY_UPD);
-DECLARE_MSG(bl_req, BL_REQ);
 DECLARE_MSG(display_req, DISPLAY_REQ);
 
 MODULE("DISPLAY");
+
+extern void dimmer_publish_bl_req(const double pct, enum dim_trans trans);
+extern void set_dpms(bool enable);
 
 static void init(void) {
     M_SUB(DISPLAY_REQ);
@@ -57,8 +57,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                     // Message arrives from DIMMER module (or external plugin)
                     if (state.current_bl_pct > conf.dim_conf.dimmed_pct) {
                         old_pct = state.current_bl_pct;
-                        publish_bl_req(conf.dim_conf.dimmed_pct, !conf.dim_conf.no_smooth[ENTER], 
-                                        conf.dim_conf.trans_step[ENTER], conf.dim_conf.trans_timeout[ENTER]);
+                        dimmer_publish_bl_req(conf.dim_conf.dimmed_pct, ENTER);
                     } else {
                         DEBUG("A lower than dimmer_pct backlight level is already set. Avoid changing it.\n");
                     }
@@ -79,8 +78,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
                     state.display_state &= ~DISPLAY_DIMMED;
                     DEBUG("Leaving dimmed state...\n");
                     if (msg->ps_msg->sender != self() && old_pct >= 0.0) {
-                        publish_bl_req(old_pct, !conf.dim_conf.no_smooth[EXIT], 
-                                       conf.dim_conf.trans_step[EXIT], conf.dim_conf.trans_timeout[EXIT]);
+                        dimmer_publish_bl_req(old_pct, EXIT);
                         old_pct = -1.0;
                     }
                 }
@@ -128,17 +126,4 @@ static int on_idle_hint_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED
     }
     M_PUB(&display_req);
     return 0;
-}
-
-static void publish_bl_req(const double pct, const bool smooth, const double step, const int to) {
-    bl_req.bl.new = pct;
-    bl_req.bl.smooth = smooth;
-    bl_req.bl.step = step;
-    bl_req.bl.timeout = to;
-    M_PUB(&bl_req);
-}
-
-static void set_dpms(bool enable) {
-    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Set");
-    call(&args, "ssi", fetch_display(), fetch_env(), enable);
 }

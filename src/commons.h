@@ -36,6 +36,13 @@ typedef struct {
 } curve_t;
 
 typedef struct {
+    int no_smooth;                          // disable smooth backlight changes for module
+    double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
+    int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
+    int trans_fixed;                        // fixed transitions duration
+} bl_smooth_t;
+
+typedef struct {
     int num_captures[SIZE_AC];
     char *dev_name;
     char *dev_opts;
@@ -46,9 +53,7 @@ typedef struct {
 typedef struct {
     int disabled;
     int timeout[SIZE_AC][SIZE_STATES + 1];
-    int no_smooth;                          // disable smooth backlight changes for BACKLIGHT module
-    double trans_step;                      // every backlight transition step value (in pct), used when smooth BACKLIGHT transitions are enabled
-    int trans_timeout;                      // every backlight transition timeout value, used when smooth BACKLIGHT transitions are enabled
+    bl_smooth_t smooth;
     int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
     double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
     int pause_on_lid_closed;                // whether clight should inhibit autocalibration on lid closed
@@ -85,9 +90,7 @@ typedef struct {
     int disabled;
     double dimmed_pct;                      // pct of max backlight to be used while dimming
     int timeout[SIZE_AC];                   // dimmer timeout
-    int no_smooth[SIZE_DIM];                // disable smooth backlight changes for DIMMER module
-    double trans_step[SIZE_DIM];            // every backlight transition step value (in pct), used when smooth DIMMER transitions are enabled
-    int trans_timeout[SIZE_DIM];            // every backlight transition timeout value, used when smooth DIMMER transitions are enabled
+    bl_smooth_t smooth[SIZE_DIM];
 } dimmer_conf_t;
 
 typedef struct {

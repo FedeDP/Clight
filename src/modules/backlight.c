@@ -46,9 +46,10 @@ static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
     SD_BUS_WRITABLE_PROPERTY("CaptureOnLidOpened", "b", NULL, NULL, offsetof(bl_conf_t, capture_on_lid_opened), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, trans_timeout), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, smooth.no_smooth), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, smooth.trans_step), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, smooth.trans_timeout), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransFixed", "i", NULL, NULL, offsetof(bl_conf_t, smooth.trans_fixed), 0),
     SD_BUS_WRITABLE_PROPERTY("ShutterThreshold", "d", NULL, NULL, offsetof(bl_conf_t, shutter_threshold), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][NIGHT]), 0),
@@ -82,6 +83,7 @@ DECLARE_MSG(amb_msg, AMBIENT_BR_UPD);
 DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(sens_msg, SENS_UPD);
 DECLARE_MSG(calib_req, NO_AUTOCALIB_REQ);
+DECLARE_MSG(bl_req, BL_REQ);
 
 API(Backlight, conf_bl_vtable, conf.bl_conf);
 API(Sensor, conf_sens_vtable, conf.sens_conf);
@@ -92,6 +94,7 @@ static void init(void) {
     bls = map_new(true, free);
     capture_req.capture.reset_timer = true;
     capture_req.capture.capture_only = false;
+    bl_req.bl.smooth = -1; // Use conf values
     
     // Disabled while in wizard mode as it is useless and spams to stdout
     if (!conf.wizard) {
@@ -213,7 +216,7 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
              * Note: set smooth field from conf to allow keyboard and gamma to react;
              * > if (up->smooth || conf.bl_conf.no_smooth) { ... }
              */
-            set_backlight_level(1.0, !conf.bl_conf.no_smooth, 0, 0);
+            set_backlight_level(1.0, !conf.bl_conf.smooth.no_smooth, 0, 0);
             pause_mod(AUTOCALIB);
         }
         if (state.lid_state) {
@@ -468,10 +471,9 @@ static void do_capture(bool reset_timer, bool capture_only) {
 static double set_new_backlight(const double perc) {
     sensor_conf_t *sens_conf = &conf.sens_conf;
     enum ac_states st = state.ac_state;
-    const double new_bl_pct = get_value_from_curve(perc, &sens_conf->default_curve[st]);
-    set_backlight_level(new_bl_pct, !conf.bl_conf.no_smooth, 
-                        conf.bl_conf.trans_step, conf.bl_conf.trans_timeout);
-    return new_bl_pct;
+    bl_req.bl.new = get_value_from_curve(perc, &sens_conf->default_curve[st]);
+    M_PUB(&bl_req);
+    return bl_req.bl.new;
 }
 
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout) {

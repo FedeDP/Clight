@@ -233,7 +233,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
 static void ambient_callback(bool smooth, double new) {
     if (conf.gamma_conf.ambient_gamma && !state.display_state) {
         /* Only account for target backlight changes, ie: not step ones */
-        if (smooth || conf.bl_conf.no_smooth) {
+        if (smooth || conf.bl_conf.smooth.no_smooth) {
             /* 
             * Note that conf.temp is not constant (it can be changed through bus api),
             * thus we have to always compute these ones.

@@ -180,3 +180,8 @@ static void pause_dpms(const bool pause, enum mod_pause reason) {
         }
     }
 }
+
+void set_dpms(bool enable) {
+    SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Set");
+    call(&args, "ssi", fetch_display(), fetch_env(), enable);
+}

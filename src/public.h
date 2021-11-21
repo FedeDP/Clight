@@ -213,7 +213,7 @@ typedef struct {
 typedef struct {
     double old;                 // Valued in updates. Useless for requests
     double new;                 // Mandatory for requests. Valued in updates
-    int smooth;                 // Mandatory for BL_REQ requests. Valued in updates. Special value: -1 -> use conf values
+    int smooth;                 // Mandatory for BL_REQ requests. Valued in updates. Special values: -1 -> use backlight conf values; -2/-3 -> use dimmer {ENTER, EXIT} conf values
     int timeout;                // Only useful for BL_REQ requests. Valued in updates
     double step;                // Only useful for BL_REQ requests. Valued in updates
 } bl_upd;

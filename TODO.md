@@ -7,6 +7,7 @@
 - [x] Always start DISPLAY module
 - [x] Only hook logind.IdleHint when DIMMER is disabled (otherwise it is a secondary source for DIMMED state...useless)
 - [x] If DIMMER is disabled but we receive an IdleHint, do not touch backlight; just manage the new DIMMED state eventually pausing backlight and other modules
+- [x] Allow to set a fixed transition duration for BACKLIGHT and DIMMER
 
 ### Interface
 - [x] Fixed null ptr dereference in inhibit_parse_msg()

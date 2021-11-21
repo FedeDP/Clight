@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include "commons.h"
 
+static void log_bl_smooth(bl_smooth_t *smooth, const char *prefix);
 static void log_bl_conf(bl_conf_t *bl_conf);
 static void log_sens_conf(sensor_conf_t *sens_conf);
 static void log_kbd_conf(kbd_conf_t *kbd_conf);
@@ -41,11 +42,16 @@ void open_log(void) {
     ftruncate(fd, 0);
 }
 
+static void log_bl_smooth(bl_smooth_t *smooth, const char *prefix) {
+    fprintf(log_file, "* %sSmooth trans:\t\t%s\n", prefix, smooth->no_smooth ? "Disabled" : "Enabled");
+    fprintf(log_file, "* %sSmooth step:\t\t%.2lf\n", prefix, smooth->trans_step);
+    fprintf(log_file, "* %sSmooth timeout:\t\t%d\n", prefix, smooth->trans_timeout);
+    fprintf(log_file, "* %sSmooth fixed:\t\t%d\n", prefix, smooth->trans_fixed);
+}
+
 static void log_bl_conf(bl_conf_t *bl_conf) {
     fprintf(log_file, "\n### BACKLIGHT ###\n");
-    fprintf(log_file, "* Smooth trans:\t\t%s\n", bl_conf->no_smooth ? "Disabled" : "Enabled");
-    fprintf(log_file, "* Smooth steps:\t\t%.2lf\n", bl_conf->trans_step);
-    fprintf(log_file, "* Smooth timeout:\t\t%d\n", bl_conf->trans_timeout);
+    log_bl_smooth(&conf.bl_conf.smooth, "");
     fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][DAY], bl_conf->timeout[ON_BATTERY][DAY]);
     fprintf(log_file, "* Nightly timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][NIGHT], bl_conf->timeout[ON_BATTERY][NIGHT]);
     fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][SIZE_STATES], bl_conf->timeout[ON_BATTERY][SIZE_STATES]);
@@ -97,11 +103,8 @@ static void log_daytime_conf(daytime_conf_t *day_conf) {
 
 static void log_dim_conf(dimmer_conf_t *dim_conf) {
     fprintf(log_file, "\n### DIMMER ###\n");
-    fprintf(log_file, "* Smooth trans:\t\tENTER: %s, EXIT: %s\n", 
-            dim_conf->no_smooth[ENTER] ? "Disabled" : "Enabled",
-            dim_conf->no_smooth[EXIT] ? "Disabled" : "Enabled");
-    fprintf(log_file, "* Smooth steps:\t\tENTER: %.2lf, EXIT: %.2lf\n", dim_conf->trans_step[ENTER], dim_conf->trans_step[EXIT]);
-    fprintf(log_file, "* Smooth timeout:\t\tENTER: %d, EXIT: %d\n", dim_conf->trans_timeout[ENTER], dim_conf->trans_timeout[EXIT]);
+    log_bl_smooth(&conf.dim_conf.smooth[ENTER], "ENTER ");
+    log_bl_smooth(&conf.dim_conf.smooth[EXIT], "EXIT ");
     fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", dim_conf->timeout[ON_AC], dim_conf->timeout[ON_BATTERY]);
     fprintf(log_file, "* Backlight pct:\t\t%.2lf\n", dim_conf->dimmed_pct);
 }
