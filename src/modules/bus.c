@@ -1,4 +1,5 @@
 #include "bus.h"
+#include "utils.h"
 
 #define GET_BUS(a)  sd_bus *tmp = a->bus; if (!tmp) { tmp = a->type == USER_BUS ? userbus : sysbus; } if (!tmp) { return -1; }
 
@@ -84,7 +85,7 @@ int call(const bus_args *a, const char *signature, ...) {
         goto finish;
     }
     
-    if (signature && strlen(signature)) {
+    if (!is_string_empty(signature)) {
         va_list args;
         va_start(args, signature);
         sd_bus_message_appendv(m, signature, args);

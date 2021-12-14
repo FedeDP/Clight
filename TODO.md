@@ -8,6 +8,7 @@
 - [x] Only hook logind.IdleHint when DIMMER is disabled (otherwise it is a secondary source for DIMMED state...useless)
 - [x] If DIMMER is disabled but we receive an IdleHint, do not touch backlight; just manage the new DIMMED state eventually pausing backlight and other modules
 - [x] Allow to set a fixed transition duration for BACKLIGHT and DIMMER
+- [ ] Add wiki page with proposed config
 
 ### Interface
 - [x] Fixed null ptr dereference in inhibit_parse_msg()
@@ -16,6 +17,7 @@
 ### Generic
 - [x] Finally allow to view usage, help and version messages while another instance is running. Fixes #235
 - [x] Show commit hash in clight version
+- [x] do not use strlen() to only check that strign is not empty
 
 ### Backlight
 - [x] Match new objectadded/removed signal from Backlight2 clightd api

@@ -13,7 +13,7 @@ const char *fetch_display() {
      * as sometimes on wayland you have $DISPLAY env var too!
      */
     const char *wl_display = getenv("WAYLAND_DISPLAY");
-    if (wl_display && strlen(wl_display)) {
+    if (!is_string_empty(wl_display)) {
         return wl_display;
     }
     return getenv("DISPLAY");
@@ -26,7 +26,7 @@ const char *fetch_display() {
  */
 const char *fetch_env() {
     const char *xauth = getenv("XAUTHORITY");
-    if (xauth && strlen(xauth)) {
+    if (!is_string_empty(xauth)) {
         return xauth;
     }
     return getenv("XDG_RUNTIME_DIR");
@@ -43,7 +43,7 @@ const char *fetch_env() {
  */
 bool own_display(const char *display) {
     const char *my_display = fetch_display();
-    if (!my_display || !strlen(my_display)) {
+    if (is_string_empty(my_display)) {
         return true;
     }
     return strcmp(display, my_display) == 0;
@@ -78,4 +78,8 @@ bool mod_check_pause(bool pause, int *paused_state, enum mod_pause reason, const
         return true;
     }
     return false;
+}
+
+bool is_string_empty(const char *str) {
+    return str == NULL || str[0] == '\0';
 }

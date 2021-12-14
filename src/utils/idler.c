@@ -1,6 +1,7 @@
 #include "idler.h"
+#include "utils.h"
 
-#define VALIDATE_CLIENT(client) do { if (!client || !strlen(client)) return -1; } while (0);
+#define VALIDATE_CLIENT(client) do { if (is_string_empty(client)) return -1; } while (0);
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int idle_get_client(char *client);

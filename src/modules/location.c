@@ -1,4 +1,5 @@
 #include "bus.h"
+#include "utils.h"
 
 /**
  * LOCATION module will be deregistered if:
@@ -56,14 +57,14 @@ static bool evaluate(void) {
      */
     return  !conf.wizard && 
             ((conf.day_conf.loc.lat == LAT_UNDEFINED || conf.day_conf.loc.lon == LON_UNDEFINED) && 
-            (!strlen(conf.day_conf.day_events[SUNRISE]) || !strlen(conf.day_conf.day_events[SUNSET])));
+            (is_string_empty(conf.day_conf.day_events[SUNRISE]) || is_string_empty(conf.day_conf.day_events[SUNSET])));
 }
 
 /*
  * Stop geoclue2 client and store latest location to cache.
  */
 static void destroy(void) {
-    if (strlen(client)) {
+    if (!is_string_empty(client)) {
         geoclue_client_delete();
     }
     /* Destroy this match slot */

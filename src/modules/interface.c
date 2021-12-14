@@ -2,6 +2,7 @@
 #include "interface.h"
 #include "my_math.h"
 #include "config.h"
+#include "utils.h"
 
 #define CLIGHT_COOKIE -1
 #define CLIGHT_INH_KEY "LockClight"
@@ -364,7 +365,7 @@ static void inhibit_parse_msg(sd_bus_message *m) {
 static int on_bus_name_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     const char *name = NULL, *old_owner = NULL, *new_owner = NULL;
     if (sd_bus_message_read(m, "sss", &name, &old_owner, &new_owner) >= 0) {
-        if (map_has_key(lock_map, old_owner) && (!new_owner || !strlen(new_owner))) {
+        if (map_has_key(lock_map, old_owner) && is_string_empty(new_owner)) {
             drop_inhibit(NULL, old_owner, true);
         }
     }

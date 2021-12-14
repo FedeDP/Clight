@@ -1,6 +1,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include "commons.h"
+#include "utils.h"
 
 static void log_bl_smooth(bl_smooth_t *smooth, const char *prefix);
 static void log_bl_conf(bl_conf_t *bl_conf);
@@ -94,8 +95,8 @@ static void log_daytime_conf(daytime_conf_t *day_conf) {
     } else {
         fprintf(log_file, "* User position:\t\tUnset\n");
     }
-    fprintf(log_file, "* User set sunrise:\t\t%s\n", strlen(day_conf->day_events[SUNRISE]) ? day_conf->day_events[SUNRISE] : "Unset");
-    fprintf(log_file, "* User set sunset:\t\t%s\n", strlen(day_conf->day_events[SUNSET]) ? day_conf->day_events[SUNSET] : "Unset");
+    fprintf(log_file, "* User set sunrise:\t\t%s\n", is_string_empty(day_conf->day_events[SUNRISE]) ? "Unset" : day_conf->day_events[SUNRISE]);
+    fprintf(log_file, "* User set sunset:\t\t%s\n", is_string_empty(day_conf->day_events[SUNSET]) ? "Unset" : day_conf->day_events[SUNSET]);
     fprintf(log_file, "* Event duration:\t\t%d\n", day_conf->event_duration);
     fprintf(log_file, "* Sunrise offset:\t\t%d\n", day_conf->events_os[SUNRISE]);
     fprintf(log_file, "* Sunset offset:\t\t%d\n", day_conf->events_os[SUNSET]);

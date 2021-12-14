@@ -1,5 +1,6 @@
 #include <libconfig.h>
 #include "config.h"
+#include "utils.h"
 
 static void init_config_file(enum CONFIG file, char *filename);
 
@@ -86,13 +87,13 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
 static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf) {
     config_setting_t *sens_group = config_lookup(cfg, "sensor");
     if (sens_group) {
-        const char *sensor_dev, *sensor_settings;
+        const char *sensor_dev = NULL, *sensor_settings = NULL;
         
-        if (config_setting_lookup_string(sens_group, "devname", &sensor_dev) == CONFIG_TRUE && strlen(sensor_dev)) {
+        if (config_setting_lookup_string(sens_group, "devname", &sensor_dev) == CONFIG_TRUE && !is_string_empty(sensor_dev)) {
             sens_conf->dev_name = strdup(sensor_dev);
         }
     
-        if (config_setting_lookup_string(sens_group, "settings", &sensor_settings) == CONFIG_TRUE && strlen(sensor_settings)) {
+        if (config_setting_lookup_string(sens_group, "settings", &sensor_settings) == CONFIG_TRUE && !is_string_empty(sensor_settings)) {
             sens_conf->dev_opts = strdup(sensor_settings);
         }
         
@@ -147,7 +148,7 @@ static void load_override_settings(config_t *cfg, sensor_conf_t *sens_conf) {
             curve_t *curve = calloc(SIZE_AC, sizeof(curve_t));
             bool error = false;
             const char *mon_id = NULL;
-            if (config_setting_lookup_string(setting, "monitor_id", &mon_id) == CONFIG_TRUE && strlen(mon_id)) {
+            if (config_setting_lookup_string(setting, "monitor_id", &mon_id) == CONFIG_TRUE && !is_string_empty(mon_id)) {
                 config_setting_t *points;
                 int len;
                 
@@ -403,7 +404,7 @@ int read_config(enum CONFIG file, char *config_file) {
     int r = 0;
     config_t cfg;
     
-    if (!strlen(config_file)) {
+    if (is_string_empty(config_file)) {
         init_config_file(file, config_file);
     }
     if (access(config_file, F_OK) == -1) {

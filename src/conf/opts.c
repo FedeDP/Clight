@@ -1,5 +1,6 @@
 #include <popt.h>
 #include "opts.h"
+#include "utils.h"
 
 static void init_backlight_opts(bl_conf_t *bl_conf);
 static void init_sens_opts(sensor_conf_t *sens_conf);
@@ -155,7 +156,7 @@ void init_opts(int argc, char *argv[]) {
     parse_cmd(argc, argv, conf_file, PATH_MAX);
     
     /* --conf-file option was passed! */
-    if (strlen(conf_file)) {
+    if (!is_string_empty(conf_file)) {
         read_config(CUSTOM, conf_file);
     }
     
@@ -390,7 +391,7 @@ static void check_daytime_conf(daytime_conf_t *day_conf) {
     
     for (int i = 0; i < SIZE_EVENTS; i++) {
         struct tm timeinfo;
-        if (strlen(day_conf->day_events[i]) && 
+        if (!is_string_empty(day_conf->day_events[i]) && 
             !strptime(day_conf->day_events[i], "%R", &timeinfo)) {
             
             memset(day_conf->day_events[i], 0, sizeof(day_conf->day_events[i]));

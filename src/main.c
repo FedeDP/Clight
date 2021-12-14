@@ -23,6 +23,7 @@
 
 #include <glob.h>
 #include "opts.h"
+#include "utils.h"
 
 static void init(int argc, char *argv[]);
 static void init_state(void);
@@ -133,7 +134,7 @@ static void check_clightd_version(void) {
     SYSBUS_ARG(vers_args, CLIGHTD_SERVICE, "/org/clightd/clightd", "org.clightd.clightd", "Version");
     
     int r = get_property(&vers_args, "s", &state.clightd_version);
-    if (r < 0 || !strlen(state.clightd_version)) {
+    if (r < 0 || is_string_empty(state.clightd_version)) {
         ERROR("No clightd found. Clightd is a mandatory dep.\n");
     } else {
         int maj_val = atoi(state.clightd_version);

@@ -1,6 +1,7 @@
 #include <gsl/gsl_multifit.h>
 #include <gsl/gsl_statistics_double.h>
 #include "my_math.h"
+#include "utils.h"
 
 #define ZENITH -0.83
 
@@ -175,7 +176,7 @@ static int calculate_sunrise_sunset(const float lat, const float lng, time_t *tt
     timeinfo->tm_sec = 0;
 
     /* If user provided a sunrise/sunset time, use them */
-    if (strlen(conf.day_conf.day_events[event]) > 0) {
+    if (!is_string_empty(conf.day_conf.day_events[event])) {
         strptime(conf.day_conf.day_events[event], "%R", timeinfo);
         *tt = mktime(timeinfo);
         return 0;
