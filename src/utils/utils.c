@@ -83,3 +83,11 @@ bool mod_check_pause(bool pause, int *paused_state, enum mod_pause reason, const
 bool is_string_empty(const char *str) {
     return str == NULL || str[0] == '\0';
 }
+
+bool check_module_sender(const self_t *self, const char *modname, const self_t *sender) {
+    const self_t *mod = NULL;
+    if (module_ref(self, modname, &mod) == 0) {
+        return sender == mod;
+    }
+    return false;
+}
