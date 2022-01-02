@@ -15,6 +15,7 @@ extern void dimmer_publish_bl_req(const double pct, enum dim_trans trans);
 extern void set_dpms(bool enable);
 
 static void init(void) {
+    display_req.display.no_backlight = true;
     M_SUB(DISPLAY_REQ);
     
     /* 
@@ -49,11 +50,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             case DISPLAY_DIMMED:
                 state.display_state |= DISPLAY_DIMMED;
                 DEBUG("Entering dimmed state...\n");
-                /*
-                 * If the message was sent by ourself, it means it is an IdleHint and DIMMER mod is disabled.
-                 * Just set the dimmed state without touching backlight.
-                 */
-                if (!check_module_sender(self(), "DISPLAY", msg->ps_msg->sender)) {
+                if (!up->no_backlight) {
                     // Message arrives from DIMMER module (or external plugin)
                     if (state.current_bl_pct > conf.dim_conf.dimmed_pct) {
                         old_pct = state.current_bl_pct;
@@ -66,18 +63,22 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
             case DISPLAY_OFF:
                 state.display_state |= DISPLAY_OFF;
                 DEBUG("Entering dpms state...\n");
-                set_dpms(true);
+                if (!up->no_backlight) {
+                    set_dpms(true);
+                }
                 break;
             case DISPLAY_ON:
                 if (state.display_state & DISPLAY_OFF) {
                     state.display_state &= ~DISPLAY_OFF;
                     DEBUG("Leaving dpms state...\n");
-                    set_dpms(false);
+                    if (!up->no_backlight) {
+                        set_dpms(false);
+                    }
                 }
                 if (state.display_state & DISPLAY_DIMMED) {
                     state.display_state &= ~DISPLAY_DIMMED;
                     DEBUG("Leaving dimmed state...\n");
-                    if (!check_module_sender(self(), "DISPLAY", msg->ps_msg->sender) && old_pct >= 0.0) {
+                    if (!up->no_backlight && old_pct >= 0.0) {
                         dimmer_publish_bl_req(old_pct, EXIT);
                         old_pct = -1.0;
                     }

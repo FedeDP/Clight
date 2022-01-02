@@ -86,7 +86,7 @@ enum mod_msg_types {
     LOCATION_REQ,       // Publish to set a new location
     UPOWER_REQ,         // Publish to set a new UPower state
     INHIBIT_REQ,        // Publish to set a new PowerManagement state
-    DISPLAY_REQ,        // Publish to set a new Display state (Set ~DISPLAY_DIMMED/~DISPLAY_OFF to unrequest a UNDIMMED/UN-DPMS state)
+    DISPLAY_REQ,        // Publish to set a new Display state
     SUNRISE_REQ,        // Publish to set a new fixed Sunrise
     SUNSET_REQ,         // Publish to set a new fixed Sunset
     TEMP_REQ,           // Publish to set a new gamma temp
@@ -162,6 +162,7 @@ typedef struct {
      * Use DISPLAY_ON to restore normal state (ie: not DIMMED and not DPMS).
      */
     enum display_states new;    // Mandatory for requests. Valued in updates
+    bool no_backlight;          // True to avoid touching backlight, only managing the new state internally (eg: pausing any module that require a DISPLAY_ON state). Optional for requests. Unused in updates.
 } display_upd;
 
 typedef struct {

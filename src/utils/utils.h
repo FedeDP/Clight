@@ -30,4 +30,3 @@ const char *fetch_env();
 bool own_display(const char *display);
 bool mod_check_pause(bool pause, int *paused_state, enum mod_pause reason, const char *modname);
 bool is_string_empty(const char *str);
-bool check_module_sender(const self_t *self, const char *modname, const self_t *sender);
