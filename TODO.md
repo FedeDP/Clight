@@ -8,7 +8,7 @@
 - [x] Only hook logind.IdleHint when DIMMER is disabled (otherwise it is a secondary source for DIMMED state...useless)
 - [x] If DIMMER is disabled but we receive an IdleHint, do not touch backlight; just manage the new DIMMED state eventually pausing backlight and other modules
 - [x] Allow to set a fixed transition duration for BACKLIGHT and DIMMER
-- [ ] Add wiki page with proposed config
+- [x] Add wiki page with proposed config
 
 ### Interface
 - [x] Fixed null ptr dereference in inhibit_parse_msg()
@@ -41,6 +41,13 @@
 - [ ] Port to libmodule 6.0.0 (?)
 - [ ] Add a Dump dbus method (and a DUMP_REQ request) to allow any module to dump their state (module_dump()) to a txt file
 
+### Pinephone
+- [ ] Finalize support
+
+### Sensor
+- [ ] Allow multiple sensors to be specified in priority order; those sensors will be stored in a list and the first available will be used.
+- [ ] Changes: -> is_sensor_available() that will be called on each of the listed sensors; first avaiable will become highest_prio_available_dev_name
+- [ ] capture_frames_brightness -> will use highest_prio_available_dev_name
 
 ## After Clightd API break:
 
