@@ -58,9 +58,9 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_PROPERTY("BlPct", "d", NULL, offsetof(state_t, current_bl_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("KbdPct", "d", NULL, offsetof(state_t, current_kbd_pct), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("AmbientBr", "d", NULL, offsetof(state_t, ambient_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+    SD_BUS_PROPERTY("ScreenBr", "d", NULL, offsetof(state_t, screen_br), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Temp", "i", NULL, offsetof(state_t, current_temp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Location", "(dd)", get_location, offsetof(state_t, current_loc), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-    SD_BUS_PROPERTY("ScreenComp", "d", NULL, offsetof(state_t, screen_comp), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_PROPERTY("Suspended", "b", NULL, offsetof(state_t, suspended), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
     SD_BUS_METHOD("Capture", "bb", NULL, method_capture, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Inhibit", "b", NULL, method_clight_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -543,6 +543,10 @@ static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_e
     
     capture_req.capture.reset_timer = reset_timer;
     capture_req.capture.capture_only = capture_only;
+    if (state.content) {
+        capture_req.capture.capture_only = true;
+        INFO("Enforcing capture only in content based calibration mode.\n");
+    }
     M_PUB(&capture_req);
     return sd_bus_reply_method_return(m, NULL);
 }

@@ -123,10 +123,9 @@ static void init_dpms_opts(dpms_conf_t *dpms_conf) {
 }
 
 static void init_screen_opts(screen_conf_t *screen_conf) {
-    screen_conf->timeout[ON_AC] = 30;
+    screen_conf->contrib = 0.2;
+    screen_conf->timeout[ON_AC] = 5;
     screen_conf->timeout[ON_BATTERY] = -1; // disabled on battery by default
-    screen_conf->contrib = 0.1;
-    screen_conf->samples = 10;
 }
 
 /*
@@ -185,7 +184,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"no-dimmer", 0, POPT_ARG_NONE, &conf.dim_conf.disabled, 100, "Disable dimmer tool", NULL},
         {"no-dpms", 0, POPT_ARG_NONE, &conf.dpms_conf.disabled, 100, "Disable dpms tool", NULL},
         {"no-backlight", 0, POPT_ARG_NONE, &conf.bl_conf.disabled, 100, "Disable backlight module", NULL},
-        {"no-screen", 0, POPT_ARG_NONE, &conf.screen_conf.disabled, 100, "Disable screen module", NULL},
+        {"no-screen", 0, POPT_ARG_NONE, &conf.screen_conf.disabled, 100, "Disable screen module (screen content based backlight adjustment)", NULL},
         {"no-kbd", 0, POPT_ARG_NONE, &conf.kbd_conf.disabled, 100, "Disable keyboard backlight calibration", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dim_conf.dimmed_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
@@ -204,7 +203,6 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
     int rc;
     while ((rc = poptGetNextOpt(pc)) > 0) {
         char *str = poptGetOptArg(pc);
-        bool must_free = true;
         switch (rc) {
             case 1:
                 strncpy(conf.day_conf.day_events[SUNRISE], str, sizeof(conf.day_conf.day_events[SUNRISE]) - 1);
@@ -216,8 +214,9 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
                 printf("%s: C daemon utility to automagically adjust screen backlight to match ambient brightness.\n"
                         "* Current version: %s\n"
                         "* https://github.com/FedeDP/Clight\n"
-                        "* Copyright (C) 2021  Federico Di Pierro <nierro92@gmail.com>\n"
+                        "* Copyright (C) 2022  Federico Di Pierro <nierro92@gmail.com>\n"
                         "* For more info, see man clight.1.\n", argv[0], VERSION);
+                free(str);
                 exit(EXIT_SUCCESS);
             case 4:
                 strncpy(conf_file, str, size);
@@ -229,9 +228,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
             default:
                 break;
         }
-        if (str && must_free) {
-            free(str);
-        }
+        free(str);
     }
     /*
      * poptGetNextOpt returns -1 when the final argument has been parsed
@@ -285,22 +282,22 @@ static void check_clightd_features(void) {
 
 static void check_bl_conf(bl_conf_t *bl_conf) {
     if (bl_conf->smooth.trans_step <= 0.0f || bl_conf->smooth.trans_step >= 1.0f) {
-        WARN("Wrong backlight_trans_step value. Resetting default value.\n");
+        WARN("BL_CONF: wrong 'trans_step' value. Resetting default value.\n");
         bl_conf->smooth.trans_step = 0.05;
     }
     
     if (bl_conf->smooth.trans_timeout <= 0) {
-        WARN("Wrong backlight_trans_timeout value. Resetting default value.\n");
+        WARN("BL_CONF: wrong 'trans_timeout' value. Resetting default value.\n");
         bl_conf->smooth.trans_timeout = 30;
     }
     
     if (bl_conf->shutter_threshold < 0 || bl_conf->shutter_threshold >= 1) {
-        WARN("Wrong shutter_threshold value. Resetting default value.\n");
+        WARN("BL_CONF: wrong 'shutter_threshold' value. Resetting default value.\n");
         bl_conf->shutter_threshold = 0.0;
     }
 }
 
-static inline void check_curve_points(curve_t *c, const char *id, double *fallback[SIZE_AC]) {
+static inline void check_curve_points(curve_t *c, const char *prefix, const char *id, double *fallback[SIZE_AC]) {
     int i, reg_points_ac_needed = 0, reg_points_batt_needed = 0;
     /* Check regression points values */
     for (i = 0; i < c[ON_AC].num_points && !reg_points_ac_needed; i++) {
@@ -314,12 +311,12 @@ static inline void check_curve_points(curve_t *c, const char *id, double *fallba
         }
     }
     if (reg_points_ac_needed) {
-        WARN("Wrong %s ac_regression points. Resetting default values.\n", id);
+        WARN("%s: wrong %s 'ac_regression' points. Resetting default values.\n", prefix, id);
         c[ON_AC].num_points = DEF_SIZE_POINTS;
         memcpy(c[ON_AC].points, fallback[ON_AC], DEF_SIZE_POINTS * sizeof(double));
     }
     if (reg_points_batt_needed) {
-        WARN("Wrong %s batt_regression points. Resetting default values.\n", id);
+        WARN("%s: wrong %s 'batt_regression' points. Resetting default values.\n", prefix, id);
         c[ON_BATTERY].num_points = DEF_SIZE_POINTS;
         memcpy(c[ON_BATTERY].points, fallback[ON_BATTERY], DEF_SIZE_POINTS * sizeof(double));
     }
@@ -327,65 +324,65 @@ static inline void check_curve_points(curve_t *c, const char *id, double *fallba
 
 static void check_sens_conf(sensor_conf_t *sens_conf) {
     if (sens_conf->num_captures[ON_AC] < 1 || sens_conf->num_captures[ON_AC] > 20) {
-        WARN("Wrong AC captures value. Resetting default value.\n");
+        WARN("SENS_CONF: wrong AC 'captures' value. Resetting default value.\n");
         sens_conf->num_captures[ON_AC] = 5;
     }
     if (sens_conf->num_captures[ON_BATTERY] < 1 || sens_conf->num_captures[ON_BATTERY] > 20) {
-        WARN("Wrong BATT captures value. Resetting default value.\n");
+        WARN("SENS_CONF: wrong BATT 'captures' value. Resetting default value.\n");
         sens_conf->num_captures[ON_BATTERY] = 5;
     }
-    check_curve_points(sens_conf->default_curve, "sensor", bl_default_curve);
+    check_curve_points(sens_conf->default_curve, "SENS_CONF", "sensor", bl_default_curve);
 }
 
 static void check_override_conf(sensor_conf_t *sens_conf) {
     for (map_itr_t *itr = map_itr_new(sens_conf->specific_curves); itr; itr = map_itr_next(itr)) {
         curve_t *c = map_itr_get_data(itr);
         const char *id = map_itr_get_key(itr);
-        check_curve_points(c, id, bl_default_curve);
+        check_curve_points(c, "MON_CONF", id, bl_default_curve);
     }
 }
 
 static void check_kbd_conf(kbd_conf_t *kbd_conf) {
-    check_curve_points(kbd_conf->curve, "keyboard", kbd_default_curve);
+    check_curve_points(kbd_conf->curve, "KBD_CONF", "keyboard", kbd_default_curve);
 }
 
 static void check_gamma_conf(gamma_conf_t *gamma_conf) {
     if (conf.bl_conf.disabled && gamma_conf->ambient_gamma) {
-        INFO("Disabling ambient gamma as BACKLIGHT is disabled.\n");
+        INFO("GAMMA_CONF: disabling 'ambient_gamma' as BACKLIGHT is disabled.\n");
         gamma_conf->ambient_gamma = false;
     }
     
     if (gamma_conf->temp[DAY] < 1000 || gamma_conf->temp[DAY] > 10000) {
-        WARN("Wrong daily temp value. Resetting default value.\n");
+        WARN("GAMMA_CONF: wrong daily 'temp' value. Resetting default value.\n");
         gamma_conf->temp[DAY] = 6500;
     }
     if (gamma_conf->temp[NIGHT] < 1000 || gamma_conf->temp[NIGHT] > 10000) {
-        WARN("Wrong nightly temp value. Resetting default value.\n");
+        WARN("GAMMA_CONF: wrong nightly 'temp' value. Resetting default value.\n");
         gamma_conf->temp[NIGHT] = 4000;
     }
     
     if (gamma_conf->trans_step <= 0) {
-        WARN("Wrong gamma_trans_step value. Resetting default value.\n");
+        WARN("GAMMA_CONF: wrong 'trans_step' value. Resetting default value.\n");
         gamma_conf->trans_step = 50;
     }
     if (gamma_conf->trans_timeout <= 0) {
-        WARN("Wrong gamma_trans_timeout value. Resetting default value.\n");
+        WARN("GAMMA_CONF: wrong 'trans_timeout' value. Resetting default value.\n");
         gamma_conf->trans_timeout = 300;
     }
 }
 
 static void check_daytime_conf(daytime_conf_t *day_conf) {
     if (day_conf->event_duration <= 0) {
-        WARN("Wrong event duration value. Resetting default value.\n");
+        WARN("DAYTIME_CONF: wrong 'event_duration' value. Resetting default value.\n");
         day_conf->event_duration = 30 * 60;
     }
     
     if (fabs(day_conf->loc.lat) > 90.0f && day_conf->loc.lat != LAT_UNDEFINED) {
-        WARN("Wrong latitude value. Resetting default value.\n");
+        WARN("DAYTIME_CONF: wrong 'latitude' value. Resetting default value.\n");
         day_conf->loc.lat = LAT_UNDEFINED;
     }
     if (fabs(day_conf->loc.lon) > 180.0f && day_conf->loc.lon != LON_UNDEFINED) {
-        WARN("Wrong longitude value. Resetting default value.\n");
+        WARN("DAYTIME_CONF: wrong 'longitude' value. Resetting default value.\n");
         day_conf->loc.lon = LON_UNDEFINED;
     }
     
@@ -401,43 +398,43 @@ static void check_daytime_conf(daytime_conf_t *day_conf) {
 
 static void check_dim_conf(dimmer_conf_t *dim_conf) {
     if (conf.bl_conf.disabled) {
-        INFO("Disabling DIMMER as BACKLIGHT is disabled.\n");
+        INFO("DIMMER_CONF: disabling as BACKLIGHT is disabled.\n");
         dim_conf->disabled = true;
     }
     
     if (dim_conf->dimmed_pct > 1 || dim_conf->dimmed_pct < 0) {
-        WARN("Wrong dimmer backlight percentage value. Resetting default value.\n");
+        WARN("DIMMER_CONF: wrong 'dimmed_pct' value. Resetting default value.\n");
         dim_conf->dimmed_pct = 0.2;
     }
     
     if (dim_conf->smooth[ENTER].trans_step <= 0.0f || dim_conf->smooth[ENTER].trans_step >= 1.0f) {
-        WARN("Wrong dimmer_trans_step[ENTER] value. Resetting default value.\n");
+        WARN("DIMMER_CONF: wrong 'trans_step[ENTER]' value. Resetting default value.\n");
         dim_conf->smooth[ENTER].trans_step = 0.05;
     }
     if (dim_conf->smooth[EXIT].trans_step <= 0.0f || dim_conf->smooth[EXIT].trans_step >= 1.0f) {
-        WARN("Wrong dimmer_trans_step[EXIT] value. Resetting default value.\n");
+        WARN("DIMMER_CONF: wrong 'trans_step[EXIT]' value. Resetting default value.\n");
         dim_conf->smooth[EXIT].trans_step = 0.05;
     }
     
     if (dim_conf->smooth[ENTER].trans_timeout <= 0) {
-        WARN("Wrong dimmer_trans_timeout[ENTER] value. Resetting default value.\n");
+        WARN("DIMMER_CONF: wrong 'trans_timeout[ENTER]' value. Resetting default value.\n");
         dim_conf->smooth[ENTER].trans_timeout = 30;
     }
     if (dim_conf->smooth[EXIT].trans_timeout <= 0) {
-        WARN("Wrong dimmer_trans_timeout[EXIT] value. Resetting default value.\n");
+        WARN("DIMMER_CONF: wrong 'trans_timeout[EXIT]' value. Resetting default value.\n");
         dim_conf->smooth[EXIT].trans_timeout = 30;
     }
 }
 
-static void check_dpms_conf(dpms_conf_t *dpms_conf) {    
+static void check_dpms_conf(dpms_conf_t *dpms_conf) {
     if (!conf.dim_conf.disabled) {
         if (dpms_conf->timeout[ON_AC] <= conf.dim_conf.timeout[ON_AC]) {
-            WARN("DPMS AC timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+            WARN("DPMS_CONF: wrong AC 'timeout' value (<= dimmer timeout). Resetting default value.\n");
             dpms_conf->timeout[ON_AC] = 900;
         }
         
         if (dpms_conf->timeout[ON_BATTERY] <= conf.dim_conf.timeout[ON_BATTERY]) {
-            WARN("DPMS BATT timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
+            WARN("DPMS_CONF: wrong BATT 'timeout' value (<= dimmer timeout). Resetting default value.\n");
             dpms_conf->timeout[ON_BATTERY] = 300;
         }
     }
@@ -445,24 +442,19 @@ static void check_dpms_conf(dpms_conf_t *dpms_conf) {
 
 static void check_screen_conf(screen_conf_t *screen_conf) {
     if (conf.bl_conf.disabled) {
-        INFO("Disabling SCREEN as BACKLIGHT is disabled.\n");
+        INFO("SCREEN_CONF: disabling as BACKLIGHT is disabled.\n");
         screen_conf->disabled = true;
     }
     
-    if (screen_conf->contrib < 0 || screen_conf->contrib >= 1) {
-        WARN("Wrong screen_contrib value. Resetting default value.\n");
-        screen_conf->contrib = 0.1;
-    }
-    
-    if (screen_conf->samples < 0) {
-        WARN("Wrong screen_samples value. Resetting default value.\n");
-        screen_conf->samples = 10;
+    if (screen_conf->contrib < 0.0f || screen_conf->contrib > 1.0f) {
+        WARN("SCREEN_CONF: wrong 'contrib' value. Resetting default value.\n");
+        screen_conf->contrib = 0.2;
     }
 }
 
 static void check_inh_conf(inh_conf_t *inh_conf) {
     if (conf.dim_conf.disabled && conf.dpms_conf.disabled) {
-        DEBUG("Inhibit module is not needed. Disabling.\n");
+        DEBUG("INHIBIT_CONF: not needed. Disabling.\n");
         inh_conf->disabled = true;
         inh_conf->inhibit_docked = false;
         inh_conf->inhibit_pm = false;
@@ -488,7 +480,7 @@ static void check_conf(void) {
     }
     
     if (conf.resumedelay < 0 || conf.resumedelay > 30) {
-        WARN("Wrong resumedelay value. Resetting default value.\n");
+        WARN("CONF: wrong 'resumedelay' value. Resetting default value.\n");
         conf.resumedelay = 0;
     }
     

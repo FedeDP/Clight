@@ -72,7 +72,6 @@ static void log_sens_conf(sensor_conf_t *sens_conf) {
 
 static void log_kbd_conf(kbd_conf_t *kbd_conf) {
     fprintf(log_file, "\n### KEYBOARD ###\n");
-    fprintf(log_file, "* Dim:\t\t%s\n", kbd_conf->dim ? "Enabled" : "Disabled");
     fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", kbd_conf->timeout[ON_AC], kbd_conf->timeout[ON_BATTERY]);
 }
 
@@ -118,8 +117,6 @@ static void log_dpms_conf(dpms_conf_t *dpms_conf) {
 static void log_scr_conf(screen_conf_t *screen_conf) {
     fprintf(log_file, "\n### SCREEN ###\n");
     fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", screen_conf->timeout[ON_AC], screen_conf->timeout[ON_BATTERY]);
-    fprintf(log_file, "* Contrib:\t\t%.2lf\n", screen_conf->contrib);
-    fprintf(log_file, "* Samples:\t\t%d\n", screen_conf->samples);
 }
 
 static void log_inh_conf(inh_conf_t *inh_conf) {
