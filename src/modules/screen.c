@@ -17,7 +17,7 @@ static double *screen_br;
 static int screen_ctr, screen_fd = -1;
 static const sd_bus_vtable conf_screen_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_PROPERTY("NumSamples", "i", NULL, offsetof(screen_conf_t, samples), SD_BUS_VTABLE_PROPERTY_CONST),
+    SD_BUS_PROPERTY("NumSamples", "i", NULL, offsetof(screen_conf_t, num_samples), SD_BUS_VTABLE_PROPERTY_CONST),
     SD_BUS_WRITABLE_PROPERTY("Contrib", "d", NULL, set_screen_contrib, offsetof(screen_conf_t, contrib), 0),
     SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(screen_conf_t, timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(screen_conf_t, timeout[ON_BATTERY]), 0),
@@ -31,7 +31,7 @@ API(Screen, conf_screen_vtable, conf.screen_conf);
 MODULE_WITH_PAUSE("SCREEN");
 
 static void init(void) {
-    screen_br = calloc(conf.screen_conf.samples, sizeof(double));
+    screen_br = calloc(conf.screen_conf.num_samples, sizeof(double));
     if (screen_br) {
         M_SUB(CONTRIB_REQ);
         M_SUB(SCR_TO_REQ);
@@ -57,7 +57,7 @@ static bool check(void) {
 static bool evaluate(void) {
     return !conf.screen_conf.disabled && 
             /* SCREEN configurations have meaningful values */
-            conf.screen_conf.contrib > 0 && conf.screen_conf.samples > 0;
+            conf.screen_conf.contrib > 0 && conf.screen_conf.num_samples > 0;
 }
 
 static void destroy(void) {
@@ -140,7 +140,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 
 static void compute_screen_brightness(void) {
     const double old_comp = state.screen_comp;
-    state.screen_comp = compute_average(screen_br, conf.screen_conf.samples) * conf.screen_conf.contrib;
+    state.screen_comp = compute_average(screen_br, conf.screen_conf.num_samples) * conf.screen_conf.contrib;
     if (old_comp != state.screen_comp) {
         screen_msg.bl.old = old_comp;
         screen_msg.bl.new = state.screen_comp;
@@ -153,11 +153,11 @@ static void get_screen_brightness(bool compute) {
     SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
     
     if (call(&args, "ss", fetch_display(), fetch_env()) == 0) {
-        screen_ctr = (screen_ctr + 1) % conf.screen_conf.samples;
+        screen_ctr = (screen_ctr + 1) % conf.screen_conf.num_samples;
         
         if (compute) {
             compute_screen_brightness();
-        } else if (screen_ctr + 1 == conf.screen_conf.samples) {
+        } else if (screen_ctr + 1 == conf.screen_conf.num_samples) {
             /* Bucket filled! Start computing! */
             DEBUG("Start compensating for screen-emitted brightness.\n");
             computing = true;

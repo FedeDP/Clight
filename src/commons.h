@@ -27,14 +27,6 @@
 #define MINIMUM_CLIGHTD_VERSION_MAJ 5       // Clightd minimum required maj version
 #define MINIMUM_CLIGHTD_VERSION_MIN 5       // Clightd minimum required min version -> org.clightd.clightd.Backlight2
 
-/** Generic structs **/
-
-typedef struct {
-    int num_points;
-    double points[MAX_SIZE_POINTS];
-    double fit_parameters[DEGREE]; // best-fit parameters
-} curve_t;
-
 typedef struct {
     int no_smooth;                          // disable smooth backlight changes for module
     double trans_step;                      // every backlight transition step value (in pct), used when smooth transitions are enabled
@@ -43,73 +35,123 @@ typedef struct {
 } bl_smooth_t;
 
 typedef struct {
+    int num_points;
+    double points[MAX_SIZE_POINTS];
+    double fit_parameters[DEGREE]; // best-fit parameters
+} curve_t;
+
+/*
+ * We need this to mark option to be parsed as bool from libconfig (ie: "x = true;"); 
+ * but both dbus and libconfig expect an int-sized type below a bool.
+ */
+typedef unsigned int bool_to_int;
+
+#define X_GENERIC_CONF \
+    X_CONF(bool_to_int, verbose, 0); \
+    X_CONF(int, resumedelay, 0);
+
+#define X_SENS_CONF \
+    X_CONF(const char *, devname, NULL); \
+    X_CONF(const char *, settings, NULL);
+
+#define X_BL_CONF \
+    X_CONF(bool_to_int, disabled, false); \
+    X_CONF(bool_to_int, no_auto_calibration, false); \
+    X_CONF(double, shutter_threshold, 0.0f); \
+    X_CONF(bool_to_int, pause_on_lid_closed, false); \
+    X_CONF(bool_to_int, capture_on_lid_opened, false); \
+    X_CONF(bool_to_int, restore_on_exit, false); \
+    X_CONF(bool_to_int, no_smooth_transition, false); \
+    X_CONF(double, trans_step, 0.05);  \
+    X_CONF(int, trans_timeout, 30); \
+    X_CONF(int, trans_fixed, 0);
+
+#define X_KBD_CONF \
+    X_CONF(bool_to_int, disabled, false); \
+    X_CONF(bool_to_int, dim, false);
+
+#define X_GAMMA_CONF \
+    X_CONF(bool_to_int, disabled, false); \
+    X_CONF(bool_to_int, no_smooth_transition, false); \
+    X_CONF(int, trans_step, 50);  \
+    X_CONF(int, trans_timeout, 300); \
+    X_CONF(bool_to_int, long_transition, false); \
+    X_CONF(bool_to_int, ambient_gamma, false); \
+    X_CONF(bool_to_int, restore_on_exit, false);
+    
+#define X_DAYTIME_CONF \
+    X_CONF(int, event_duration, 30 * 60);
+    
+#define X_DIMMER_CONF \
+    X_CONF(bool_to_int, disabled, false); \
+    X_CONF(double, dimmed_pct, 0.2);
+    
+#define X_DPMS_CONF \
+    X_CONF(bool_to_int, disabled, false);
+    
+#define X_SCREEN_CONF \
+    X_CONF(bool_to_int, disabled, false); \
+    X_CONF(double, contrib, 0.1); \
+    X_CONF(int, num_samples, 10);
+    
+#define X_INH_CONF \
+    X_CONF(bool_to_int, disabled, false); \
+    X_CONF(bool_to_int, inhibit_docked, false); \
+    X_CONF(bool_to_int, inhibit_pm, false); \
+    X_CONF(bool_to_int, inhibit_bl, false);
+
+#define X_CONF(tp, name, def) tp name
+
+/** Generic structs **/
+
+typedef struct {
+    X_SENS_CONF
     int num_captures[SIZE_AC];
-    char *dev_name;
-    char *dev_opts;
     curve_t default_curve[SIZE_AC];                     // points used for regression through libgsl
     map_t *specific_curves;                             // map of monitor-specific curves
 } sensor_conf_t;
 
 typedef struct {
-    int disabled;
-    int timeout[SIZE_AC][SIZE_STATES + 1];
-    bl_smooth_t smooth;
-    int no_auto_calib;                      // disable automatic calibration for both BACKLIGHT and GAMMA
-    double shutter_threshold;               // capture values below this threshold will be considered "shuttered"
-    int pause_on_lid_closed;                // whether clight should inhibit autocalibration on lid closed
-    int capture_on_lid_opened;              // whether to trigger a new capture whenever lid gets opened
-    int restore;                            // whether backlight should be restored on Clight exit
+    X_BL_CONF
+    int timeout[SIZE_AC][SIZE_STATES + 1];              // Complex types must be manually parsed
 } bl_conf_t;
 
 typedef struct {
-    int disabled;                           // disable keyboard backlight automatic calibration (where supported)
-    int dim;                                // whether DPMS/Dimmer should switch keyboard off
+    X_KBD_CONF
     int timeout[SIZE_AC];                   // kbd dimming timeout
     curve_t curve[SIZE_AC];                 // curve used to match ambient brightness to certain keyboard backlight level
 } kbd_conf_t;
 
 typedef struct {
-    int disabled;
+    X_GAMMA_CONF
     int temp[SIZE_STATES];                  // screen temperature for each daytime
-    int no_smooth;                          // disable smooth gamma changes
-    int trans_step;                         // every gamma transition step value, used when smooth GAMMA transitions are enabled
-    int trans_timeout;                      // every gamma transition timeout value, used when smooth GAMMA transitions are enabled
-    int long_transition;                    // flag to enable a very long smooth transition for gamma (redshift-like)
-    int ambient_gamma;                      // enable gamma adjustments based on ambient backlight
-    int restore;                            // whether gamma should be restored on Clight exit
 } gamma_conf_t;
 
 typedef struct {
+    X_DAYTIME_CONF
     char day_events[SIZE_EVENTS][10];       // sunrise/sunset times passed from cmdline opts (if setted, location module won't be started)
-    int event_duration;                     // duration of an event (by default 30mins, ie: it starts 30mins before an event and ends 30mins after)
     loc_t loc;                              // user location as loaded by config
     int events_os[SIZE_EVENTS];             // offset for each event
 } daytime_conf_t;
 
 typedef struct {
-    int disabled;
-    double dimmed_pct;                      // pct of max backlight to be used while dimming
+    X_DIMMER_CONF
     int timeout[SIZE_AC];                   // dimmer timeout
     bl_smooth_t smooth[SIZE_DIM];
 } dimmer_conf_t;
 
 typedef struct {
-    int disabled;
+    X_DPMS_CONF
     int timeout[SIZE_AC];                   // dpms timeouts
 } dpms_conf_t;
 
 typedef struct {
-    int disabled;
+    X_SCREEN_CONF
     int timeout[SIZE_AC];                   // screen timeouts
-    double contrib;                         // how much does screen-emitted brightness affect ambient brightness (eg 0.1)
-    int samples;                            // number of samples used to compute average screen-emitted brightness
 } screen_conf_t;
 
 typedef struct {
-    int disabled;
-    int inhibit_docked;                     // whether to manage "docked" states as inhibitions. Requires UPower.
-    int inhibit_pm;                         // whether handle inhibition suppressing powermanagement too
-    int inhibit_bl;                         // whether to inhibit backlight module too
+    X_INH_CONF
 } inh_conf_t;
 
 /* Struct that holds global config as passed through cmdline args/config file reading */
@@ -123,10 +165,11 @@ typedef struct {
     dpms_conf_t dpms_conf;
     screen_conf_t screen_conf;
     inh_conf_t inh_conf;
-    int verbose;                            // whether verbose mode is enabled
+    X_GENERIC_CONF
     int wizard;                             // whether wizard mode is enabled
-    int resumedelay;                        // delay on resume from suspend
 } conf_t;
+
+#undef X_CONF
 
 /* Global state of program */
 

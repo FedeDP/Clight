@@ -43,91 +43,109 @@ void open_log(void) {
     ftruncate(fd, 0);
 }
 
+#define X_CONF(tp, name, def) \
+    do { \
+        if (strcmp(#name, "disabled") == 0) break; \
+        const char *fmt = \
+        _Generic((conf->name), \
+            int: "* %s: \t\t%d\n", \
+            double: "* %s: \t\t%.2lf\n", \
+            const char *: "* %s: \t\t%s\n", \
+            bool_to_int: "* %s: \t\t%d\n"); \
+            \
+        fprintf(log_file, fmt, #name, conf->name); \
+    } while(0);
+
 static void log_bl_smooth(bl_smooth_t *smooth, const char *prefix) {
-    fprintf(log_file, "* %sSmooth trans:\t\t%s\n", prefix, smooth->no_smooth ? "Disabled" : "Enabled");
-    fprintf(log_file, "* %sSmooth step:\t\t%.2lf\n", prefix, smooth->trans_step);
-    fprintf(log_file, "* %sSmooth timeout:\t\t%d\n", prefix, smooth->trans_timeout);
-    fprintf(log_file, "* %sSmooth fixed:\t\t%d\n", prefix, smooth->trans_fixed);
+    fprintf(log_file, "* no_smooth_transition[%s]:\t\t%d\n", prefix, smooth->no_smooth);
+    fprintf(log_file, "* trans_step[%s]:\t\t%.2lf\n", prefix, smooth->trans_step);
+    fprintf(log_file, "* trans_timeout[%s]:\t\t%d\n", prefix, smooth->trans_timeout);
+    fprintf(log_file, "* trans_fixed[%s]:\t\t%d\n", prefix, smooth->trans_fixed);
 }
 
-static void log_bl_conf(bl_conf_t *bl_conf) {
+static void log_generic_conf(conf_t *conf) {
+    fprintf(log_file, "\n### GENERIC ###\n");
+    
+    X_GENERIC_CONF
+}
+
+static void log_bl_conf(bl_conf_t *conf) {
     fprintf(log_file, "\n### BACKLIGHT ###\n");
-    log_bl_smooth(&conf.bl_conf.smooth, "");
-    fprintf(log_file, "* Daily timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][DAY], bl_conf->timeout[ON_BATTERY][DAY]);
-    fprintf(log_file, "* Nightly timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][NIGHT], bl_conf->timeout[ON_BATTERY][NIGHT]);
-    fprintf(log_file, "* Event timeouts:\t\tAC %d\tBATT %d\n", bl_conf->timeout[ON_AC][SIZE_STATES], bl_conf->timeout[ON_BATTERY][SIZE_STATES]);
-    fprintf(log_file, "* Shutter threshold:\t\t%.2lf\n", bl_conf->shutter_threshold);
-    fprintf(log_file, "* Autocalibration:\t\t%s\n", bl_conf->no_auto_calib ? "Disabled" : "Enabled");
-    fprintf(log_file, "* Pause on lid closed:\t\t%s\n", bl_conf->pause_on_lid_closed ? "Enabled" : "Disabled");
-    fprintf(log_file, "* Capture on lid opened:\t\t%s\n", bl_conf->capture_on_lid_opened ? "Enabled" : "Disabled");
-    fprintf(log_file, "* Restore On Exit:\t\t%s\n", bl_conf->restore ? "Enabled" : "Disabled");
+    
+    fprintf(log_file, "* timeouts[DAY]:\t\tAC %d\tBATT %d\n", conf->timeout[ON_AC][DAY], conf->timeout[ON_BATTERY][DAY]);
+    fprintf(log_file, "* timeouts[NIGHT]:\t\tAC %d\tBATT %d\n", conf->timeout[ON_AC][NIGHT], conf->timeout[ON_BATTERY][NIGHT]);
+    fprintf(log_file, "* timeouts[EVENT]:\t\tAC %d\tBATT %d\n", conf->timeout[ON_AC][SIZE_STATES], conf->timeout[ON_BATTERY][SIZE_STATES]);
+    
+    X_BL_CONF
 }
 
-static void log_sens_conf(sensor_conf_t *sens_conf) {
+static void log_sens_conf(sensor_conf_t *conf) {
     fprintf(log_file, "\n### SENSOR ###\n");
-    fprintf(log_file, "* Captures:\t\tAC %d\tBATT %d\n", sens_conf->num_captures[ON_AC], sens_conf->num_captures[ON_BATTERY]);
-    fprintf(log_file, "* Device:\t\t%s\n", sens_conf->dev_name ? sens_conf->dev_name : "Unset");
-    fprintf(log_file, "* Settings:\t\t%s\n", sens_conf->dev_opts ? sens_conf->dev_opts : "Unset");
+    fprintf(log_file, "* captures:\t\tAC %d\tBATT %d\n", conf->num_captures[ON_AC], conf->num_captures[ON_BATTERY]);
+   
+    X_SENS_CONF
 }
 
-static void log_kbd_conf(kbd_conf_t *kbd_conf) {
+static void log_kbd_conf(kbd_conf_t *conf) {
     fprintf(log_file, "\n### KEYBOARD ###\n");
-    fprintf(log_file, "* Dim:\t\t%s\n", kbd_conf->dim ? "Enabled" : "Disabled");
-    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", kbd_conf->timeout[ON_AC], kbd_conf->timeout[ON_BATTERY]);
+    fprintf(log_file, "* timeouts:\t\tAC %d\tBATT %d\n", conf->timeout[ON_AC], conf->timeout[ON_BATTERY]);
+    
+    X_KBD_CONF
 }
 
-static void log_gamma_conf(gamma_conf_t *gamma_conf) {
+static void log_gamma_conf(gamma_conf_t *conf) {
     fprintf(log_file, "\n### GAMMA ###\n");
-    fprintf(log_file, "* Smooth trans:\t\t%s\n", gamma_conf->no_smooth ? "Disabled" : "Enabled");
-    fprintf(log_file, "* Smooth steps:\t\t%d\n", gamma_conf->trans_step);
-    fprintf(log_file, "* Smooth timeout:\t\t%d\n", gamma_conf->trans_timeout);
-    fprintf(log_file, "* Daily screen temp:\t\t%d\n", gamma_conf->temp[DAY]);
-    fprintf(log_file, "* Nightly screen temp:\t\t%d\n", gamma_conf->temp[NIGHT]);
-    fprintf(log_file, "* Long transition:\t\t%s\n", gamma_conf->long_transition ? "Enabled" : "Disabled");
-    fprintf(log_file, "* Ambient gamma:\t\t%s\n", gamma_conf->ambient_gamma ? "Enabled" : "Disabled");
-    fprintf(log_file, "* Restore On Exit:\t\t%s\n", gamma_conf->restore ? "Enabled" : "Disabled");
+    fprintf(log_file, "* temp[DAY]:\t\t%d\n", conf->temp[DAY]);
+    fprintf(log_file, "* temp[NIGHT]:\t\t%d\n", conf->temp[NIGHT]);
+    
+    X_GAMMA_CONF
 }
 
-static void log_daytime_conf(daytime_conf_t *day_conf) {
+static void log_daytime_conf(daytime_conf_t *conf) {
     fprintf(log_file, "\n### DAYTIME ###\n");
-    if (day_conf->loc.lat != LAT_UNDEFINED && day_conf->loc.lon != LON_UNDEFINED) {
-        fprintf(log_file, "* User position:\t\t%.2lf\t%.2lf\n", day_conf->loc.lat, day_conf->loc.lon);
+    if (conf->loc.lat != LAT_UNDEFINED && conf->loc.lon != LON_UNDEFINED) {
+        fprintf(log_file, "* location:\t\t%.2lf\t%.2lf\n", conf->loc.lat, conf->loc.lon);
     } else {
-        fprintf(log_file, "* User position:\t\tUnset\n");
+        fprintf(log_file, "* location:\t\tUnset\n");
     }
-    fprintf(log_file, "* User set sunrise:\t\t%s\n", is_string_empty(day_conf->day_events[SUNRISE]) ? "Unset" : day_conf->day_events[SUNRISE]);
-    fprintf(log_file, "* User set sunset:\t\t%s\n", is_string_empty(day_conf->day_events[SUNSET]) ? "Unset" : day_conf->day_events[SUNSET]);
-    fprintf(log_file, "* Event duration:\t\t%d\n", day_conf->event_duration);
-    fprintf(log_file, "* Sunrise offset:\t\t%d\n", day_conf->events_os[SUNRISE]);
-    fprintf(log_file, "* Sunset offset:\t\t%d\n", day_conf->events_os[SUNSET]);
+    fprintf(log_file, "* sunrise:\t\t%s\n", is_string_empty(conf->day_events[SUNRISE]) ? "Unset" : conf->day_events[SUNRISE]);
+    fprintf(log_file, "* sunset:\t\t%s\n", is_string_empty(conf->day_events[SUNSET]) ? "Unset" : conf->day_events[SUNSET]);
+    fprintf(log_file, "* sunrise offset:\t\t%d\n", conf->events_os[SUNRISE]);
+    fprintf(log_file, "* sunset offset:\t\t%d\n", conf->events_os[SUNSET]);
+    
+    X_DAYTIME_CONF
 }
 
-static void log_dim_conf(dimmer_conf_t *dim_conf) {
+static void log_dim_conf(dimmer_conf_t *conf) {
     fprintf(log_file, "\n### DIMMER ###\n");
-    log_bl_smooth(&conf.dim_conf.smooth[ENTER], "ENTER ");
-    log_bl_smooth(&conf.dim_conf.smooth[EXIT], "EXIT ");
-    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", dim_conf->timeout[ON_AC], dim_conf->timeout[ON_BATTERY]);
-    fprintf(log_file, "* Backlight pct:\t\t%.2lf\n", dim_conf->dimmed_pct);
+    fprintf(log_file, "* timeouts:\t\tAC %d\tBATT %d\n", conf->timeout[ON_AC], conf->timeout[ON_BATTERY]);
+    log_bl_smooth(&conf->smooth[ENTER], "ENTER");
+    log_bl_smooth(&conf->smooth[EXIT], "EXIT");
+    
+    X_DIMMER_CONF
 }
 
-static void log_dpms_conf(dpms_conf_t *dpms_conf) {
+static void log_dpms_conf(dpms_conf_t *conf) {
     fprintf(log_file, "\n### DPMS ###\n");
-    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", dpms_conf->timeout[ON_AC], dpms_conf->timeout[ON_BATTERY]);
+    fprintf(log_file, "* timeouts:\t\tAC %d\tBATT %d\n", conf->timeout[ON_AC], conf->timeout[ON_BATTERY]);
+    
+    X_DPMS_CONF
 }
 
-static void log_scr_conf(screen_conf_t *screen_conf) {
+static void log_scr_conf(screen_conf_t *conf) {
     fprintf(log_file, "\n### SCREEN ###\n");
-    fprintf(log_file, "* Timeouts:\t\tAC %d\tBATT %d\n", screen_conf->timeout[ON_AC], screen_conf->timeout[ON_BATTERY]);
-    fprintf(log_file, "* Contrib:\t\t%.2lf\n", screen_conf->contrib);
-    fprintf(log_file, "* Samples:\t\t%d\n", screen_conf->samples);
+    fprintf(log_file, "* timeouts:\t\tAC %d\tBATT %d\n", conf->timeout[ON_AC], conf->timeout[ON_BATTERY]);
+    
+    X_SCREEN_CONF
 }
 
-static void log_inh_conf(inh_conf_t *inh_conf) {
+static void log_inh_conf(inh_conf_t *conf) {
     fprintf(log_file, "\n### INHIBIT ###\n");
-    fprintf(log_file, "* Docked:\t\t%s\n", inh_conf->inhibit_docked ? "Enabled" : "Disabled");
-    fprintf(log_file, "* PowerManagement:\t\t%s\n", inh_conf->inhibit_pm ? "Enabled" : "Disabled");
-    fprintf(log_file, "* Backlight:\t\t%s\n", inh_conf->inhibit_bl ? "Enabled" : "Disabled");
+   
+    X_INH_CONF
 }
+
+#undef X_CONF
 
 void log_conf(void) {
     if (log_file) {
@@ -142,9 +160,7 @@ void log_conf(void) {
         
         fprintf(log_file, "Starting options:\n");
         
-        fprintf(log_file, "\n### GENERIC ###\n");
-        fprintf(log_file, "* Verbose (debug):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
-        fprintf(log_file, "* ResumeDelay:\t\t%d\n", conf.resumedelay);
+        log_generic_conf(&conf);
         
         if (!conf.bl_conf.disabled) {
             log_bl_conf(&conf.bl_conf);

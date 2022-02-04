@@ -73,7 +73,7 @@ bool validate_temp(temp_upd *up) {
     }
     
     if (up->smooth == -1) {
-        up->smooth = !conf.gamma_conf.no_smooth;
+        up->smooth = !conf.gamma_conf.no_smooth_transition;
         up->step = conf.gamma_conf.trans_step;
         up->timeout = conf.gamma_conf.trans_timeout;
     }
@@ -89,7 +89,7 @@ bool validate_temp(temp_upd *up) {
 }
 
 bool validate_autocalib(calib_upd *up) {
-    if (conf.bl_conf.no_auto_calib != up->new) {
+    if (conf.bl_conf.no_auto_calibration != up->new) {
         return true;
     }
     DEBUG("Failed to validate autocalib request.\n");
@@ -119,9 +119,15 @@ bool validate_curve(curve_upd *up) {
 bool validate_backlight(bl_upd *up) {
     bl_smooth_t *smooth = NULL;
     switch (up->smooth) {
-    case -1:
-        smooth = &conf.bl_conf.smooth;
+    case -1: {
+        static bl_smooth_t sm;
+        sm.no_smooth = conf.bl_conf.no_smooth_transition;
+        sm.trans_fixed = conf.bl_conf.trans_fixed;
+        sm.trans_step = conf.bl_conf.trans_step;
+        sm.trans_timeout = conf.bl_conf.trans_timeout;
+        smooth = &sm;
         break;
+    }
     case -2:
         smooth = &conf.dim_conf.smooth[ENTER];
         break;

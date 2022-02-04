@@ -27,13 +27,13 @@ static const self_t *daytime_ref;
 static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("AmbientGamma", "b", NULL, set_ambgamma, offsetof(gamma_conf_t, ambient_gamma), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(gamma_conf_t, no_smooth), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(gamma_conf_t, no_smooth_transition), 0),
     SD_BUS_WRITABLE_PROPERTY("TransStep", "i", NULL, NULL, offsetof(gamma_conf_t, trans_step), 0),
     SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(gamma_conf_t, trans_timeout), 0),
     SD_BUS_WRITABLE_PROPERTY("DayTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("LongTransition", "b", NULL, NULL, offsetof(gamma_conf_t, long_transition), 0),
-    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(gamma_conf_t, restore), 0),
+    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(gamma_conf_t, restore_on_exit), 0),
     SD_BUS_VTABLE_END
 };
 
@@ -135,7 +135,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         pause_mod(state.suspended, SUSPEND);
         break;
     case SYSTEM_UPD:
-        if (msg->ps_msg->type == LOOP_STOPPED && initial_temp && conf.gamma_conf.restore) {
+        if (msg->ps_msg->type == LOOP_STOPPED && initial_temp && conf.gamma_conf.restore_on_exit) {
             set_temp(initial_temp, NULL, false, 0, 0);
         }
         break;    
@@ -217,7 +217,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
         
     int r = call(&args, "ssi(buu)", fetch_display(), fetch_env(), temp, smooth, step, timeout);    
     if (!r && ok) {
-        if (!long_transitioning && conf.gamma_conf.no_smooth) {
+        if (!long_transitioning && conf.gamma_conf.no_smooth_transition) {
             INFO("%d gamma temp set.\n", temp);
             // we do not publish TEMP_UPD here as it will be published by on_temp_changed()
         } else {
@@ -233,7 +233,7 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
 static void ambient_callback(bool smooth, double new) {
     if (conf.gamma_conf.ambient_gamma && !state.display_state) {
         /* Only account for target backlight changes, ie: not step ones */
-        if (smooth || conf.bl_conf.smooth.no_smooth) {
+        if (smooth || conf.bl_conf.no_smooth_transition) {
             /* 
             * Note that conf.temp is not constant (it can be changed through bus api),
             * thus we have to always compute these ones.
@@ -243,7 +243,7 @@ static void ambient_callback(bool smooth, double new) {
                                 conf.gamma_conf.temp[NIGHT] : conf.gamma_conf.temp[DAY]; 
             
             const int ambient_temp = (diff * new) + min_temp;
-            set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth, 
+            set_temp(ambient_temp, NULL, !conf.gamma_conf.no_smooth_transition, 
                     conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout); // force refresh (passing NULL time_t*)
         }
     }
@@ -280,7 +280,7 @@ static void on_daytime_req(void) {
     last_t = t;
         
     if (!long_transitioning && !conf.gamma_conf.ambient_gamma) {
-        set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth, 
+        set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth_transition, 
                  conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
     }
 }
@@ -290,7 +290,7 @@ static void on_ambgamma_req(ambgamma_upd *up) {
     if (!up->new) {
         // restore correct screen temp -> force refresh (passing NULL time_t*)
         // Note that long_transitioning cannot be true because we were in ambient gamma mode
-        set_temp(conf.gamma_conf.temp[state.day_time], NULL, !conf.gamma_conf.no_smooth, 
+        set_temp(conf.gamma_conf.temp[state.day_time], NULL, !conf.gamma_conf.no_smooth_transition, 
                  conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
     } else {
         // Immediately set correct temp for current bl pct

@@ -1,8 +1,13 @@
 ## 4.9
 
 ### Generic
-- [ ] Port to libmodule 6.0.0 (?)
-- [ ] Add a Dump dbus method (and a DUMP_REQ request) to allow any module to dump their state (module_dump()) to a txt file
+- [x] automatic config parser/dumper: use X_Macro to declare config fields
+- [x] Possibly same for log_conf().
+- [x] Fix conf namings that now must match clight.conf namings
+- [x] Fix bl_smooth_t for backlight too (?) See validate_backlight()
+- [ ] Implement for simple arrays too (? is this feasible?)
+
+- [ ] fix check_X_conf() ? May be specify value ranges in X_CONF macro?
 
 ### Pinephone
 - [ ] Finalize support

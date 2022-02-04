@@ -43,13 +43,13 @@ static sd_bus_slot *sens_slot, *bl_slot, *if_a_slot, *if_r_slot;
 static char *backlight_interface; // main backlight interface used to only publish BL_UPD msgs for a single backlight sn
 static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calib), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoAutoCalib", "b", NULL, set_auto_calib, offsetof(bl_conf_t, no_auto_calibration), 0),
     SD_BUS_WRITABLE_PROPERTY("InhibitOnLidClosed", "b", NULL, NULL, offsetof(bl_conf_t, pause_on_lid_closed), 0),
     SD_BUS_WRITABLE_PROPERTY("CaptureOnLidOpened", "b", NULL, NULL, offsetof(bl_conf_t, capture_on_lid_opened), 0),
-    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, smooth.no_smooth), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, smooth.trans_step), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, smooth.trans_timeout), 0),
-    SD_BUS_WRITABLE_PROPERTY("TransFixed", "i", NULL, NULL, offsetof(bl_conf_t, smooth.trans_fixed), 0),
+    SD_BUS_WRITABLE_PROPERTY("NoSmooth", "b", NULL, NULL, offsetof(bl_conf_t, no_smooth_transition), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransStep", "d", NULL, NULL, offsetof(bl_conf_t, trans_step), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransDuration", "i", NULL, NULL, offsetof(bl_conf_t, trans_timeout), 0),
+    SD_BUS_WRITABLE_PROPERTY("TransFixed", "i", NULL, NULL, offsetof(bl_conf_t, trans_fixed), 0),
     SD_BUS_WRITABLE_PROPERTY("ShutterThreshold", "d", NULL, NULL, offsetof(bl_conf_t, shutter_threshold), 0),
     SD_BUS_WRITABLE_PROPERTY("AcDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_AC][NIGHT]), 0),
@@ -57,14 +57,14 @@ static const sd_bus_vtable conf_bl_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("BattDayTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][DAY]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattNightTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattEventTimeout", "i", NULL, set_timeouts, offsetof(bl_conf_t, timeout[ON_BATTERY][IN_EVENT]), 0),
-    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(bl_conf_t, restore), 0),
+    SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(bl_conf_t, restore_on_exit), 0),
     SD_BUS_VTABLE_END
 };
 
 static const sd_bus_vtable conf_sens_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("Device", "s", NULL, NULL, offsetof(sensor_conf_t, dev_name), 0),
-    SD_BUS_WRITABLE_PROPERTY("Settings", "s", NULL, NULL, offsetof(sensor_conf_t, dev_opts), 0),
+    SD_BUS_WRITABLE_PROPERTY("Device", "s", NULL, NULL, offsetof(sensor_conf_t, devname), 0),
+    SD_BUS_WRITABLE_PROPERTY("Settings", "s", NULL, NULL, offsetof(sensor_conf_t, settings), 0),
     SD_BUS_WRITABLE_PROPERTY("AcCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattCaptures", "i", NULL, NULL, offsetof(sensor_conf_t, num_captures[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(sensor_conf_t, default_curve[ON_AC]), 0),
@@ -147,8 +147,8 @@ static void destroy(void) {
         close(bl_fd);
     }
     free(backlight_interface);
-    free(conf.sens_conf.dev_name);
-    free(conf.sens_conf.dev_opts);
+    free((char *)conf.sens_conf.devname);
+    free((char *)conf.sens_conf.settings);
     map_free(conf.sens_conf.specific_curves);
 }
 
@@ -207,7 +207,7 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         /* Eventually pause backlight if sensor is not available */
         on_sensor_change(NULL, NULL, NULL);
         
-        if (conf.bl_conf.no_auto_calib) {
+        if (conf.bl_conf.no_auto_calibration) {
             /*
              * If automatic calibration is disabled, we need to ensure to start
              * from a well known backlight level for DIMMER to correctly work.
@@ -216,7 +216,7 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
              * Note: set smooth field from conf to allow keyboard and gamma to react;
              * > if (up->smooth || conf.bl_conf.no_smooth) { ... }
              */
-            set_backlight_level(1.0, !conf.bl_conf.smooth.no_smooth, 0, 0);
+            set_backlight_level(1.0, !conf.bl_conf.no_smooth_transition, 0, 0);
             pause_mod(AUTOCALIB);
         }
         if (state.lid_state) {
@@ -296,7 +296,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
     case SYSTEM_UPD:
-        if (msg->ps_msg->type == LOOP_STOPPED && conf.bl_conf.restore) {
+        if (msg->ps_msg->type == LOOP_STOPPED && conf.bl_conf.restore_on_exit) {
             set_each_brightness(-1.0f, 0, 0);
         }
         break; 
@@ -366,7 +366,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         break;
     }
     case SYSTEM_UPD:
-        if (msg->ps_msg->type == LOOP_STOPPED && conf.bl_conf.restore) {
+        if (msg->ps_msg->type == LOOP_STOPPED && conf.bl_conf.restore_on_exit) {
             set_each_brightness(-1.0f, 0, 0);
         }
         break; 
@@ -441,7 +441,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 static int is_sensor_available(void) {
     int available = 0;
     SYSBUS_ARG_REPLY(args, parse_bus_reply, &available, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "IsAvailable");
-    int r = call(&args, "s", conf.sens_conf.dev_name);
+    int r = call(&args, "s", conf.sens_conf.devname);
     return r == 0 && available;
 }
 
@@ -545,9 +545,9 @@ static void set_backlight_level(const double pct, const bool is_smooth, double s
 
 static int capture_frames_brightness(void) {
     SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Sensor", "org.clightd.clightd.Sensor", "Capture");
-    return call(&args, "sis", conf.sens_conf.dev_name, 
+    return call(&args, "sis", conf.sens_conf.devname, 
                 conf.sens_conf.num_captures[state.ac_state], 
-                conf.sens_conf.dev_opts);
+                conf.sens_conf.settings);
 }
 
 /* Callback on upower ac state changed signal */
@@ -558,8 +558,8 @@ static void upower_callback(void) {
 /* Callback on "NoAutoCalib" bus exposed writable property */
 static void interface_autocalib_callback(bool new_val) {
     INFO("Backlight autocalibration %s.\n", new_val ? "disabled" : "enabled");
-    conf.bl_conf.no_auto_calib = new_val;
-    if (conf.bl_conf.no_auto_calib) {
+    conf.bl_conf.no_auto_calibration = new_val;
+    if (conf.bl_conf.no_auto_calibration) {
         pause_mod(AUTOCALIB);
     } else {
         resume_mod(AUTOCALIB);

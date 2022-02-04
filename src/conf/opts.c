@@ -36,20 +36,25 @@ static double *kbd_default_curve[SIZE_AC] = {
     (double[]){ 0.80, 0.78, 0.75, 0.71, 0.65, 0.59, 0.52, 0.36, 0.23, 0.15, 0.0 },
 };
 
-static void init_backlight_opts(bl_conf_t *bl_conf) {
-    bl_conf->timeout[ON_AC][DAY] = 10 * 60;
-    bl_conf->timeout[ON_AC][NIGHT] = 45 * 60;
-    bl_conf->timeout[ON_AC][IN_EVENT] = 5 * 60;
-    bl_conf->timeout[ON_BATTERY][DAY] = 2 * conf.bl_conf.timeout[ON_AC][DAY];
-    bl_conf->timeout[ON_BATTERY][NIGHT] = 2 * conf.bl_conf.timeout[ON_AC][NIGHT];
-    bl_conf->timeout[ON_BATTERY][IN_EVENT] = 2 * conf.bl_conf.timeout[ON_AC][IN_EVENT];
-    bl_conf->smooth.trans_step = 0.05;
-    bl_conf->smooth.trans_timeout = 30;
+#define X_CONF(tp, name, def) \
+    conf->name = def;
+
+static void init_backlight_opts(bl_conf_t *conf) {
+    X_BL_CONF
+    
+    conf->timeout[ON_AC][DAY] = 10 * 60;
+    conf->timeout[ON_AC][NIGHT] = 45 * 60;
+    conf->timeout[ON_AC][IN_EVENT] = 5 * 60;
+    conf->timeout[ON_BATTERY][DAY] = 2 * conf->timeout[ON_AC][DAY];
+    conf->timeout[ON_BATTERY][NIGHT] = 2 * conf->timeout[ON_AC][NIGHT];
+    conf->timeout[ON_BATTERY][IN_EVENT] = 2 * conf->timeout[ON_AC][IN_EVENT];
 }
 
-static void init_sens_opts(sensor_conf_t *sens_conf) {
-    sens_conf->num_captures[ON_AC] = 5;
-    sens_conf->num_captures[ON_BATTERY] = 5;
+static void init_sens_opts(sensor_conf_t *conf) {
+    X_SENS_CONF
+
+    conf->num_captures[ON_AC] = 5;
+    conf->num_captures[ON_BATTERY] = 5;
     /*
      * Default polynomial regression points:
      * ON AC                ON BATTERY
@@ -67,12 +72,12 @@ static void init_sens_opts(sensor_conf_t *sens_conf) {
      * Where X is ambient brightness and Y is backlight level.
      * Empirically built (fast growing curve for lower values, and flattening m for values near 1)
      */
-    sens_conf->default_curve[ON_AC].num_points = DEF_SIZE_POINTS;
-    sens_conf->default_curve[ON_BATTERY].num_points = DEF_SIZE_POINTS;
-    memcpy(sens_conf->default_curve[ON_AC].points,
+    conf->default_curve[ON_AC].num_points = DEF_SIZE_POINTS;
+    conf->default_curve[ON_BATTERY].num_points = DEF_SIZE_POINTS;
+    memcpy(conf->default_curve[ON_AC].points,
            bl_default_curve[ON_AC],
            DEF_SIZE_POINTS * sizeof(double));
-    memcpy(sens_conf->default_curve[ON_BATTERY].points,
+    memcpy(conf->default_curve[ON_BATTERY].points,
            bl_default_curve[ON_BATTERY],
            DEF_SIZE_POINTS * sizeof(double));
 }
@@ -81,53 +86,61 @@ static void init_override_opts(sensor_conf_t *sens_conf) {
     sens_conf->specific_curves = map_new(true, free);
 }
 
-static void init_kbd_opts(kbd_conf_t *kbd_conf) {
-    kbd_conf->timeout[ON_AC] = 15;
-    kbd_conf->timeout[ON_BATTERY] = 5;
-    kbd_conf->curve[ON_AC].num_points = DEF_SIZE_POINTS;
-    kbd_conf->curve[ON_BATTERY].num_points = DEF_SIZE_POINTS;
-    memcpy(kbd_conf->curve[ON_AC].points,
+static void init_kbd_opts(kbd_conf_t *conf) {
+    X_KBD_CONF
+
+    conf->timeout[ON_AC] = 15;
+    conf->timeout[ON_BATTERY] = 5;
+    conf->curve[ON_AC].num_points = DEF_SIZE_POINTS;
+    conf->curve[ON_BATTERY].num_points = DEF_SIZE_POINTS;
+    memcpy(conf->curve[ON_AC].points,
            kbd_default_curve[ON_AC],
            DEF_SIZE_POINTS * sizeof(double));
-    memcpy(kbd_conf->curve[ON_BATTERY].points,
+    memcpy(conf->curve[ON_BATTERY].points,
            kbd_default_curve[ON_BATTERY],
            DEF_SIZE_POINTS * sizeof(double));
 }
 
-static void init_gamma_opts(gamma_conf_t *gamma_conf) {
-    gamma_conf->temp[DAY] = 6500;
-    gamma_conf->temp[NIGHT] = 4000;
-    gamma_conf->trans_step = 50;
-    gamma_conf->trans_timeout = 300;
+static void init_gamma_opts(gamma_conf_t *conf) {
+    X_GAMMA_CONF
+    
+    conf->temp[DAY] = 6500;
+    conf->temp[NIGHT] = 4000;
 }
 
-static void init_daytime_opts(daytime_conf_t *day_conf) {
-    day_conf->event_duration = 30 * 60;
-    day_conf->loc.lat = LAT_UNDEFINED;
-    day_conf->loc.lon = LON_UNDEFINED;
+static void init_daytime_opts(daytime_conf_t *conf) {
+    X_DAYTIME_CONF
+
+    conf->loc.lat = LAT_UNDEFINED;
+    conf->loc.lon = LON_UNDEFINED;
 }
 
-static void init_dimmer_opts(dimmer_conf_t *dim_conf) {
-    dim_conf->timeout[ON_AC] = 45;
-    dim_conf->timeout[ON_BATTERY] = 20;
-    dim_conf->dimmed_pct = 0.2;
-    dim_conf->smooth[ENTER].trans_step = 0.05;
-    dim_conf->smooth[EXIT].trans_step = 0.05;
-    dim_conf->smooth[ENTER].trans_timeout = 30;
-    dim_conf->smooth[EXIT].trans_timeout = 30;
+static void init_dimmer_opts(dimmer_conf_t *conf) {
+    X_DIMMER_CONF
+    
+    conf->timeout[ON_AC] = 45;
+    conf->timeout[ON_BATTERY] = 20;
+    conf->smooth[ENTER].trans_step = 0.05;
+    conf->smooth[EXIT].trans_step = 0.05;
+    conf->smooth[ENTER].trans_timeout = 30;
+    conf->smooth[EXIT].trans_timeout = 30;
 }
 
-static void init_dpms_opts(dpms_conf_t *dpms_conf) {
-    dpms_conf->timeout[ON_AC] = 900;
-    dpms_conf->timeout[ON_BATTERY] = 300;
+static void init_dpms_opts(dpms_conf_t *conf) {
+    X_DPMS_CONF
+
+    conf->timeout[ON_AC] = 900;
+    conf->timeout[ON_BATTERY] = 300;
 }
 
-static void init_screen_opts(screen_conf_t *screen_conf) {
-    screen_conf->timeout[ON_AC] = 30;
-    screen_conf->timeout[ON_BATTERY] = -1; // disabled on battery by default
-    screen_conf->contrib = 0.1;
-    screen_conf->samples = 10;
+static void init_screen_opts(screen_conf_t *conf) {
+    X_SCREEN_CONF
+    
+    conf->timeout[ON_AC] = 30;
+    conf->timeout[ON_BATTERY] = -1; // disabled on battery by default
 }
+
+#undef X_CONF
 
 /*
  * Init default config values,
@@ -170,9 +183,9 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
     poptContext pc;
     const struct poptOption po[] = {
         {"frames", 'f', POPT_ARG_INT, NULL, 5, "Frames taken for each capture, Between 1 and 20", NULL},
-        {"device", 'd', POPT_ARG_STRING, &conf.sens_conf.dev_name, 100, "Path to sensor device. If empty, first matching device is used", "video0"},
-        {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.bl_conf.smooth.no_smooth, 100, "Disable smooth backlight transitions", NULL},
-        {"no-gamma-smooth", 0, POPT_ARG_NONE, &conf.gamma_conf.no_smooth, 100, "Disable smooth gamma transitions", NULL},
+        {"device", 'd', POPT_ARG_STRING, &conf.sens_conf.devname, 100, "Path to sensor device. If empty, first matching device is used", "video0"},
+        {"no-backlight-smooth", 0, POPT_ARG_NONE, &conf.bl_conf.no_smooth_transition, 100, "Disable smooth backlight transitions", NULL},
+        {"no-gamma-smooth", 0, POPT_ARG_NONE, &conf.gamma_conf.no_smooth_transition, 100, "Disable smooth gamma transitions", NULL},
         {"no-dimmer-smooth-enter", 0, POPT_ARG_NONE, &conf.dim_conf.smooth[ENTER].no_smooth, 100, "Disable smooth dimmer transitions while entering dimmed state", NULL},
         {"no-dimmer-smooth-exit", 0, POPT_ARG_NONE, &conf.dim_conf.smooth[EXIT].no_smooth, 100, "Disable smooth dimmer transitions while leaving dimmed state", NULL},
         {"day-temp", 0, POPT_ARG_INT | POPT_ARGFLAG_SHOW_DEFAULT, &conf.gamma_conf.temp[DAY], 100, "Daily gamma temperature, between 1000 and 10000", NULL},
@@ -189,7 +202,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"no-kbd", 0, POPT_ARG_NONE, &conf.kbd_conf.disabled, 100, "Disable keyboard backlight calibration", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dim_conf.dimmed_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
-        {"no-auto-calib", 0, POPT_ARG_NONE, &conf.bl_conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
+        {"no-auto-calib", 0, POPT_ARG_NONE, &conf.bl_conf.no_auto_calibration, 100, "Disable screen backlight automatic calibration", NULL},
         {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.bl_conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 3, "Show version info", NULL},
         {"conf-file", 'c', POPT_ARG_STRING, NULL, 4, "Specify a conf file to be parsed", NULL},
@@ -216,7 +229,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
                 printf("%s: C daemon utility to automagically adjust screen backlight to match ambient brightness.\n"
                         "* Current version: %s\n"
                         "* https://github.com/FedeDP/Clight\n"
-                        "* Copyright (C) 2021  Federico Di Pierro <nierro92@gmail.com>\n"
+                        "* Copyright (C) 2022  Federico Di Pierro <nierro92@gmail.com>\n"
                         "* For more info, see man clight.1.\n", argv[0], VERSION);
                 exit(EXIT_SUCCESS);
             case 4:
@@ -284,14 +297,14 @@ static void check_clightd_features(void) {
 }
 
 static void check_bl_conf(bl_conf_t *bl_conf) {
-    if (bl_conf->smooth.trans_step <= 0.0f || bl_conf->smooth.trans_step >= 1.0f) {
+    if (bl_conf->trans_step <= 0.0f || bl_conf->trans_step >= 1.0f) {
         WARN("Wrong backlight_trans_step value. Resetting default value.\n");
-        bl_conf->smooth.trans_step = 0.05;
+        bl_conf->trans_step = 0.05;
     }
     
-    if (bl_conf->smooth.trans_timeout <= 0) {
+    if (bl_conf->trans_timeout <= 0) {
         WARN("Wrong backlight_trans_timeout value. Resetting default value.\n");
-        bl_conf->smooth.trans_timeout = 30;
+        bl_conf->trans_timeout = 30;
     }
     
     if (bl_conf->shutter_threshold < 0 || bl_conf->shutter_threshold >= 1) {
@@ -429,7 +442,7 @@ static void check_dim_conf(dimmer_conf_t *dim_conf) {
     }
 }
 
-static void check_dpms_conf(dpms_conf_t *dpms_conf) {    
+static void check_dpms_conf(dpms_conf_t *dpms_conf) {
     if (!conf.dim_conf.disabled) {
         if (dpms_conf->timeout[ON_AC] <= conf.dim_conf.timeout[ON_AC]) {
             WARN("DPMS AC timeout: wrong value (<= dimmer timeout). Resetting default value.\n");
@@ -454,9 +467,9 @@ static void check_screen_conf(screen_conf_t *screen_conf) {
         screen_conf->contrib = 0.1;
     }
     
-    if (screen_conf->samples < 0) {
+    if (screen_conf->num_samples < 0) {
         WARN("Wrong screen_samples value. Resetting default value.\n");
-        screen_conf->samples = 10;
+        screen_conf->num_samples = 10;
     }
 }
 
@@ -476,7 +489,7 @@ static void check_inh_conf(inh_conf_t *inh_conf) {
 static void check_conf(void) {
     /* Wizard mode; disable everything except backlight */
     if (conf.wizard) {
-        conf.bl_conf.no_auto_calib = true;
+        conf.bl_conf.no_auto_calibration = true;
         conf.kbd_conf.disabled = true;
         conf.gamma_conf.disabled = true;
         conf.dim_conf.disabled = true;
