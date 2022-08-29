@@ -8,7 +8,8 @@
 - - [x] BACKLIGHT
 - - [x] GAMMA
 - - [x] KEYBOARD
-- [ ] Somewhat less verbose backlight/kbdbacklight logs? :/ 
+- [ ] Somewhat less verbose backlight/kbdbacklight logs when using SCREEN module? :/ 
+- [x] Add a way to force-set gamma for current daytime from desktop file
 
 ### Backlight
 - [x] Support content based backlight calibration

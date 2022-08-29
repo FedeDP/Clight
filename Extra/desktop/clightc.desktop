@@ -31,3 +31,7 @@ Name=Pause all clight feature
 [Desktop Action Resume]
 Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Pause "b" false
 Name=Resume all clight features
+
+[Desktop Action ForceGamma]
+Exec=busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma DayTemp "i" -1 && busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma NightTemp "i" -1
+Name=Force-set gamma for current conditions

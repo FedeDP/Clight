@@ -185,7 +185,7 @@ typedef struct {
 typedef struct {
     enum day_states daytime;    // Mandatory for requests. Valued in updates. Special value: -1 -> current daytime
     int old;                    // Valued in updates. Useless for requests
-    int new;                    // Mandatory for requests. Valued in updates
+    int new;                    // Mandatory for requests. Valued in updates. Special value -1 -> use conf value
     int smooth;                 // Mandatory for requests. Valued in updates. Special value: -1 -> use conf values
     int step;                   // Only useful for requests. Valued in updates
     int timeout;                // Only useful for requests. Valued in updates

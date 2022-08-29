@@ -78,6 +78,10 @@ bool validate_temp(temp_upd *up) {
         up->timeout = conf.gamma_conf.trans_timeout;
     }
     
+    if (up->new == 0) {
+        up->new = conf.gamma_conf.temp[up->daytime];
+    }
+    
     /* Validate new temp: check clighd limits */
     if (up->new >= 1000 && up->new <= 10000 && 
         up->daytime >= DAY && up->daytime < SIZE_STATES) {
