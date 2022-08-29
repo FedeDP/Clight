@@ -4,7 +4,6 @@
 #include "utils.h"
 
 static void receive_waiting_state(const msg_t *msg, UNUSED const void *userdata);
-static void receive_paused(const msg_t *msg, UNUSED const void *userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int get_screen_brightness(void);
 static void timeout_callback(int old_val, bool reset);
@@ -27,7 +26,7 @@ DECLARE_MSG(screen_msg, SCREEN_BR_UPD);
 API(Screen, conf_screen_vtable, conf.screen_conf);
 MODULE_WITH_PAUSE("SCREEN");
 
-static void init(void) {
+static void init(void) {    
     M_SUB(AMBIENT_BR_UPD);
     M_SUB(SCR_TO_REQ);
     M_SUB(UPOWER_UPD);
@@ -68,20 +67,15 @@ static void receive_waiting_state(const msg_t *msg, UNUSED const void *userdata)
             module_deregister((self_t **)&self());
             return;
         }
+
+        m_unbecome();
         
         /* Start paused if screen timeout for current ac state is <= 0 */
         screen_fd = start_timer(CLOCK_BOOTTIME, conf.screen_conf.timeout[state.ac_state], 0);
         m_register_fd(screen_fd, false, NULL);
         timeout_callback(-1, false);
         
-        m_unbecome();
-        
-        if (paused_state) {
-            // Publish an empty message to let Backlight start
-            M_PUB(&screen_msg);
-        } else {
-            state.content = true;
-        }
+        pause_screen(conf.screen_conf.contrib == 0.0f, CONTRIB);
         break;
     }
     default:
@@ -93,9 +87,7 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
     switch (MSG_TYPE()) {
     case AMBIENT_BR_UPD:
         pause_screen(state.ambient_br < conf.bl_conf.shutter_threshold, CLOGGED);
-        if (!paused_state) {
-            get_screen_brightness();
-        }
+        get_screen_brightness();
         break;
     case FD_UPD:
         read_timer(screen_fd);
@@ -152,9 +144,9 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
         if (VALIDATE_REQ(up)) {
             conf.screen_conf.contrib = up->new;
             pause_screen(conf.screen_conf.contrib == 0.0f, CONTRIB);
+            // Refresh current screen brightness with new contrib!
             if (!paused_state) {
-                // Refresh screen brightness!
-                get_screen_brightness();
+                M_PUB(&screen_msg);
             }
         }
         break;
@@ -164,84 +156,28 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
     }
 }
 
-static void receive_paused(const msg_t *msg, UNUSED const void *userdata) {
-    switch (MSG_TYPE()) {
-        case AMBIENT_BR_UPD:
-            pause_screen(state.ambient_br < conf.bl_conf.shutter_threshold, CLOGGED);
-            break;
-        case UPOWER_UPD: {
-            upower_upd *up = (upower_upd *)MSG_DATA();
-            timeout_callback(conf.screen_conf.timeout[up->old], true);
-            break;
-        }
-        case DISPLAY_UPD:
-            pause_screen(state.display_state, DISPLAY);
-            break;
-        case SENS_UPD:
-            pause_screen(!state.sens_avail, SENSOR);
-            break;
-        case LID_UPD:
-            if (conf.bl_conf.pause_on_lid_closed) {
-                pause_screen(state.lid_state, LID);
-            }
-            break;
-        case SUSPEND_UPD:
-            pause_screen(state.suspended, SUSPEND);
-            break;
-        case SCR_TO_REQ: {
-            timeout_upd *up = (timeout_upd *)MSG_DATA();
-            if (VALIDATE_REQ(up)) {
-                const int old = conf.screen_conf.timeout[up->state];
-                conf.screen_conf.timeout[up->state] = up->new;
-                if (up->state == state.ac_state) {
-                    timeout_callback(old, true);
-                }
-            }
-            break;
-        }
-        case NO_AUTOCALIB_REQ: {
-            calib_upd *up = (calib_upd *)MSG_DATA();
-            if (VALIDATE_REQ(up)) {
-                pause_screen(up->new, AUTOCALIB);
-            }
-            break;
-        }
-        case INHIBIT_UPD: {
-            if (state.inhibited && conf.inh_conf.inhibit_bl) {
-                pause_screen(true, INHIBIT);
-            } else {
-                pause_screen(false, INHIBIT);
-            }
-            break;
-        }
-        case CONTRIB_REQ: {
-            contrib_upd *up = (contrib_upd *)MSG_DATA();
-            if (VALIDATE_REQ(up)) {
-                conf.screen_conf.contrib = up->new;
-                pause_screen(conf.screen_conf.contrib == 0.0f, CONTRIB);
-            }
-            break;
-        }
-        default:
-            break;
-    }
-}
-
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     int r = -EINVAL;
     if (!strcmp(member, "GetEmittedBrightness")) {
-        screen_msg.bl.old = state.screen_br;
         r = sd_bus_message_read(reply, "d", &state.screen_br);
-        screen_msg.bl.new = state.screen_br;
-        M_PUB(&screen_msg);
     }
     return r;
 }
 
 static int get_screen_brightness(void) {
+    if (paused_state) {
+        return 0;
+    }
+
     SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
     
-    return call(&args, "ss", fetch_display(), fetch_env());
+    screen_msg.bl.old = state.screen_br;
+    int ret = call(&args, "ss", fetch_display(), fetch_env());
+    if (ret == 0) {
+        screen_msg.bl.new = state.screen_br;
+        M_PUB(&screen_msg);
+    }
+    return ret;
 }
 
 static void timeout_callback(int old_val, bool reset) {
@@ -257,15 +193,14 @@ static void timeout_callback(int old_val, bool reset) {
 
 static void pause_screen(bool pause, enum mod_pause type) {
     if (CHECK_PAUSE(pause, type, "SCREEN")) {
-        state.content = !pause;
         if (pause) {
+            // We are paused: we do not provide any screen br anymore
+            state.screen_br = 0.0f;
             /* Stop capturing snapshots */
             m_deregister_fd(screen_fd);
-            m_become(paused);
         } else {
             /* Resume capturing */
             m_register_fd(screen_fd, false, NULL);
-            m_unbecome();
         }
     }
 }

@@ -43,6 +43,6 @@ const char *topics[] = {
     "ReqKbdTo",
     "ReqAmbGamma",
     "ReqKbdCurve",
-    "ScreenBr"
+    "ScreenBr",
 };
 _Static_assert(sizeof(topics) / sizeof(*topics) == MSGS_SIZE, "Undefined topic.");

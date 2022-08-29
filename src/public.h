@@ -235,6 +235,10 @@ typedef struct {
 } ambgamma_upd;
 
 typedef struct {
+    bool capture_only;          // Mandatory for requests. Whether clight should update backlight after screen-content capture.
+} screen_upd;
+
+typedef struct {
     const enum mod_msg_types type;
     union {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
@@ -256,6 +260,7 @@ typedef struct {
         capture_upd capture;    /* CAPTURE_REQ */
         sens_upd sens;          /* SENS_UPD */
         ambgamma_upd ambgamma;  /* AMB_GAMMA_REQ */
+        screen_upd screen;      /* SCREEN_REQ */
     };
 } message_t;
 

@@ -136,7 +136,6 @@ typedef struct {
  */
 typedef struct {
     bool looping;
-    bool content;                           // Whether content backlight is enabled (ie: SCREEN is running)
     double screen_br;                       // screen content brightness
     int in_event;                           // Whether we are in a TIME event +- conf.event_duration
     int inhibited;                          // whether screensaver inhibition is enabled

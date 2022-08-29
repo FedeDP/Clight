@@ -15,7 +15,7 @@ static void set_backlight_level(const double pct, const bool is_smooth, double s
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_autocalib_callback(bool new_val);
-static void reset_or_pause(int old_timeout);
+static void reset_or_pause(int old_timeout, bool reset);
 static void interface_curve_callback(double *regr_points, int num_points, enum ac_states s);
 static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
@@ -217,7 +217,7 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         /* Create the timerfd and eventually pause (if current timeout is <0) */
         bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
         m_register_fd(bl_fd, false, NULL);
-        reset_or_pause(-1);
+        reset_or_pause(-1, false);
         
         /* Eventually pause backlight if sensor is not available */
         on_sensor_change(NULL, NULL, NULL);
@@ -253,7 +253,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     case FD_UPD:
         read_timer(msg->fd_msg->fd);
         // When SCREEN module is running, capture only!
-        capture_req.capture.capture_only = state.content;
+        capture_req.capture.capture_only = state.screen_br != 0.0f;
         M_PUB(&capture_req);
         break;
     case SCREEN_BR_UPD:
@@ -327,6 +327,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
+    case SCREEN_BR_UPD:
+        if (!state.display_state) {
+            set_new_backlight();
+        }
+        break;
     case UPOWER_UPD:
         upower_callback();
         break;    
@@ -485,7 +490,7 @@ static void set_new_backlight(void) {
     curve_t *curve = &conf.sens_conf.default_curve[state.ac_state];
     
     const double new_bl = get_value_from_curve(state.ambient_br, curve);
-    if (!state.content) {
+    if (state.screen_br == 0.0f) {
         bl_req.bl.new = new_bl;
     } else {
         const double max = curve->points[curve->num_points - 1] > curve->points[0] ? curve->points[curve->num_points - 1] : curve->points[0];
@@ -497,7 +502,7 @@ static void set_new_backlight(void) {
     }
     // Less verbose: only log real backlight changes, unless we are in verbose mode
     if (bl_req.bl.new != state.current_bl_pct || conf.verbose) {
-        if (!state.content) {
+        if (state.screen_br == 0.0f) {
             INFO("Ambient brightness: %.3lf -> Screen backlight: %.3lf.\n", state.ambient_br, bl_req.bl.new);
         } else {
             INFO("Ambient brightness: %.3lf, Screen brightness: %.3lf -> Screen backlight: %.3lf.\n", 
@@ -614,13 +619,13 @@ static void interface_curve_callback(double *regr_points, int num_points, enum a
  * to pause BACKLIGHT if <= 0 timeout should be set,
  * else resuming it and setting correct timeout.
  */
-static void reset_or_pause(int old_timeout) {
+static void reset_or_pause(int old_timeout, bool reset) {
     const int new_timeout = get_current_timeout();
     if (new_timeout <= 0) {
         pause_mod(TIMEOUT);
     } else {
         resume_mod(TIMEOUT);
-        if (old_timeout != -1) {
+        if (reset) {
             reset_timer(bl_fd, old_timeout, new_timeout);
         }
     }
@@ -636,7 +641,7 @@ static void interface_timeout_callback(timeout_upd *up) {
         if (up->state == state.ac_state && 
             (up->daytime == state.day_time || (state.in_event && up->daytime == IN_EVENT))) {
             
-            reset_or_pause(old);
+            reset_or_pause(old, true);
         }
     } else {
         WARN("Failed to validate timeout request.\n");
@@ -681,7 +686,7 @@ static void time_callback(int old_val, const bool is_event) {
          */
         old_timeout = conf.bl_conf.timeout[state.ac_state][state.in_event ? state.day_time : IN_EVENT];
     }
-     reset_or_pause(old_timeout);
+     reset_or_pause(old_timeout, true);
 }
 
 /* Callback on SensorChanged clightd signal */

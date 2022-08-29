@@ -536,18 +536,14 @@ static int method_get_inhibit(sd_bus_message *m, void *userdata, sd_bus_error *r
 }
 
 /** Clight bus api **/
-                       
 static int method_capture(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
     int reset_timer, capture_only;
     VALIDATE_PARAMS(m, "bb", &reset_timer, &capture_only);
-    
+
     capture_req.capture.reset_timer = reset_timer;
     capture_req.capture.capture_only = capture_only;
-    if (state.content) {
-        capture_req.capture.capture_only = true;
-        INFO("Enforcing capture only in content based calibration mode.\n");
-    }
     M_PUB(&capture_req);
+
     return sd_bus_reply_method_return(m, NULL);
 }
 

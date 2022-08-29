@@ -43,7 +43,7 @@ static bool evaluate(void) {
 static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdata) {
     switch (MSG_TYPE()) {
     case UPOWER_UPD: {
-        int r = idle_init(client, &slot, conf.dpms_conf.timeout[state.ac_state], on_new_idle);
+        int r = idle_init(client, &slot, on_new_idle);
         if (r != 0) {
             WARN("Failed to init. Killing module.\n");
             module_deregister((self_t **)&self());
@@ -52,6 +52,9 @@ static void receive_waiting_acstate(const msg_t *msg, UNUSED const void *userdat
 
             SYSBUS_ARG(args, CLIGHTD_SERVICE, "/org/clightd/clightd/Dpms", "org.clightd.clightd.Dpms", "Changed");
             add_match(&args, &dpms_slot, on_new_idle);
+            
+            // Eventually pause dpms if initial timeout is <= 0, else set the initial timeout
+            timeout_callback();
         }
         break;
     }
@@ -115,7 +118,7 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         break;
     }
     default:
-        /* SIMULATE_REQ is not handled while inhibited */
+        /* SIMULATE_REQ is not handled while paused */
         break;
     }
 }

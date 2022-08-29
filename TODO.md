@@ -1,12 +1,14 @@
 ## 4.9 (5.0?)
 
 ### Generic
-- [ ] Fix MODULE_WITH_PAUSE modules: properly start in "paused" state if pause condition is met as soon as module starts
-
-### Sensor
-- [ ] Allow multiple sensors to be specified in priority order; those sensors will be stored in a list and the first available will be used.
-- [ ] Changes: -> is_sensor_available() that will be called on each of the listed sensors; first avaiable will become highest_prio_available_dev_name
-- [ ] capture_frames_brightness -> will use highest_prio_available_dev_name
+- [x] Fix MODULE_WITH_PAUSE modules: properly start in "paused" state if pause condition is met as soon as module starts
+- - [x] DIMMER
+- - [x] DPMS
+- - [x] SCREEN
+- - [x] BACKLIGHT
+- - [x] GAMMA
+- - [x] KEYBOARD
+- [ ] Somewhat less verbose backlight/kbdbacklight logs? :/ 
 
 ### Backlight
 - [x] Support content based backlight calibration
@@ -25,8 +27,9 @@
 ### KbdBacklight
 - [x] Port to use BL_UPD instead of ambient_upd: this way it works fine while content_based backlight is enabled, and follows monitor specific_curves and ambient gamma rule (ie: use default backlight curve as target)
 - [x] Better still: it allows KEYBOARD to react to external backlight changes too
-- [ ] TEST -> bl_upd when smoothing (may be ok -> smoother transitions) or becoming dimmed (should be ok as there is already an option to pause kbd when dimmed)
+- [x] TEST -> bl_upd when smoothing (smoother transitions) or becoming dimmed
 - [x] dim by default and drop config (why was it there in the first place?)
+- [x] Only set target_bl for smooth steps
 
 ### Backlight
 - [ ] Drop is_smooth option (no need, just specify a step/wait > 0)
@@ -36,6 +39,13 @@
 
 ### Dimmer
 - [ ] Drop is_smooth option (no need, just specify a step/wait > 0)
+
+## 4.10
+
+### Sensor
+- [ ] Allow multiple sensors to be specified in priority order; those sensors will be stored in a list and the first available will be used.
+- [ ] Changes: -> is_sensor_available() that will be called on each of the listed sensors; first avaiable will become highest_prio_available_dev_name
+- [ ] capture_frames_brightness -> will use highest_prio_available_dev_name
 
 ## Future
 

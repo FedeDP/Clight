@@ -59,6 +59,8 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
     switch (MSG_TYPE()) {
     case UPOWER_UPD:
         m_unbecome();
+        
+        // Eventually pause keyboard if current timeout is <= 0
         set_keyboard_timeout();
         break;
     default:
@@ -159,6 +161,8 @@ static int init_kbd_backlight(void) {
 }
 
 static void on_screen_bl_update(bl_upd *up) {
+    static bool first_time = true; // always send the notification first time we startup, even if new_kbd_pct is 0.0 (same as initial one)
+    
     const double new_kbd_pct = get_value_from_curve(up->new, &conf.kbd_conf.curve[state.ac_state]);
     /*
      * Only log for first BL_UPD message received:
@@ -166,10 +170,22 @@ static void on_screen_bl_update(bl_upd *up) {
      *      * or the only one sent when conf.bl_conf.smooth is disabled
      */
     if (up->smooth || conf.bl_conf.smooth.no_smooth) {
-        INFO("Screen backlight: %.3lf -> Keyboard backlight: %.3lf.\n", up->new, new_kbd_pct);
+        // Less verbose: only log real kbdbacklight changes, unless we are in verbose mode
+        if (new_kbd_pct != state.current_kbd_pct || conf.verbose || first_time) {
+            INFO("Screen backlight: %.3lf -> Keyboard backlight: %.3lf.\n", up->new, new_kbd_pct);
+            first_time = false;
+        }
     }
-    kbd_req.bl.new = new_kbd_pct;
-    M_PUB(&kbd_req);
+    
+    /*
+     * Only actually act for:
+     *      * Smooth steps
+     *      * Non-smooth target
+     */ 
+    if (!up->smooth) {
+        kbd_req.bl.new = new_kbd_pct;
+        M_PUB(&kbd_req);
+    }
 }
 
 static void set_keyboard_level(double level) {
