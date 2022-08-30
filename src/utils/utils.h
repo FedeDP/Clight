@@ -17,7 +17,8 @@
     X(SUSPEND,      1 << 4) \
     X(TIMEOUT,      1 << 5) \
     X(INHIBIT,      1 << 6) \
-    X(CONTRIB,      1 << 7)
+    X(CONTRIB,      1 << 7) \
+    X(CLOGGED,      1 << 8)
 
 enum mod_pause {
 #define X(name, value) name = value,

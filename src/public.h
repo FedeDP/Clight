@@ -78,9 +78,9 @@ enum mod_msg_types {
     IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times
-    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth changes, a first TEMP_UPD will be emitted with target temp and smooth params, then for each individual step TEMP_UPD will be emitted too
+    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth changes, a first TEMP_UPD will be emitted with target temp and smooth params, then for each individual step TEMP_UPD will be emitted too, with 0-set smooth params
     AMBIENT_BR_UPD,     // Subscribe to receive new ambient brightness values
-    BL_UPD,             // Subscribe to receive new backlight level values. NOTE: for smooth changes, a first BL_UPD will be emitted with target temp and smooth params, then for each individual step BL_UPD will be emitted too
+    BL_UPD,             // Subscribe to receive new backlight level values. NOTE: for smooth changes, a first BL_UPD will be emitted with target backlight and smooth params, then for each individual step BL_UPD will be emitted too, with 0-set smooth params
     KBD_BL_UPD,         // Subscribe to receive new keyboard backlight values
     SCR_BL_UPD,         // Subscribe to receive new screen-emitted brightness values
     LOCATION_REQ,       // Publish to set a new location
@@ -112,6 +112,7 @@ enum mod_msg_types {
     KBD_TO_REQ,         // Publish to require a new keyboard timeout
     AMB_GAMMA_REQ,      // Publish to require a new AmbientGamma state
     KBD_CURVE_REQ,      // Publish to set a new keyboard backlight curve for given ac state
+    SCREEN_BR_UPD,      // Subscribe to receive new screen brightness values
     MSGS_SIZE
 };
 
@@ -184,7 +185,7 @@ typedef struct {
 typedef struct {
     enum day_states daytime;    // Mandatory for requests. Valued in updates. Special value: -1 -> current daytime
     int old;                    // Valued in updates. Useless for requests
-    int new;                    // Mandatory for requests. Valued in updates
+    int new;                    // Mandatory for requests. Valued in updates. Special value 0 -> use conf value
     int smooth;                 // Mandatory for requests. Valued in updates. Special value: -1 -> use conf values
     int step;                   // Only useful for requests. Valued in updates
     int timeout;                // Only useful for requests. Valued in updates
@@ -250,7 +251,7 @@ typedef struct {
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ/KBD_TO_REQ */
         curve_upd curve;        /* CURVE_REQ/KBD_CURVE_REQ */
         calib_upd nocalib;      /* NO_AUTOCALIB_REQ */
-        bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ */
+        bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ/SCREEN_BR_UPD */
         contrib_upd contrib;    /* CONTRIB_REQ */
         capture_upd capture;    /* CAPTURE_REQ */
         sens_upd sens;          /* SENS_UPD */

@@ -63,7 +63,6 @@ typedef struct {
 
 typedef struct {
     int disabled;                           // disable keyboard backlight automatic calibration (where supported)
-    int dim;                                // whether DPMS/Dimmer should switch keyboard off
     int timeout[SIZE_AC];                   // kbd dimming timeout
     curve_t curve[SIZE_AC];                 // curve used to match ambient brightness to certain keyboard backlight level
 } kbd_conf_t;
@@ -100,9 +99,8 @@ typedef struct {
 
 typedef struct {
     int disabled;
+    double contrib;
     int timeout[SIZE_AC];                   // screen timeouts
-    double contrib;                         // how much does screen-emitted brightness affect ambient brightness (eg 0.1)
-    int samples;                            // number of samples used to compute average screen-emitted brightness
 } screen_conf_t;
 
 typedef struct {
@@ -138,6 +136,7 @@ typedef struct {
  */
 typedef struct {
     bool looping;
+    double screen_br;                       // screen content brightness
     int in_event;                           // Whether we are in a TIME event +- conf.event_duration
     int inhibited;                          // whether screensaver inhibition is enabled
     int pm_inhibited;                       // whether pm_inhibition is enabled
@@ -155,7 +154,6 @@ typedef struct {
     double current_bl_pct;                  // current backlight pct
     double current_kbd_pct;                 // current keyboard backlight pct
     double ambient_br;                      // last ambient brightness captured from CLIGHTD Sensor
-    double screen_comp;                     // current screen-emitted brightness compensation
     const char *clightd_version;            // Clightd found version
     const char *version;                    // Clight version
     jmp_buf quit_buf;                       // quit jump called by longjmp

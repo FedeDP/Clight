@@ -7,16 +7,12 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
 static int idle_get_client(char *client);
 static int idle_hook_update(char *client, sd_bus_slot **slot, sd_bus_message_handler_t handler);
 
-int idle_init(char *client, sd_bus_slot **slot, int timeout, sd_bus_message_handler_t handler) {
+int idle_init(char *client, sd_bus_slot **slot, sd_bus_message_handler_t handler) {
     int r = idle_get_client(client);
     if (r < 0) {
         goto end;
     }
     r = idle_hook_update(client, slot, handler);
-    if (r < 0) {
-        goto end;
-    }
-    r = idle_set_timeout(client, timeout); // set timeout automatically calls client start
 
 end:
     if (r < 0) {

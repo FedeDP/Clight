@@ -5,7 +5,7 @@
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata);
 static int init_kbd_backlight(void);
-static void on_ambient_br_update(bl_upd *up);
+static void on_screen_bl_update(bl_upd *up);
 static void set_keyboard_level(double level);
 static void set_keyboard_timeout(void);
 static void on_curve_req(double *regr_points, int num_points, enum ac_states s);
@@ -13,7 +13,6 @@ static void pause_kbd(const bool pause, enum mod_pause reason);
 
 static const sd_bus_vtable conf_kbd_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_WRITABLE_PROPERTY("Dim", "b", NULL, NULL, offsetof(kbd_conf_t, dim), 0),
     SD_BUS_WRITABLE_PROPERTY("AcTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_AC]), 0),
     SD_BUS_WRITABLE_PROPERTY("BattTimeout", "i", NULL, set_timeouts, offsetof(kbd_conf_t, timeout[ON_BATTERY]), 0),
     SD_BUS_WRITABLE_PROPERTY("AcPoints", "ad", get_curve, set_curve, offsetof(kbd_conf_t, curve[ON_AC]), 0),
@@ -30,7 +29,7 @@ MODULE_WITH_PAUSE("KEYBOARD");
 static void init(void) {
     if (init_kbd_backlight() == 0) {
         M_SUB(DISPLAY_UPD);
-        M_SUB(AMBIENT_BR_UPD);
+        M_SUB(BL_UPD);
         M_SUB(KBD_BL_REQ);
         M_SUB(UPOWER_UPD);
         M_SUB(KBD_TO_REQ);
@@ -60,6 +59,8 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
     switch (MSG_TYPE()) {
     case UPOWER_UPD:
         m_unbecome();
+        
+        // Eventually pause keyboard if current timeout is <= 0
         set_keyboard_timeout();
         break;
     default:
@@ -69,8 +70,8 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
-    case AMBIENT_BR_UPD: {
-        on_ambient_br_update((bl_upd *)MSG_DATA());
+    case BL_UPD: {
+        on_screen_bl_update((bl_upd *)MSG_DATA());
         break;
     }
     case KBD_BL_REQ: {
@@ -92,7 +93,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         break;
     }
      case DISPLAY_UPD:
-        pause_kbd(state.display_state && conf.kbd_conf.dim, DISPLAY);
+        pause_kbd(state.display_state, DISPLAY);
         break;
     case UPOWER_UPD:
         set_keyboard_timeout();
@@ -115,7 +116,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case DISPLAY_UPD:
-        pause_kbd(state.display_state && conf.kbd_conf.dim, DISPLAY);
+        pause_kbd(state.display_state, DISPLAY);
         break;
     case UPOWER_UPD:
         set_keyboard_timeout();
@@ -159,11 +160,32 @@ static int init_kbd_backlight(void) {
     return r;
 }
 
-static void on_ambient_br_update(bl_upd *up) {
+static void on_screen_bl_update(bl_upd *up) {
+    static bool first_time = true; // always send the notification first time we startup, even if new_kbd_pct is 0.0 (same as initial one)
+    
     const double new_kbd_pct = get_value_from_curve(up->new, &conf.kbd_conf.curve[state.ac_state]);
-    INFO("Ambient brightness: %.3lf -> Keyboard backlight pct: %.3lf.\n", up->new, new_kbd_pct);
-    kbd_req.bl.new = new_kbd_pct;
-    M_PUB(&kbd_req);
+    /*
+     * Only log for first BL_UPD message received:
+     *      * either the one with up->smooth = true
+     *      * or the only one sent when conf.bl_conf.smooth is disabled
+     */
+    if (up->smooth || conf.bl_conf.smooth.no_smooth) {
+        // Less verbose: only log real kbdbacklight changes, unless we are in verbose mode
+        if (new_kbd_pct != state.current_kbd_pct || conf.verbose || first_time) {
+            INFO("Screen backlight: %.3lf -> Keyboard backlight: %.3lf.\n", up->new, new_kbd_pct);
+            first_time = false;
+        }
+    }
+    
+    /*
+     * Only actually act for:
+     *      * Smooth steps
+     *      * Non-smooth target
+     */ 
+    if (!up->smooth) {
+        kbd_req.bl.new = new_kbd_pct;
+        M_PUB(&kbd_req);
+    }
 }
 
 static void set_keyboard_level(double level) {

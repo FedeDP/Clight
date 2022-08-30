@@ -2,22 +2,20 @@
 #include "my_math.h"
 #include "utils.h"
 
-#define BILLION 1000000000
-
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata);
 static void receive_paused(const msg_t *const msg, const void* userdata);
 static void init_curves(void);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int is_sensor_available(void);
 static void do_capture(bool reset_timer, bool capture_only);
-static double set_new_backlight(const double perc);
+static void set_new_backlight(void);
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout);
 static void set_each_brightness(double pct, const double step, const int timeout);
 static void set_backlight_level(const double pct, const bool is_smooth, double step, int timeout);
 static int capture_frames_brightness(void);
 static void upower_callback(void);
 static void interface_autocalib_callback(bool new_val);
-static void reset_or_pause(int old_timeout);
+static void reset_or_pause(int old_timeout, bool reset);
 static void interface_curve_callback(double *regr_points, int num_points, enum ac_states s);
 static void interface_timeout_callback(timeout_upd *up);
 static void dimmed_callback(void);
@@ -93,7 +91,6 @@ MODULE_WITH_PAUSE("BACKLIGHT");
 static void init(void) {
     bls = map_new(true, free);
     capture_req.capture.reset_timer = true;
-    capture_req.capture.capture_only = false;
     bl_req.bl.smooth = -1; // Use conf values
     
     // Disabled while in wizard mode as it is useless and spams to stdout
@@ -116,6 +113,7 @@ static void init(void) {
     M_SUB(NO_AUTOCALIB_REQ);
     M_SUB(BL_REQ);
     M_SUB(INHIBIT_UPD);
+    M_SUB(SCREEN_BR_UPD);
     m_become(waiting_init);
 }
 
@@ -153,11 +151,19 @@ static void destroy(void) {
 }
 
 static void receive_waiting_init(const msg_t *const msg, UNUSED const void* userdata) {
-    static enum { UPOWER_STARTED = 1, LID_STARTED = 2, DAYTIME_STARTED = 4, ALL_STARTED = 7} ok = 0;
-    static const self_t *wizSelf = NULL;
+    static enum { UPOWER_STARTED = 1 << 0, LID_STARTED = 1 << 1, DAYTIME_STARTED = 1 << 2, SCREEN_STARTED = 1 << 3, ALL_STARTED = (1 << 4) - 1} ok = 0;
+    static const self_t *wizSelf = NULL, *screenSelf = NULL;
     if (!wizSelf) {
         m_ref("WIZARD", &wizSelf);
     }
+    if (!screenSelf) {
+        m_ref("SCREEN", &screenSelf);
+    }
+    
+    if (conf.screen_conf.disabled) {
+        ok |= SCREEN_STARTED;
+    }
+
     switch (MSG_TYPE()) {
     case UPOWER_UPD:
         ok |= UPOWER_STARTED;
@@ -167,6 +173,9 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         break;
     case DAYTIME_UPD:
         ok |= DAYTIME_STARTED;
+        break;
+    case SCREEN_BR_UPD:
+        ok |= SCREEN_STARTED;
         break;
     case SYSTEM_UPD:
         /* 
@@ -178,6 +187,10 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
             msg->ps_msg->sender == wizSelf) {
             
             ok = ALL_STARTED;
+        } else if (msg->ps_msg->type == MODULE_STOPPED && 
+            msg->ps_msg->sender == screenSelf) {
+           // Screen was deregistered (unsupported).
+            ok |= SCREEN_STARTED; 
         }
         break;
     default:
@@ -201,8 +214,10 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         SYSBUS_ARG(if_removed_args, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved");
         add_match(&if_removed_args, &if_r_slot, on_interface_removed);
         
+        /* Create the timerfd and eventually pause (if current timeout is <0) */
         bl_fd = start_timer(CLOCK_BOOTTIME, 0, get_current_timeout() > 0);
         m_register_fd(bl_fd, false, NULL);
+        reset_or_pause(-1, false);
         
         /* Eventually pause backlight if sensor is not available */
         on_sensor_change(NULL, NULL, NULL);
@@ -237,7 +252,12 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case FD_UPD:
         read_timer(msg->fd_msg->fd);
+        // When SCREEN module is running, capture only!
+        capture_req.capture.capture_only = state.screen_br != 0.0f;
         M_PUB(&capture_req);
+        break;
+    case SCREEN_BR_UPD:
+        set_new_backlight();
         break;
     case UPOWER_UPD:
         upower_callback();
@@ -307,6 +327,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
+    case SCREEN_BR_UPD:
+        if (!state.display_state) {
+            set_new_backlight();
+        }
+        break;
     case UPOWER_UPD:
         upower_callback();
         break;    
@@ -446,18 +471,11 @@ static int is_sensor_available(void) {
 }
 
 static void do_capture(bool reset_timer, bool capture_only) {
-    if (!capture_frames_brightness() && !capture_only) {
-        /* Account for screen-emitted brightness */
-        const double compensated_br = clamp(state.ambient_br - state.screen_comp, 1, 0);
-        if (compensated_br >= conf.bl_conf.shutter_threshold) {
-            const double new_bl = set_new_backlight(compensated_br);
-            if (state.screen_comp > 0.0) {
-                INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Screen backlight pct: %.3lf.\n", state.ambient_br, state.screen_comp, new_bl);
-            } else {
-                INFO("Ambient brightness: %.3lf -> Screen backlight pct: %.3lf.\n", state.ambient_br, new_bl);
+    if (capture_frames_brightness() == 0) {
+        if (state.ambient_br >= conf.bl_conf.shutter_threshold) {
+            if (!capture_only) {
+                set_new_backlight();
             }
-        } else if (state.screen_comp > 0.0) {
-            INFO("Ambient brightness: %.3lf (-%.3lf screen compensation) -> Clogged capture detected.\n", state.ambient_br, state.screen_comp);
         } else {
             INFO("Ambient brightness: %.3lf -> Clogged capture detected.\n", state.ambient_br);
         }
@@ -468,12 +486,30 @@ static void do_capture(bool reset_timer, bool capture_only) {
     }
 }
 
-static double set_new_backlight(const double perc) {
-    sensor_conf_t *sens_conf = &conf.sens_conf;
-    enum ac_states st = state.ac_state;
-    bl_req.bl.new = get_value_from_curve(perc, &sens_conf->default_curve[st]);
-    M_PUB(&bl_req);
-    return bl_req.bl.new;
+static void set_new_backlight(void) {
+    curve_t *curve = &conf.sens_conf.default_curve[state.ac_state];
+    
+    const double new_bl = get_value_from_curve(state.ambient_br, curve);
+    if (state.screen_br == 0.0f) {
+        bl_req.bl.new = new_bl;
+    } else {
+        const double max = curve->points[curve->num_points - 1] > curve->points[0] ? curve->points[curve->num_points - 1] : curve->points[0];
+        const double min = curve->points[0] < curve->points[curve->num_points - 1] ? curve->points[0] : curve->points[curve->num_points - 1];
+        const double wmax = new_bl + conf.screen_conf.contrib;
+        bl_req.bl.new = clamp(wmax - (2 * conf.screen_conf.contrib * state.screen_br), max, min);
+        DEBUG("Content calib: wmax: %.3lf, wmin: %.3lf, new_bl: %.3lf\n", 
+              wmax, wmax - 2 * conf.screen_conf.contrib, bl_req.bl.new);
+    }
+    // Less verbose: only log real backlight changes, unless we are in verbose mode
+    if (bl_req.bl.new != state.current_bl_pct || conf.verbose) {
+        if (state.screen_br == 0.0f) {
+            INFO("Ambient brightness: %.3lf -> Screen backlight: %.3lf.\n", state.ambient_br, bl_req.bl.new);
+        } else {
+            INFO("Ambient brightness: %.3lf, Screen brightness: %.3lf -> Screen backlight: %.3lf.\n", 
+                 state.ambient_br, state.screen_br, bl_req.bl.new);
+        }
+        M_PUB(&bl_req);
+    }
 }
 
 static void publish_bl_upd(const double pct, const bool is_smooth, const double step, const int timeout) {
@@ -583,13 +619,15 @@ static void interface_curve_callback(double *regr_points, int num_points, enum a
  * to pause BACKLIGHT if <= 0 timeout should be set,
  * else resuming it and setting correct timeout.
  */
-static void reset_or_pause(int old_timeout) {
+static void reset_or_pause(int old_timeout, bool reset) {
     const int new_timeout = get_current_timeout();
     if (new_timeout <= 0) {
         pause_mod(TIMEOUT);
     } else {
         resume_mod(TIMEOUT);
-        reset_timer(bl_fd, old_timeout, new_timeout);
+        if (reset) {
+            reset_timer(bl_fd, old_timeout, new_timeout);
+        }
     }
 }
 
@@ -603,7 +641,7 @@ static void interface_timeout_callback(timeout_upd *up) {
         if (up->state == state.ac_state && 
             (up->daytime == state.day_time || (state.in_event && up->daytime == IN_EVENT))) {
             
-            reset_or_pause(old);
+            reset_or_pause(old, true);
         }
     } else {
         WARN("Failed to validate timeout request.\n");
@@ -648,7 +686,7 @@ static void time_callback(int old_val, const bool is_event) {
          */
         old_timeout = conf.bl_conf.timeout[state.ac_state][state.in_event ? state.day_time : IN_EVENT];
     }
-     reset_or_pause(old_timeout);
+     reset_or_pause(old_timeout, true);
 }
 
 /* Callback on SensorChanged clightd signal */

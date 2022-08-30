@@ -20,7 +20,7 @@ arguments=(
   '--no-dimmer[Disable dimmer tool]'
   '--no-dpms[Disable dpms tool]'
   '--no-backlight[Disable backlight module]'
-  '--no-screen[Disable screen module]'
+  '--no-screen[Disable screen module (screen content based backlight adjustment)]'
   '--no-kbd[Disable keyboard backlight calibration]'
   '--dimmer-pct=[Backlight level used while screen is dimmed, in percentage]'
   '--verbose[Enable verbose mode]'

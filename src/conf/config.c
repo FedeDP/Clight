@@ -27,17 +27,16 @@ static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf);
 static void store_inh_settings(config_t *cfg, inh_conf_t *inh_conf);
 
 static void init_config_file(enum CONFIG file, char *filename) {
-    int len = 0;
     switch (file) {
         case LOCAL:
             if (getenv("XDG_CONFIG_HOME")) {
-                len = snprintf(filename, PATH_MAX, "%s/clight.conf", getenv("XDG_CONFIG_HOME"));
+                snprintf(filename, PATH_MAX, "%s/clight.conf", getenv("XDG_CONFIG_HOME"));
             } else {
-                len = snprintf(filename, PATH_MAX, "%s/.config/clight.conf", getpwuid(getuid())->pw_dir);
+                snprintf(filename, PATH_MAX, "%s/.config/clight.conf", getpwuid(getuid())->pw_dir);
             }
             break;
         case GLOBAL:
-            len = snprintf(filename, PATH_MAX, "%s/clight.conf", CONFDIR);
+            snprintf(filename, PATH_MAX, "%s/clight.conf", CONFDIR);
             break;
         default:
             return;
@@ -200,7 +199,6 @@ static void load_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
     config_setting_t *kbd = config_lookup(cfg, "keyboard");
     if (kbd) {
         config_setting_lookup_bool(kbd, "disabled", &kbd_conf->disabled);
-        config_setting_lookup_bool(kbd, "dim", &kbd_conf->dim);
         
         /* Load timeouts */
         config_setting_t *timeouts, *points;
@@ -375,8 +373,6 @@ static void load_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
     if (screen) {
         config_setting_lookup_bool(screen, "disabled", &screen_conf->disabled);
         config_setting_lookup_float(screen, "contrib", &screen_conf->contrib);
-        config_setting_lookup_int(screen, "num_samples", &screen_conf->samples);
-        
         config_setting_t *timeouts;
         if ((timeouts = config_setting_get_member(screen, "timeouts"))) {
             if (config_setting_length(timeouts) == SIZE_AC) {
@@ -540,9 +536,6 @@ static void store_kbd_settings(config_t *cfg, kbd_conf_t *kbd_conf) {
     config_setting_t *setting = config_setting_add(kbd, "disabled", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, kbd_conf->disabled);
     
-    setting = config_setting_add(kbd, "dim", CONFIG_TYPE_BOOL);
-    config_setting_set_bool(setting, kbd_conf->dim);
-    
     /* -1 here below means append to end of array */
     setting = config_setting_add(kbd, "ac_regression_points", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < kbd_conf->curve[ON_AC].num_points; i++) {
@@ -670,10 +663,7 @@ static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf) {
     config_setting_t *setting = config_setting_add(screen, "disabled", CONFIG_TYPE_BOOL);
     config_setting_set_bool(setting, screen_conf->disabled);
     
-    setting = config_setting_add(screen, "num_samples", CONFIG_TYPE_INT);
-    config_setting_set_int(setting, screen_conf->samples);
-    
-    setting = config_setting_add(screen, "contrib", CONFIG_TYPE_FLOAT);
+    setting = config_setting_add(screen, "content", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, screen_conf->contrib);
     
     setting = config_setting_add(screen, "timeouts", CONFIG_TYPE_ARRAY);

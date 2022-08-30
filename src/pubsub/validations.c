@@ -46,7 +46,7 @@ bool validate_inhibit(inhibit_upd *up) {
 }
 
 bool validate_contrib(contrib_upd *up) {
-    if (up->new >= 0.0 && up->new <= 1.0 && conf.screen_conf.contrib != up->new) {
+    if (up->new >= 0.0f && up->new <= 1.0f && conf.screen_conf.contrib != up->new) {
         return true;
     }
     DEBUG("Failed to validate contrib request.\n");
@@ -76,6 +76,10 @@ bool validate_temp(temp_upd *up) {
         up->smooth = !conf.gamma_conf.no_smooth;
         up->step = conf.gamma_conf.trans_step;
         up->timeout = conf.gamma_conf.trans_timeout;
+    }
+    
+    if (up->new == 0) {
+        up->new = conf.gamma_conf.temp[up->daytime];
     }
     
     /* Validate new temp: check clighd limits */
