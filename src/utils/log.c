@@ -19,13 +19,15 @@ static FILE *log_file;
 void open_log(void) {
     char log_path[PATH_MAX + 1] = {0};
 
-    if (getenv("XDG_DATA_HOME")) {
+    if (getenv("XDG_RUNTIME_DIR")) {
+        snprintf(log_path, PATH_MAX, "%s/clight/", getenv("XDG_RUNTIME_DIR"));
+    } else if (getenv("XDG_DATA_HOME")) {
         snprintf(log_path, PATH_MAX, "%s/clight/", getenv("XDG_DATA_HOME"));
     } else {
         snprintf(log_path, PATH_MAX, "%s/.local/share/clight/", getpwuid(getuid())->pw_dir);
     }
 
-    /* Create XDG_DATA_HOME/clight/ folder if it does not exist! */
+    /* Create log folder if it does not exist! */
     mkdir(log_path, 0755);
 
     strcat(log_path, "clight.log");

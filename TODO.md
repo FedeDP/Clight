@@ -10,6 +10,7 @@
 - - [x] KEYBOARD
 - [ ] Somewhat less verbose backlight/kbdbacklight logs when using SCREEN module? :/ 
 - [x] Add a way to force-set gamma for current daytime from desktop file
+- [x] Put log file in XDG_RUNTIME_DIR if available, so that its constant write does not hurt eg: ssd. Otherwise fallback at current folder.
 
 ### Backlight
 - [x] Support content based backlight calibration

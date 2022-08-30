@@ -78,7 +78,7 @@ enum mod_msg_types {
     IN_EVENT_UPD,       // Subscribe to receive new InEvent states
     SUNRISE_UPD,        // Subscribe to receive new Sunrise times
     SUNSET_UPD,         // Subscribe to receive new Sunset times
-    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth changes, a first TEMP_UPD will be emitted with target temp and smooth params, then for each individual step TEMP_UPD will be emitted too with 0-set smooth params
+    TEMP_UPD,           // Subscribe to receive new gamma temperatures. NOTE: for smooth changes, a first TEMP_UPD will be emitted with target temp and smooth params, then for each individual step TEMP_UPD will be emitted too, with 0-set smooth params
     AMBIENT_BR_UPD,     // Subscribe to receive new ambient brightness values
     BL_UPD,             // Subscribe to receive new backlight level values. NOTE: for smooth changes, a first BL_UPD will be emitted with target backlight and smooth params, then for each individual step BL_UPD will be emitted too, with 0-set smooth params
     KBD_BL_UPD,         // Subscribe to receive new keyboard backlight values
@@ -185,7 +185,7 @@ typedef struct {
 typedef struct {
     enum day_states daytime;    // Mandatory for requests. Valued in updates. Special value: -1 -> current daytime
     int old;                    // Valued in updates. Useless for requests
-    int new;                    // Mandatory for requests. Valued in updates. Special value -1 -> use conf value
+    int new;                    // Mandatory for requests. Valued in updates. Special value 0 -> use conf value
     int smooth;                 // Mandatory for requests. Valued in updates. Special value: -1 -> use conf values
     int step;                   // Only useful for requests. Valued in updates
     int timeout;                // Only useful for requests. Valued in updates
@@ -235,10 +235,6 @@ typedef struct {
 } ambgamma_upd;
 
 typedef struct {
-    bool capture_only;          // Mandatory for requests. Whether clight should update backlight after screen-content capture.
-} screen_upd;
-
-typedef struct {
     const enum mod_msg_types type;
     union {
         loc_upd loc;            /* LOCATION_UPD/LOCATION_REQ */
@@ -260,7 +256,6 @@ typedef struct {
         capture_upd capture;    /* CAPTURE_REQ */
         sens_upd sens;          /* SENS_UPD */
         ambgamma_upd ambgamma;  /* AMB_GAMMA_REQ */
-        screen_upd screen;      /* SCREEN_REQ */
     };
 } message_t;
 
