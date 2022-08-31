@@ -12,6 +12,7 @@ static int set_contrib(sd_bus *bus, const char *path, const char *interface, con
                               sd_bus_message *value, void *userdata, sd_bus_error *error);
 
 static int screen_fd = -1;
+static enum msg_type curr_msg;
 static const sd_bus_vtable conf_screen_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_WRITABLE_PROPERTY("Contrib", "d", NULL, set_contrib, offsetof(screen_conf_t, contrib), 0),
@@ -84,6 +85,7 @@ static void receive_waiting_state(const msg_t *msg, UNUSED const void *userdata)
 }
 
 static void receive(const msg_t *msg, UNUSED const void *userdata) {
+    curr_msg = MSG_TYPE();
     switch (MSG_TYPE()) {
     case AMBIENT_BR_UPD:
         pause_screen(state.ambient_br < conf.bl_conf.shutter_threshold, CLOGGED);
@@ -194,8 +196,17 @@ static void timeout_callback(int old_val, bool reset) {
 static void pause_screen(bool pause, enum mod_pause type) {
     if (CHECK_PAUSE(pause, type, "SCREEN")) {
         if (pause) {
-            // We are paused: we do not provide any screen br anymore
-            state.screen_br = 0.0f;
+            // We are paused: reset screen_br if paused state
+            // is coming from a message that is going to mess
+            // with screen br.
+            // ie: if suspending/dimming/closing the lid,
+            // actual screen_br will stay the same,
+            // no need to reset it.
+            if (curr_msg != SUSPEND_UPD && 
+                curr_msg != DISPLAY_UPD && 
+                curr_msg != LID_UPD) {
+                state.screen_br = 0.0f;
+            }
             /* Stop capturing snapshots */
             m_deregister_fd(screen_fd);
         } else {
