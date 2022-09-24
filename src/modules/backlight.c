@@ -82,6 +82,7 @@ DECLARE_MSG(capture_req, CAPTURE_REQ);
 DECLARE_MSG(sens_msg, SENS_UPD);
 DECLARE_MSG(calib_req, NO_AUTOCALIB_REQ);
 DECLARE_MSG(bl_req, BL_REQ);
+DECLARE_MSG(no_autocalib_upd, NO_AUTOCALIB_UPD);
 
 API(Backlight, conf_bl_vtable, conf.bl_conf);
 API(Sensor, conf_sens_vtable, conf.sens_conf);
@@ -600,6 +601,8 @@ static void interface_autocalib_callback(bool new_val) {
     } else {
         resume_mod(AUTOCALIB);
     }
+    no_autocalib_upd.nocalib.new = new_val;
+    M_PUB(&no_autocalib_upd);
 }
 
 /* Callback on "AcCurvePoints" and "BattCurvePoints" bus exposed writable properties */

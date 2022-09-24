@@ -113,6 +113,7 @@ enum mod_msg_types {
     AMB_GAMMA_REQ,      // Publish to require a new AmbientGamma state
     KBD_CURVE_REQ,      // Publish to set a new keyboard backlight curve for given ac state
     SCREEN_BR_UPD,      // Subscribe to receive new screen brightness values
+    NO_AUTOCALIB_UPD,   // Subscribe to receive no_autocalib updates
     MSGS_SIZE
 };
 
@@ -250,7 +251,7 @@ typedef struct {
         temp_upd temp;          /* TEMP_UPD/TEMP_REQ */
         timeout_upd to;         /* DIMMER_TO_REQ/DPMS_TO_REQ/SCR_TO_REQ/BL_TO_REQ/KBD_TO_REQ */
         curve_upd curve;        /* CURVE_REQ/KBD_CURVE_REQ */
-        calib_upd nocalib;      /* NO_AUTOCALIB_REQ */
+        calib_upd nocalib;      /* NO_AUTOCALIB_REQ/NO_AUTOCALIB_UPD */
         bl_upd bl;              /* AMBIENT_BR_UPD/BL_UPD/KBD_BL_UPD/SCR_BL_UPD/BL_REQ/KBD_BL_REQ/SCREEN_BR_UPD */
         contrib_upd contrib;    /* CONTRIB_REQ */
         capture_upd capture;    /* CAPTURE_REQ */

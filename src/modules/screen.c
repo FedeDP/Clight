@@ -27,7 +27,7 @@ DECLARE_MSG(screen_msg, SCREEN_BR_UPD);
 API(Screen, conf_screen_vtable, conf.screen_conf);
 MODULE_WITH_PAUSE("SCREEN");
 
-static void init(void) {    
+static void init(void) {
     M_SUB(AMBIENT_BR_UPD);
     M_SUB(SCR_TO_REQ);
     M_SUB(UPOWER_UPD);
@@ -35,9 +35,8 @@ static void init(void) {
     M_SUB(SENS_UPD);
     M_SUB(LID_UPD);
     M_SUB(SUSPEND_UPD);
-    M_SUB(NO_AUTOCALIB_REQ);
+    M_SUB(NO_AUTOCALIB_UPD);
     M_SUB(INHIBIT_UPD);
-    
     M_SUB(CONTRIB_REQ);
         
     m_become(waiting_state);
@@ -126,11 +125,9 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
         }
         break;
     }
-    case NO_AUTOCALIB_REQ: {
+    case NO_AUTOCALIB_UPD: {
         calib_upd *up = (calib_upd *)MSG_DATA();
-        if (VALIDATE_REQ(up)) {
-            pause_screen(up->new, AUTOCALIB);
-        }
+        pause_screen(up->new, AUTOCALIB);
         break;
     }
     case INHIBIT_UPD: {
