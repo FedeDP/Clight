@@ -407,7 +407,9 @@ int read_config(enum CONFIG file, char *config_file) {
         WARN("Config file %s not found.\n", config_file);
         return -1;
     }
-    
+
+    DEBUG("Reading config file: %s\n", config_file);
+
     config_init(&cfg);
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
