@@ -25,6 +25,7 @@
 - [x] New msg: SCREEN_UPD -> emit screen_br updates
 - [x] Expose state.screen_br in interface
 - [x] Drop state.content_based?
+- [ ] Pause on auto backlight calibration disabled
 
 ### KbdBacklight
 - [x] Port to use BL_UPD instead of ambient_upd: this way it works fine while content_based backlight is enabled, and follows monitor specific_curves and ambient gamma rule (ie: use default backlight curve as target)

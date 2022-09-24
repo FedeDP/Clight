@@ -6,7 +6,7 @@ Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/cligh
 Comment=Recalibrate your screen backlight!
 Icon=clight
 Categories=System
-Actions=Inhibit;Uninhibit;PauseCalib;ResumeCalib;Pause;Resume
+Actions=Inhibit;Uninhibit;PauseCalib;ResumeCalib;Pause;Resume;ForceGamma
 
 [Desktop Action Inhibit]
 Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" true
