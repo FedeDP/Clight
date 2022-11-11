@@ -299,14 +299,21 @@ static void on_ambgamma_req(ambgamma_upd *up) {
 }
 
 static void interface_callback(temp_upd *req) {
-    if (req->new != conf.gamma_conf.temp[req->daytime]) {
-        conf.gamma_conf.temp[req->daytime] = req->new;
-        if (!conf.gamma_conf.ambient_gamma && req->daytime == state.day_time) {
-            set_temp(req->new, NULL, req->smooth, req->step, req->timeout); // force refresh (passing NULL time_t*)
-        } else {
-             // Immediately set correct temp for current bl pct (given new temperature max/min values)
-            ambient_callback(true, state.current_bl_pct);
-        }
+    // req->new was already validated. Store it.
+    conf.gamma_conf.temp[req->daytime] = req->new;
+    if (!conf.gamma_conf.ambient_gamma && req->daytime == state.day_time) {
+        /*
+         * When not in ambient_gamma mode, 
+         * if the requested daytime matches the current one,
+         * force refresh current temp (passing NULL time_t*)
+         */
+        set_temp(req->new, NULL, req->smooth, req->step, req->timeout);
+    } else {
+        /*
+         * Immediately set correct temp for current bl pct 
+         * (given new temperature max/min values
+         */
+        ambient_callback(true, state.current_bl_pct);
     }
 }
 
