@@ -1,6 +1,5 @@
 #include <sys/file.h>
 #include <sys/stat.h>
-#include "commons.h"
 #include "utils.h"
 
 static void log_bl_smooth(bl_smooth_t *smooth, const char *prefix);

@@ -2,9 +2,7 @@
 
 #include <setjmp.h>
 
-#define LOG_DEBUG   'D'
-#define LOG_INFO    'I'
-#define LOG_WARN    'W'
+/* Internal; not exposed through public API */
 #define LOG_ERR     'E'
 #define LOG_PLOT    'P'
 

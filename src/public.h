@@ -34,6 +34,10 @@
 
 /** Log Macros **/
 
+#define LOG_DEBUG   'D'
+#define LOG_INFO    'I'
+#define LOG_WARN    'W'
+
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
 #define DEBUG(msg, ...) log_message(__FILENAME__, __LINE__, LOG_DEBUG, msg, ##__VA_ARGS__)
