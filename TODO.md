@@ -1,5 +1,8 @@
 ## 4.10
 
+### Signal
+- [x] Improve signal support, adding SIGUSR1 to trigger a capture, SIGTSTP to pause and SIGCONT to resume
+
 ### Backlight
 - [ ] Drop is_smooth option (no need, just specify a step/wait > 0)
 

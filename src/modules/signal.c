@@ -2,6 +2,9 @@
 #include <signal.h>
 #include "commons.h"
 
+DECLARE_MSG(suspend_req, SUSPEND_REQ);
+DECLARE_MSG(capture_req, CAPTURE_REQ);
+
 MODULE("SIGNAL");
 
 /*
@@ -10,12 +13,18 @@ MODULE("SIGNAL");
  * See: https://fedoraproject.org/wiki/Changes/KillUserProcesses_by_default
  */
 static void init(void) {
+    capture_req.capture.reset_timer = false;
+    capture_req.capture.capture_only = false;
+    
     sigset_t mask;
 
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
     sigaddset(&mask, SIGTERM);
     sigaddset(&mask, SIGHUP);
+    sigaddset(&mask, SIGTSTP);
+    sigaddset(&mask, SIGCONT);
+    sigaddset(&mask, SIGUSR1);
     sigprocmask(SIG_BLOCK, &mask, NULL);
 
     int fd = signalfd(-1, &mask, 0);
@@ -45,8 +54,23 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         if (s != sizeof(struct signalfd_siginfo)) {
             ERROR("An error occurred while getting signalfd data.\n");
         }
-        INFO("Received %d. Leaving.\n", fdsi.ssi_signo);
-        modules_quit(EXIT_SUCCESS);
+        switch (fdsi.ssi_signo) {
+        case SIGTSTP:
+            suspend_req.suspend.new = true;
+            M_PUB(&suspend_req);
+            break;
+        case SIGCONT:
+            suspend_req.suspend.new = false;
+            M_PUB(&suspend_req);
+            break;
+        case SIGUSR1:
+            M_PUB(&capture_req);
+            break;
+        default:
+            INFO("Received %d. Leaving.\n", fdsi.ssi_signo);
+            modules_quit(EXIT_SUCCESS);
+            break;
+        }
         break;
     }
     default:
