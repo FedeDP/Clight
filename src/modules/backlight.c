@@ -795,7 +795,7 @@ static void on_lid_update(void) {
 }
 
 static void pause_mod(enum mod_pause type) {
-    if (CHECK_PAUSE(true, type, "BACKLIGHT")) {
+    if (CHECK_PAUSE(true, type)) {
         m_become(paused);
         /* Properly deregister our fd while paused */
         m_deregister_fd(bl_fd);
@@ -803,7 +803,7 @@ static void pause_mod(enum mod_pause type) {
 }
 
 static void resume_mod(enum mod_pause type) {
-    if (CHECK_PAUSE(false, type, "BACKLIGHT")) {
+    if (CHECK_PAUSE(false, type)) {
         m_unbecome();
         /* Register back our fd on resume */
         m_register_fd(bl_fd, false, NULL);

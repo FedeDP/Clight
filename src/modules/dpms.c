@@ -173,7 +173,7 @@ static void timeout_callback(void) {
 }
 
 static void pause_dpms(const bool pause, enum mod_pause reason) {
-    if (CHECK_PAUSE(pause, reason, "DPMS")) {
+    if (CHECK_PAUSE(pause, reason)) {
         if (!pause) {
             idle_client_start(client, conf.dpms_conf.timeout[state.ac_state]);
             m_unbecome();

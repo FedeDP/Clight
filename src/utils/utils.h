@@ -4,9 +4,10 @@
 
 #define MODULE_WITH_PAUSE(name) \
     static int paused_state; \
+    static const char *_name = name; \
     MODULE(name)
 
-#define CHECK_PAUSE(pause, reason, name) mod_check_pause(pause, &paused_state, reason, name)
+#define CHECK_PAUSE(pause, reason) mod_check_pause(pause, &paused_state, reason, _name)
 
 #define X_FIELDS \
     X(UNPAUSED,     0) \

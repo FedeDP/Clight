@@ -191,7 +191,7 @@ static void timeout_callback(int old_val, bool reset) {
 }
 
 static void pause_screen(bool pause, enum mod_pause type) {
-    if (CHECK_PAUSE(pause, type, "SCREEN")) {
+    if (CHECK_PAUSE(pause, type)) {
         if (pause) {
             // We are paused: reset screen_br if paused state
             // is coming from a message that is going to mess

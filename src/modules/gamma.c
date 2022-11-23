@@ -332,7 +332,7 @@ static int on_temp_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_b
 }
 
 static void pause_mod(bool pause, enum mod_pause reason) {
-    if (CHECK_PAUSE(pause, reason, "GAMMA")) {
+    if (CHECK_PAUSE(pause, reason)) {
         if (pause) {
             m_become(paused);
         } else {

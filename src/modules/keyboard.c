@@ -218,7 +218,7 @@ static void on_curve_req(double *regr_points, int num_points, enum ac_states s) 
 }
 
 static void pause_kbd(const bool pause, enum mod_pause reason) {
-    if (CHECK_PAUSE(pause, reason, "KEYBOARD")) {
+    if (CHECK_PAUSE(pause, reason)) {
         if (!pause) {
             m_unbecome();
             // Set correct level for current backlight

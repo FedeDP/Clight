@@ -163,7 +163,7 @@ static void timeout_callback(void) {
 }
 
 static void pause_dimmer(const bool pause, enum mod_pause reason) {
-    if (CHECK_PAUSE(pause, reason, "DIMMER")) {
+    if (CHECK_PAUSE(pause, reason)) {
         if (!pause) {
             idle_client_start(client, conf.dim_conf.timeout[state.ac_state]);
             m_unbecome();
