@@ -24,4 +24,4 @@ A clear and concise description of what you expected to happen.
 **To Reproduce**
 Steps to reproduce the behavior.
 
-Please attach a Clight verbose log too!
+Please attach a Clight [verbose log](https://github.com/FedeDP/Clight/wiki/FAQ#where-is-clight-log) too!
