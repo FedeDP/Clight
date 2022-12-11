@@ -145,17 +145,16 @@ static void publish_susp_req(const bool new) {
 }
 
 static bool acquire_lock(void) {
-    static bool r = false;
+    bool r = false;
     if (pm_inh_token == -1) {
-        SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token, "org.freedesktop.login1", "/org/freedesktop/login1",
+        SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
+                         "org.freedesktop.login1", "/org/freedesktop/login1",
                          "org.freedesktop.login1.Manager", "Inhibit");
-
-        int ret = call(&pm_args, "ssss", "idle", "Clight", "Idle inhibitor.", "block");
-
+        int ret = call(&pm_args, "ssss", "idle", "Clight", "Idle inhibitor.",
+                       "block");
         if (ret < 0) {
             DEBUG("Failed to parse D-Bus response for idle inhibit\n");
         }
-
         if (pm_inh_token < 0) {
             DEBUG("Failed to copy lock file\n");
         } else {
