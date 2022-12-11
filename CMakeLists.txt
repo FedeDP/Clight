@@ -99,7 +99,9 @@ endif()
 if (NOT DEFINED FISH_COMPLETIONS_DIR)
     pkg_get_variable(FISH_COMPLETIONS_DIR fish completionsdir)
 endif()
-pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
+if (NOT DEFINED SESSION_BUS_DIR)
+  pkg_get_variable(SESSION_BUS_DIR dbus-1 session_bus_services_dir)
+endif()
 
 file(GLOB_RECURSE SKELETONS Extra/skeletons/*.skel)
 
@@ -108,11 +110,11 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.clight.clight.service
 install(FILES ${EXTRA_DIR}/clight.conf
         DESTINATION ${CLIGHT_CONFDIR})
 install(FILES ${EXTRA_DIR}/desktop/clight.desktop
-        DESTINATION /etc/xdg/autostart)
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg/autostart)
 install(FILES ${EXTRA_DIR}/desktop/clightc.desktop
-        DESTINATION /usr/share/applications)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
 install(FILES ${EXTRA_DIR}/icons/clight.svg
-        DESTINATION /usr/share/icons/hicolor/scalable/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps)
 install(FILES ${SKELETONS} DESTINATION ${CLIGHT_DATADIR})
 install(DIRECTORY DESTINATION ${CLIGHT_DATADIR}/modules.d/)
 
@@ -159,7 +161,7 @@ set(CPACK_RPM_PACKAGE_LICENSE "GPL")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/FedeDP/Clight")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
-set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc/xdg" "/etc/xdg/autostart" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_BINDIR}" "/usr/share/applications" "${SESSION_BUS_DIR}" "/usr/share/icons" "/usr/share/icons/hicolor" "/usr/share/icons/hicolor/scalable" "/usr/share/icons/hicolor/scalable/apps")
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CMAKE_INSTALL_SYSCONFDIR}/xdg" "${CMAKE_INSTALL_SYSCONFDIR}/xdg/autostart" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_BINDIR}" "${CMAKE_INSTALL_DATAROOTDIR}/applications" "${SESSION_BUS_DIR}" "${CMAKE_INSTALL_DATAROOTDIR}/icons" "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor" "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable" "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps")
 set(CPACK_RPM_PACKAGE_REQUIRES "systemd-libs popt libconfig gsl clightd >= 5.0 libmodule >= 5.0.0")
 set(CPACK_RPM_PACKAGE_SUGGESTS "geoclue-2.0 upower bash-completion")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
