@@ -4,7 +4,7 @@
 static int hook_suspend_signal(void);
 static int session_active_listener_init(void);
 static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
-static int on_logind_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int on_session_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void publish_pm_msg(const bool old, const bool new);
 static void publish_susp_req(const bool new);
@@ -16,7 +16,6 @@ MODULE("PM");
 static sd_bus_slot *slot;
 static unsigned int pm_inh_token;
 static int delayed_resume_fd;
-static bool ext_inhibit = false;
 
 static void init(void) {
     pm_inh_token = -1; // UINT MAX
@@ -97,7 +96,7 @@ static int hook_suspend_signal(void) {
 
 static int session_active_listener_init(void) {
     SYSBUS_ARG(args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.DBus.Properties", "PropertiesChanged");
-    return add_match(&args, &slot, on_logind_change);
+    return add_match(&args, &slot, on_session_change);
 }
 
 static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
@@ -109,31 +108,7 @@ static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bu
 }
 
 /* Listener on logind session.Active for current session */
-static int on_logind_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
-    const char *locks;
-    SYSBUS_ARG(inh_args, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "BlockInhibited");
-    int i = get_property(&inh_args, "s", &locks);
-    if (i < 0) {
-        DEBUG("Failed to parse D-Bus response for Inhibit Locks: %s \n", strerror(-i));
-        return 0;
-    }
-
-    if (locks != NULL) {
-        DECLARE_HEAP_MSG(suspend_req, SUSPEND_REQ);
-        suspend_req->suspend.force = false;
-        if ((strstr(locks, "idle") != NULL && !ext_inhibit)) {
-            ext_inhibit = true;
-            suspend_req->suspend.old = false;
-            suspend_req->suspend.new = true;
-            M_PUB(suspend_req);
-        } else if ((strstr(locks, "idle") == NULL && ext_inhibit)) {
-            ext_inhibit = false;
-            DECLARE_HEAP_MSG(suspend_req, SUSPEND_REQ);
-            suspend_req->suspend.old = true;
-            suspend_req->suspend.new = false;
-            M_PUB(suspend_req);
-        }
-    }
+static int on_session_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     static int active = 1;
     SYSBUS_ARG(args, "org.freedesktop.login1",  "/org/freedesktop/login1/session/auto", "org.freedesktop.login1.Session", "Active");
     int old_active = active;
@@ -171,7 +146,7 @@ static void publish_susp_req(const bool new) {
 
 static bool acquire_lock(void) {
     static bool r = false;
-    if (pm_inh_token == -1 || ext_inhibit) {
+    if (pm_inh_token == -1) {
         SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token, "org.freedesktop.login1", "/org/freedesktop/login1",
                          "org.freedesktop.login1.Manager", "Inhibit");
 
@@ -193,15 +168,9 @@ static bool acquire_lock(void) {
 static bool release_lock(void) {
     bool r = false;
     if (pm_inh_token >= 0) {
-        if (!ext_inhibit)
-            (close(pm_inh_token));
+        (close(pm_inh_token));
         pm_inh_token = -1;
         DEBUG("Released Idle inhibition.\n");
-        r = true;
-    }
-    if (ext_inhibit) {
-        close(pm_inh_token);
-        DEBUG("External Idle inhibition released.\n");
         r = true;
     }
     return r;
