@@ -145,7 +145,6 @@ static void publish_susp_req(const bool new) {
 }
 
 static bool acquire_lock(void) {
-    bool r = false;
     if (pm_inh_token == -1) {
         SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
                          "org.freedesktop.login1", "/org/freedesktop/login1",
@@ -154,25 +153,22 @@ static bool acquire_lock(void) {
                        "block");
         if (ret < 0) {
             DEBUG("Failed to parse D-Bus response for idle inhibit\n");
-        }
-        if (pm_inh_token < 0) {
+        } else if (pm_inh_token < 0) {
             DEBUG("Failed to copy lock file\n");
         } else {
-            r = true;
+            return true;
         }
     }
-    return r;
+    return false;
 }
 
 static bool release_lock(void) {
-    bool r = false;
     if (pm_inh_token >= 0) {
         (close(pm_inh_token));
         pm_inh_token = -1;
-        DEBUG("Released Idle inhibition.\n");
-        r = true;
+        return true;
     }
-    return r;
+    return false;
 }
 
 static void on_pm_req(const bool new, const bool old) {
@@ -183,6 +179,7 @@ static void on_pm_req(const bool new, const bool old) {
         }
     } else if (!new) {
         if (release_lock()) {
+            DEBUG("Released Idle inhibition.\n");
             publish_pm_msg(true, false);
         }
     }
