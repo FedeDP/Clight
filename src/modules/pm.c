@@ -147,15 +147,10 @@ static int on_logind_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNU
 }
 
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
-    int r = -EINVAL;
-    if (strcmp(member, "Inhibit") != 0) {
-        r = sd_bus_message_read(reply, "u", userdata);
-    } else {
-        unsigned int f;
-        r = sd_bus_message_read(reply, "h", &f);
-        if (r >= 0) {
-            pm_inh_token = fcntl(f, F_DUPFD_CLOEXEC, 3);
-        }
+    unsigned int f;
+    int r = sd_bus_message_read(reply, "h", &f);
+    if (r >= 0) {
+        pm_inh_token = fcntl(f, F_DUPFD_CLOEXEC, 3);
     }
     return r;
 }
