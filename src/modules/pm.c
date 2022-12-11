@@ -4,7 +4,7 @@
 static int hook_suspend_signal(void);
 static int session_active_listener_init(void);
 static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
-static int on_session_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
+static int on_logind_change(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void publish_pm_msg(const bool old, const bool new);
 static void publish_susp_req(const bool new);
@@ -61,14 +61,14 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         case PM_REQ: {
             pm_upd *up = (pm_upd *)MSG_DATA();
             if (VALIDATE_REQ(up)) {
-            on_pm_req(up->new, up->old);
+                on_pm_req(up->new, up->old);
             }
             break;
         }
         case SYSTEM_UPD:
             /* Release any PowerManagement inhibition upon leaving as we're not PM manager */
             if (msg->ps_msg->type == LOOP_STOPPED && pm_inh_token != -1) {
-            on_pm_req(false, true);
+                on_pm_req(false, true);
             }
             break;
         case SUSPEND_REQ: {
@@ -97,7 +97,7 @@ static int hook_suspend_signal(void) {
 
 static int session_active_listener_init(void) {
     SYSBUS_ARG(args, "org.freedesktop.login1",  "/org/freedesktop/login1", "org.freedesktop.DBus.Properties", "PropertiesChanged");
-    return add_match(&args, &slot, on_session_change);
+    return add_match(&args, &slot, on_logind_change);
 }
 
 static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
@@ -109,7 +109,7 @@ static int on_new_suspend(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bu
 }
 
 /* Listener on logind session.Active for current session */
-static int on_session_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
+static int on_logind_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error) {
     const char *locks;
     SYSBUS_ARG(inh_args, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "BlockInhibited");
     int i = get_property(&inh_args, "s", &locks);
@@ -188,14 +188,15 @@ static bool acquire_lock(void) {
 
         if (pm_inh_token < 0) {
             DEBUG("Failed to copy lock file\n");
-        } else
+        } else {
             r = true;
+        }
     }
     return r;
 }
 
 static bool release_lock(void) {
-    static bool r = false;
+    bool r = false;
     if (pm_inh_token >= 0) {
         if (!ext_inhibit)
             (close(pm_inh_token));
