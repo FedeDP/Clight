@@ -53,7 +53,7 @@ jobs:
       run: sudo apt update -y
 
     - name: Install build dependencies
-      run: sudo DEBIAN_FRONTEND=noninteractive apt install build-essential pkg-config cmake libsystemd-dev libpopt-dev libconfig-dev libgsl-dev -y
+      run: sudo DEBIAN_FRONTEND=noninteractive apt install build-essential pkg-config cmake libsystemd-dev libpopt-dev libconfig-dev libgsl-dev libdbus-1-dev -y
     
     - name: Install libmodule
       run: |

@@ -21,7 +21,7 @@ jobs:
       - name: Install deps
         run: |
           sudo apt update
-          sudo apt install -y --no-install-recommends build-essential pkg-config cmake libsystemd-dev libpopt-dev libconfig-dev libgsl-dev
+          sudo apt install -y --no-install-recommends build-essential pkg-config cmake libsystemd-dev libpopt-dev libconfig-dev libgsl-dev libdbus-1-dev
       - name: Install libmodule
         run: |
           cd libmodule
