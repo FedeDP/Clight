@@ -1,7 +1,12 @@
 ## 4.10
 
+### Generic
+- [x] port CI to gh actions
+
 ### Signal
 - [x] Improve signal support, adding SIGUSR1 to trigger a capture, SIGTSTP to pause and SIGCONT to resume
+
+## 4.11
 
 ### Backlight
 - [ ] Drop is_smooth option (no need, just specify a step/wait > 0)
