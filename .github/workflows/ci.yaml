@@ -1,0 +1,37 @@
+name: CI Build
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-ubuntu-amd64:
+    name: build-ubuntu-amd64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check out libmodule
+        uses: actions/checkout@v3
+        with:
+          repository: fededp/libmodule
+          ref: '5.0.1'
+          path: libmodule
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y --no-install-recommends build-essential pkg-config cmake libsystemd-dev libpopt-dev libconfig-dev libgsl-dev
+      - name: Install libmodule
+        run: |
+          cd libmodule
+          mkdir build && cd build
+          cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE="Release" ..
+          make
+          sudo make install
+      - name: Configure project
+        run: |
+          mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug ..
+      - name: Build
+        run: |
+          cd build && make
