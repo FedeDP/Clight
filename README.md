@@ -1,4 +1,4 @@
-# Clight [![builds.sr.ht status](https://builds.sr.ht/~fededp/clight.svg)](https://builds.sr.ht/~fededp/clight?)
+# Clight [![CI Build](https://github.com/FedeDP/clight/actions/workflows/ci.yaml/badge.svg)](https://github.com/FedeDP/clight/actions/workflows/ci.yaml) [![CodeQL](https://github.com/FedeDP/clight/actions/workflows/codeql.yaml/badge.svg)](https://github.com/FedeDP/clight/actions/workflows/codeql.yaml)
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/clight.svg)](https://repology.org/project/clight/versions)
 
