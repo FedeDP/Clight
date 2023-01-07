@@ -8,7 +8,7 @@ static int on_session_change(sd_bus_message *m, void *userdata, sd_bus_error *re
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static void publish_pm_msg(const bool old, const bool new);
 static void publish_susp_req(const bool new);
-static void on_pm_req(const bool new, const bool old);
+static void on_pm_req(const bool new);
 static void on_suspend_req(suspend_upd *up);
 
 MODULE("PM");
@@ -60,14 +60,14 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         case PM_REQ: {
             pm_upd *up = (pm_upd *)MSG_DATA();
             if (VALIDATE_REQ(up)) {
-                on_pm_req(up->new, up->old);
+                on_pm_req(up->new);
             }
             break;
         }
         case SYSTEM_UPD:
             /* Release any PowerManagement inhibition upon leaving as we're not PM manager */
             if (msg->ps_msg->type == LOOP_STOPPED && pm_inh_token != -1) {
-                on_pm_req(false, true);
+                on_pm_req(false);
             }
             break;
         case SUSPEND_REQ: {
@@ -144,41 +144,82 @@ static void publish_susp_req(const bool new) {
     M_PUB(suspend_req);
 }
 
-static bool acquire_lock(void) {
-    if (pm_inh_token == -1) {
-        SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
-                         "org.freedesktop.login1", "/org/freedesktop/login1",
-                         "org.freedesktop.login1.Manager", "Inhibit");
-        int ret = call(&pm_args, "ssss", "idle", "Clight", "Idle inhibitor.",
-                       "block");
-        if (ret < 0) {
-            DEBUG("Failed to parse D-Bus response for idle inhibit\n");
-        } else if (pm_inh_token < 0) {
-            DEBUG("Failed to copy lock file\n");
-        } else {
+static bool acquire_systemd_lock(void) {
+    SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
+                     "org.freedesktop.login1", "/org/freedesktop/login1",
+                     "org.freedesktop.login1.Manager", "Inhibit");
+    int ret =
+        call(&pm_args, "ssss", "idle", "Clight", "Idle inhibitor.", "block");
+    if (ret < 0) {
+        DEBUG("Failed to parse systemd-inhibit D-Bus response.\n");
+    } else if (pm_inh_token < 0) {
+        DEBUG("Failed to copy lock file\n");
+    } else {
+        DEBUG("Holding inhibition with systemd-inhibit.\n");
+        return true;
+    }
+    return false;
+}
+
+static bool acquire_pm_lock(void) {
+    SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
+                     "org.freedesktop.PowerManagement.Inhibit",
+                     "/org/freedesktop/PowerManagement/Inhibit",
+                     "org.freedesktop.PowerManagement.Inhibit", 
+                     "Inhibit");
+    if (call(&pm_args, "ss", "Clight", "Idle inhibitor.", "block") != 0) {
+        DEBUG("Failed to parse PowerManagement D-Bus "
+              "response.\n");
+    } else {
+        DEBUG("Holding inhibition with PowerManagement.\n");
+        return true;
+    }
+    return false;
+}
+
+static bool release_lock(void) {
+    if (close(pm_inh_token) == 0) {
+        DEBUG("Released systemd-inhibit inhibition.\n");
+        pm_inh_token = -1;
+        return true;
+    } else {
+        USERBUS_ARG(pm_args, "org.freedesktop.PowerManagement.Inhibit",
+                    "/org/freedesktop/PowerManagement/Inhibit",
+                    "org.freedesktop.PowerManagement.Inhibit", "UnInhibit");
+        if (call(&pm_args, "u", pm_inh_token) == 0) {
+            DEBUG("Released PowerManagement inhibition.\n");
+            pm_inh_token = -1;
             return true;
         }
     }
     return false;
 }
 
-static bool release_lock(void) {
-    if (pm_inh_token >= 0) {
-        (close(pm_inh_token));
+static bool release_lockv2(void) {
+    USERBUS_ARG(pm_args, "org.freedesktop.PowerManagement.Inhibit",
+                "/org/freedesktop/PowerManagement/Inhibit",
+                "org.freedesktop.PowerManagement.Inhibit", "UnInhibit");
+    if (call(&pm_args, "u", pm_inh_token) == 0) {
+        DEBUG("Released PowerManagement inhibition.\n");
+        pm_inh_token = -1;
+        return true;
+    } else if (close(pm_inh_token) == 0) {
+        DEBUG("Released systemd-inhibit inhibition.\n");
         pm_inh_token = -1;
         return true;
     }
     return false;
 }
 
-static void on_pm_req(const bool new, const bool old) {
-    if (new && !old) {
-        if (acquire_lock()) {
-            DEBUG("Idle inhibition on\n");
+static void on_pm_req(const bool new) {
+    if (new && pm_inh_token == -1) {
+        if (acquire_systemd_lock() || acquire_pm_lock()) {
             publish_pm_msg(false, true);
         }
-    } else if (!new) {
+    } else if (!new && pm_inh_token != -1) {
         if (release_lock()) {
+            /* Below is just used for testing order of inhibition APIs */
+            /* if (release_lockv2()) { */
             DEBUG("Released Idle inhibition.\n");
             publish_pm_msg(true, false);
         }
