@@ -128,13 +128,25 @@ static int on_session_change(UNUSED sd_bus_message *m, UNUSED void *userdata, UN
     return 0;
 }
 
-static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
-    unsigned int f;
-    int r = sd_bus_message_read(reply, "h", &f);
-    if (r >= 0) {
-        pm_inh_token = fcntl(f, F_DUPFD_CLOEXEC, 3);
+static int parse_bus_reply(sd_bus_message *reply, const char *member,
+                           void *userdata) {
+    switch (inh_api) {
+    case SYSTEMD: {
+        unsigned int f;
+        int r = sd_bus_message_read(reply, "h", &f);
+        if (r >= 0) {
+            pm_inh_token = fcntl(f, F_DUPFD_CLOEXEC, 3);
+            return r;
+        }
     }
-    return r;
+    case POWERMANAGEMENT: {
+        int r = sd_bus_message_read(reply, "u", userdata);
+        return r;
+    }
+    case NONE: {
+        return -EINVAL;
+    }
+    }
 }
 
 static void publish_pm_msg(const bool old, const bool new) {
@@ -152,24 +164,28 @@ static void publish_susp_req(const bool new) {
 }
 
 static bool acquire_systemd_lock(void) {
+    inh_api = SYSTEMD;
     SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
                      "org.freedesktop.login1", "/org/freedesktop/login1",
                      "org.freedesktop.login1.Manager", "Inhibit");
     int ret =
         call(&pm_args, "ssss", "idle", "Clight", "Idle inhibitor.", "block");
     if (ret < 0) {
+        inh_api = NONE;
         DEBUG("Failed to parse systemd-inhibit D-Bus response.\n");
     } else if (pm_inh_token < 0) {
+        inh_api = NONE;
         DEBUG("Failed to copy lock file\n");
     } else {
         DEBUG("Holding inhibition with systemd-inhibit.\n");
-        inh_api = SYSTEMD;
         return true;
     }
+    inh_api = NONE;
     return false;
 }
 
 static bool acquire_pm_lock(void) {
+    inh_api = POWERMANAGEMENT;
     SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
                      "org.freedesktop.PowerManagement.Inhibit",
                      "/org/freedesktop/PowerManagement/Inhibit",
@@ -177,11 +193,12 @@ static bool acquire_pm_lock(void) {
                      "Inhibit");
     if (call(&pm_args, "ss", "Clight", "Idle inhibitor.", "block") != 0) {
         DEBUG("Failed to parse PowerManagement D-Bus response.\n");
+        inh_api = NONE;
     } else {
         DEBUG("Holding inhibition with PowerManagement.\n");
-        inh_api = POWERMANAGEMENT;
         return true;
     }
+    inh_api = NONE;
     return false;
 }
 
