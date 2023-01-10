@@ -6,6 +6,9 @@
 ### Signal
 - [x] Improve signal support, adding SIGUSR1 to trigger a capture, SIGTSTP to pause and SIGCONT to resume
 
+### Pm
+- [x] add support for logind inhibition
+
 ## 4.11
 
 ### Backlight
