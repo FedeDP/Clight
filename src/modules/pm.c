@@ -163,16 +163,17 @@ static void publish_susp_req(const bool new) {
 }
 
 static bool acquire_systemd_lock(void) {
+    inh_api = SYSTEMD;
     SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
                      "org.freedesktop.login1", "/org/freedesktop/login1",
                      "org.freedesktop.login1.Manager", "Inhibit");
     int ret = call(&pm_args, "ssss", "idle", "Clight", "Idle inhibitor.", "block");
     if (ret == 0 && pm_inh_token > 0) {
         DEBUG("Holding inhibition with systemd-inhibit.\n");
-        inh_api = SYSTEMD;
         return true;
     }
     
+    inh_api = NONE;
     if (ret < 0) {
         DEBUG("Failed to parse systemd-inhibit D-Bus response.\n");
     } else {
@@ -182,6 +183,7 @@ static bool acquire_systemd_lock(void) {
 }
 
 static bool acquire_pm_lock(void) {
+    inh_api = POWERMANAGEMENT;
     SYSBUS_ARG_REPLY(pm_args, parse_bus_reply, &pm_inh_token,
                      "org.freedesktop.PowerManagement.Inhibit",
                      "/org/freedesktop/PowerManagement/Inhibit",
@@ -189,9 +191,9 @@ static bool acquire_pm_lock(void) {
                      "Inhibit");
     if (call(&pm_args, "ss", "Clight", "Idle inhibitor.", "block") == 0) {
         DEBUG("Holding inhibition with PowerManagement.\n");
-        inh_api = POWERMANAGEMENT;
         return true;
     }
+    inh_api = NONE;
     DEBUG("Failed to parse PowerManagement D-Bus response.\n");
     return false;
 }
