@@ -7,7 +7,7 @@ static void receive_waiting_state(const msg_t *msg, UNUSED const void *userdata)
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
 static int get_screen_brightness(void);
 static void timeout_callback(int old_val, bool reset);
-static void pause_screen(bool pause, enum mod_pause type);
+static void pause_screen(bool pause, enum mod_pause type, bool reset_screen_br);
 static int set_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
                               sd_bus_message *value, void *userdata, sd_bus_error *error);
 
@@ -75,7 +75,7 @@ static void receive_waiting_state(const msg_t *msg, UNUSED const void *userdata)
         m_register_fd(screen_fd, false, NULL);
         timeout_callback(-1, false);
         
-        pause_screen(conf.screen_conf.contrib == 0.0f, CONTRIB);
+        pause_screen(conf.screen_conf.contrib == 0.0f, CONTRIB, true);
         break;
     }
     default:
@@ -87,8 +87,10 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
     curr_msg = MSG_TYPE();
     switch (MSG_TYPE()) {
     case AMBIENT_BR_UPD:
-        pause_screen(state.ambient_br < conf.bl_conf.shutter_threshold, CLOGGED);
-        get_screen_brightness();
+        pause_screen(state.ambient_br < conf.bl_conf.shutter_threshold, CLOGGED, false);
+        if (!paused_state) {
+            get_screen_brightness();
+        }
         break;
     case FD_UPD:
         read_timer(screen_fd);
@@ -101,18 +103,18 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
         break;
     }
     case DISPLAY_UPD:
-        pause_screen(state.display_state, DISPLAY);
+        pause_screen(state.display_state, DISPLAY, false);
         break;
     case SENS_UPD:
-        pause_screen(!state.sens_avail, SENSOR);
+        pause_screen(!state.sens_avail, SENSOR, true);
         break;
     case LID_UPD:
         if (conf.bl_conf.pause_on_lid_closed) {
-            pause_screen(state.lid_state, LID);
+            pause_screen(state.lid_state, LID, false);
         }
         break;
     case SUSPEND_UPD:
-         pause_screen(state.suspended, SUSPEND);
+         pause_screen(state.suspended, SUSPEND, false);
          break;
     case SCR_TO_REQ: {
         timeout_upd *up = (timeout_upd *)MSG_DATA();
@@ -127,22 +129,18 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
     }
     case NO_AUTOCALIB_UPD: {
         calib_upd *up = (calib_upd *)MSG_DATA();
-        pause_screen(up->new, AUTOCALIB);
+        pause_screen(up->new, AUTOCALIB, true);
         break;
     }
     case INHIBIT_UPD: {
-        if (state.inhibited && conf.inh_conf.inhibit_bl) {
-            pause_screen(true, INHIBIT);
-        } else {
-            pause_screen(false, INHIBIT);
-        }
+        pause_screen(state.inhibited && conf.inh_conf.inhibit_bl, INHIBIT, true);
         break;
     }
     case CONTRIB_REQ: {
         contrib_upd *up = (contrib_upd *)MSG_DATA();
         if (VALIDATE_REQ(up)) {
             conf.screen_conf.contrib = up->new;
-            pause_screen(conf.screen_conf.contrib == 0.0f, CONTRIB);
+            pause_screen(conf.screen_conf.contrib == 0.0f, CONTRIB, true);
             // Refresh current screen brightness with new contrib!
             if (!paused_state) {
                 M_PUB(&screen_msg);
@@ -181,35 +179,33 @@ static int get_screen_brightness(void) {
 
 static void timeout_callback(int old_val, bool reset) {
     if (conf.screen_conf.timeout[state.ac_state] <= 0) {
-        pause_screen(true, TIMEOUT);
+        pause_screen(true, TIMEOUT, true);
     } else {
-        pause_screen(false, TIMEOUT);
+        pause_screen(false, TIMEOUT, false);
         if (reset) {
             reset_timer(screen_fd, old_val, conf.screen_conf.timeout[state.ac_state]);
         }
     }
 }
 
-static void pause_screen(bool pause, enum mod_pause type) {
+static void pause_screen(bool pause, enum mod_pause type, bool reset_screen_br) {
     if (CHECK_PAUSE(pause, type)) {
         if (pause) {
-            // We are paused: reset screen_br if paused state
-            // is coming from a message that is going to mess
-            // with screen br.
-            // ie: if suspending/dimming/closing the lid,
-            // actual screen_br will stay the same,
-            // no need to reset it.
-            if (curr_msg != SUSPEND_UPD && 
-                curr_msg != DISPLAY_UPD && 
-                curr_msg != LID_UPD) {
-                state.screen_br = 0.0f;
-            }
             /* Stop capturing snapshots */
             m_deregister_fd(screen_fd);
         } else {
             /* Resume capturing */
             m_register_fd(screen_fd, false, NULL);
         }
+    }
+    
+    /* 
+     * Even if we were already paused: 
+     * account anyway for new paused request and
+     * reset screen br if requested.
+     */
+    if (pause && reset_screen_br) {
+        state.screen_br = 0.0f;
     }
 }
 
