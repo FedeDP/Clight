@@ -45,6 +45,7 @@ static void init_backlight_opts(bl_conf_t *bl_conf) {
     bl_conf->timeout[ON_BATTERY][IN_EVENT] = 2 * conf.bl_conf.timeout[ON_AC][IN_EVENT];
     bl_conf->smooth.trans_step = 0.05;
     bl_conf->smooth.trans_timeout = 30;
+    bl_conf->sync_monitors_delay = 5;
 }
 
 static void init_sens_opts(sensor_conf_t *sens_conf) {
@@ -294,6 +295,11 @@ static void check_bl_conf(bl_conf_t *bl_conf) {
     if (bl_conf->shutter_threshold < 0 || bl_conf->shutter_threshold >= 1) {
         WARN("BL_CONF: wrong 'shutter_threshold' value. Resetting default value.\n");
         bl_conf->shutter_threshold = 0.0;
+    }
+    
+    if (bl_conf->sync_monitors_delay < 0 || bl_conf->sync_monitors_delay > 10) {
+        WARN("BL_CONF: wrong 'hotplug_delay' value. Resetting default value.\n");
+        bl_conf->sync_monitors_delay = 0;
     }
 }
 

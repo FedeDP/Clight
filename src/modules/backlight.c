@@ -26,6 +26,7 @@ static int on_sensor_change(sd_bus_message *m, void *userdata, sd_bus_error *ret
 static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int on_interface_added(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
 static int on_interface_removed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus_error *ret_error);
+static void on_delayed_interface(void);
 static int get_current_timeout(void);
 static void on_lid_update(void);
 static void pause_mod(enum mod_pause type);
@@ -36,7 +37,7 @@ static int method_list_mon_override(sd_bus_message *m, void *userdata, sd_bus_er
 static int method_set_mon_override(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static map_t *bls;
-static int bl_fd = -1;
+static int bl_fd = -1, delayed_fd;
 static sd_bus_slot *sens_slot, *bl_slot, *if_a_slot, *if_r_slot;
 static char *backlight_interface; // main backlight interface used to only publish BL_UPD msgs for a single backlight sn
 static const sd_bus_vtable conf_bl_vtable[] = {
@@ -94,6 +95,8 @@ static void init(void) {
     capture_req.capture.reset_timer = true;
     bl_req.bl.smooth = -1; // Use conf values
     
+    delayed_fd = start_timer(CLOCK_BOOTTIME, 0, 0);
+    
     // Disabled while in wizard mode as it is useless and spams to stdout
     if (!conf.wizard) {
         init_curves();
@@ -145,6 +148,7 @@ static void destroy(void) {
     if (bl_fd >= 0) {
         close(bl_fd);
     }
+    close(delayed_fd);
     free(backlight_interface);
     free(conf.sens_conf.dev_name);
     free(conf.sens_conf.dev_opts);
@@ -253,9 +257,13 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
     case FD_UPD:
         read_timer(msg->fd_msg->fd);
-        // When SCREEN module is running, capture only!
-        capture_req.capture.capture_only = state.screen_br != 0.0f;
-        M_PUB(&capture_req);
+        if (msg->fd_msg->fd == delayed_fd) {
+            on_delayed_interface();
+        } else {
+            // When SCREEN module is running, capture only!
+            capture_req.capture.capture_only = state.screen_br != 0.0f;
+            M_PUB(&capture_req);
+        }
         break;
     case SCREEN_BR_UPD:
         set_new_backlight();
@@ -328,6 +336,11 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 
 static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) {
     switch (MSG_TYPE()) {
+    case FD_UPD:
+        // While paused, we can only receive events from delayed_fd!
+        read_timer(msg->fd_msg->fd);
+        on_delayed_interface();
+        break;
     case SCREEN_BR_UPD:
         if (!state.display_state) {
             set_new_backlight();
@@ -742,18 +755,12 @@ static int on_interface_added(sd_bus_message *m, UNUSED void *userdata, UNUSED s
         *val = 1.0;
         map_put(bls, obj_path, val);
         
-        /* Force-set gamma temp on new monitor */
-        DECLARE_HEAP_MSG(temp_req, TEMP_REQ);
-        temp_req->temp.new = state.current_temp;
-        temp_req->temp.smooth = -1;
-        temp_req->temp.daytime = -1;
-        M_PUB(temp_req);
-        
-        /* Force-set backlight on new monitor */
-        DECLARE_HEAP_MSG(bl_req, BL_REQ);
-        bl_req->bl.new = state.current_bl_pct;
-        bl_req->bl.smooth = -1;
-        M_PUB(bl_req);
+        if (conf.bl_conf.sync_monitors_delay > 0) {
+            set_timeout(conf.bl_conf.sync_monitors_delay, 0, delayed_fd, 0);
+            m_register_fd(delayed_fd, false, NULL);
+        } else {
+            on_delayed_interface();
+        }
     }
     return 0;
 }
@@ -769,8 +776,32 @@ static int on_interface_removed(sd_bus_message *m, UNUSED void *userdata, UNUSED
             backlight_interface = NULL;
         }
         map_remove(bls, obj_path);
+        
+        if (conf.bl_conf.sync_monitors_delay > 0) {
+            set_timeout(conf.bl_conf.sync_monitors_delay, 0, delayed_fd, 0);
+            m_register_fd(delayed_fd, false, NULL);
+        } else {
+            on_delayed_interface();
+        }
     }
     return 0;
+}
+
+static void on_delayed_interface(void) {
+    /* Force-set gamma temp on all monitors */
+    DECLARE_HEAP_MSG(temp_req, TEMP_REQ);
+    temp_req->temp.new = state.current_temp;
+    temp_req->temp.smooth = -1;
+    temp_req->temp.daytime = -1;
+    M_PUB(temp_req);
+    
+    /* Force-set backlight on all monitors */
+    DECLARE_HEAP_MSG(bl_req, BL_REQ);
+    bl_req->bl.new = state.current_bl_pct;
+    bl_req->bl.smooth = -1;
+    M_PUB(bl_req);
+    
+    m_deregister_fd(delayed_fd);
 }
 
 static inline int get_current_timeout(void) {

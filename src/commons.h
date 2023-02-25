@@ -59,6 +59,7 @@ typedef struct {
     int pause_on_lid_closed;                // whether clight should inhibit autocalibration on lid closed
     int capture_on_lid_opened;              // whether to trigger a new capture whenever lid gets opened
     int restore;                            // whether backlight should be restored on Clight exit
+    int sync_monitors_delay;                // delay before syncing gamma and backlight when monitors are hotplugged
 } bl_conf_t;
 
 typedef struct {

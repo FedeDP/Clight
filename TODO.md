@@ -12,6 +12,10 @@
 ### Screen
 - [x] fix screen_br reset upon pause
 
+### Backlight
+- [x] Refresh gamma on interface removed too
+- [x] wait some time (configurable) before refreshing gamma/backlight on interface changes
+
 ## 4.11
 
 ### Backlight

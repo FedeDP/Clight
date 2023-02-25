@@ -56,7 +56,8 @@ static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
         config_setting_lookup_bool(bl, "no_auto_calibration", &bl_conf->no_auto_calib);
         config_setting_lookup_bool(bl, "pause_on_lid_closed", &bl_conf->pause_on_lid_closed);
         config_setting_lookup_bool(bl, "capture_on_lid_opened", &bl_conf->capture_on_lid_opened);
-        
+        config_setting_lookup_int(bl, "hotplug_delay", &bl_conf->sync_monitors_delay);
+         
         config_setting_t *timeouts;
         
         /* Load capture timeouts while on battery -> +1 because EVENT is exposed too */
@@ -467,6 +468,9 @@ static void store_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
 
     setting = config_setting_add(bl, "shutter_threshold", CONFIG_TYPE_FLOAT);
     config_setting_set_float(setting, bl_conf->shutter_threshold);
+    
+    setting = config_setting_add(bl, "hotplug_delay", CONFIG_TYPE_INT);
+    config_setting_set_int(setting, bl_conf->sync_monitors_delay);
     
     setting = config_setting_add(bl, "ac_timeouts", CONFIG_TYPE_ARRAY);
     for (int i = 0; i < SIZE_STATES + 1; i++) {
