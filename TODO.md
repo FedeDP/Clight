@@ -9,6 +9,9 @@
 ### Pm
 - [x] add support for logind inhibition
 
+### Screen
+- [x] fix screen_br reset upon pause
+
 ## 4.11
 
 ### Backlight
