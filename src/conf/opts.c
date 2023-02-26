@@ -45,7 +45,6 @@ static void init_backlight_opts(bl_conf_t *bl_conf) {
     bl_conf->timeout[ON_BATTERY][IN_EVENT] = 2 * conf.bl_conf.timeout[ON_AC][IN_EVENT];
     bl_conf->smooth.trans_step = 0.05;
     bl_conf->smooth.trans_timeout = 30;
-    bl_conf->sync_monitors_delay = 5;
 }
 
 static void init_sens_opts(sensor_conf_t *sens_conf) {
