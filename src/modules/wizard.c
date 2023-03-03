@@ -218,7 +218,7 @@ static void next_step(void) {
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     if (userdata) {
         // called by get_backlight()
-        return sd_bus_message_read(reply, "(sd)", NULL, &curve.points[capture_idx++]);
+        return sd_bus_message_read(reply, "d", &curve.points[capture_idx++]);
     }
     // called by get_first_available_backlight()
     int r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(sd)");
