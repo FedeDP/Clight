@@ -18,6 +18,7 @@
 
 ### Gamma
 - [x] add a Toggle method exposed by org.clight.clight.Conf.Gamma to toggle between states' temps
+- [x] add a new desktop file action
 
 ## 5.0
 

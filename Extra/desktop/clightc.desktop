@@ -6,7 +6,7 @@ Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/cligh
 Comment=Recalibrate your screen backlight!
 Icon=clight
 Categories=System
-Actions=Inhibit;Uninhibit;PauseCalib;ResumeCalib;Pause;Resume;ForceGamma
+Actions=Inhibit;Uninhibit;PauseCalib;ResumeCalib;Pause;Resume;ForceGamma;ToggleGamma
 
 [Desktop Action Inhibit]
 Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Inhibit "b" true
@@ -35,3 +35,7 @@ Name=Resume all clight features
 [Desktop Action ForceGamma]
 Exec=sh -c "busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma DayTemp "i" 0 && busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma NightTemp "i" 0"
 Name=Force-set gamma for current conditions
+
+[Desktop Action ToggleGamma]
+Exec=busctl --user call org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma Toggle
+Name=Toggle between conf gamma temperatures
