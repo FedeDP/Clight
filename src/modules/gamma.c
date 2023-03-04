@@ -19,6 +19,7 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
                      sd_bus_message *value, void *userdata, sd_bus_error *error);
 static int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
                  sd_bus_message *value, void *userdata, sd_bus_error *error);
+static int method_toggle_gamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
 
 static int initial_temp;
 static sd_bus_slot *slot;
@@ -34,6 +35,7 @@ static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_WRITABLE_PROPERTY("NightTemp", "i", NULL, set_gamma, offsetof(gamma_conf_t, temp[NIGHT]), 0),
     SD_BUS_WRITABLE_PROPERTY("LongTransition", "b", NULL, NULL, offsetof(gamma_conf_t, long_transition), 0),
     SD_BUS_WRITABLE_PROPERTY("RestoreOnExit", "b", NULL, NULL, offsetof(gamma_conf_t, restore), 0),
+    SD_BUS_METHOD("Toggle", NULL, NULL, method_toggle_gamma, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END
 };
 
@@ -138,7 +140,7 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
         if (msg->ps_msg->type == LOOP_STOPPED && initial_temp && conf.gamma_conf.restore) {
             set_temp(initial_temp, NULL, false, 0, 0);
         }
-        break;    
+        break;
     default:
         break;
     }
@@ -356,10 +358,19 @@ static int set_gamma(sd_bus *bus, const char *path, const char *interface, const
 }
 
 
-int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
+static int set_ambgamma(sd_bus *bus, const char *path, const char *interface, const char *property,
                  sd_bus_message *value, void *userdata, sd_bus_error *error) {
     VALIDATE_PARAMS(value, "b", &ambgamma_req.ambgamma.new);
     
     M_PUB(&ambgamma_req);
     return r;
+}
+
+static int method_toggle_gamma(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+    static bool is_toggled = false;
+    const int new_temp = !is_toggled ? conf.gamma_conf.temp[!state.day_time] : conf.gamma_conf.temp[state.day_time];
+    is_toggled = !is_toggled;
+    set_temp(new_temp, NULL, false, 0, 0);
+    
+    return sd_bus_reply_method_return(m, NULL);
 }

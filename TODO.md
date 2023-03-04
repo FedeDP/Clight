@@ -16,10 +16,14 @@
 - [x] Refresh gamma on interface removed too
 - [x] wait some time (configurable) before refreshing gamma/backlight on interface changes
 
-## 4.11
+### Gamma
+- [x] add a Toggle method exposed by org.clight.clight.Conf.Gamma to toggle between states' temps
+
+## 5.0
 
 ### Backlight
 - [ ] Drop is_smooth option (no need, just specify a step/wait > 0)
+- [ ] Move "Capture","IncBl", "DecBl" interface methods to org.clight.clight.Conf.Backlight
 
 ### Gamma
 - [ ] Drop is_smooth option (no need, just specify a step/wait > 0)
