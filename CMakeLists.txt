@@ -8,7 +8,7 @@ include(GNUInstallDirs)
 find_package(PkgConfig)
 
 # Needed folders
-set(CLIGHT_CONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
+set(CLIGHT_CONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}/clight"
     CACHE PATH "Path for config file")
 set(CLIGHT_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/clight"
     CACHE PATH "Path for data dir folder")
@@ -35,6 +35,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     -D_GNU_SOURCE
     -DVERSION="${PROJECT_VERSION}-${GIT_HASH}"
     -DCONFDIR="${CLIGHT_CONFDIR}"
+    -DOLDCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
     -DDATADIR="${CLIGHT_DATADIR}"
 )
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD_REQUIRED ON)
@@ -107,7 +108,7 @@ file(GLOB_RECURSE SKELETONS Extra/skeletons/*.skel)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.clight.clight.service
         DESTINATION ${SESSION_BUS_DIR})
-install(FILES ${EXTRA_DIR}/clight.conf
+install(DIRECTORY ${EXTRA_DIR}/config/
         DESTINATION ${CLIGHT_CONFDIR})
 install(FILES ${EXTRA_DIR}/desktop/clight.desktop
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/xdg/autostart)

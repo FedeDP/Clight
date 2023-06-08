@@ -2,6 +2,8 @@
 
 ### Generic
 - [x] port CI to gh actions
+- [x] Split config under /etc/clight/clight.conf and /etc/clight/modules.conf.d/{backlight,gamma,...}.conf
+- [x] old config file path support is retained for backward compatibility
 
 ### Signal
 - [x] Improve signal support, adding SIGUSR1 to trigger a capture, SIGTSTP to pause and SIGCONT to resume
@@ -21,6 +23,9 @@
 - [x] add a new desktop file action
 
 ## 5.0
+
+### Generic
+- [ ] drop old config file path support (OLDCONFDIR)
 
 ### Backlight
 - [ ] Drop is_smooth option (no need, just specify a step/wait > 0)

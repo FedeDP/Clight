@@ -1,8 +1,7 @@
 #include <libconfig.h>
+#include <libgen.h>
 #include "config.h"
 #include "utils.h"
-
-static void init_config_file(enum CONFIG file, char *filename);
 
 static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf);
 static void load_sensor_settings(config_t *cfg, sensor_conf_t *sens_conf);
@@ -25,23 +24,6 @@ static void store_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf);
 static void store_dpms_settings(config_t *cfg, dpms_conf_t *dpms_conf);
 static void store_screen_settings(config_t *cfg, screen_conf_t *screen_conf);
 static void store_inh_settings(config_t *cfg, inh_conf_t *inh_conf);
-
-static void init_config_file(enum CONFIG file, char *filename) {
-    switch (file) {
-        case LOCAL:
-            if (getenv("XDG_CONFIG_HOME")) {
-                snprintf(filename, PATH_MAX, "%s/clight.conf", getenv("XDG_CONFIG_HOME"));
-            } else {
-                snprintf(filename, PATH_MAX, "%s/.config/clight.conf", getpwuid(getuid())->pw_dir);
-            }
-            break;
-        case GLOBAL:
-            snprintf(filename, PATH_MAX, "%s/clight.conf", CONFDIR);
-            break;
-        default:
-            return;
-    }
-}
 
 static void load_backlight_settings(config_t *cfg, bl_conf_t *bl_conf) {
     config_setting_t *bl = config_lookup(cfg, "backlight");
@@ -397,21 +379,46 @@ static void load_inh_settings(config_t *cfg, inh_conf_t *inh_conf) {
     }
 }
 
+void init_config_file(enum CONFIG file, char *filename) {
+    switch (file) {
+        case LOCAL:
+            if (getenv("XDG_CONFIG_HOME")) {
+                snprintf(filename, PATH_MAX, "%s/clight.conf", getenv("XDG_CONFIG_HOME"));
+            } else {
+                snprintf(filename, PATH_MAX, "%s/.config/clight.conf", getpwuid(getuid())->pw_dir);
+            }
+            break;
+        case GLOBAL:
+            snprintf(filename, PATH_MAX, "%s/clight.conf", CONFDIR);
+            break;
+        case OLD_GLOBAL:
+            snprintf(filename, PATH_MAX, "%s/clight.conf", OLDCONFDIR);
+            break;
+        default:
+            return;
+    }
+}
+
 int read_config(enum CONFIG file, char *config_file) {
     int r = 0;
     config_t cfg;
     
-    if (is_string_empty(config_file)) {
-        init_config_file(file, config_file);
-    }
     if (access(config_file, F_OK) == -1) {
         WARN("Config file %s not found.\n", config_file);
         return -1;
     }
 
     DEBUG("Reading config file: %s\n", config_file);
+    
+    if (file == OLD_GLOBAL) {
+        WARN("Using deprecated %s config file whose support will be dropped in the near future. Please move to new one at: %s/clight.conf.\n", config_file, CONFDIR);
+    }
 
     config_init(&cfg);
+    // NOTE: dirname can modify the path, avoid it!
+    char *config_file_dup = strdup(config_file);
+    config_set_include_dir(&cfg, dirname(config_file_dup));
+    free(config_file_dup);
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
         config_lookup_int(&cfg, "resumedelay", &conf.resumedelay);
