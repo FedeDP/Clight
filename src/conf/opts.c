@@ -148,14 +148,10 @@ void init_opts(int argc, char *argv[]) {
 
     char conf_file[PATH_MAX + 1] = {0};
     
-    init_config_file(OLD_GLOBAL, conf_file);
-    read_config(OLD_GLOBAL, conf_file);
-    
-    init_config_file(GLOBAL, conf_file);
-    read_config(GLOBAL, conf_file);
-    
-    init_config_file(LOCAL, conf_file);
-    read_config(LOCAL, conf_file);
+    for (int i = OLD_GLOBAL; i < CUSTOM; i++) {
+        init_config_file(i, conf_file);
+        read_config(i, conf_file);
+    }
     
     conf_file[0] = 0;
     parse_cmd(argc, argv, conf_file, PATH_MAX);
