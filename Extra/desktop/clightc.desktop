@@ -26,16 +26,16 @@ Name=Resume backlight calibration
 
 [Desktop Action Pause]
 Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Pause "b" true
-Name=Pause all clight feature
+Name=Pause Clight
 
 [Desktop Action Resume]
 Exec=busctl --expect-reply=false --user call org.clight.clight /org/clight/clight org.clight.clight Pause "b" false
-Name=Resume all clight features
+Name=Resume Clight
 
 [Desktop Action ForceGamma]
 Exec=sh -c "busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma DayTemp "i" 0 && busctl --expect-reply=false --user set-property org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma NightTemp "i" 0"
-Name=Force-set gamma for current conditions
+Name=Force-set screen temperature for current daytime
 
 [Desktop Action ToggleGamma]
 Exec=busctl --user call org.clight.clight /org/clight/clight/Conf/Gamma org.clight.clight.Conf.Gamma Toggle
-Name=Toggle between conf gamma temperatures
+Name=Toggle between config screen temperatures
