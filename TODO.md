@@ -1,27 +1,3 @@
-## 4.10
-
-### Generic
-- [x] port CI to gh actions
-- [x] Split config under /etc/clight/clight.conf and /etc/clight/modules.conf.d/{backlight,gamma,...}.conf
-- [x] old config file path support is retained for backward compatibility
-
-### Signal
-- [x] Improve signal support, adding SIGUSR1 to trigger a capture, SIGTSTP to pause and SIGCONT to resume
-
-### Pm
-- [x] add support for logind inhibition
-
-### Screen
-- [x] fix screen_br reset upon pause
-
-### Backlight
-- [x] Refresh gamma on interface removed too
-- [x] wait some time (configurable) before refreshing gamma/backlight on interface changes
-
-### Gamma
-- [x] add a Toggle method exposed by org.clight.clight.Conf.Gamma to toggle between states' temps
-- [x] add a new desktop file action
-
 ## 5.0
 
 ### Generic
