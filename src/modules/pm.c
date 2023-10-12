@@ -142,9 +142,8 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member,
     case POWERMANAGEMENT: {
         return sd_bus_message_read(reply, "u", userdata);
     }
-    case NONE: {
+    default:
         return -EINVAL;
-    }
     }
 }
 
@@ -216,7 +215,7 @@ static bool release_lock(void) {
             return true;
         }
     }
-    case NONE:
+    default:
         return false;
     }
 }
