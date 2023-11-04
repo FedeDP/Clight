@@ -1,10 +1,5 @@
 ## 4.11
 
-### CI
-
-- [ ] Support prebuilt artifacts (deb, rpm) build from as old as possible glibc version to reach widest compatibility
-- [ ] both master devel and release
-
 ## 5.0
 
 ### Generic
