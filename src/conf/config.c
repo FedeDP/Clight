@@ -403,8 +403,10 @@ int read_config(enum CONFIG file, char *config_file) {
     int r = 0;
     config_t cfg;
     
-    if (access(config_file, F_OK) == -1 && file != OLD_GLOBAL) {
-        WARN("Config file %s not found.\n", config_file);
+    if (access(config_file, F_OK) == -1) {
+        if (file != OLD_GLOBAL) {
+            WARN("Config file %s not found.\n", config_file);
+        }
         return -1;
     }
 
