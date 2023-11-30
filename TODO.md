@@ -1,5 +1,7 @@
 ## 4.11
 
+- [x] Fix running where Screen is not supported (ie: wayland compositors that do not support the protocol)
+
 ## 5.0
 
 ### Generic

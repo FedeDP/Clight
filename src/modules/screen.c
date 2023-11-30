@@ -5,7 +5,7 @@
 
 static void receive_waiting_state(const msg_t *msg, UNUSED const void *userdata);
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata);
-static int get_screen_brightness(void);
+static int get_screen_brightness(bool emit);
 static void timeout_callback(int old_val, bool reset);
 static void pause_screen(bool pause, enum mod_pause type, bool reset_screen_br);
 static int set_contrib(sd_bus *bus, const char *path, const char *interface, const char *property,
@@ -38,10 +38,15 @@ static void init(void) {
     M_SUB(NO_AUTOCALIB_UPD);
     M_SUB(INHIBIT_UPD);
     M_SUB(CONTRIB_REQ);
-        
-    m_become(waiting_state);
-        
-    init_Screen_api();
+    
+    if (get_screen_brightness(false) != 0) {
+         // We are on an unsupported wayland compositor; kill ourself immediately without further message processing
+        WARN("Failed to init. Killing module.\n");
+        module_deregister((self_t **)&self());
+    } else {
+        m_become(waiting_state);
+        init_Screen_api();
+    }
 }
 
 static bool check(void) {
@@ -62,12 +67,6 @@ static void destroy(void) {
 static void receive_waiting_state(const msg_t *msg, UNUSED const void *userdata) {
     switch (MSG_TYPE()) {
     case UPOWER_UPD: {
-        if (get_screen_brightness() != 0) {
-            WARN("Failed to init. Killing module.\n");
-            module_deregister((self_t **)&self());
-            return;
-        }
-
         m_unbecome();
         
         /* Start paused if screen timeout for current ac state is <= 0 */
@@ -89,12 +88,12 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
     case AMBIENT_BR_UPD:
         pause_screen(state.ambient_br < conf.bl_conf.shutter_threshold, CLOGGED, false);
         if (!paused_state) {
-            get_screen_brightness();
+            get_screen_brightness(true);
         }
         break;
     case FD_UPD:
         read_timer(screen_fd);
-        get_screen_brightness();
+        get_screen_brightness(true);
         set_timeout(conf.screen_conf.timeout[state.ac_state], 0, screen_fd, 0);
         break;
     case UPOWER_UPD: {
@@ -156,21 +155,23 @@ static void receive(const msg_t *msg, UNUSED const void *userdata) {
 static int parse_bus_reply(sd_bus_message *reply, const char *member, void *userdata) {
     int r = -EINVAL;
     if (!strcmp(member, "GetEmittedBrightness")) {
-        r = sd_bus_message_read(reply, "d", &state.screen_br);
+        r = sd_bus_message_read(reply, "d", userdata);
     }
     return r;
 }
 
-static int get_screen_brightness(void) {
+static int get_screen_brightness(bool emit) {
     if (paused_state) {
         return 0;
     }
 
-    SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
+    double new_br = 0.0f;
+    SYSBUS_ARG_REPLY(args, parse_bus_reply, &new_br, CLIGHTD_SERVICE, "/org/clightd/clightd/Screen", "org.clightd.clightd.Screen", "GetEmittedBrightness");
     
     screen_msg.bl.old = state.screen_br;
     int ret = call(&args, "ss", fetch_display(), fetch_env());
-    if (ret == 0) {
+    if (ret == 0 && emit) {
+        state.screen_br = new_br;
         screen_msg.bl.new = state.screen_br;
         M_PUB(&screen_msg);
     }

@@ -53,7 +53,6 @@ static void init(void) {
     M_SUB(DAYTIME_UPD);
     M_SUB(NEXT_DAYEVT_UPD);
     M_SUB(SUSPEND_UPD);
-    m_become(waiting_daytime);
     
     // Store current temperature to later restore it if requested
     SYSBUS_ARG_REPLY(args, parse_bus_reply, &initial_temp, CLIGHTD_SERVICE, "/org/clightd/clightd/Gamma", "org.clightd.clightd.Gamma", "Get");
@@ -62,6 +61,7 @@ static void init(void) {
         WARN("Failed to init. Killing module.\n");
         module_deregister((self_t **)&self());
     } else {
+        m_become(waiting_daytime);
         init_Gamma_api();
     }
 }
