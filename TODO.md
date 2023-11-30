@@ -1,6 +1,7 @@
 ## 4.11
 
 - [x] Fix running where Screen is not supported (ie: wayland compositors that do not support the protocol)
+- [x] do not skip access check for OLD CONFIG.
 
 ## 5.0
 
