@@ -14,11 +14,17 @@ set(CLIGHT_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/clight"
     CACHE PATH "Path for data dir folder")
 
 execute_process(
-        COMMAND git log -1 --format=%h
+        COMMAND sh -c "test -d .git && git log -1 --format=%h"
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
         OUTPUT_VARIABLE GIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+if(GIT_HASH)
+    set(VERSION "${PROJECT_VERSION}-${GIT_HASH}")
+else()
+    set(VERSION "${PROJECT_VERSION}")
+endif()
     
 # Create program target
 file(GLOB_RECURSE SOURCES src/*.c)
@@ -33,7 +39,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     -D_GNU_SOURCE
-    -DVERSION="${PROJECT_VERSION}-${GIT_HASH}"
+    -DVERSION="${VERSION}"
     -DCONFDIR="${CLIGHT_CONFDIR}"
     -DOLDCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}/default"
     -DDATADIR="${CLIGHT_DATADIR}"
