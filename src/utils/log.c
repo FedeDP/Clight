@@ -23,7 +23,11 @@ void open_log(void) {
     } else if (getenv("XDG_DATA_HOME")) {
         snprintf(log_path, PATH_MAX, "%s/clight/", getenv("XDG_DATA_HOME"));
     } else {
-        snprintf(log_path, PATH_MAX, "%s/.local/share/clight/", getpwuid(getuid())->pw_dir);
+        snprintf(log_path, PATH_MAX, "%s/.local/", getpwuid(getuid())->pw_dir);
+        mkdir(log_path, 0755);
+        strcat(log_path, "share/");
+        mkdir(log_path, 0755);
+        strcat(log_path, "clight/");
     }
 
     /* Create log folder if it does not exist! */
