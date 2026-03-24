@@ -27,6 +27,10 @@ On wayland Clight requires specific protocols to be implemented by your composit
 Github user [nullobsi](https://github.com/nullobsi) created a (super nice!) qt gui for clight, with a useful tray applet too.  
 Remember to check it out: https://github.com/nullobsi/clight-gui!
 
+## DIY Ambient Light Sensor
+
+For desktops without a built-in ambient light sensor or webcam, you can build your own USB ambient light sensor using a Raspberry Pi Pico. Check out the project here: https://github.com/thariq-shanavas/RP2040_USBHID_Ambient-Light-Sensor
+
 ## Developers Corner
 
 Clight makes use of [Clightd](https://github.com/FedeDP/Clightd), a system DBus service that exposes an [API](https://github.com/FedeDP/Clightd/wiki/Api) to manage various aspects of your screen and allows Webcam/ALS devices captures.  
