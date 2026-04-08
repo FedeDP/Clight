@@ -23,7 +23,7 @@ static int method_toggle_gamma(sd_bus_message *m, void *userdata, sd_bus_error *
 
 static int initial_temp;
 static sd_bus_slot *slot;
-static bool long_transitioning, should_sync_temp;
+static bool long_transitioning, should_sync_temp, skip_snap_after_long_transition;
 static const self_t *daytime_ref;
 static const sd_bus_vtable conf_gamma_vtable[] = {
     SD_BUS_VTABLE_START(0),
@@ -61,6 +61,9 @@ static void init(void) {
         WARN("Failed to init. Killing module.\n");
         module_deregister((self_t **)&self());
     } else {
+        /* Seed current_temp so the long transition step calculation has a
+         * valid starting point from the first set_temp() call. */
+        state.current_temp = initial_temp;
         m_become(waiting_daytime);
         init_Gamma_api();
     }
@@ -205,10 +208,25 @@ static void set_temp(int temp, const time_t *now, int smooth, int step, int time
             /* Remaining time in second half of transition */
             timeout = conf.day_conf.event_duration - (*now - state.day_events[state.next_event]);
         }
-        /* Temperature difference */
-        step = abs(conf.gamma_conf.temp[DAY] - conf.gamma_conf.temp[NIGHT]);
-        /* Compute each step size with a gamma_trans_timeout of 10s */
-        step /= (((double)timeout) / GAMMA_LONG_TRANS_TIMEOUT);
+        /* Temperature difference to cover the event window.
+         * Always use the whole day/night range rather than (temp - state.current_temp).
+         * Using the full range is slightly over-generous but guarantees the transition
+         * completes within the window regardless of cold starting within the configured window. */
+        step = abs(conf.gamma_conf.temp[!state.day_time] - conf.gamma_conf.temp[state.day_time]);
+        /* Guard: clamp to 1 so we never send step=0 to Clightd (e.g. when the screen
+         * is already at the target temperature). */
+        if (step == 0) {
+            step = 1;
+        }
+        /* Compute each step size with a gamma_trans_timeout of 10s.
+         * Use ceiling division so the transition ends during the event window
+         * instead of overshooting it and snapping at the end.
+         * Guard against num_steps == 0 (with remaining window < 10s): keep step as the
+         * remaining diff so clightd snaps to target instead of invoking UB from dividing by zero. */
+        const int num_steps = timeout / GAMMA_LONG_TRANS_TIMEOUT;
+        if (num_steps > 0) {
+            step = (step + num_steps - 1) / num_steps;
+        }
         /* force gamma_trans_timeout to 10s (in ms) */
         timeout = GAMMA_LONG_TRANS_TIMEOUT * 1000;
         
@@ -256,6 +274,14 @@ static void on_new_next_dayevt(void) {
     if (long_transitioning) {
         INFO("Long transition ended.\n");
         long_transitioning = false;
+        /*
+         * Signal on_daytime_req() to skip the TEMP_REQ that daytime.c unconditionally
+         * publishes following this NEXT_DAYEVT_UPD tick. Without this guard, the
+         * normal-transition path in set_temp() would fire immediately after the long
+         * transition completes, snapping the screen to the target temperature instead
+         * of leaving it at whatever value clightd reached through smooth stepping.
+         */
+        skip_snap_after_long_transition = true;
     }
 }
 
@@ -282,8 +308,20 @@ static void on_daytime_req(void) {
     last_t = t;
         
     if (!long_transitioning && !conf.gamma_conf.ambient_gamma) {
-        set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth, 
-                 conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
+        /*
+         * If we just finished a long transition (skip_snap_after_long_transition was set by
+         * on_new_next_dayevt()), do not call set_temp() here. daytime.c unconditionally
+         * publishes TEMP_REQ on every tick, including the window-exit tick that resets
+         * long_transitioning. Calling set_temp() at that moment would issue an
+         * immediate transition to the target temperature, visually snapping the screen
+         * even though the long transition already brought it there smoothly.
+         */
+        if (skip_snap_after_long_trans) {
+            skip_snap_after_long_transition = false;
+        } else {
+            set_temp(conf.gamma_conf.temp[state.day_time], &t, !conf.gamma_conf.no_smooth, 
+                     conf.gamma_conf.trans_step, conf.gamma_conf.trans_timeout);
+        }
     }
 }
 
