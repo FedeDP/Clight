@@ -42,7 +42,12 @@ static bool check(void) {
 }
 
 static bool evaluate() {
-    return !conf.inh_conf.disabled;
+    /*
+     * PM module handles suspend/resume events (SUSPEND_REQ) and power
+     * management inhibition (PM_REQ). Suspend/resume must work regardless
+     * of inhibit configuration, so always enable this module.
+     */
+    return true;
 }
 
 static void receive(const msg_t *const msg, UNUSED const void* userdata) {

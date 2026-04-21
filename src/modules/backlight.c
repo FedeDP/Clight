@@ -236,7 +236,8 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
              * Note: set smooth field from conf to allow keyboard and gamma to react;
              * > if (up->smooth || conf.bl_conf.no_smooth) { ... }
              */
-            set_backlight_level(1.0, !conf.bl_conf.smooth.no_smooth, 0, 0);
+            if (!conf.bl_conf.restore)
+                set_backlight_level(1.0, !conf.bl_conf.smooth.no_smooth, 0, 0);
             pause_mod(AUTOCALIB);
         }
         if (state.lid_state) {
@@ -250,6 +251,23 @@ static void receive_waiting_init(const msg_t *const msg, UNUSED const void* user
         // Store current backlight to later restore them if requested
         SYSBUS_ARG_REPLY(args, parse_bus_reply, NULL, CLIGHTD_SERVICE, "/org/clightd/clightd/Backlight2", "org.clightd.clightd.Backlight2", "Get");
         call(&args, NULL);
+
+        /*
+         * When restore_on_exit is set and auto calibration is disabled,
+         * initialize current_bl_pct from hardware so DIMMER knows
+         * the correct brightness to restore after dimming.
+         */
+        if (conf.bl_conf.no_auto_calib && conf.bl_conf.restore && map_length(bls) > 0) {
+            map_itr_t *itr = map_itr_new(bls);
+            if (itr) {
+                double *val = map_itr_get_data(itr);
+                if (val) {
+                    state.current_bl_pct = *val;
+                    DEBUG("Initial backlight level: %.2lf.\n", state.current_bl_pct);
+                }
+                free(itr);
+            }
+        }
     }
 }
 
@@ -397,9 +415,14 @@ static void receive_paused(const msg_t *const msg, UNUSED const void* userdata) 
         break;
     }
     case BL_REQ: {
-        /* In paused state check that we're not dimmed/dpms */
+        /*
+         * In paused state, ignore normal autocalibration requests but still
+         * honor explicit dimmer enter/exit transitions.
+         */
         bl_upd *up = (bl_upd *)MSG_DATA();
-        if (VALIDATE_REQ(up) && !state.display_state) {
+        const int requested_smooth = up->smooth;
+        const bool dimmer_transition = requested_smooth == -2 || requested_smooth == -3;
+        if (VALIDATE_REQ(up) && (!state.display_state || dimmer_transition)) {
             set_backlight_level(up->new, up->smooth, up->step, up->timeout);
         }
         break;
@@ -460,13 +483,13 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
     } else if (!strcmp(member, "Get")) {
         r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(sd)");
         if (r == 1) {
-            while ((r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_STRUCT, "sd") == 1)) {
+            while ((r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_STRUCT, "sd")) == 1) {
                 const char *mon_id = NULL;
-                double *pct = malloc(sizeof(double)),
+                double *pct = malloc(sizeof(double));
                 r = sd_bus_message_read(reply, "sd", &mon_id, pct);
                 if (r >= 0) {
                     char key[PATH_MAX + 1];
-                    snprintf(key, sizeof(key), "/org/clightd/clightd/Backlight2/%s", mon_id);
+                    make_valid_obj_path(key, sizeof(key), "/org/clightd/clightd/Backlight2", mon_id);
                     map_put(bls, key, pct);
                 }
                 sd_bus_message_exit_container(reply);
@@ -539,6 +562,10 @@ static void publish_bl_upd(const double pct, const bool is_smooth, const double 
     M_PUB(bl_msg);
 }
 
+static int noop_reply_cb(UNUSED sd_bus_message *reply, UNUSED const char *member, UNUSED void *userdata) {
+    return 0;
+}
+
 static void set_each_brightness(double pct, const double step, const int timeout) {
     const bool restoring = pct == -1.0f;
     sensor_conf_t *sens_conf = &conf.sens_conf;
@@ -566,8 +593,14 @@ static void set_each_brightness(double pct, const double step, const int timeout
             r = call(&args, "d(du)", real_pct, step, timeout);
         } else {
             DEBUG("Using default curve for '%s'\n", mon_id);
-            /* Use non-adjusted (default) curve value */
-            r = call(&args, "d(du)", restoring ? *val : pct, step, timeout);
+            if (restoring) {
+                /* Synchronous call to ensure completion before exit */
+                SYSBUS_ARG_REPLY(sync_args, noop_reply_cb, NULL, CLIGHTD_SERVICE, path, "org.clightd.clightd.Backlight2.Server", "Set");
+                r = call(&sync_args, "d(du)", *val, step, timeout);
+            } else {
+                /* Use non-adjusted (default) curve value */
+                r = call(&args, "d(du)", pct, step, timeout);
+            }
         }
         if (r < 0) {
             WARN("Failed to set backlight on %s.\n", mon_id);
@@ -738,6 +771,16 @@ static int on_bl_changed(sd_bus_message *m, UNUSED void *userdata, UNUSED sd_bus
     
     DEBUG("Backlight '%s' level updated: %.2lf.\n", syspath, pct);
     
+    /* Keep bls map in sync for restore_on_exit, but skip dimmed/dpms states */
+    if (!state.display_state) {
+        char key[PATH_MAX + 1];
+        make_valid_obj_path(key, sizeof(key), "/org/clightd/clightd/Backlight2", syspath);
+        double *val = map_get(bls, key);
+        if (val) {
+            *val = pct;
+        }
+    }
+
     /* Publish a single bl update event on multimonitor setups */
     if (!strcmp(backlight_interface, syspath)) {
         publish_bl_upd(pct, false, 0, 0);

@@ -37,7 +37,7 @@ typedef struct {
 #define USERBUS_ARG(name, ...)  USERBUS_ARG_REPLY(name, NULL, NULL, __VA_ARGS__);
 #define SYSBUS_ARG(name, ...)   SYSBUS_ARG_REPLY(name, NULL, NULL, __VA_ARGS__);
 
-
+void make_valid_obj_path(char *storage, size_t size, const char *root, const char *name);
 int call(const bus_args *a, const char *signature, ...);
 int add_match(const bus_args *a, sd_bus_slot **slot, sd_bus_message_handler_t cb);
 int set_property(const bus_args *a, const char *type, const uintptr_t value);

@@ -229,7 +229,7 @@ static int parse_bus_reply(sd_bus_message *reply, const char *member, void *user
             r = sd_bus_message_read(reply, "sd", &sysname, NULL);
             if (r >= 0) {
                 char obj_path[PATH_MAX + 1];
-                snprintf(obj_path, sizeof(obj_path), "/org/clightd/clightd/Backlight2/%s", sysname);
+                make_valid_obj_path(obj_path, sizeof(obj_path), "/org/clightd/clightd/Backlight2", sysname);
                 bl_obj_path = strdup(obj_path);
             }
             sd_bus_message_exit_container(reply);

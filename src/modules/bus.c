@@ -1,5 +1,6 @@
 #include "bus.h"
 #include "utils.h"
+#include <ctype.h>
 
 #define GET_BUS(a)  sd_bus *tmp = a->bus; if (!tmp) { tmp = a->type == USER_BUS ? userbus : sysbus; } if (!tmp) { return -1; }
 
@@ -205,4 +206,18 @@ static int proxy_async_request(struct sd_bus_message *m, void *userdata, sd_bus_
 
 sd_bus *get_user_bus(void) {
     return userbus;
+}
+
+/*
+ * Build a valid D-Bus object path from root + basename.
+ * Replaces any char not in [A-Za-z0-9_] with '_'.
+ * Mirrors Clightd's make_valid_obj_path in bus_utils.c.
+ */
+void make_valid_obj_path(char *storage, size_t size, const char *root, const char *name) {
+    snprintf(storage, size, "%s/%s", root, name);
+    for (char *p = storage + strlen(root) + 1; *p; p++) {
+        if (!isalnum((unsigned char)*p) && *p != '_') {
+            *p = '_';
+        }
+    }
 }

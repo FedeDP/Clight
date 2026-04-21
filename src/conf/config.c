@@ -278,7 +278,7 @@ static void load_dimmer_settings(config_t *cfg, dimmer_conf_t *dim_conf) {
         if ((points = config_setting_get_member(dim, "no_smooth_transition"))) {
             if (config_setting_length(points) == SIZE_DIM) {
                 for (int i = 0; i < SIZE_DIM; i++) {
-                    dim_conf->smooth[i].no_smooth = config_setting_get_float_elem(points, i);
+                    dim_conf->smooth[i].no_smooth = config_setting_get_bool_elem(points, i);
                 }
             } else {
                 WARN("Wrong number of dimmer 'no_smooth_transition' array elements.\n");
