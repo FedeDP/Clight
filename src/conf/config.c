@@ -424,6 +424,7 @@ int read_config(enum CONFIG file, char *config_file) {
     if (config_read_file(&cfg, config_file) == CONFIG_TRUE) {
         config_lookup_bool(&cfg, "verbose", &conf.verbose);
         config_lookup_int(&cfg, "resumedelay", &conf.resumedelay);
+        config_lookup_bool(&cfg, "use_system_bus", &conf.use_system_bus);
         
         load_backlight_settings(&cfg, &conf.bl_conf);
         load_sensor_settings(&cfg, &conf.sens_conf);
@@ -718,6 +719,8 @@ int store_config(enum CONFIG file) {
     config_setting_set_bool(setting, conf.verbose);
     setting = config_setting_add(cfg.root, "resumedelay", CONFIG_TYPE_INT);
     config_setting_set_int(setting, conf.resumedelay);
+    setting = config_setting_add(cfg.root, "use_system_bus", CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, conf.use_system_bus);
     
     store_backlight_settings(&cfg, &conf.bl_conf);
     store_sensors_settings(&cfg, &conf.sens_conf);

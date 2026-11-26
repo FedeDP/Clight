@@ -134,7 +134,7 @@ static void init(void) {
                                 conf_vtable,
                                 &conf);
     
-    if (!conf.inh_conf.disabled) {
+    if (!conf.inh_conf.disabled && !conf.use_system_bus) {
             /*
             * ScreenSaver implementation:
             * take both /ScreenSaver and /org/freedesktop/ScreenSaver paths
@@ -170,7 +170,9 @@ static void init(void) {
             
             /** org.freedesktop.ScreenSaver API **/
             if (!conf.inh_conf.disabled) {
-                if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
+                if (conf.use_system_bus) {
+                    INFO("%s API is not exposed on system bus.\n", sc_interface);
+                } else if (sd_bus_request_name(userbus, sc_interface, SD_BUS_NAME_REPLACE_EXISTING) < 0) {
                     // Debug as this is not a warning, it happens very often
                     DEBUG("Failed to create %s dbus interface: %s\n", sc_interface, strerror(-r));
                     INFO("Monitoring requests to %s name owner.\n", sc_interface);
@@ -180,6 +182,7 @@ static void init(void) {
                 } else {
                     INFO("%s dbus interface exposed.\n", sc_interface);
                 }
+                /* Still needed by org.clight.clight Inhibit method */
                 lock_map = map_new(true, lock_dtor);
             }
             /**                                 **/
@@ -237,10 +240,15 @@ static void receive(const msg_t *const msg, UNUSED const void* userdata) {
 static void destroy(void) {
     if (userbus) {
         sd_bus_release_name(userbus, bus_interface);
-        if (!conf.inh_conf.disabled) {
-            sd_bus_release_name(userbus, sc_interface);
+        if (conf.use_system_bus) {
+            /* Shared system bus connection: just drop our reference */
+            userbus = sd_bus_unref(userbus);
+        } else {
+            if (!conf.inh_conf.disabled) {
+                sd_bus_release_name(userbus, sc_interface);
+            }
+            userbus = sd_bus_flush_close_unref(userbus);
         }
-        userbus = sd_bus_flush_close_unref(userbus);
     }
     if (monbus) {
         monbus = sd_bus_flush_close_unref(monbus);

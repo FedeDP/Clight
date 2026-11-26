@@ -24,6 +24,7 @@ arguments=(
   '--no-kbd[Disable keyboard backlight calibration]'
   '--dimmer-pct=[Backlight level used while screen is dimmed, in percentage]'
   '--verbose[Enable verbose mode]'
+  '--system-bus[Expose clight API on system bus instead of user bus]'
   '--no-auto-calib[Disable screen backlight automatic calibration]'
   '--shutter-thres=[Threshold to consider a capture as clogged]'
   {-v,--version}'[Show version info]'

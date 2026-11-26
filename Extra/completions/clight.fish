@@ -22,6 +22,7 @@ complete -c clight -l no-screen -f -d "Disable screen module (screen content bas
 complete -c clight -l no-kbd -f -d "Disable keyboard backlight calibration"
 complete -c clight -l dimmer-pct -x -d "Backlight level used while screen is dimmed, in percentage"
 complete -c clight -l verbose -f -d "Enable verbose mode"
+complete -c clight -l system-bus -f -d "Expose clight API on system bus instead of user bus"
 complete -c clight -l no-auto-calib -f -d "Disable screen backlight automatic calibration"
 complete -c clight -l shutter-thres -x -d "Threshold to consider a capture as clogged"
 complete -c clight -o v -f -d "Show version info"

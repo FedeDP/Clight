@@ -144,6 +144,34 @@ configure_file(${EXTRA_DIR}/man/clight.1 clight.1 @ONLY)
 execute_process(COMMAND gzip clight.1 WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/clight.1.gz DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/man/man1)
 
+# Optional files to run clight as a system service on system bus (--system-bus)
+option(ENABLE_SYSTEM_BUS "Install D-Bus policy, D-Bus activation and systemd unit to run clight on system bus" OFF)
+if (ENABLE_SYSTEM_BUS)
+    if (NOT DEFINED SYSTEMD_SYSTEM_UNIT_DIR)
+        pkg_get_variable(SYSTEMD_SYSTEM_UNIT_DIR systemd systemdsystemunitdir)
+    endif()
+    if (NOT SYSTEMD_SYSTEM_UNIT_DIR)
+        set(SYSTEMD_SYSTEM_UNIT_DIR "${CMAKE_INSTALL_PREFIX}/lib/systemd/system")
+    endif()
+    if (NOT DEFINED SYSUSERS_DIR)
+        pkg_get_variable(SYSUSERS_DIR systemd sysusersdir)
+    endif()
+    if (NOT SYSUSERS_DIR)
+        set(SYSUSERS_DIR "${CMAKE_INSTALL_PREFIX}/lib/sysusers.d")
+    endif()
+    configure_file(${EXTRA_DIR}/systembus/clight.service systembus/clight.service @ONLY)
+    configure_file(${EXTRA_DIR}/systembus/org.clight.clight.service systembus/org.clight.clight.service @ONLY)
+    install(FILES ${EXTRA_DIR}/systembus/org.clight.clight.conf
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/dbus-1/system.d)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/systembus/org.clight.clight.service
+            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/dbus-1/system-services)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/systembus/clight.service
+            DESTINATION ${SYSTEMD_SYSTEM_UNIT_DIR})
+    install(FILES ${EXTRA_DIR}/systembus/clight.sysusers
+            DESTINATION ${SYSUSERS_DIR}
+            RENAME clight.conf)
+endif()
+
 #
 # Packaging support
 #

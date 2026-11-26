@@ -16,7 +16,7 @@ Clight \- a user daemon utility that aims to fully manage your display.
 .br
 [\fB\fC\-\-dimmer\-pct\fR DOUBLE] [\fB\fC\-\-no\-auto\-calib\fR] [\fB\fC\-\-shutter\-thres\fR DOUBLE] [\fB\fC\-\-gamma\-long\-transition\fR] [\fB\fC\-\-ambient\-gamma\fR]
 .br
-[\fB\fC\-c, \-\-conf\-file\fR STRING] [\fB\fC\-w, \-\-wizard\fR] [\fB\fC\-\-verbose\fR] [\fB\fC\-v, \-\-version\fR] [\fB\fC\-?, \-\-help\fR] [\fB\fC\-\-usage\fR]
+[\fB\fC\-c, \-\-conf\-file\fR STRING] [\fB\fC\-w, \-\-wizard\fR] [\fB\fC\-\-verbose\fR] [\fB\fC\-\-system\-bus\fR] [\fB\fC\-v, \-\-version\fR] [\fB\fC\-?, \-\-help\fR] [\fB\fC\-\-usage\fR]
 
 .SH DESCRIPTION
 .PP
@@ -131,6 +131,11 @@ dim your screen after a timeout and manage screen DPMS.
 \fB\fC\-\-verbose\fR
 .br
   Enable verbose mode.
+
+.PP
+\fB\fC\-\-system\-bus\fR
+.br
+  Expose clight API on system bus instead of user bus.
 
 .PP
 \fB\fC\-\-no\-auto\-calib\fR

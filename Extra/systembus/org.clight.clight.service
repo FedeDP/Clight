@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.clight.clight
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/clight --system-bus
+User=root
+SystemdService=clight.service
