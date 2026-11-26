@@ -66,6 +66,7 @@ static const sd_bus_vtable clight_vtable[] = {
     SD_BUS_METHOD("Inhibit", "b", NULL, method_clight_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("IncBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("DecBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("SetBl", "d", NULL, method_clight_changebl, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Load", "s", NULL, method_load, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Unload", "s", NULL, method_unload, SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("Pause", "b", NULL, method_pause, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -480,10 +481,14 @@ static int method_clight_changebl(sd_bus_message *m, void *userdata, sd_bus_erro
     double change_pct;
     VALIDATE_PARAMS(m, "d", &change_pct);
     
-    if (change_pct > 0.0 && change_pct <= 1.0) {
+    /* SetBl sets an absolute backlight level, thus 0.0 is valid; IncBl/DecBl need a positive step */
+    const bool is_set = !strcmp(sd_bus_message_get_member(m), "SetBl");
+    if ((is_set ? change_pct >= 0.0 : change_pct > 0.0) && change_pct <= 1.0) {
         bl_req.bl.smooth = -1;
         
-        if (!strcmp(sd_bus_message_get_member(m), "IncBl")) {
+        if (is_set) {
+            bl_req.bl.new = change_pct;
+        } else if (!strcmp(sd_bus_message_get_member(m), "IncBl")) {
             bl_req.bl.new = state.current_bl_pct + change_pct;
             if (bl_req.bl.new > 1.0) {
                 bl_req.bl.new = 1.0;
