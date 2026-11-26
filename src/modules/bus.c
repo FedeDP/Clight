@@ -1,7 +1,7 @@
 #include "bus.h"
 #include "utils.h"
 
-#define GET_BUS(a)  sd_bus *tmp = a->bus; if (!tmp) { tmp = a->type == USER_BUS ? userbus : sysbus; } if (!tmp) { return -1; }
+#define GET_BUS(a)  sd_bus *tmp = a->bus; if (!tmp) { tmp = a->type == USER_BUS ? get_user_bus() : sysbus; } if (!tmp) { return -1; }
 
 static void free_bus_structs(sd_bus_error *err, sd_bus_message *m, sd_bus_message *reply);
 static int check_err(int *r, sd_bus_error *err, const char *caller);
@@ -13,7 +13,6 @@ MODULE("BUS");
 
 static void module_pre_start(void) {
     sd_bus_default_system(&sysbus);
-    sd_bus_default_user(&userbus);
 }
 
 static void init(void) {
@@ -21,18 +20,20 @@ static void init(void) {
         ERROR("BUS: Failed to connect to system bus.\n");
     }
     
-    if (!userbus) {
+    if (!get_user_bus()) {
         ERROR("BUS: Failed to connect to user bus\n");
     }
     
     sd_bus_process(sysbus, NULL);
-    sd_bus_process(userbus, NULL);
-    
     int bus_fd = sd_bus_get_fd(sysbus);
-    int userbus_fd = sd_bus_get_fd(userbus);
-
     m_register_fd(dup(bus_fd), true, sysbus);
-    m_register_fd(dup(userbus_fd), true, userbus);
+    
+    /* When running on system bus, "user" bus is the system bus itself: it is already being polled */
+    if (!conf.use_system_bus) {
+        sd_bus_process(userbus, NULL);
+        int userbus_fd = sd_bus_get_fd(userbus);
+        m_register_fd(dup(userbus_fd), true, userbus);
+    }
 }
 
 static bool check(void) {
@@ -203,6 +204,19 @@ static int proxy_async_request(struct sd_bus_message *m, void *userdata, sd_bus_
     return a->reply_cb(m, a->member, a->reply_userdata);
 }
 
+/*
+ * Bus where clight exposes its API and talks to user services.
+ * It is connected on first use, as "use_system_bus" option is not yet known in module_pre_start().
+ * Callers own the returned bus (interface module closes it on exit),
+ * thus the system bus is referenced once more when used in its place.
+ */
 sd_bus *get_user_bus(void) {
+    if (!userbus) {
+        if (conf.use_system_bus) {
+            userbus = sd_bus_ref(sysbus);
+        } else {
+            sd_bus_default_user(&userbus);
+        }
+    }
     return userbus;
 }

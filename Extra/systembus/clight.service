@@ -1,0 +1,13 @@
+[Unit]
+Description=Clight daemon on system bus, to manage screen backlight, gamma, dimmer and dpms
+After=dbus.service
+
+[Service]
+Type=dbus
+BusName=org.clight.clight
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/clight --system-bus
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -189,6 +189,7 @@ static void parse_cmd(int argc, char *const argv[], char *conf_file, size_t size
         {"no-kbd", 0, POPT_ARG_NONE, &conf.kbd_conf.disabled, 100, "Disable keyboard backlight calibration", NULL},
         {"dimmer-pct", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.dim_conf.dimmed_pct, 100, "Backlight level used while screen is dimmed, in pergentage", NULL},
         {"verbose", 0, POPT_ARG_NONE, &conf.verbose, 100, "Enable verbose mode", NULL},
+        {"system-bus", 0, POPT_ARG_NONE, &conf.use_system_bus, 100, "Expose clight API on system bus instead of user bus", NULL},
         {"no-auto-calib", 0, POPT_ARG_NONE, &conf.bl_conf.no_auto_calib, 100, "Disable screen backlight automatic calibration", NULL},
         {"shutter-thres", 0, POPT_ARG_DOUBLE | POPT_ARGFLAG_SHOW_DEFAULT, &conf.bl_conf.shutter_threshold, 100, "Threshold to consider a capture as clogged", NULL},
         {"version", 'v', POPT_ARG_NONE, NULL, 3, "Show version info", NULL},

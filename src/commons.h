@@ -123,6 +123,7 @@ typedef struct {
     screen_conf_t screen_conf;
     inh_conf_t inh_conf;
     int verbose;                            // whether verbose mode is enabled
+    int use_system_bus;                     // whether clight API should be exposed on system bus instead of user bus
     int wizard;                             // whether wizard mode is enabled
     int resumedelay;                        // delay on resume from suspend
 } conf_t;

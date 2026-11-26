@@ -148,6 +148,7 @@ void log_conf(void) {
         fprintf(log_file, "\n### GENERIC ###\n");
         fprintf(log_file, "* Verbose (debug):\t\t%s\n", conf.verbose ? "Enabled" : "Disabled");
         fprintf(log_file, "* ResumeDelay:\t\t%d\n", conf.resumedelay);
+        fprintf(log_file, "* System bus:\t\t%s\n", conf.use_system_bus ? "Enabled" : "Disabled");
         
         if (!conf.bl_conf.disabled) {
             log_bl_conf(&conf.bl_conf);
